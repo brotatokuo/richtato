@@ -1,0 +1,173 @@
+{% load static %}
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="{% static 'richtato/styles.css' %}">
+        <title>Richtato</title>
+        <style>
+            body {
+                padding-top: 30px; /* Adjust this value based on your navbar height */
+            }
+
+            .navbar {
+                background-color: #000;
+                padding: 10px 10px;
+                border-bottom: 1px solid #98cc2c;
+                position: fixed;
+                top: 0;
+                width: 100%;
+                white-space: nowrap;
+                z-index: 1000;
+                height: 50px; /* Ensure this height matches the padding-top value */
+            }
+
+            .navbar-container {
+                display: flex;
+                flex-direction: column; /* Stack elements vertically */
+                align-items: center;
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+
+            .navbar-top {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                width: 100%;
+            }
+
+            .navbar-left, .navbar-right {
+                display: flex;
+                align-items: center;
+            }
+
+            .navbar-left {
+                flex-grow: 1; /* Use the available space */
+            }
+
+            .navbar-right {
+                display: flex;
+                align-items: center;
+            }
+
+            .navbar-logo {
+                height: 40px;
+                margin-right: 10px;
+            }
+
+            .navbar-brand {
+                color: #fff;
+                text-decoration: none;
+                font-size: 1.5em;
+                display: flex;
+                align-items: center;
+            }
+
+            .navbar-nav {
+                display: flex;
+                gap: 20px;
+                width: 100%; /* Make sure it spans the full width */
+                justify-content: center; /* Center the navigation links */
+                padding-top: 10px; /* Add some space between rows */
+            }
+
+            .navbar-nav a {
+                color: #fff;
+                text-decoration: none;
+                font-size: 1em;
+                position: relative;
+            }
+
+            .navbar-nav a::after {
+                content: '';
+                display: inline-block;
+                width: 0;
+                height: 2px;
+                background: #98cc2c;
+                transition: width .3s;
+                position: absolute;
+                bottom: -5px;
+                left: 0;
+            }
+
+            .navbar-nav a:hover::after {
+                width: 100%;
+            }
+
+            .navbar-login, .navbar-signup, #navbar-username {
+                padding: 8px 16px;
+                border-radius: 20px;
+                text-decoration: none;
+                font-size: 1em;
+                margin-top: 10px;
+            }
+
+            .navbar-login {
+                color: #98cc2c;
+                border: 2px solid #98cc2c;
+                background-color: transparent;
+            }
+
+            .navbar-login:hover {
+                background-color: #98cc2c;
+                color: #000;
+            }
+
+            .navbar-signup {
+                background-color: #98cc2c;
+                color: #000;
+                border: 1px solid #98cc2c;
+            }
+
+            .navbar-signup:hover {
+                background-color: #fff;
+                color: #000;
+            }
+
+            #navbar-username {
+                color: gold;
+                border: 2px solid gold;
+                background-color: transparent;
+                padding: 8px 16px;
+                border-radius: 20px;
+                text-decoration: none;
+                font-size: 1em;
+            }
+
+            #navbar-username:hover {
+                background-color: gold;
+                color: black;
+            }
+        </style>
+    </head>
+    <body>
+        <header class="navbar">
+            <div class="navbar-container">
+                <div class="navbar-top">
+                    <div class="navbar-left">
+                        <a href="{% url 'index' %}" class="navbar-brand">
+                            <img src="{% static 'media/richtato.png' %}" alt="Richtato Logo" class="navbar-logo">
+                            Richtato
+                        </a>
+                    </div>
+                    <nav class="navbar-nav">
+                        <a href="{% url 'organize_statements' %}">Organize Statements</a>
+                        <a href="{% url 'spendings' %}">Spendings</a>
+                        <a href="{% url 'earnings' %}">Earnings</a>
+                        <a href="{% url 'accounts' %}">Accounts</a>
+                    </nav>
+                    <!-- <div class="navbar-right">
+                        <a href="{% url 'login' %}" class="navbar-login">Login</a>
+                        <a href="{% url 'register' %}" class="navbar-signup">Sign up</a>
+                    </div> -->
+                </div>
+            </div>
+        </header>
+
+        {% block body %}
+        {% endblock %}
+    </body>
+
+    </html>
