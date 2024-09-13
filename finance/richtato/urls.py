@@ -19,14 +19,15 @@ from django.urls import path, include
 from . import views
 
 urlpatterns = [
-     path("", views.index, name="index"),
+    path("", views.index, name="index"),
     path("spendings", views.spendings, name="spendings"),
     path("earnings", views.earnings, name="earnings"),
     path("accounts", views.accounts, name="accounts"),
     path("login", views.login, name="login"),
     path("register", views.register, name="register"),
     path('chart/', views.chart_view, name='chart_view'),  # URL to view the chart
-    path('master-chart-data/', views.master_data, name='master_data'),  # URL for chart data
+    path('plot-data/', views.plot_data, name='plot_data'),  # URL for chart data
+    path('sql-data/', views.sql_data_json, name='sql_data_json'),
     path('organize-statements', views.organize_statements, name="organize_statements"),
     path('filter-data/', views.filter_data_view, name='filter_data'),
 ]

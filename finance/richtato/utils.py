@@ -8,10 +8,8 @@ warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 script_path = os.path.abspath(__file__)
 parent_path = os.path.dirname(script_path)
 
-# data_folder_path = r"C:\Users\Alan\OneDrive\Desktop\Richtato\finance\richtato\static\data"
 data_folder_path = os.path.join(parent_path, "static/data")
 card_statements_folder_path = os.path.join(data_folder_path, "Credit Card Statements")
-# card_statements_folder_path = r"C:\Users\Alan\OneDrive\Desktop\Richtato\finance\richtato\static\data\Credit Card Statements"
 
 script_path = os.path.abspath(__file__)
 parent_path = os.path.dirname(script_path)
@@ -70,9 +68,6 @@ def rename_statements(excel_path, folder_path, bank, account, min_date, max_date
         suffix = "xlsx"
     new_name = os.path.join(folder_path, f"{bank} [{account}] ({start_date}-{end_date}).{suffix}")
     os.rename(excel_path, new_name)
-
-def structure_statements():
-    return None            
             
 def compile_statements():
     bank_list = [folder for folder in os.listdir(card_statements_folder_path)  if os.path.isdir(os.path.join(card_statements_folder_path, folder))]
@@ -106,32 +101,46 @@ def compile_statements():
             print(df.head())
             df = df[['Date', 'Account Name', 'Description', 'Amount']]
             master_df = pd.concat([master_df, df])
+        return master_df
+def get_sql_data():
+    transactions = Transaction.objects.all().values()
+    df_transactions = pd.DataFrame(transactions)
+    df_transactions = df_transactions.rename(columns={"date": "Date", "account_name": "Account Name", "description": "Description", "amount": "Amount"})
+    df_transactions = df_transactions.drop(columns=["id"])
 
+    # Convert 'Date' to datetime
+    df_transactions['Date'] = pd.to_datetime(df_transactions['Date'], errors='coerce')
+
+    # Convert 'Amount' to numeric
+    df_transactions['Amount'] = pd.to_numeric(df_transactions['Amount'], errors='coerce')
+
+    # Handle missing values if necessary (optional)
+    df_transactions = df_transactions.dropna()  # or use fillna()
+
+    # Select specific columns in the desired order
+    df_transactions = df_transactions[["Date", "Account Name", "Description", "Amount"]]
+    df_transactions = df_transactions.sort_values(by="Date", ascending=True)
+    
     # Cleanup Data
-    master_df = master_df[~master_df['Description'].str.contains("MOBILE PAYMENT", case=False, na=False)]
-    master_df = master_df[~master_df['Description'].str.contains("ONLINE PAYMENT", case=False, na=False)]
+    df_transactions = df_transactions[~df_transactions['Description'].str.contains("MOBILE PAYMENT", case=False, na=False)]
+    df_transactions = df_transactions[~df_transactions['Description'].str.contains("ONLINE PAYMENT", case=False, na=False)]
 
     # Categorization
-    master_df['Category'] = master_df.apply(lambda row: auto_categorization(row['Description'], row['Account Name']), axis=1)
+    df_transactions['Category'] = df_transactions.apply(lambda row: auto_categorization(row['Description'], row['Account Name']), axis=1)
 
     # Sort by Date
-    master_df['Date'] = pd.to_datetime(master_df['Date'])
-    master_df = master_df.sort_values(by="Date")
+    df_transactions['Date'] = pd.to_datetime(df_transactions['Date'])
+    df_transactions = df_transactions.sort_values(by="Date")
    
-
     # Add Year, Month, Day
-    master_df['Year'] = master_df['Date'].dt.year
-    master_df['Month'] = master_df['Date'].dt.month
-    master_df['Day'] = master_df['Date'].dt.day
-    master_df['Date'] = pd.to_datetime(master_df['Date']).dt.date
-
-    master_df_path = os.path.join(data_folder_path, "master_creditcard_data.xlsx")
-    master_df.to_excel(master_df_path, index=False)
-
-    master_df['Date'] = pd.to_datetime(master_df['Date'], format='%m/%d/%Y')
+    df_transactions['Year'] = df_transactions['Date'].dt.year
+    df_transactions['Month'] = df_transactions['Date'].dt.month
+    df_transactions['Day'] = df_transactions['Date'].dt.day
+    df_transactions['Date'] = pd.to_datetime(df_transactions['Date']).dt.date
+    df_transactions['Date'] = pd.to_datetime(df_transactions['Date'], format='%m/%d/%Y')
 
     # Save to database
-    for _, row in master_df.iterrows():
+    for _, row in df_transactions.iterrows():
         exists = Transaction.objects.filter(
             account_name=row['Account Name'],
             description = row['Description'],
@@ -147,10 +156,8 @@ def compile_statements():
                 date=row['Date'],
                 amount = row['Amount']
             )
-
     print("\033[92mSuccess!\033[0m")
-    print(f"\033]8;;{master_df_path}\033\\\033[93mClick to open Master Data\033[0m\033]8;;\033\\")
-
+    return df_transactions
 
 def auto_categorization(description, account):
     description = description.lower()

@@ -12,6 +12,8 @@ card_statements_folder_path = os.path.join(data_folder_path, "Credit Card Statem
 file_name = "master_creditcard_data.xlsx"
 data_file_path = os.path.join(data_folder_path, file_name)
 
+
+
 def chart_view(request):
     return render(request, 'chart.html')
 
@@ -57,8 +59,18 @@ def color_picker(i):
     border_color = f"rgba({color}, 1)"
     return background_color, border_color
 
-def master_data(request):
-    df = pd.read_excel(data_file_path, header=0)
+def sql_data_json(request):
+    df = get_sql_data()
+    print("sql section")
+    print(df)
+    df_json = df.to_dict(orient='records')  # JSON format
+    print(df_json)
+    # Pass the JSON data to the template context
+    return JsonResponse(df_json, safe=False)
+
+def plot_data(request):
+    df = get_sql_data()
+    print(df)
 
     # Generating Labels (Months)
     labels = [calendar.month_abbr[i] for i in range(1, 13)]
@@ -72,12 +84,11 @@ def master_data(request):
     for i in range(len(accounts_list)):
         df_account = df[df["Account Name"] == accounts_list[i]].copy()
 
-        print(df_account.head())
+        # print(df_account.head())
 
         monthly_sum = df_account.groupby('Month')['Amount'].sum().reset_index()
         monthly_amount = monthly_sum['Amount'].tolist()
         
-
         if not monthly_sum.empty:
             last_month = monthly_sum['Month'].max()
             max_month = max(max_month, last_month)
@@ -101,15 +112,11 @@ def master_data(request):
         "labels": labels[0:max_month],
         "datasets": datasets
     }
-    # Testing SQL Data
-    transactions = Transaction.objects.all().values()
-    df = pd.DataFrame(transactions)
-    print(df.head())
+    # return HttpResponse("EHEHEH")
     return JsonResponse(response_data, safe=False)
 
 def filter_data_view(request, account, month):
-    # Read the Excel file
-    df = pd.read_excel(data_file_path, header=0)
+    df = get_sql_data()
 
     # Filter based on account, month
     filtered_df = df[(df['Account Name'] == account) & (df['Month'] == month)]
@@ -118,6 +125,3 @@ def organize_statements(request):
     sort_statements()
     compile_statements()
     return HttpResponse("Renamed Statements")
-
-
-# def test_sql_data(request):

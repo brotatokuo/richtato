@@ -18,7 +18,8 @@
     <script src="{% static 'richtato/script.js' %}"></script>
     <script>
         // Run the fetchChartData function from script.js
-        const AMEXDataUrl = "{% url 'master_data' %}";
-        stackedFetchChartData(AMEXDataUrl, "myChart3");
+        const AMEXDataUrl = "{% url 'plot_data' %}";
+        const data = "{% url 'sql_data_json' %}";
+        stackedFetchChartData(AMEXDataUrl, "myChart3", data);
     </script>
 {% endblock %}
