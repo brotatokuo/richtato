@@ -3,10 +3,12 @@ from django.shortcuts import render
 from django.http import JsonResponse
 import random, pandas as pd
 import os, calendar
+from .models import Transaction
 from django.http import HttpResponse
 from .utils import *
-data_folder_path = r"C:\Users\Alan\OneDrive\Desktop\Richtato\finance\richtato\static\data"
-card_statements_folder_path = r"C:\Users\Alan\OneDrive\Desktop\Richtato\finance\richtato\static\data\Credit Card Statements"
+
+data_folder_path = os.path.join(parent_path, "static/data")
+card_statements_folder_path = os.path.join(data_folder_path, "Credit Card Statements")
 file_name = "master_creditcard_data.xlsx"
 data_file_path = os.path.join(data_folder_path, file_name)
 
@@ -113,3 +115,6 @@ def organize_statements(request):
     sort_statements()
     compile_statements()
     return HttpResponse("Renamed Statements")
+
+
+# def test_sql_data(request):

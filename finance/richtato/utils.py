@@ -5,8 +5,13 @@ from django.http import HttpResponse
 from richtato.models import *
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
-data_folder_path = r"C:\Users\Alan\OneDrive\Desktop\Richtato\finance\richtato\static\data"
-card_statements_folder_path = r"C:\Users\Alan\OneDrive\Desktop\Richtato\finance\richtato\static\data\Credit Card Statements"
+script_path = os.path.abspath(__file__)
+parent_path = os.path.dirname(script_path)
+
+# data_folder_path = r"C:\Users\Alan\OneDrive\Desktop\Richtato\finance\richtato\static\data"
+data_folder_path = os.path.join(parent_path, "static/data")
+card_statements_folder_path = os.path.join(data_folder_path, "Credit Card Statements")
+# card_statements_folder_path = r"C:\Users\Alan\OneDrive\Desktop\Richtato\finance\richtato\static\data\Credit Card Statements"
 
 script_path = os.path.abspath(__file__)
 parent_path = os.path.dirname(script_path)
