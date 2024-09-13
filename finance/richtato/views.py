@@ -101,7 +101,10 @@ def master_data(request):
         "labels": labels[0:max_month],
         "datasets": datasets
     }
-
+    # Testing SQL Data
+    transactions = Transaction.objects.all().values()
+    df = pd.DataFrame(transactions)
+    print(df.head())
     return JsonResponse(response_data, safe=False)
 
 def filter_data_view(request, account, month):
