@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block body %}
+<div class="page-container">
+    <div class="login-container">
+        <div class="login-form">
+            <h2>Create A Richtato Account</h2>
+            <br>
+            <form action="{% url 'register' %}" method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <br>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="password-container">
+                        <input type="password" id="password" name="password" class="form-control" required>
+                        <button type="button" onclick="togglePasswordVisibility('password', this)" class="show-password">Show</button>
+                    </div>  
+                </div>
+                <br>
+                <div class="form-group">
+                    <label for="password2">Verify Password</label>
+                    <div class="password-container">
+                        <input type="password" id="password2" name="password2" class="form-control" required>
+                        <button type="button" onclick="togglePasswordVisibility('password2', this)" class="show-password">Show</button>
+                    </div>
+                </div>
+                <input class="btn-primary" type="submit" value="Register">
+            </form>
+            <br>
+            <br>
+            Already have an account? <a href="{% url 'login' %}">Login in here</a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
