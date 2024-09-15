@@ -2,16 +2,16 @@
 html, body {
     height: 100%;
     margin: 0;
-    padding: 0;
+    padding-top: 30px;
     font-family: Arial, sans-serif;
     background-color: #ffffff; /* Set background color to white */
 }
 
 .page-container{
     display:flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    padding-top: 60px;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 0px;
     padding-left: 10px;
     padding-right: 10px;
 }
@@ -348,13 +348,12 @@ input[type="password"] {
 }
 
 .bar-chart {
-    padding-top: 60px;
-    width: 50%;
+    width: 70%;
     margin: 0 auto; /* Centers the chart horizontally */
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 60vh; /* Adjust the height as needed */
+    height: 40vh; /* Adjust the height as needed */
 }
 
 .styled-table {
@@ -406,6 +405,13 @@ input[type="password"] {
 }
 
 .table-title {
+    justify-content: center;  /* Center horizontally */
+    align-items: center;      /* Center vertically */
+    text-align: center;       /* Center the text inside the container */
+    flex-direction: column;   /* Ensure the text stays in a column (not a row) */
+}
+
+.page-title{
     display: flex;           /* Enable flexbox */
     justify-content: center;  /* Center horizontally */
     align-items: center;      /* Center vertically */

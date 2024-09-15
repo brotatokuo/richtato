@@ -7,9 +7,6 @@
         <link rel="stylesheet" href="{% static 'richtato/styles.css' %}">
         <title>Richtato</title>
         <style>
-            body {
-                padding-top: 30px; /* Adjust this value based on your navbar height */
-            }
 
             .navbar {
                 background-color: #000;
@@ -154,15 +151,24 @@
                             Richtato
                         </a>
                     </div>
-                    <nav class="navbar-nav">
-                        <a href="{% url 'import_statements_data' %}">Import Statements Data</a>
-                        <a href="{% url 'spendings' %}">Spendings</a>
-                        <a href="{% url 'earnings' %}">Earnings</a>
-                        <a href="{% url 'accounts' %}">Accounts</a>
-                    </nav>
+                    {% if user.is_authenticated %}
+                        <nav class="navbar-nav">
+                            <a href="{% url 'import_statements_data' %}">Import Statements Data</a>
+                            <a href="{% url 'spendings' %}">Spendings</a>
+                            <a href="{% url 'earnings' %}">Earnings</a>
+                            <a href="{% url 'accounts' %}">Accounts</a>
+                            
+                        </nav>
+                    {% endif %}
+
                     <div class="navbar-right">
-                        <a href="{% url 'login' %}" class="navbar-login">Login</a>
-                        <a href="{% url 'register' %}" class="navbar-signup">Sign up</a>
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'index' %}" id="navbar-username">{{ user.username }}</a>
+                        <a href="{% url 'logout' %}" class="navbar-login">Log out</a>
+                        {% else %}
+                            <a href="{% url 'login' %}" class="navbar-login">Log in</a>
+                            <a href="{% url 'register' %}" class="navbar-signup">Sign up</a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
