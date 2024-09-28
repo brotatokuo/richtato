@@ -1,7 +1,7 @@
 import pandas as pd
 import os, warnings, re
 from datetime import datetime
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from viz.models import *
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
@@ -15,9 +15,9 @@ script_path = os.path.abspath(__file__)
 parent_path = os.path.dirname(script_path)
 print("card statements path", card_statements_folder_path)
 
-def sort_statements():
+# region Excel Functions
+def sort_statements()->None:
     bank_list = [folder for folder in os.listdir(card_statements_folder_path)  if os.path.isdir(os.path.join(card_statements_folder_path, folder))]
-
     for bank in bank_list:
         folder_path = os.path.join(card_statements_folder_path, bank)
         
@@ -56,7 +56,7 @@ def sort_statements():
                 else:
                     rename_statements(excel_path, folder_path, bank, "Custom Cash", min_date, max_date)
 
-def rename_statements(excel_path, folder_path, bank, account, min_date, max_date):
+def rename_statements(excel_path, folder_path, bank, account, min_date, max_date) -> None:
     def date_formatter(date):
         date_obj = datetime.strptime(str(date), "%m/%d/%Y")
         # Format the date object to the desired format (YYYYMonDD)
@@ -72,7 +72,7 @@ def rename_statements(excel_path, folder_path, bank, account, min_date, max_date
     new_name = os.path.join(folder_path, f"{bank} [{account}] ({start_date}-{end_date}).{suffix}")
     os.rename(excel_path, new_name)
             
-def compile_statements():
+def compile_statements()->pd.DataFrame:
     bank_list = [folder for folder in os.listdir(card_statements_folder_path)  if os.path.isdir(os.path.join(card_statements_folder_path, folder))]
     print("bank_list:", bank_list)
     master_df = pd.DataFrame()
@@ -105,14 +105,13 @@ def compile_statements():
                 df = df[['Date', 'Account Name', 'Description', 'Amount']]
                 master_df = pd.concat([master_df, df])
 
-                # print("Account Name:", account_name)
-                # print("EXCEL PATH :", excel_path)
-                # print(df.head())
-
     # Save to Excel
     master_df.to_excel(os.path.join(data_folder_path, "Master Statements.xlsx"), index=False)
     return master_df
 
+# endregion
+
+# region Category Functions
 def categorize_transactions(df):
     # Convert 'Date' to datetime
     df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
@@ -128,7 +127,7 @@ def categorize_transactions(df):
     df = df.sort_values(by="Date", ascending=True)
 
     # Categorization
-    def form_category_dictionary():
+    def form_category_dictionary() -> dict:
         categories = Category.objects.all().values()
         categories_dict = {}
         for category in categories:
@@ -139,7 +138,7 @@ def categorize_transactions(df):
     
     category_dictionary = form_category_dictionary()
 
-    def auto_categorization(description, account, category_dictionary):
+    def auto_categorization(description, account, category_dictionary, verbose=False):
         description = description.lower()
         for category, keywords in category_dictionary.items():
             # Split the keywords string into a list
@@ -147,10 +146,11 @@ def categorize_transactions(df):
             
             for keyword in keyword_list:
                 if keyword.lower() in description:
-                    # print("Description: ", description)
-                    # print("Matched Keyword: ", keyword)
-                    # print("Category: ", category)
-                    # print("\n")
+                    if verbose:
+                        print("Description: ", description)
+                        print("Matched Keyword: ", keyword)
+                        print("Category: ", category)
+                        print("\n")
                     return category
                 
         # Additional account-based categorization
@@ -164,69 +164,88 @@ def categorize_transactions(df):
     # print("Category Dictionary: ", category_dictionary)
     df['Category'] = df.apply(lambda row: auto_categorization(row['Description'], row['Account Name'], category_dictionary), axis=1)
     return df
-    
-def post_to_sql(df, request_user):
+# endregion
+
+# region SQL Functions    
+def post_to_sql(df, request_user)->None:
+    """
+    Post the dataframe to the SQL database
+    """
     for _, row in df.iterrows():
-        exists = Transaction.objects.filter(
-            user = request_user,
+        Transaction.objects.get_or_create(
+            user=request_user,
             account_name=row['Account Name'],
-            description = row['Description'],
+            description=row['Description'],
             date=row['Date'],
-            amount = row['Amount']
-
-        ).exists()
-
-        if not exists:
-            Transaction.objects.create(
-                user = request_user,
-                account_name=row['Account Name'],
-                description = row['Description'],
-                category = row['Category'],
-                date=row['Date'],
-                amount = row['Amount']
-            )
+            amount=round(row['Amount'], 2),
+            defaults={
+                'category': row['Category']
+            }
+        )
     print("\033[92mSuccess!\033[0m")
 
-def get_sql_data():
-    transactions = Transaction.objects.all().values()
-    df_transactions = pd.DataFrame(transactions)
-    if df_transactions.empty:
-        print("utils.py: No data found in the database. Import data first.")
-        return df_transactions
+def get_sql_data(user, context="Spending", verbose=True):
+    if context == "Spending":
+        dict = Transaction.objects.filter(user=user).select_related('account_name', 'category').values(
+            'id', 'date', 'amount', 'account_name__name', 'category__name', 'description'
+        )
+        df = pd.DataFrame(list(dict))
     else:
-        df_transactions = df_transactions.rename(columns={"date": "Date", "account_name": "Account Name", "description": "Description", "amount": "Amount", "category": "Category"})
-        df_transactions = df_transactions.drop(columns=["id"])
-
-        # Convert 'Date' to datetime
-        df_transactions['Date'] = pd.to_datetime(df_transactions['Date'], errors='coerce')
-
-        # Convert 'Amount' to numeric
-        df_transactions['Amount'] = pd.to_numeric(df_transactions['Amount'], errors='coerce')
-
-        # Handle missing values if necessary (optional)
-        df_transactions = df_transactions.dropna()  # or use fillna()
-
-        # Select specific columns in the desired order
-        df_transactions = df_transactions[["Date", "Account Name", "Description", "Amount", "Category"]]
-        df_transactions = df_transactions.sort_values(by="Date", ascending=True)
-        
-        # Cleanup Data
-        df_transactions = df_transactions[~df_transactions['Description'].str.contains("MOBILE PAYMENT", case=False, na=False)]
-        df_transactions = df_transactions[~df_transactions['Description'].str.contains("ONLINE PAYMENT", case=False, na=False)]
-
-        # Sort by Date
-        df_transactions['Date'] = pd.to_datetime(df_transactions['Date'])
-        df_transactions = df_transactions.sort_values(by="Date")
+        context = "Earnings"
+        dict = Earning.objects.filter(user=user).select_related('account_name').values(
+            'id', 'date', 'amount', 'account_name__name', 'description'
+        )
+        df = pd.DataFrame(list(dict)
+                                       )
+    if verbose:
+        print("User Accounts Dataframe:", dict)
+        print("User Transactions Dataframe:", df)
     
-        # Add Year, Month, Day
-        df_transactions['Year'] = df_transactions['Date'].dt.year
-        df_transactions['Month'] = df_transactions['Date'].dt.month
-        df_transactions['Day'] = df_transactions['Date'].dt.day
-        df_transactions['Date'] = pd.to_datetime(df_transactions['Date']).dt.date
-        df_transactions['Date'] = pd.to_datetime(df_transactions['Date'], format='%m/%d/%Y')
+    if df.empty:
+        print("No data found in the database. Import data first.")
+    else:
+        df = strcuture_sql_data(df, context=context, verbose=True)    
+    return df
+    
+def strcuture_sql_data(df, context, verbose):
+    if verbose:
+        print("Structure SQL Data")
+        print(df.head())
 
-        return df_transactions
+    # Organize Columns
+    if context == "Spending":
+        df = df.rename(columns={"date": "Date", "account_name__name": "Account Name", "description": "Description", "amount": "Amount", "category__name": "Category"})
+        df = df[["Date", "Account Name", "Description", "Amount", "Category"]]
+    else:
+        df = df.rename(columns={"date": "Date", "account_name__name": "Account Name", "description": "Description", "amount": "Amount"})
+        df = df[["Date", "Account Name", "Description", "Amount"]]
 
+    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+    df['Amount'] = pd.to_numeric(df['Amount'], errors='coerce')
+    df = df.sort_values(by="Date", ascending=True)
+
+    if verbose:
+        print("Renamed and Organized Columns")
+        print(df.head())
+
+    # Cleanup Data
+    df = df[~df['Description'].str.contains("MOBILE PAYMENT", case=False, na=False)]
+    df = df[~df['Description'].str.contains("ONLINE PAYMENT", case=False, na=False)]
+
+    # Add Year, Month, Day
+    df['Year'] = df['Date'].dt.year
+    df['Month'] = df['Date'].dt.month
+    df['Day'] = df['Date'].dt.day
+    df['Date'] = pd.to_datetime(df['Date'], format='%m/%d/%Y').dt.date
+    
+    if verbose:
+        print("Structured Transactions Data")
+        print(df.head())
+    return df
+
+# endregion
+
+# region Helper functions
 def color_picker(i):
     # Preset colors
     colors = [
@@ -250,3 +269,5 @@ def color_picker(i):
     background_color = f"rgba({color}, 0.4)"
     border_color = f"rgba({color}, 1)"
     return background_color, border_color
+
+# endregion

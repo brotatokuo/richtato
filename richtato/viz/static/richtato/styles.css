@@ -108,18 +108,32 @@ html, body {
     align-items: center;
     min-height: 100vh; /* Maintain minimum height of 100vh */
     background-color: #ffffff;
-    padding-top: 50px;
 }
 
 .login-form {
     width: 100%;
-    max-width: 400px;
+    max-width: 500px;
     padding: 20px;
     border: 1px solid #ddd;
     border-radius: 8px;
     background-color: #fff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     text-align: left;
+}
+
+.settings-form {
+    width: 100%;
+    max-width: 700px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-align: left;
+}
+
+.settings-form h2 {
+    text-align: center;
 }
 
 .wrong-password {
@@ -348,19 +362,19 @@ input[type="password"] {
 }
 
 .bar-chart {
-    width: 70%;
+    width: 90%;
     margin: 0 auto; /* Centers the chart horizontally */
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 40vh; /* Adjust the height as needed */
+    height: 70vh; /* Adjust the height as needed */
 }
 
 .styled-table {
     border-collapse: collapse;
     margin: 25px 0;
     font-size: 18px;
-    min-width: 400px;
+    min-width: 700px;
     justify-content: center;
     align-items: center;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
@@ -375,25 +389,13 @@ input[type="password"] {
 }
 
 .styled-table thead tr {
-    background-color: #009879;
+    background-color: black;
     color: #ffffff;
     text-align: left;
 }
 
 .styled-table tbody tr:hover {
-    background-color: coral; /* Highlight row on hover */
-}
-
-.styled-table tbody tr {
-    border-bottom: 1px solid #dddddd; /* Adds a bottom border to each row */
-}
-
-.styled-table tbody tr:nth-of-type(even) {
-    background-color: #f3f3f3; /* Alternating row color */
-}
-
-.styled-table tbody tr:last-of-type {
-    border-bottom: 2px solid #009879; /* Bottom border for the last row */
+    background-color: #98cc2c; /* Highlight row on hover */
 }
 
 .detailed-table {
@@ -413,6 +415,13 @@ input[type="password"] {
 
 .page-title{
     display: flex;           /* Enable flexbox */
+    justify-content: center;  /* Center horizontally */
+    align-items: center;      /* Center vertically */
+    text-align: center;       /* Center the text inside the container */
+    flex-direction: column;   /* Ensure the text stays in a column (not a row) */
+}
+
+.subtitle{    /* Enable flexbox */
     justify-content: center;  /* Center horizontally */
     align-items: center;      /* Center vertically */
     text-align: center;       /* Center the text inside the container */

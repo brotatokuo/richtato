@@ -6,8 +6,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="stylesheet" href="{% static 'richtato/styles.css' %}">
         <title>Richtato</title>
-        <style>
-
+        <style> 
             .navbar {
                 background-color: #000;
                 padding: 10px 10px;
@@ -140,6 +139,7 @@
             
         </style>
     </head>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{% static 'richtato/script.js' %}"></script> 
     <body>
         <header class="navbar">
@@ -153,11 +153,11 @@
                     </div>
                     {% if user.is_authenticated %}
                         <nav class="navbar-nav">
-                            <a href="{% url 'import_statements_data' %}">Import Statements Data</a>
+                            <a href="{% url 'data' %}">Data</a>
                             <a href="{% url 'spendings' %}">Spendings</a>
                             <a href="{% url 'earnings' %}">Earnings</a>
                             <a href="{% url 'accounts' %}">Accounts</a>
-                            
+                            <a href="{% url 'settings' %}">Settings</a>
                         </nav>
                     {% endif %}
 

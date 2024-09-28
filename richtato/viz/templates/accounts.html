@@ -1,0 +1,67 @@
+{% extends "layout.html" %}
+{% load static %}
+{% load humanize %}
+{% block body %}
+
+<div class="page-container">
+    <div class="page-title">
+        <h1>Accounts and Networth</h1>
+    </div>
+
+    <div class="bar-chart">
+        <canvas id="accountsChart"></canvas>
+    </div>
+
+    <br>
+    <br>
+    <div class="bar-chart">
+        <canvas id="pieChart"></canvas>
+    </div>
+
+
+    <div class="page-item">
+        <h2>Networth: ${{ networth|floatformat:2|intcomma }}</h2>
+        <ul class="stock-list">
+            <table class="detailed-table, styled-table">
+                <thead>
+                    <tr>
+                        <th>Account Name</th>
+                        <th>Account Type</th>
+                        <th>Date</th>
+                        <th>Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for item in accounts_data %}
+                    <tr>
+                        <td>{{ item.account.name }}</td>
+                        <td>{{ item.account.type|capfirst }}</td>
+                        <td>{% if item.date %}{{ item.date|date:"Y-m-d" }}{% else %}No history{% endif %}</td>
+                        <td>${{ item.balance|floatformat:2|intcomma }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </ul>
+    </div>
+</div>
+
+<script src="{% static 'richtato/accounts_script.js' %}"></script>
+<script>
+    // Run the fetchChartData function from script.js
+    const dataUrl = "{% url 'plot_accounts_data' %}";
+    const piedataUrl = "{% url 'plot_accounts_data_pie' %}";
+    fetch("{% url 'get_accounts_data_json' %}")
+        .then(response => response.json())
+        .then(tableData => {
+            console.log("fetch data");
+            console.log(tableData);
+            
+            // Call the chart function after data is successfully fetched
+            stackedFetchChartData(dataUrl, "accountsChart", tableData);
+            pieChartData(piedataUrl, "pieChart", tableData);
+        })
+        .catch(error => console.error('Error:', error));
+    
+</script>
+{% endblock %}

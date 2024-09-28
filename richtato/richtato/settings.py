@@ -33,6 +33,7 @@ AUTH_USER_MODEL = 'viz.User'
 
 INSTALLED_APPS = [
     'viz',
+    "django.contrib.humanize",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
