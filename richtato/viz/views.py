@@ -150,6 +150,7 @@ def settings(request):
 @login_required
 def accounts(request):
     accounts_data = get_latest_accounts_data(request)
+    print("Accounts Data: ", accounts_data)
     return render(request, "accounts.html", {
         "networth": request.user.networth(),
         "accounts_data": accounts_data,
@@ -178,8 +179,6 @@ def data(request):
 @login_required
 def get_latest_accounts_data(request):
     user_accounts = request.user.account.all()
-    print("User Accounts: ", user_accounts)
-    
     accounts_data = []
     for account in user_accounts:
         # Get the latest balance history record for the account
@@ -205,13 +204,13 @@ def get_latest_accounts_data(request):
         accounts_data.append({
             'account': account,
             'balance': latest_balance,
-            'date': latest_date
+            'date': latest_date,
+            'history': list(zip(balance_list, date_list)) 
         })
 
         return accounts_data
 
-
-
+@login_required
 def add_account(request):
     if request.method=="POST":
         all_accounts_names = [account.name for account in request.user.account.all()]
@@ -245,6 +244,26 @@ def add_account(request):
         return accounts(request)
     return HttpResponse("Add account error")
 
+@login_required
+def update_accounts(request):
+    if request.method=="POST":
+        account_id = request.POST.get('account-id')
+        balance_date = request.POST.get('balance-date')
+        balance = request.POST.get('balance-input')
+        # Get the account
+        account = Account.objects.get(user=request.user, id=account_id)
+
+        print("Update account details: ", account, balance_date, balance)
+        # Update the account history
+        account_history = AccountHistory(
+            account=account,
+            balance_history=balance,
+            date_history=balance_date,
+        )
+        account_history.save()
+        return accounts(request)
+
+@login_required
 def add_card_account(request):
     if request.method=="POST":
         user_transactions = Transaction.objects.filter(user=request.user)
@@ -269,12 +288,15 @@ def add_card_account(request):
     return HttpResponse("Add account error")
 
 # region Plotting
+@login_required
 def plot_earnings_data(request):
     return plot_data(request, context="Earnings", group_by="Description")
 
+@login_required
 def plot_spendings_data(request):
     return plot_data(request, context="Spending", group_by="Account Name")
 
+@login_required
 def plot_data(request, context, group_by):
     df = get_sql_data(request.user, context=context)
     if df.empty:
@@ -285,7 +307,7 @@ def plot_data(request, context, group_by):
 
         # Get Unique Account Names
         group_list = df[group_by].unique()
-        print("Unique Accounts: ", group_list)
+        #print("Unique Accounts: ", group_list)
 
         datasets = []
         for i in range(len(group_list)):
@@ -310,13 +332,14 @@ def plot_data(request, context, group_by):
             "labels": labels[0:max_month],
             "datasets": datasets
         }
-        print("Response Data: ", response_data)
+        #print("Response Data: ", response_data)
         # print("Response Data: ", response_data)
         return JsonResponse(response_data, safe=False)
 
 # endregion
 
-def get_sql_data_json(request, verbose=True):
+@login_required
+def get_sql_data_json(request, verbose=False):
     df = get_sql_data(request.user)
     if verbose:
         print("get_sql_data_json: ", df)
@@ -327,6 +350,7 @@ def get_sql_data_json(request, verbose=True):
     df_json = df.to_dict(orient='records')
     return JsonResponse(df_json, safe=False)
 
+@login_required
 def get_sql_data_json_earnings(request):
     df = get_sql_data(request.user, context="Earnings")
     if df.empty:
@@ -335,7 +359,7 @@ def get_sql_data_json_earnings(request):
     df_json = df.to_dict(orient='records')  
     return JsonResponse(df_json, safe=False)
 
-
+@login_required
 def get_accounts_data_monthly_df(request):
     users_accounts = Account.objects.filter(user=request.user)
     master_df = pd.DataFrame()
@@ -355,6 +379,7 @@ def get_accounts_data_monthly_df(request):
     master_df['Month'] = master_df['Date'].dt.month
     return master_df
 
+@login_required
 def get_accounts_data_json(request):
     users_accounts = Account.objects.filter(user=request.user)
     json_data = {}
@@ -380,7 +405,7 @@ def plot_accounts_data(request):
 
     # Get Unique Account Names
     accounts_list = df['Account Name'].unique()
-    print("Unique Accounts: ", accounts_list)
+    #print("Unique Accounts: ", accounts_list)
 
     datasets = []
     for i in range(len(accounts_list)):
@@ -403,7 +428,7 @@ def plot_accounts_data(request):
         }
         datasets.append(dataset)
 
-        print(datasets)
+        #print(datasets)
     # Structure the final response
     response_data = {
         "labels": labels[0:max_month],
@@ -418,7 +443,7 @@ def plot_accounts_data_pie(request):
     
     # Get Unique Account Names
     accounts_list = df['Account Name'].unique()
-    print("Unique Accounts: ", accounts_list)
+    #print("Unique Accounts: ", accounts_list)
 
     data_list = []
     background_color_list = []
@@ -447,7 +472,7 @@ def plot_accounts_data_pie(request):
         "datasets": datasets
     }
 
-    print("Response Data: ", response_data)
+    #print("Response Data: ", response_data)
     return JsonResponse(response_data, safe=False)
 
 @login_required
@@ -524,6 +549,7 @@ def update_row(request):
         return JsonResponse({'success': True})
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
+@login_required
 def delete_row(request):
     if request.method == 'POST':
         # Parse the incoming JSON data

@@ -184,7 +184,7 @@ def post_to_sql(df, request_user)->None:
         )
     print("\033[92mSuccess!\033[0m")
 
-def get_sql_data(user, context="Spending", verbose=True):
+def get_sql_data(user, context="Spending", verbose=False):
     if context == "Spending":
         dict = Transaction.objects.filter(user=user).select_related('account_name', 'category').values(
             'id', 'date', 'amount', 'account_name__name', 'category__name', 'description'
@@ -204,7 +204,7 @@ def get_sql_data(user, context="Spending", verbose=True):
     if df.empty:
         print("No data found in the database. Import data first.")
     else:
-        df = strcuture_sql_data(df, context=context, verbose=True)    
+        df = strcuture_sql_data(df, context=context, verbose=False)    
     return df
     
 def strcuture_sql_data(df, context, verbose):

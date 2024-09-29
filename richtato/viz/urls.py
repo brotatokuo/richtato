@@ -54,4 +54,5 @@ urlpatterns = [
     # Updating data
     path('update-row/', views.update_row, name='update_row'),
     path('delete-row/', views.delete_row, name='delete_row'),
+    path("update-accounts", views.update_accounts, name="update_accounts"),
 ]
