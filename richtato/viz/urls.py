@@ -47,7 +47,6 @@ urlpatterns = [
     path('earnings_data_entry', views.earnings_data_entry, name='earnings_data_entry'),
 
     # Data Import/ Export
-    path("data", views.data, name="data"),
     path('export-statements-data', views.export_statements_data, name="export_statements_data"),
     path('import-statements-data', views.import_statements_data, name="import_statements_data"),
 

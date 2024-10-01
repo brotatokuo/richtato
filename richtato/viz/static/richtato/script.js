@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
             }
         });
     }
+    
 });
 
 // Toggle password visibility
@@ -38,49 +39,45 @@ function togglePasswordVisibility(id, button) {
     }
 }
 
+myChart = null;
 async function stackedFetchChartData(url, canvasId, tableData, group_by) {
     try {
+        const year = parseInt(document.getElementById('year-filter').value);
+        console.log("Year:", year); 
         const response = await fetch(url);  // Fetch data from the provided URL
-        console.log("response:", response); 
         const data = await response.json();
-
+        console.log("Original data:", data);
+        // Filter the data by year
+        const filteredDataByYear = data.filter(item => item.year === year);
+        console.log("Filtered data:", filteredDataByYear);
+        
         const ctx = document.getElementById(canvasId).getContext('2d');
-        const myChart = new Chart(ctx, {
+
+        // Destroy existing chart instance if it exists
+        if (myChart) {
+            myChart.destroy();
+        }
+
+        myChart = new Chart(ctx, {
             type: 'bar',
-            data: data,
+            data: {
+                labels: filteredDataByYear.map(d => d.labels).flat(),  // Ensure your data structure supports this
+                datasets: filteredDataByYear.map(d => d.data).flat()  // Adjust if your data structure is different
+            },
             options: {
                 responsive: true,
-                onClick: (event, elements) => {
-                    if (elements.length > 0) {
-                        const element = elements[0];
-                        const datasetIndex = element.datasetIndex;
-                        const dataIndex = element.index;
-
-                        const datasetLabel = data.datasets[datasetIndex].label;
-                        const value = data.datasets[datasetIndex].data[dataIndex];
-                        const label = data.labels[dataIndex];
-                        const monthNumber = dataIndex + 1;
-
-                        // Display the clicked bar data
-                        // alert(`Label: ${label}\nDataset: ${datasetLabel}\nValue: ${value}\nData Index: ${dataIndex}`);
-
-                        // Update the table with the dataset details
-                        updateTable(tableData, label, datasetLabel, monthNumber, group_by);
-
-                    }
-                },
                 scales: {
                     x: {
-                        stacked: true  // Stack the bars along the x-axis
+                        stacked: true
                     },
                     y: {
                         beginAtZero: true,
-                        stacked: true  // Stack the bars along the y-axis
+                        stacked: true
                     }
                 },
                 plugins: {
                     legend: {
-                        position: 'top'  // Move the legend to the top
+                        position: 'top'
                     }
                 }
             }
@@ -89,6 +86,7 @@ async function stackedFetchChartData(url, canvasId, tableData, group_by) {
         console.error("Error fetching stacked chart data:", error);
     }
 }
+
 
 function updateTable(transactions, month, account, monthNumber, group_by) {
     const title1 = document.getElementById('detailed-table-title-1');

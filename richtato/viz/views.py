@@ -144,16 +144,29 @@ def settings(request):
         "card_options": card_options,
         "accounts_data": accounts_data,
         "account_types": account_types,
-        "category_list": category_list
+        "category_list": category_list,
+        "import_path": card_statements_folder_path,
+        "export_path": data_folder_path
     })
 
 @login_required
 def accounts(request):
     accounts_data = get_latest_accounts_data(request)
-    print("Accounts Data: ", accounts_data)
+    print("Accounts Data accounts.html: ", accounts_data)
+    years = None
+    if accounts_data:
+        accounts_histories = AccountHistory.objects.filter(account__user=request.user)
+        balance_history_df = pd.DataFrame.from_records(accounts_histories.values('account__name', 'balance_history', 'date_history'))
+        # Convert dates to datetime
+        balance_history_df['date_history'] = pd.to_datetime(balance_history_df['date_history'])
+        # Extract year and month-day for labels
+        balance_history_df['year'] = balance_history_df['date_history'].dt.year
+        years =  balance_history_df['year'].unique()
+
     return render(request, "accounts.html", {
         "networth": request.user.networth(),
         "accounts_data": accounts_data,
+        "years": years
     })
 
 @login_required
@@ -169,17 +182,13 @@ def export_statements_data(request):
     transactions_df = get_sql_data(request.user, context="Transactions")
     earnings_df = get_sql_data(request.user, context="Earnings")
     accounts_df = get_accounts_data_monthly_df(request)
-
-@login_required
-def data(request):
-    return render(request, 'data.html')
 # endregion
 
 # region Data Routes
 @login_required
 def get_latest_accounts_data(request):
     user_accounts = request.user.account.all()
-    accounts_data = []
+    json_data = []
     for account in user_accounts:
         # Get the latest balance history record for the account
         balance_history = account.history.all()
@@ -201,14 +210,18 @@ def get_latest_accounts_data(request):
         latest_balance = balance_list_sorted[0] if balance_list_sorted else None
 
         # Collect the necessary data for each account
-        accounts_data.append({
+        accounts_data = {
             'account': account,
             'balance': latest_balance,
             'date': latest_date,
             'history': list(zip(balance_list, date_list)) 
-        })
+        }
+        json_data.append({
+            "account_name": account.name,
+            "accounts_data": accounts_data})
 
-        return accounts_data
+    print("JSON DATA: ", json_data)
+    return json_data
 
 @login_required
 def add_account(request):
@@ -224,6 +237,8 @@ def add_account(request):
             print("Account name already exists. Please choose a different name.")
             return render(request, "settings.html",{
                 "error_account_message": "Account name already exists. Please choose a different name.",
+                "import_path": card_statements_folder_path,
+                "export_path": data_folder_path
             })
         # Create and save the account
         account = Account(
@@ -274,6 +289,8 @@ def add_card_account(request):
         if account_name in all_accounts_names:
             return render(request, "settings.html",{
                 "error_card_message": "Card Name already exists. Please choose a different name.",
+                "import_path": card_statements_folder_path,
+                "export_path": data_folder_path
             })
         
         # Create and save the Card account
@@ -289,57 +306,61 @@ def add_card_account(request):
 
 # region Plotting
 @login_required
-def plot_earnings_data(request):
-    return plot_data(request, context="Earnings", group_by="Description")
+def plot_earnings_data(request, verbose=False):
+    return plot_data(request, context="Earnings", group_by="Description", verbose=verbose)
 
 @login_required
-def plot_spendings_data(request):
-    return plot_data(request, context="Spending", group_by="Account Name")
+def plot_spendings_data(request, verbose=True):
+    data_dict = plot_data(request, context="Spending", group_by="Account Name", verbose=verbose)
+    if verbose:
+        print("Data Dict: ", data_dict)
+    return data_dict
 
 @login_required
-def plot_data(request, context, group_by):
+def plot_data(request, context, group_by, verbose=False):
     df = get_sql_data(request.user, context=context)
     if df.empty:
         print("\033[91mviews.py - plot_data: No data available. Please import data first.\033[0m")
     else:
-        # Generating Labels (Months)
-        labels = [calendar.month_abbr[i] for i in range(1, 13)]
-
-        # Get Unique Account Names
-        group_list = df[group_by].unique()
-        #print("Unique Accounts: ", group_list)
-
         datasets = []
-        for i in range(len(group_list)):
-            df_account = df[df[group_by] == group_list[i]]
-            df_monthly_sum = df_account.groupby('Month')['Amount'].sum().reset_index()
-            max_month = df_monthly_sum['Month'].max()
-            all_months = pd.DataFrame({'Month': range(1, max_month+1)})
-            df_complete = all_months.merge(df_monthly_sum, on='Month', how='left').fillna(0)
-            monthly_spending_sum_list = df_complete['Amount'].tolist()
+        # Split by Year
+        year_list = df['Year'].unique()
+        for year in year_list:
+            df_year = df[df['Year'] == year]
+            # Generating Labels (Months)
+            labels = [calendar.month_abbr[i] for i in range(1, 13)]
+            # Get Unique Account Names
+            group_list = df_year[group_by].unique()
+            #print("Unique Accounts: ", group_list)
+            year_dataset_list = []
+            for i in range(len(group_list)):
+                df_account = df_year[df_year[group_by] == group_list[i]]
+                df_monthly_sum = df_account.groupby('Month')['Amount'].sum().reset_index()
+                max_month = df_monthly_sum['Month'].max()
+                all_months = pd.DataFrame({'Month': range(1, max_month+1)})
+                df_complete = all_months.merge(df_monthly_sum, on='Month', how='left').fillna(0)
+                monthly_spending_sum_list = df_complete['Amount'].tolist()
 
-            dataset = {
-                "label": group_list[i],  # Dataset label
-                "backgroundColor": color_picker(i)[0],  # Background color
-                "borderColor": color_picker(i)[1],  # Border color
-                "borderWidth": 1,
-                "data": monthly_spending_sum_list
-            }
-            datasets.append(dataset)
-
-        # Structure the final response
-        response_data = {
-            "labels": labels[0:max_month],
-            "datasets": datasets
-        }
-        #print("Response Data: ", response_data)
-        # print("Response Data: ", response_data)
-        return JsonResponse(response_data, safe=False)
+                year_dataset = {
+                    "label": group_list[i],  # Dataset label
+                    "backgroundColor": color_picker(i)[0],  # Background color
+                    "borderColor": color_picker(i)[1],  # Border color
+                    "borderWidth": 1,
+                    "data": monthly_spending_sum_list
+                }
+                year_dataset_list.append(year_dataset)
+            datasets.append({
+                "year": int(year),
+                "labels": labels[0:max_month],
+                "data": year_dataset_list})
+        if verbose:
+            print("Plot Data - Datasets: ", datasets)
+        return JsonResponse(datasets, safe=False)
 
 # endregion
 
 @login_required
-def get_sql_data_json(request, verbose=False):
+def get_sql_data_json(request, verbose=True):
     df = get_sql_data(request.user)
     if verbose:
         print("get_sql_data_json: ", df)
@@ -347,7 +368,15 @@ def get_sql_data_json(request, verbose=False):
         return {}
     df["Description"] = df["Description"].str.slice(0, 20)
     df = df[df["Category"] != "Earnings"]
-    df_json = df.to_dict(orient='records')
+
+    # Split by Year
+    dict = {}
+    year_list = df['Year'].unique()
+    for year in year_list:
+        df_year = df[df['Year'] == year]
+        df_json = df_year.to_dict(orient='records')
+        dict[year] = df_json
+    print("get_sql_data_json dict: ", dict)
     return JsonResponse(df_json, safe=False)
 
 @login_required
@@ -381,94 +410,109 @@ def get_accounts_data_monthly_df(request):
 
 @login_required
 def get_accounts_data_json(request):
-    users_accounts = Account.objects.filter(user=request.user)
-    json_data = {}
-    for account in users_accounts:
-        balance_history = account.history.all()
-        balance_history_df = pd.DataFrame(balance_history.values())
-        balance_history_df['date_history'] = pd.to_datetime(balance_history_df['date_history'])
-        balance_history_df.drop('id', axis=1, inplace=True)
+    accounts_histories = AccountHistory.objects.filter(account__user=request.user)
+    balance_history_df = pd.DataFrame.from_records(accounts_histories.values('account__name', 'balance_history', 'date_history'))
+    
+    # Convert dates to datetime
+    balance_history_df['date_history'] = pd.to_datetime(balance_history_df['date_history'])
+    
+    # Extract year and month-day for labels
+    balance_history_df['year'] = balance_history_df['date_history'].dt.year
+    balance_history_df['label'] = balance_history_df['date_history'].dt.strftime('%m-%d')
 
-        json_data[account.name] = {
-            "name": account.name,
-            "balance_list": balance_history_df['balance_history'].tolist(),
-            "date_list": balance_history_df['date_history'].dt.strftime('%Y-%m-%d').tolist()
+    # Organize data by year
+    json_data = []
+    for year in balance_history_df['year'].unique():
+        year = int(year)
+        year_df = balance_history_df[balance_history_df['year'] == year]
+        
+        data_for_year = {
+            'year': year,
+            'labels': year_df['label'].tolist(),
+            'data': []
         }
-
+        
+        # Group by account within the year
+        for account_name in year_df['account__name'].unique():
+            account_df = year_df[year_df['account__name'] == account_name]
+            account_data = {
+                'account': account_name,
+                'balances': account_df['balance_history'].tolist()
+            }
+            data_for_year['data'].append(account_data)
+        
+        json_data.append(data_for_year)
+    print("Accounts Data JSON: ", json_data)
     return JsonResponse(json_data, safe=False)
+
 
 @login_required
 def plot_accounts_data(request):
     df = get_accounts_data_monthly_df(request)
-    # Generating Labels (Months)
-    labels = [calendar.month_abbr[i] for i in range(1, 13)]
+    df['YearMonth'] = df['Date'].dt.to_period('M')
+    df = df.sort_values('Date').drop_duplicates(['Account Name', 'YearMonth'], keep='last')
+    df = df.drop(columns=['YearMonth'])
+    years = df['Date'].dt.year.unique()
+    json_data = []
+    for year in years:
+        df_year = df[df['Date'].dt.year == year]
+        # Generating Labels (Months)
+        labels = [calendar.month_abbr[i] for i in range(1, 13)]
 
-    # Get Unique Account Names
-    accounts_list = df['Account Name'].unique()
-    #print("Unique Accounts: ", accounts_list)
+        # Get Unique Account Names
+        accounts_list = df_year['Account Name'].unique()
 
-    datasets = []
-    for i in range(len(accounts_list)):
-        df_account = df[df["Account Name"] == accounts_list[i]]
+        datasets = []
+        for i in range(len(accounts_list)):
+            df_account = df_year[df_year["Account Name"] == accounts_list[i]]
+            max_month = df_account['Month'].max()
+            all_months = pd.DataFrame({'Month': range(1, max_month+1)})
+            # # Merge the DataFrame with the complete list of months and fill missing values with 0
+            df_complete = all_months.merge(df_account, on='Month', how='left').fillna(0)
+            monthly_list = df_complete['Balance'].tolist()
 
-        df_monthly_sum = df_account.groupby('Month')['Balance'].sum().reset_index()
-        max_month = df_monthly_sum['Month'].max()
+            dataset = {
+                "label": accounts_list[i],  # Dataset label
+                "backgroundColor": color_picker(i)[0],  # Background color
+                "borderColor": color_picker(i)[1],  # Border color
+                "borderWidth": 1,
+                "data": monthly_list
+            }
+            datasets.append(dataset)
 
-        all_months = pd.DataFrame({'Month': range(1, max_month+1)})
-        # # Merge the DataFrame with the complete list of months and fill missing values with 0
-        df_complete = all_months.merge(df_monthly_sum, on='Month', how='left').fillna(0)
-        monthly_list = df_complete['Balance'].tolist()
+        json_data.append({
+            "year": int(year),
+            "labels": labels[0:max_month],
+            "data": datasets
+        })
 
-        dataset = {
-            "label": accounts_list[i],  # Dataset label
-            "backgroundColor": color_picker(i)[0],  # Background color
-            "borderColor": color_picker(i)[1],  # Border color
-            "borderWidth": 1,
-            "data": monthly_list
-        }
-        datasets.append(dataset)
-
-        #print(datasets)
-    # Structure the final response
-    response_data = {
-        "labels": labels[0:max_month],
-        "datasets": datasets
-    }
-    # print("Response Data: ", response_data)
-    return JsonResponse(response_data, safe=False)
+    return JsonResponse(json_data, safe=False)
 
 @login_required
 def plot_accounts_data_pie(request):
-    df = get_accounts_data_monthly_df(request)
-    
-    # Get Unique Account Names
-    accounts_list = df['Account Name'].unique()
-    #print("Unique Accounts: ", accounts_list)
-
+    accounts_list = list(Account.objects.filter(user=request.user))
+    accounts_names_list = [account.name for account in accounts_list]
     data_list = []
     background_color_list = []
     border_color_list = []
-
-    for i in range(len(accounts_list)):
-        df_account = df[df["Account Name"] == accounts_list[i]]
-
-        df_account = df_account.sort_values(by='Date')
-        latest_balance = df_account['Balance'].iloc[-1]
-        balance_date = df_account['Date'].iloc[-1]
-
-        data_list.append(latest_balance)
+    for i, account in enumerate (accounts_list):
+        latest_balance = account.latest_balance
+        print(account, "Latest Balance: ", latest_balance)
+        data_list.append(account.latest_balance)
         background_color_list.append(color_picker(i)[0])
         border_color_list.append(color_picker(i)[1])
 
-    datasets = [{
-        "data": data_list,
-        "backgroundColor": background_color_list,
-        "borderColor": border_color_list 
-    }]
+        datasets = [{
+            "data": data_list,
+            "backgroundColor": background_color_list,
+            "borderColor": border_color_list 
+        }]
+
+    print("Datasets: ", datasets)
 
     # Structure the final response
     response_data = {
-        "labels": accounts_list.tolist(),
+        "labels": accounts_names_list,
         "datasets": datasets
     }
 
@@ -484,10 +528,10 @@ def spending_data_entry(request):
         date = request.POST.get('date')
         category = request.POST.get('category')
 
-        category = Category.objects.get(name=category)
+        category = Category.objects.get(user=request.user, name=category)
         print("Category Search: ", category, type(category))
         account = request.POST.get('account')
-        account_name = CardAccount.objects.get(name=account)
+        account_name = CardAccount.objects.get(user=request.user, name=account)
 
         # Create and save the transaction
         transaction = Transaction(
@@ -511,7 +555,7 @@ def earnings_data_entry(request):
         date = request.POST.get('date')
         account = request.POST.get('account')
 
-        account_name = Account.objects.get(name=account)
+        account_name = Account.objects.get(user=request.user, name=account)
         # Create and save the transaction
         transaction = Earning(
             user=request.user,

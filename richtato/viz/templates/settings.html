@@ -142,6 +142,19 @@
                 </table>
                 <button class="btn-secondary" onclick="addRow()">Add Row</button>
         </div>
+
+        <br>
+        <br>
+
+        <div id="Data Settings"  class="settings-form">
+            <h2>Data Options</h2>
+            <div class="form-group">
+                <p>Import Path: {{import_path}}</p>
+                <button class="btn-primary" a href="{% url 'import_statements_data' %}">Import Data</button>
+                <p>Export Path: {{export_path}}</p>
+                <button class="btn-primary" a href="{% url 'export_statements_data' %}">Export Data</button>
+            </div>
+        </div>
     </div>
 
     <script>

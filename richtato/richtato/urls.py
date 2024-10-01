@@ -20,4 +20,7 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('viz.urls')),  # Include Viz app URLs
+    path('accounts/', include('accounts.urls')),
+    path('earnings/', include('earnings.urls')),
+    path('spendings/', include('spendings.urls')),
 ]

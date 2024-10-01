@@ -33,13 +33,6 @@ class Account(models.Model):
     def __str__(self):
         return f"[{self.user}] {self.name}"
 
-class CardAccount(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="card_account")
-    name = models.CharField(max_length=100)
-
-    def __str__(self):
-        return f"[{self.user}] {self.name}"
-
 class AccountHistory(models.Model):
     account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name="history")
     balance_history = models.DecimalField(max_digits=10, decimal_places=2)
@@ -51,6 +44,13 @@ class AccountHistory(models.Model):
     def __str__(self):
         return f"{self.account} Balance on {self.date_history}: {self.balance_history}"
 
+class CardAccount(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="card_account")
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f"[{self.user}] {self.name}"
+    
 class Category(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="category")
     name = models.CharField(max_length=100)

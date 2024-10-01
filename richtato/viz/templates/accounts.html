@@ -9,14 +9,24 @@
         <h2>Networth: ${{ networth|floatformat:2|intcomma }}</h2>
     </div>
 
+    <h2>Latest Data</h2>
     <div class="bar-chart">
         <canvas id="pieChart"></canvas>
     </div>
 
     <br>
     <br>
-
+    
+    <h2>Historical Data</h2>
     <div class="bar-chart">
+        <div class="year-filter">
+            <label for="year-filter">Year:</label>
+            <select id="year-filter" name="year-filter">
+                {% for year in years %}
+                    <option value="{{ year }}">{{ year }}</option>
+                {% endfor %}
+            </select>
+        </div>
         <canvas id="accountsChart"></canvas>
     </div>
 
@@ -89,21 +99,62 @@
 </div>
 
 <script src="{% static 'richtato/accounts_script.js' %}"></script>
+
 <script>
-    // Run the fetchChartData function from script.js
-    const dataUrl = "{% url 'plot_accounts_data' %}";
+    const graphDataUrl = "{% url 'plot_accounts_data' %}";
     const piedataUrl = "{% url 'plot_accounts_data_pie' %}";
-    fetch("{% url 'get_accounts_data_json' %}")
-        .then(response => response.json())
-        .then(tableData => {
-            console.log("fetch data");
-            console.log(tableData);
-            
-            // Call the chart function after data is successfully fetched
-            stackedFetchChartData(dataUrl, "accountsChart", tableData);
-            pieChartData(piedataUrl, "pieChart", tableData);
-        })
-        .catch(error => console.error('Error:', error));
-    
+    const tableDataUrl = "{% url 'get_accounts_data_json' %}";
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const yearFilter = document.getElementById('year-filter');
+        if (yearFilter) {
+            yearFilter.addEventListener('change', () => {
+                console.log("Year filter change event triggered");
+                fetchDataAndUpdateChart();
+            });
+        }
+
+        // Initial fetch and chart setup
+        pieChartData(piedataUrl, "pieChart", tableDataUrl);
+        fetchDataAndUpdateChart();
+    });
+
+    async function pieChartData(url, canvasId) {
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            console.log("Pie chart data:", data);
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const myChart = new Chart(ctx, {
+                type: 'doughnut',  // Use 'doughnut' type for the chart
+                data: data,
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top'  // Position the legend at the top
+                        },
+                        tooltip: {
+                            enabled: true  // Enable tooltips
+                        },
+                    }
+                },
+            });
+        } catch (error) {
+            console.error("Error fetching pie chart data:", error);
+        }
+    }
+    // Function to fetch data and update chart
+    function fetchDataAndUpdateChart() {
+        console.log("Fetching table data");
+        fetch(tableDataUrl)
+            .then(response => response.json())
+            .then(tableData => {
+                console.log("Table data received:", tableData);
+                // Call the chart function after data is successfully fetched
+                stackedFetchChartData(graphDataUrl, "accountsChart", tableData, "Account Name");
+            })
+            .catch(error => console.error('Error fetching table data:', error));
+    }
 </script>
 {% endblock %}

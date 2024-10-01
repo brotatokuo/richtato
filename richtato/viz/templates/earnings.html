@@ -8,9 +8,9 @@
         </div>
         
         {% if years %}
-            <div class="dropdown">
-                <label for="dropdown">Year:</label>
-                <select id="dropdown" name="dropdown">
+            <div class="year-filter">
+                <label for="year-filter">Year:</label>
+                <select id="year-filter" name="year-filter">
                     {% for year in years %}
                         <option value="{{ year }}">{{ year }}</option>
                     {% endfor %}
@@ -75,18 +75,33 @@
     </div>
     
     <script>
-        // Run the fetchChartData function from script.js
-        const dataUrl = "{% url 'plot_earnings_data' %}";
-        fetch("{% url 'get_sql_data_json_earnings' %}")
-            .then(response => response.json())
-            .then(tableData => {
-                console.log("fetch table data");
-                console.log(tableData);
-                
-                // Call the chart function after data is successfully fetched
-                stackedFetchChartData(dataUrl, "myChart3", tableData, group_by="Description");
-            })
-            .catch(error => console.error('Error:', error));
-        
+        const graphDataUrl = "{% url 'plot_earnings_data' %}";
+        const tableDataUrl = "{% url 'get_sql_data_json_earnings' %}";
+    
+        // Function to fetch data and update chart
+        function fetchDataAndUpdateChart() {
+            console.log("Fetching table data");
+            fetch(tableDataUrl)
+                .then(response => response.json())
+                .then(tableData => {
+                    console.log("Table data received:", tableData);
+                    // Call the chart function after data is successfully fetched
+                    stackedFetchChartData(graphDataUrl, "myChart3", tableData, group_by="Description");
+                })
+                .catch(error => console.error('Error fetching table data:', error));
+        }
+    
+        document.addEventListener('DOMContentLoaded', () => {
+            const yearFilter = document.getElementById('year-filter');
+            if (yearFilter) {
+                yearFilter.addEventListener('change', () => {
+                    console.log("Year filter change event triggered");
+                    fetchDataAndUpdateChart();
+                });
+            }
+    
+            // Initial fetch and chart setup
+            fetchDataAndUpdateChart();
+        });
     </script>
 {% endblock %}
