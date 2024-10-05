@@ -62,12 +62,13 @@
                     <tbody>
                     {% for item in accounts_data %}
                         <tr>
-                            <td>{{ item.account.name }}</td>
-                            <td>{{ item.account.type|capfirst }}</td>
-                            <td>{% if item.date %}{{ item.date|date:"Y-m-d" }}{% else %}No history{% endif %}</td>
-                            <td>${{ item.balance|floatformat:2|intcomma }}</td>
+                            <td>{{ item.accounts_data.account.name }}</td>
+                            <td>{{ item.accounts_data.account.type|capfirst }}</td>
+                            <td>{% if item.accounts_data.date %}{{ item.accounts_data.date|date:"Y-m-d" }}{% else %}No history{% endif %}</td>
+                            <td>${{ item.accounts_data.balance|floatformat:2|intcomma }}</td>
                         </tr>
                     {% endfor %}
+                    
                     </tbody>
                 </table>
 

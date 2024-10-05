@@ -21,11 +21,11 @@ card_statements_folder_path = os.path.join(data_folder_path, "Credit Card Statem
 file_name = "master_creditcard_data.xlsx"
 data_file_path = os.path.join(data_folder_path, file_name)
 
-# region pages
-def index(request):
+# region Main Pages
+def view_index(request):
     return render(request, 'index.html')
 
-def login_view(request):
+def view_login(request):
     if request.method == "POST":
         # Attempt to sign user in
         username = request.POST["username"]
@@ -35,7 +35,7 @@ def login_view(request):
         # Check if authentication successful
         if user is not None:
             login(request, user)
-            return HttpResponseRedirect(reverse("index"))
+            return HttpResponseRedirect(reverse("view_index"))
         else:
             return render(request, "login.html", {
                 "username": username,
@@ -47,11 +47,11 @@ def login_view(request):
             "message": None,
     })
 
-def logout_view(request):
+def view_logout(request):
     logout(request)
-    return HttpResponseRedirect(reverse("index"))
+    return HttpResponseRedirect(reverse("view_index"))
 
-def register_view(request):
+def view_register(request):
     if request.method == "POST":
         username = request.POST["username"]
 
@@ -88,17 +88,16 @@ def register_view(request):
             })
 
         login(request, user)
-        return HttpResponseRedirect(reverse("index"))
+        return HttpResponseRedirect(reverse("view_index"))
     else:
         return render(request, "register.html")
 
 @login_required
-def spendings(request):
+def view_spendings(request):
     spending_dates = Transaction.objects.filter(user=request.user).exclude(date__isnull=True).values_list('date', flat=True).distinct()
     years_list = sorted(set(date.year for date in spending_dates))
     transaction_accounts = CardAccount.objects.filter(user=request.user).values_list('name', flat=True).distinct()
     category_list = list(Category.objects.filter(user=request.user).values_list('name', flat=True))
-
     print("Transaction Accounts: ", transaction_accounts)
     return render(request, 'spendings.html',
                   {"years": years_list,
@@ -107,7 +106,7 @@ def spendings(request):
                    })
 
 @login_required
-def earnings(request):
+def view_earnings(request):
     earnings_dates = Earning.objects.filter(user=request.user).exclude(date__isnull=True).values_list('date', flat=True).distinct()
     years_list = sorted(set(date.year for date in earnings_dates))
     account_names = Account.objects.filter(user=request.user)
@@ -123,34 +122,7 @@ def earnings(request):
                    })
 
 @login_required
-def spending_entry(request):
-    transaction_accounts = Transaction.objects.filter(user=request.user).values_list('account_name', flat=True).distinct()
-    entries = Transaction.objects.filter(user=request.user).exclude(category="Earnings").order_by('-date')
-    print(entries)
-    return render(request, 'spending_entry.html',
-                  {"entries": entries,
-                     "transaction_accounts": transaction_accounts,
-                   })
-
-@login_required
-def settings(request):
-    card_options = list(CardAccount.objects.filter(user=request.user).values_list('name', flat=True))
-    print("Card Options: ", card_options)
-    accounts_data = get_latest_accounts_data(request)
-    account_types = account_choices
-    category_list = list(Category.objects.filter(user=request.user))
-    print("Category List: ", category_list)
-    return render(request, 'settings.html', {
-        "card_options": card_options,
-        "accounts_data": accounts_data,
-        "account_types": account_types,
-        "category_list": category_list,
-        "import_path": card_statements_folder_path,
-        "export_path": data_folder_path
-    })
-
-@login_required
-def accounts(request):
+def view_accounts(request):
     accounts_data = get_latest_accounts_data(request)
     print("Accounts Data accounts.html: ", accounts_data)
     years = None
@@ -170,21 +142,162 @@ def accounts(request):
     })
 
 @login_required
-def import_statements_data(request):
-    sort_statements()
-    compiled_df = compile_statements()
-    df = categorize_transactions(compiled_df)
-    post_to_sql(df, request.user)
-    return HttpResponse("Renamed Statements and added to SQL database")
+def view_settings(request):
+    card_options = list(CardAccount.objects.filter(user=request.user).values_list('name', flat=True))
+    print("Card Options: ", card_options)
+    accounts_data = get_latest_accounts_data(request)
+    account_types = account_choices
+    category_list = list(Category.objects.filter(user=request.user))
+    print("Category List: ", category_list)
+    return render(request, 'settings.html', {
+        "card_options": card_options,
+        "accounts_data": accounts_data,
+        "account_types": account_types,
+        "category_list": category_list,
+        "import_path": card_statements_folder_path,
+        "export_path": data_folder_path
+    })
+
+# region Spendings
+@login_required
+def add_spendings_entry(request):
+    if request.method == "POST":
+        # Get the form data
+        description = request.POST.get('description')
+        amount = request.POST.get('amount')
+        date = request.POST.get('date')
+        category = request.POST.get('category')
+
+        category = Category.objects.get(user=request.user, name=category)
+        print("Category Search: ", category, type(category))
+        account = request.POST.get('account')
+        account_name = CardAccount.objects.get(user=request.user, name=account)
+
+        # Create and save the transaction
+        transaction = Transaction(
+            user=request.user,
+            account_name = account_name,
+            description=description,
+            category=category,
+            date=date,
+            amount=amount,
+        )
+        transaction.save()
+        return HttpResponseRedirect(reverse("view_spendings"))
+    return HttpResponse("Data Entry Error")
 
 @login_required
-def export_statements_data(request):
-    transactions_df = get_sql_data(request.user, context="Transactions")
-    earnings_df = get_sql_data(request.user, context="Earnings")
-    accounts_df = get_accounts_data_monthly_df(request)
-# endregion
+def plot_spendings_data(request, verbose=True):
+    data_dict = _plot_data(request, context="Spending", group_by="Account Name", verbose=verbose)
+    if verbose:
+        print("Data Dict: ", data_dict)
+    return data_dict
+
+# region Earnings
+@login_required
+def add_earnings_entry(request):
+    if request.method == "POST":
+        # Get the form data
+        description = request.POST.get('description')
+        amount = request.POST.get('amount')
+        date = request.POST.get('date')
+        account = request.POST.get('account')
+
+        account_name = Account.objects.get(user=request.user, name=account)
+        # Create and save the transaction
+        transaction = Earning(
+            user=request.user,
+            account_name = account_name,
+            description=description,
+            date=date,
+            amount=amount,
+        )
+        transaction.save()
+        return HttpResponseRedirect(reverse("view_earnings"))
+    return HttpResponse("Data Entry Error")
+
+@login_required
+def plot_earnings_data(request, verbose=False):
+    return _plot_data(request, context="Earnings", group_by="Description", verbose=verbose)
 
 # region Data Routes
+
+
+
+# region Plotting
+@login_required
+def _plot_data(request, context, group_by, verbose=False):
+    df = get_transaction_data(request.user, context=context)
+    if df.empty:
+        print("\033[91mviews.py - _plot_data: No data available. Please import data first.\033[0m")
+    else:
+        datasets = []
+        # Split by Year
+        year_list = df['Year'].unique()
+        for year in year_list:
+            df_year = df[df['Year'] == year]
+            # Generating Labels (Months)
+            labels = [calendar.month_abbr[i] for i in range(1, 13)]
+            # Get Unique Account Names
+            group_list = df_year[group_by].unique()
+            #print("Unique Accounts: ", group_list)
+            year_dataset_list = []
+            for i in range(len(group_list)):
+                df_account = df_year[df_year[group_by] == group_list[i]]
+                df_monthly_sum = df_account.groupby('Month')['Amount'].sum().reset_index()
+                max_month = df_monthly_sum['Month'].max()
+                all_months = pd.DataFrame({'Month': range(1, max_month+1)})
+                df_complete = all_months.merge(df_monthly_sum, on='Month', how='left').fillna(0)
+                monthly_spending_sum_list = df_complete['Amount'].tolist()
+
+                year_dataset = {
+                    "label": group_list[i],  # Dataset label
+                    "backgroundColor": color_picker(i)[0],  # Background color
+                    "borderColor": color_picker(i)[1],  # Border color
+                    "borderWidth": 1,
+                    "data": monthly_spending_sum_list
+                }
+                year_dataset_list.append(year_dataset)
+            datasets.append({
+                "year": int(year),
+                "labels": labels[0:max_month],
+                "data": year_dataset_list})
+        if verbose:
+            print("Plot Data - Datasets: ", datasets)
+        return JsonResponse(datasets, safe=False)
+
+# endregion
+
+@login_required
+def get_transaction_data_json_spendings(request, verbose=True):
+    df = get_transaction_data(request.user)
+    if verbose:
+        print("get_transaction_data_spendings_json: ", df)
+    if df.empty:
+        return {}
+    df["Description"] = df["Description"].str.slice(0, 20)
+    df = df[df["Category"] != "Earnings"]
+
+    # Split by Year
+    dict = {}
+    year_list = df['Year'].unique()
+    for year in year_list:
+        df_year = df[df['Year'] == year]
+        df_json = df_year.to_dict(orient='records')
+        dict[year] = df_json
+    print("get_transaction_data_spendings_json dict: ", dict)
+    return JsonResponse(df_json, safe=False)
+
+@login_required
+def get_transaction_data_json_earnings(request):
+    df = get_transaction_data(request.user, context="Earnings")
+    if df.empty:
+        return {}
+    df["Description"] = df["Description"].str.slice(0, 20)
+    df_json = df.to_dict(orient='records')  
+    return JsonResponse(df_json, safe=False)
+
+# region Accounts
 @login_required
 def get_latest_accounts_data(request):
     user_accounts = request.user.account.all()
@@ -256,7 +369,7 @@ def add_account(request):
         )
         account_history.save()
         
-        return accounts(request)
+        return view_accounts(request)
     return HttpResponse("Add account error")
 
 @login_required
@@ -276,174 +389,8 @@ def update_accounts(request):
             date_history=balance_date,
         )
         account_history.save()
-        return accounts(request)
+        return view_accounts(request)
 
-@login_required
-def add_card_account(request):
-    if request.method=="POST":
-        user_transactions = Transaction.objects.filter(user=request.user)
-        all_accounts_names = [transaction.account_name for transaction in user_transactions]
-        account_name = request.POST.get('account-name')
-
-        # Check if account name already exists
-        if account_name in all_accounts_names:
-            return render(request, "settings.html",{
-                "error_card_message": "Card Name already exists. Please choose a different name.",
-                "import_path": card_statements_folder_path,
-                "export_path": data_folder_path
-            })
-        
-        # Create and save the Card account
-        card_account = CardAccount(
-            user=request.user,
-            name=account_name,
-        )
-        
-        card_account.save()
-        
-        return settings(request)
-    return HttpResponse("Add account error")
-
-# region Plotting
-@login_required
-def plot_earnings_data(request, verbose=False):
-    return plot_data(request, context="Earnings", group_by="Description", verbose=verbose)
-
-@login_required
-def plot_spendings_data(request, verbose=True):
-    data_dict = plot_data(request, context="Spending", group_by="Account Name", verbose=verbose)
-    if verbose:
-        print("Data Dict: ", data_dict)
-    return data_dict
-
-@login_required
-def plot_data(request, context, group_by, verbose=False):
-    df = get_sql_data(request.user, context=context)
-    if df.empty:
-        print("\033[91mviews.py - plot_data: No data available. Please import data first.\033[0m")
-    else:
-        datasets = []
-        # Split by Year
-        year_list = df['Year'].unique()
-        for year in year_list:
-            df_year = df[df['Year'] == year]
-            # Generating Labels (Months)
-            labels = [calendar.month_abbr[i] for i in range(1, 13)]
-            # Get Unique Account Names
-            group_list = df_year[group_by].unique()
-            #print("Unique Accounts: ", group_list)
-            year_dataset_list = []
-            for i in range(len(group_list)):
-                df_account = df_year[df_year[group_by] == group_list[i]]
-                df_monthly_sum = df_account.groupby('Month')['Amount'].sum().reset_index()
-                max_month = df_monthly_sum['Month'].max()
-                all_months = pd.DataFrame({'Month': range(1, max_month+1)})
-                df_complete = all_months.merge(df_monthly_sum, on='Month', how='left').fillna(0)
-                monthly_spending_sum_list = df_complete['Amount'].tolist()
-
-                year_dataset = {
-                    "label": group_list[i],  # Dataset label
-                    "backgroundColor": color_picker(i)[0],  # Background color
-                    "borderColor": color_picker(i)[1],  # Border color
-                    "borderWidth": 1,
-                    "data": monthly_spending_sum_list
-                }
-                year_dataset_list.append(year_dataset)
-            datasets.append({
-                "year": int(year),
-                "labels": labels[0:max_month],
-                "data": year_dataset_list})
-        if verbose:
-            print("Plot Data - Datasets: ", datasets)
-        return JsonResponse(datasets, safe=False)
-
-# endregion
-
-@login_required
-def get_sql_data_json(request, verbose=True):
-    df = get_sql_data(request.user)
-    if verbose:
-        print("get_sql_data_json: ", df)
-    if df.empty:
-        return {}
-    df["Description"] = df["Description"].str.slice(0, 20)
-    df = df[df["Category"] != "Earnings"]
-
-    # Split by Year
-    dict = {}
-    year_list = df['Year'].unique()
-    for year in year_list:
-        df_year = df[df['Year'] == year]
-        df_json = df_year.to_dict(orient='records')
-        dict[year] = df_json
-    print("get_sql_data_json dict: ", dict)
-    return JsonResponse(df_json, safe=False)
-
-@login_required
-def get_sql_data_json_earnings(request):
-    df = get_sql_data(request.user, context="Earnings")
-    if df.empty:
-        return {}
-    df["Description"] = df["Description"].str.slice(0, 20)
-    df_json = df.to_dict(orient='records')  
-    return JsonResponse(df_json, safe=False)
-
-@login_required
-def get_accounts_data_monthly_df(request):
-    users_accounts = Account.objects.filter(user=request.user)
-    master_df = pd.DataFrame()
-    for account in users_accounts:
-        df = pd.DataFrame()
-        
-        balance_history = account.history.all()
-        balance_history_df = pd.DataFrame(balance_history.values())
-
-        df["Date"] = pd.to_datetime(balance_history_df['date_history'])
-        df["Balance"] = balance_history_df['balance_history']
-        df["Account Name"] = account.name
-        master_df = pd.concat([master_df, df])
-
-    # Organizing the data
-
-    master_df['Month'] = master_df['Date'].dt.month
-    return master_df
-
-@login_required
-def get_accounts_data_json(request):
-    accounts_histories = AccountHistory.objects.filter(account__user=request.user)
-    balance_history_df = pd.DataFrame.from_records(accounts_histories.values('account__name', 'balance_history', 'date_history'))
-    
-    # Convert dates to datetime
-    balance_history_df['date_history'] = pd.to_datetime(balance_history_df['date_history'])
-    
-    # Extract year and month-day for labels
-    balance_history_df['year'] = balance_history_df['date_history'].dt.year
-    balance_history_df['label'] = balance_history_df['date_history'].dt.strftime('%m-%d')
-
-    # Organize data by year
-    json_data = []
-    for year in balance_history_df['year'].unique():
-        year = int(year)
-        year_df = balance_history_df[balance_history_df['year'] == year]
-        
-        data_for_year = {
-            'year': year,
-            'labels': year_df['label'].tolist(),
-            'data': []
-        }
-        
-        # Group by account within the year
-        for account_name in year_df['account__name'].unique():
-            account_df = year_df[year_df['account__name'] == account_name]
-            account_data = {
-                'account': account_name,
-                'balances': account_df['balance_history'].tolist()
-            }
-            data_for_year['data'].append(account_data)
-        
-        json_data.append(data_for_year)
-    print("Accounts Data JSON: ", json_data)
-    return JsonResponse(json_data, safe=False)
 
 
 @login_required
@@ -519,54 +466,48 @@ def plot_accounts_data_pie(request):
     #print("Response Data: ", response_data)
     return JsonResponse(response_data, safe=False)
 
+
+
+
+# region Settings
 @login_required
-def spending_data_entry(request):
-    if request.method == "POST":
-        # Get the form data
-        description = request.POST.get('description')
-        amount = request.POST.get('amount')
-        date = request.POST.get('date')
-        category = request.POST.get('category')
-
-        category = Category.objects.get(user=request.user, name=category)
-        print("Category Search: ", category, type(category))
-        account = request.POST.get('account')
-        account_name = CardAccount.objects.get(user=request.user, name=account)
-
-        # Create and save the transaction
-        transaction = Transaction(
-            user=request.user,
-            account_name = account_name,
-            description=description,
-            category=category,
-            date=date,
-            amount=amount,
-        )
-        transaction.save()
-        return HttpResponseRedirect(reverse("spendings"))
-    return HttpResponse("Data Entry Error")
+def import_statements_data(request):
+    sort_statements()
+    compiled_df = compile_statements()
+    df = categorize_transactions(compiled_df)
+    transaction_df_to_db(df, request.user)
+    return HttpResponse("Renamed Statements and added to SQL database")
 
 @login_required
-def earnings_data_entry(request):
-    if request.method == "POST":
-        # Get the form data
-        description = request.POST.get('description')
-        amount = request.POST.get('amount')
-        date = request.POST.get('date')
-        account = request.POST.get('account')
+def export_statements_data(request):
+    transactions_df = get_transaction_data(request.user, context="Transactions")
+    earnings_df = get_transaction_data(request.user, context="Earnings")
+    accounts_df = get_accounts_data_monthly_df(request)
 
-        account_name = Account.objects.get(user=request.user, name=account)
-        # Create and save the transaction
-        transaction = Earning(
+@login_required
+def add_card_account(request):
+    if request.method=="POST":
+        user_transactions = Transaction.objects.filter(user=request.user)
+        all_accounts_names = [transaction.account_name for transaction in user_transactions]
+        account_name = request.POST.get('account-name')
+
+        # Check if account name already exists
+        if account_name in all_accounts_names:
+            return render(request, "settings.html",{
+                "error_card_message": "Card Name already exists. Please choose a different name.",
+                "import_path": card_statements_folder_path,
+                "export_path": data_folder_path
+            })
+        
+        # Create and save the Card account
+        card_account = CardAccount(
             user=request.user,
-            account_name = account_name,
-            description=description,
-            date=date,
-            amount=amount,
+            name=account_name,
         )
-        transaction.save()
-        return HttpResponseRedirect(reverse("earnings"))
-    return HttpResponse("Data Entry Error")
+        card_account.save()
+        
+        return view_settings(request)
+    return HttpResponse("Add account error")
 
 @login_required
 def update_row(request):
@@ -619,3 +560,4 @@ def delete_row(request):
             return JsonResponse({'success': False, 'error': 'Category not found'})
 
     return JsonResponse({'success': False, 'error': 'Invalid request'})
+# endregion

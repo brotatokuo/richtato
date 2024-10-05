@@ -146,27 +146,27 @@
             <div class="navbar-container">
                 <div class="navbar-top">
                     <div class="navbar-left">
-                        <a href="{% url 'index' %}" class="navbar-brand">
+                        <a href="{% url 'view_index' %}" class="navbar-brand">
                             <img src="{% static 'media/richtato.png' %}" alt="Richtato Logo" class="navbar-logo">
                             Richtato
                         </a>
                     </div>
                     {% if user.is_authenticated %}
                         <nav class="navbar-nav">
-                            <a href="{% url 'spendings' %}">Spendings</a>
-                            <a href="{% url 'earnings' %}">Earnings</a>
-                            <a href="{% url 'accounts' %}">Accounts</a>
-                            <a href="{% url 'settings' %}">Settings</a>
+                            <a href="{% url 'view_spendings' %}">Spendings</a>
+                            <a href="{% url 'view_earnings' %}">Earnings</a>
+                            <a href="{% url 'view_accounts' %}">Accounts</a>
+                            <a href="{% url 'view_settings' %}">Settings</a>
                         </nav>
                     {% endif %}
 
                     <div class="navbar-right">
                         {% if user.is_authenticated %}
-                        <a href="{% url 'index' %}" id="navbar-username">{{ user.username }}</a>
-                        <a href="{% url 'logout' %}" class="navbar-login">Log out</a>
+                        <a href="{% url 'view_index' %}" id="navbar-username">{{ user.username }}</a>
+                        <a href="{% url 'view_logout' %}" class="navbar-login">Log out</a>
                         {% else %}
-                            <a href="{% url 'login' %}" class="navbar-login">Log in</a>
-                            <a href="{% url 'register' %}" class="navbar-signup">Sign up</a>
+                            <a href="{% url 'view_login' %}" class="navbar-login">Log in</a>
+                            <a href="{% url 'view_register' %}" class="navbar-signup">Sign up</a>
                         {% endif %}
                     </div>
                 </div>

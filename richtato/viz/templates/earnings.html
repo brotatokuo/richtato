@@ -29,7 +29,7 @@
 
             <div class="login-form">
                 <h2 class="subtitle">Add an Earnings Transaction</h2>
-                <form method="post" action="{% url 'earnings_data_entry' %}">
+                <form method="post" action="{% url 'add_earnings_entry' %}">
                     {% csrf_token %}
 
                     <!-- Account field -->
@@ -76,7 +76,7 @@
     
     <script>
         const graphDataUrl = "{% url 'plot_earnings_data' %}";
-        const tableDataUrl = "{% url 'get_sql_data_json_earnings' %}";
+        const tableDataUrl = "{% url 'get_transaction_data_json_earnings' %}";
     
         // Function to fetch data and update chart
         function fetchDataAndUpdateChart() {

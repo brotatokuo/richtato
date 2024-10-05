@@ -20,31 +20,29 @@ from . import views
 
 urlpatterns = [
     # Navbar
-    path("", views.index, name="index"),
-    path("login", views.login_view, name="login"),
-    path("logout", views.logout_view, name="logout"),
-    path("register", views.register_view, name="register"),
-    path("spendings", views.spendings, name="spendings"),
-    path("earnings", views.earnings, name="earnings"),
-    path("accounts", views.accounts, name="accounts"),
-    path("settings", views.settings, name="settings"),
+    path("", views.view_index, name="view_index"),
+    path("login", views.view_login, name="view_login"),
+    path("logout", views.view_logout, name="view_logout"),
+    path("register", views.view_register, name="view_register"),
+    path("spendings", views.view_spendings, name="view_spendings"),
+    path("earnings", views.view_earnings, name="view_earnings"),
+    path("accounts", views.view_accounts, name="view_accounts"),
+    path("settings", views.view_settings, name="view_settings"),
 
-    # Buttons
-    path("add-account", views.add_account, name="add_account"),
-    path("add-card-account", views.add_card_account, name="add_card_account"),
+    # Spendings
+    path('transaction-data-spendings/', views.get_transaction_data_json_spendings, name='get_transaction_data_json_spendings'),
+    path('spending-data/', views.plot_spendings_data, name='plot_spending_data'),  
+    path('add_spendings_entry', views.add_spendings_entry, name='add_spendings_entry'),
 
-    # Plotting
-    path('plot-spending-data/', views.plot_spendings_data, name='plot_spending_data'),
+    # Earnings
+    path('transaction-data-earnings/', views.get_transaction_data_json_earnings, name='get_transaction_data_json_earnings'),
     path('plot-earnings-data/', views.plot_earnings_data, name='plot_earnings_data'),
-    path('sql-data/', views.get_sql_data_json, name='get_sql_data_json'),
-    path('sql-data_earnings/', views.get_sql_data_json_earnings, name='get_sql_data_json_earnings'),
+    path('add_earnings_entry', views.add_earnings_entry, name='add_earnings_entry'),
+
+    # Accounts
+    path('get-accounts-data/', views.get_accounts_data_json, name='get_accounts_data_json'),
     path('plot-accounts-data/', views.plot_accounts_data, name='plot_accounts_data'),
     path('plot-accounts-data-pie/', views.plot_accounts_data_pie, name='plot_accounts_data_pie'),
-    path('get-accounts-data/', views.get_accounts_data_json, name='get_accounts_data_json'),
-
-    # Manual data entry
-    path('spending_data_entry', views.spending_data_entry, name='spending_data_entry'),
-    path('earnings_data_entry', views.earnings_data_entry, name='earnings_data_entry'),
 
     # Data Import/ Export
     path('export-statements-data', views.export_statements_data, name="export_statements_data"),
@@ -54,4 +52,8 @@ urlpatterns = [
     path('update-row/', views.update_row, name='update_row'),
     path('delete-row/', views.delete_row, name='delete_row'),
     path("update-accounts", views.update_accounts, name="update_accounts"),
+
+    # Buttons
+    path("add-account", views.add_account, name="add_account"),
+    path("add-card-account", views.add_card_account, name="add_card_account"),
 ]

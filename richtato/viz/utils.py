@@ -166,8 +166,8 @@ def categorize_transactions(df):
     return df
 # endregion
 
-# region SQL Functions    
-def post_to_sql(df, request_user)->None:
+# region Spendings/Earnings    
+def transaction_df_to_db(df, request_user)->None:
     """
     Post the dataframe to the SQL database
     """
@@ -184,7 +184,7 @@ def post_to_sql(df, request_user)->None:
         )
     print("\033[92mSuccess!\033[0m")
 
-def get_sql_data(user, context="Spending", verbose=False):
+def get_transaction_data(user, context="Spending", verbose=False)->pd.DataFrame:
     if context == "Spending":
         dict = Transaction.objects.filter(user=user).select_related('account_name', 'category').values(
             'id', 'date', 'amount', 'account_name__name', 'category__name', 'description'
@@ -204,10 +204,67 @@ def get_sql_data(user, context="Spending", verbose=False):
     if df.empty:
         print("No data found in the database. Import data first.")
     else:
-        df = strcuture_sql_data(df, context=context, verbose=False)    
+        df = _clean_db_df(df, context=context, verbose=False)    
     return df
+
+# region Accounts
+def get_accounts_data_monthly_df(request):
+    users_accounts = Account.objects.filter(user=request.user)
+    master_df = pd.DataFrame()
+    for account in users_accounts:
+        df = pd.DataFrame()
+        
+        balance_history = account.history.all()
+        balance_history_df = pd.DataFrame(balance_history.values())
+
+        df["Date"] = pd.to_datetime(balance_history_df['date_history'])
+        df["Balance"] = balance_history_df['balance_history']
+        df["Account Name"] = account.name
+        master_df = pd.concat([master_df, df])
+
+    # Organizing the data
+    master_df['Month'] = master_df['Date'].dt.month
+    return master_df 
+
+def get_accounts_data_json(request):
+    accounts_histories = AccountHistory.objects.filter(account__user=request.user)
+    balance_history_df = pd.DataFrame.from_records(accounts_histories.values('account__name', 'balance_history', 'date_history'))
     
-def strcuture_sql_data(df, context, verbose):
+    # Convert dates to datetime
+    balance_history_df['date_history'] = pd.to_datetime(balance_history_df['date_history'])
+    
+    # Extract year and month-day for labels
+    balance_history_df['year'] = balance_history_df['date_history'].dt.year
+    balance_history_df['label'] = balance_history_df['date_history'].dt.strftime('%m-%d')
+
+    # Organize data by year
+    json_data = []
+    for year in balance_history_df['year'].unique():
+        year = int(year)
+        year_df = balance_history_df[balance_history_df['year'] == year]
+        
+        data_for_year = {
+            'year': year,
+            'labels': year_df['label'].tolist(),
+            'data': []
+        }
+        
+        # Group by account within the year
+        for account_name in year_df['account__name'].unique():
+            account_df = year_df[year_df['account__name'] == account_name]
+            account_data = {
+                'account': account_name,
+                'balances': account_df['balance_history'].tolist()
+            }
+            data_for_year['data'].append(account_data)
+        
+        json_data.append(data_for_year)
+    print("Accounts Data JSON: ", json_data)
+    return JsonResponse(json_data, safe=False)  
+# endregion
+
+# region Helper functions
+def _clean_db_df(df, context, verbose):
     if verbose:
         print("Structure SQL Data")
         print(df.head())
@@ -243,9 +300,6 @@ def strcuture_sql_data(df, context, verbose):
         print(df.head())
     return df
 
-# endregion
-
-# region Helper functions
 def color_picker(i):
     # Preset colors
     colors = [
