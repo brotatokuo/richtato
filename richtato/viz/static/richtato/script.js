@@ -79,6 +79,23 @@ async function stackedFetchChartData(url, canvasId, tableData, group_by) {
                     legend: {
                         position: 'top'
                     }
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const datasetIndex = elements[0].datasetIndex;
+                        const index = elements[0].index;
+                        const datasetLabel = myChart.data.datasets[datasetIndex].label;
+                        const label = myChart.data.labels[index];
+                        console.log("Clicked:", datasetLabel, year, label);
+
+                        // Update the table with the dataset details
+                        
+                        updateTable(tableData, label, datasetLabel, index, group_by);
+                    }   
+
+
+                    // Update the table with the dataset details
+                    // updateTable(datasetLabel, label);
                 }
             }
         });

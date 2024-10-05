@@ -6,7 +6,7 @@
     <div class="login-form">
         <h2>Log in to Richtato</h2>
         <br>
-        <form action="{% url 'login' %}" method="post">
+        <form action="{% url 'view_login' %}" method="post">
             {% csrf_token %}
             <div class="form-group">
                 <label for="username">Username</label>
@@ -27,7 +27,7 @@
         </form>
         <br>
         <br>
-        Not on Richtato? <a href="{% url 'register' %}">Create an account</a>
+        Not on Richtato? <a href="{% url 'view_register' %}">Create an account</a>
     </div>
 </div>
 {% endblock %}

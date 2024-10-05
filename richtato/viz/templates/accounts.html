@@ -44,13 +44,11 @@
                 <tbody>
                 {% for item in accounts_data %}
                     <tr>
-                    {% for balance, date in item.history %}
-                        <td>{{ item.account.name }}</td>
-                        <td>{{ item.account.type|capfirst }}</td>
-                        <td>{{ date|date:"Y-m-d" }}</td>
-                        <td>${{ balance }}</td>
+                        <td>{{ item.accounts_data.account.name }}</td>
+                        <td>{{ item.accounts_data.account.type|capfirst }}</td>
+                        <td>{% if item.accounts_data.date %}{{ item.accounts_data.date|date:"Y-m-d" }}{% else %}No history{% endif %}</td>
+                        <td>${{ item.accounts_data.balance|floatformat:2|intcomma }}</td>
                     </tr>
-                    {% endfor %}
                 {% endfor %}
                 </tbody>
             </table>
@@ -67,7 +65,7 @@
                 <label for="account">Account:</label>
                 <select class="form-control" id="account-id" name="account-id" required>
                     {% for item in accounts_data %}
-                        <option value="{{ item.account.id }}">{{ item.account.name }}</option>
+                        <option value="{{ item.accounts_data.account.id }}">{{ item.accounts_data.account.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -97,8 +95,6 @@
         </form>
     </div>
 </div>
-
-<script src="{% static 'richtato/accounts_script.js' %}"></script>
 
 <script>
     const graphDataUrl = "{% url 'plot_accounts_data' %}";

@@ -7,7 +7,7 @@
         <div class="login-form">
             <h2>Create A Richtato Account</h2>
             <br>
-            <form action="{% url 'register' %}" method="post">
+            <form action="{% url 'view_register' %}" method="post">
                 {% csrf_token %}
                 <div class="form-group">
                     <label for="username">Username</label>
@@ -33,7 +33,7 @@
             </form>
             <br>
             <br>
-            Already have an account? <a href="{% url 'login' %}">Login in here</a>
+            Already have an account? <a href="{% url 'view_login' %}">Login in here</a>
         </div>
     </div>
 </div>
