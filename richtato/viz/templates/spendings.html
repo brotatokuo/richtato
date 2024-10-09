@@ -18,15 +18,19 @@
             </div>
 
             <div class="bar-chart">
-                <canvas id="myChart3"></canvas>
+                <canvas id="barChart"></canvas>
             </div>
         {% endif %}
         
         <div class="detailed-table">
-            <h2 id="detailed-table-title-1"></h2>
-            <h2 id="detailed-table-title-2"></h2>
+            <div class="table-header">
+                <h2 class="table-title" id="detailed-table-title-1"></h2>
+                <h2 class="table-title" id="detailed-table-title-2"></h2>
+            </div>
             <table class="styled-table" id="detailsTable"></table>
-        </div>    
+            <button class="btn-secondary" id="editButton" onclick="editTable('detailsTable', 'editButton')">Edit</button>
+        </div>
+
 
         <div class="login-form">
             <h2 class="subtitle">Add Transaction</h2>
@@ -64,7 +68,7 @@
                 <!-- Date field -->
                 <div class="form-group">
                     <label for="date">Date:</label>
-                    <input class="form-control" type="date" id="date" name="date" required>
+                    <input class="form-control" type="date" id="balance-date" name="balance-date" value="{{ today_date }}" required>
                 </div> <!-- Closed the div here -->
         
                 <br>
@@ -84,28 +88,10 @@
                 <!-- Submit button -->
                 <button type="submit" class="btn-secondary">Add Entry</button>
             </form>
-        </div>
-
-        
+        </div>       
     </div>
     
-    <script>
-        const graphDataUrl = "{% url 'plot_spending_data' %}";
-        const tableDataUrl = "{% url 'get_transaction_data_json_spendings' %}";
-    
-        // Function to fetch data and update chart
-        function fetchDataAndUpdateChart() {
-            console.log("Fetching table data");
-            fetch(tableDataUrl)
-                .then(response => response.json())
-                .then(tableData => {
-                    console.log("Table data received:", tableData);
-                    // Call the chart function after data is successfully fetched
-                    stackedFetchChartData(graphDataUrl, "myChart3", tableData, "Account Name");
-                })
-                .catch(error => console.error('Error fetching table data:', error));
-        }
-    
+    <script>    
         document.addEventListener('DOMContentLoaded', () => {
             const yearFilter = document.getElementById('year-filter');
             if (yearFilter) {
@@ -118,6 +104,87 @@
             // Initial fetch and chart setup
             fetchDataAndUpdateChart();
         });
+
+        function fetchDataAndUpdateChart() {
+            const graphDataUrl = "{% url 'plot_spending_data' %}";
+            const tableDataUrl = "{% url 'get_spendings_data_json' %}";
+            console.log("Fetching table data");
+            fetch(tableDataUrl)
+                .then(response => response.json())
+                .then(tableData => {
+                    console.log("Table data received:", tableData);
+                    // Call the chart function after data is successfully fetched
+                    plotBarChart(graphDataUrl, "barChart", tableData, group_by="Account Name");
+                })
+                .catch(error => console.error('Error fetching table data:', error));
+        }
+
+        function saveTable(tableID, editButtonID) {
+            const table = document.getElementById('detailsTable');
+            const rows = table.rows;
+            const data = [];
+            const account = document.getElementById('account').value;
+
+            for (let i = 1; i < rows.length; i++) { // Skipping the header row
+                const row = rows[i];
+                const cells = row.cells;
+
+                // Extracting values from input fields
+                const row_data = {
+                    "date": cells[0].querySelector('input').value,  // Get input value for date
+                    "description": cells[1].querySelector('input').value,  // Get input value for description
+                    "amount": cells[2].querySelector('input').value,  // Get input value for amount
+                    "category": cells[3].querySelector('input').value,  // Get input value for category
+                    "id": cells[4].querySelector('input').value,  // Get hidden input value for id
+                    "account_name": document.getElementById('detailed-table-title-1').innerText,  // Get account name from title
+                };
+
+                data.push(row_data);
+            }
+
+            console.log("Data to be saved:", data);
+
+            // Sending data via fetch
+            fetch("{% url 'update_spendings' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                console.log("Data successfully saved:", result);
+                
+                // Convert table back to non-editable state
+                for (let i = 1; i < rows.length; i++) {  // Skipping the header row
+                    const row = rows[i];
+                    const cells = row.cells;
+
+                    // Revert each input field back to plain text by using their current values
+                    cells[0].innerHTML = cells[0].querySelector('input').value;  // Replace input with plain text for date
+                    cells[1].innerHTML = cells[1].querySelector('input').value;  // Replace input with plain text for description
+                    const sanitizedAmount = cells[2].querySelector('input').value.replace(/[$,]/g, '');
+                    cells[2].innerHTML = `$${parseFloat(sanitizedAmount).toFixed(2)}`;
+                    cells[3].innerHTML = cells[3].querySelector('input').value;  // Replace input with plain text for category
+                }
+
+                // Change 'Save' button back to 'Edit'
+                const editButton = document.getElementById('editButton');
+                editButton.textContent = 'Edit';
+                editButton.style.backgroundColor = '';  // Reset the button color
+                editButton.onclick = function() {
+                    editTable(tableID, editButtonID);
+                };  // Switch back to the editTable function
+
+                fetchDataAndUpdateChart();  // Update the chart after saving data   
+            })
+            .catch(error => {
+                console.error('Error saving data:', error);
+            });
+        }
+
     </script>
     
 {% endblock %}

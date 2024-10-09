@@ -5,13 +5,14 @@
     <div class="page-container">
         <div id="Card Settings" class="settings-form">
             <h2>Card Accounts</h2>
-        <form method="post" action="{% url 'add_card_account'%}">
-            {% csrf_token %}
-
+        
+            
             <div class="form-group">
-                <table class="styled-table">
+                <table class="styled-table" id="settings-card-table">
                     <thead>
                         <tr>
+                            <th style="display:none">Delete</th>
+                            <th style="display:none">Card ID</th>
                             <th>Card Name</th>
                         </tr>
                     </thead>
@@ -19,21 +20,28 @@
                     <tbody>
                         {% for card in card_options %}
                         <tr>
-                            <td> {{card}} </td>
+                            <td style="display:none">
+                                <input type="checkbox" class="delete-checkbox">
+                            </td>
+                            <td style="display:none">
+                                <input type="hidden" value="{{ card.id }}"> 
+                            </td>
+                            <td>{{ card.name }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
                 
-
+            <button class="btn-secondary editButton" id="settingsCardEditButton" onclick="editTable('settings-card-table','settingsCardEditButton')">Edit</button>
                 <br>
             </div>
+        <form method="post" action="{% url 'add_card_account'%}">
+            {% csrf_token %}
             <div class="form-group">
                 <label for="account-name">Card Name</label>
                 <input class="form-control" id="account-name" name="account-name" type="string" required>
             </div>
-                           
-
+                
             <br>
 
             {% if error_card_message %}
@@ -41,7 +49,7 @@
             {% endif %}
 
             <input class="btn-secondary" id="submit-balance" type="submit" value="Add">
-        </form>
+        </form>  
 
         </div>
         
@@ -71,7 +79,9 @@
                     
                     </tbody>
                 </table>
-
+            
+            <button class="btn-secondary editButton" id="settingsEditButton" onclick="editTable('detailed-table', 'editButton')">Edit</button>
+            
             <form method="post" action="{% url 'add_account'%}">
                 {% csrf_token %}
                 <div class="form-group">
@@ -94,7 +104,7 @@
 
                 <div class="form-group">
                     <label for="account-name">Balance Date</label>
-                    <input class="form-control" id="balance-date" name="balance-date" type="date" required>
+                    <input class="form-control" type="date" id="balance-date" name="balance-date" value="{{ today_date }}" required>
                 </div>
 
                 <br>
@@ -331,6 +341,111 @@
             saveButton.onclick = () => saveRow(newRow);  // Attach event programmatically
             deleteButton.onclick = () => deleteRow(newRow);  // Attach event programmatically
         }
+        
+    function saveTable(tableID, editButtonID) {
+    const table = document.getElementById(tableID);
+    const rows = table.rows;
+    const data = [];
+    let fetch_url = '';  // Declare fetch_url outside the blocks to be available globally
+
+    console.log("Table ID:", tableID, table);
+
+    for (let i = 1; i < rows.length; i++) {  // Skipping the header row
+        const row = rows[i];
+        const cells = row.cells;
+
+        // Extracting values from input fields
+        if (tableID === 'settings-card-table') {
+            console.log("Table case:", tableID);
+            fetch_url = "{% url 'update_settings_card_account' %}";  // Set the fetch_url for this case
+            
+            const row_data = {
+                // Accessing the checkbox state (if it's checked)
+                "delete_bool": cells[0].querySelector('input[type="checkbox"]').checked,  // Get the state of the checkbox
+
+                // Accessing the card ID from the hidden input field
+                "id": cells[1].querySelector('input[type="hidden"]').value,  // Get the card ID from the hidden input
+
+                // Accessing the card name from the plain text content (not an input)
+                "card_name": cells[2].querySelector('input').value,  // Get the card name from the text content
+            };
+    
+            console.log(row_data);
+
+            data.push(row_data);  // Add the row_data to the data array for the card table
+
+        } else {
+            fetch_url = "{% url 'update_spendings' %}";  // Default fetch URL for other tables
+            
+            const row_data = {
+                "account_name": cells[0].querySelector('input').value,  // Get input value for account name
+                "account_type": cells[1].querySelector('input').value,  // Get input value for account type
+                "date": cells[2].querySelector('input').value,  // Get input value for date
+                "balance": cells[3].querySelector('input').value,  // Get input value for balance
+            };
+            data.push(row_data);  // Add the row_data to the data array for the default case
+        }
+    }
+
+    console.log("Data to be saved:", data);
+    console.log("Fetch URL:", fetch_url);
+
+    // Sending data via fetch
+    fetch(fetch_url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'  // Ensure the CSRF token is correctly added
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        console.log("Data saved?:", result);
+        
+        // Convert table back to non-editable state
+        for (let i = 1; i < rows.length; i++) {  // Skipping the header row
+            const row = rows[i];
+            const cells = row.cells;
+
+            if (tableID === 'settings-card-table') {
+                // Revert the card table cells back to plain text
+                cells[0].innerHTML = cells[0].querySelector('input').value; 
+                cells[1].innerHTML = cells[1].querySelector('input[type="hidden"]').value;  
+                cells[2].innerHTML = cells[2].querySelector('input').value; 
+
+            } else {
+                // Revert the other table cells back to plain text
+                cells[0].innerHTML = cells[0].querySelector('input').value;  // Replace input with plain text for account name
+                cells[1].innerHTML = cells[1].querySelector('input').value;  // Replace input with plain text for account type
+                
+                const sanitizedAmount = cells[2].querySelector('input').value.replace(/[$,]/g, '');  // Sanitize the amount
+                cells[2].innerHTML = `$${parseFloat(sanitizedAmount).toFixed(2)}`;  // Format the amount
+                
+                cells[3].innerHTML = cells[3].querySelector('input').value;  // Replace input with plain text for balance
+            }
+        }
+
+        const deleteColumnHeader = table.rows[0].cells[0];  // Assuming the delete column header is in the first cell
+        deleteColumnHeader.style.display = 'none';
+
+        // Then, hide the delete column for each row
+        for (let i = 1; i < rows.length; i++) {  // Skipping the header row
+            const deleteColumnCell = rows[i].cells[0];  // Assuming the delete column is in the first cell
+            deleteColumnCell.style.display = 'none';  // Hide the delete checkbox column
+        }
+        // Change 'Save' button back to 'Edit'
+        const editButton = document.getElementById(editButtonID);
+        editButton.textContent = 'Edit';
+        editButton.style.backgroundColor = '';  // Reset the button color
+        editButton.onclick =function() {
+            editTable(tableID, editButtonID);
+        }; // Switch back to the editTable function
+    })
+    .catch(error => {
+        console.error('Error saving data:', error);
+    });
+}
     </script>
     
 {% endblock %}

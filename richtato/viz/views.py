@@ -103,6 +103,7 @@ def view_spendings(request):
                   {"years": years_list,
                    "transaction_accounts": transaction_accounts,
                    "category_list": category_list,
+                    "today_date": datetime.today().strftime('%Y-%m-%d')
                    })
 
 @login_required
@@ -115,16 +116,16 @@ def view_earnings(request):
     print("Earnings Dates: ", earnings_dates)
     print("Accounts: ", account_name_list)
     print("Earnings Entries: ", entries)
-    return render(request, 'earnings.html'  ,
+    return render(request, 'earnings.html',
                   {"years": years_list,
                     "entries": entries,
                     "accounts": account_name_list,
+                    "today_date": datetime.today().strftime('%Y-%m-%d')
                    })
 
 @login_required
 def view_accounts(request):
     accounts_data = get_latest_accounts_data(request)
-    print("Accounts Data accounts.html: ", accounts_data)
     years = None
     if accounts_data:
         accounts_histories = AccountHistory.objects.filter(account__user=request.user)
@@ -138,24 +139,25 @@ def view_accounts(request):
     return render(request, "accounts.html", {
         "networth": request.user.networth(),
         "accounts_data": accounts_data,
-        "years": years
+        "years": years,
+        "today_date": datetime.today().strftime('%Y-%m-%d')
     })
 
 @login_required
 def view_settings(request):
-    card_options = list(CardAccount.objects.filter(user=request.user).values_list('name', flat=True))
+    card_options = list(CardAccount.objects.filter(user=request.user).values('id', 'name'))
     print("Card Options: ", card_options)
     accounts_data = get_latest_accounts_data(request)
     account_types = account_choices
     category_list = list(Category.objects.filter(user=request.user))
-    print("Category List: ", category_list)
     return render(request, 'settings.html', {
         "card_options": card_options,
         "accounts_data": accounts_data,
         "account_types": account_types,
         "category_list": category_list,
         "import_path": card_statements_folder_path,
-        "export_path": data_folder_path
+        "export_path": data_folder_path,
+        "today_date": datetime.today().strftime('%Y-%m-%d')
     })
 
 # region Spendings
@@ -193,6 +195,48 @@ def plot_spendings_data(request, verbose=True):
         print("Data Dict: ", data_dict)
     return data_dict
 
+@login_required
+def update_spendings(request):
+    if request.method == 'POST':
+        try:
+            # Decode the JSON body from the request
+            data = json.loads(request.body.decode('utf-8'))
+
+            for transaction_data in data:
+                # Extract the fields for each transaction
+                transaction_id = transaction_data.get('id')
+
+                account_name = transaction_data.get('account_name')
+                date = transaction_data.get('date')
+                description = transaction_data.get('description')
+                amount = transaction_data.get('amount')
+                # Remove the dollar sign, comas and convert to float
+                amount = float(amount.replace('$', '').replace(',', ''))
+
+                category_name = transaction_data.get('category') 
+                
+                category = Category.objects.get(user=request.user, name=category_name)
+                account_name = CardAccount.objects.get(user=request.user, name=account_name)
+                
+                Transaction.objects.update_or_create(
+                    id=transaction_id,
+                    defaults={
+                        'date': date,
+                        'description': description,
+                        'amount': amount,
+                        'category': category,
+                        'account_name': account_name
+                    }
+                )
+                print("Transaction Updated: ", transaction_id, date, description, amount, category, account_name)
+
+            return JsonResponse({'success': True})
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
 # region Earnings
 @login_required
 def add_earnings_entry(request):
@@ -220,8 +264,42 @@ def add_earnings_entry(request):
 def plot_earnings_data(request, verbose=False):
     return _plot_data(request, context="Earnings", group_by="Description", verbose=verbose)
 
-# region Data Routes
+@login_required
+def update_earnings(request):
+    if request.method == 'POST':
+        try:
+            # Decode the JSON body from the request
+            data = json.loads(request.body.decode('utf-8'))
 
+            for transaction_data in data:
+                # Extract the fields for each transaction
+                transaction_id = transaction_data.get('id')
+
+                account_name = transaction_data.get('account_name')
+                account = Account.objects.get(user=request.user, name=account_name)
+                date = transaction_data.get('date')
+                amount = transaction_data.get('amount')
+                amount = float(amount.replace('$', '').replace(',', ''))
+                description = transaction_data.get('description')
+
+                Earning.objects.update_or_create(
+                    id=transaction_id,
+                    defaults={
+                        'date': date,
+                        'amount': amount,
+                        'account_name': account,
+                        'description': description
+                    }
+                )
+
+                print("Transaction Updated: ", transaction_id, date, account_name, amount)
+
+            return JsonResponse({'success': True})
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 
 # region Plotting
@@ -268,34 +346,69 @@ def _plot_data(request, context, group_by, verbose=False):
 
 # endregion
 
+# region Table Data Routes
 @login_required
-def get_transaction_data_json_spendings(request, verbose=True):
-    df = get_transaction_data(request.user)
+def get_spendings_data_json(request):
+    df = get_transaction_data(request.user)    
+    spendings_data = _process_transaction_data(df, context="Spendings")
+    return JsonResponse(spendings_data, safe=False)
+
+@login_required
+def get_earnings_data_json(request):
+    df = get_transaction_data(request.user, context="Earnings")
+    earnings_data = _process_transaction_data(df, context="Earnings")
+    return JsonResponse(earnings_data, safe=False)
+
+
+def get_accounts_data_json(request):
+    accounts_histories = AccountHistory.objects.filter(account__user=request.user)
+    
+    # Create DataFrame from account history records
+    balance_history_df = pd.DataFrame.from_records(
+        accounts_histories.values('id', 'account__name', 'balance_history', 'date_history')
+    )
+    print("Balance History DF: ", balance_history_df)
+    # Convert dates to datetime and extract year and label for grouping
+    balance_history_df['date_history'] = pd.to_datetime(balance_history_df['date_history'])
+    balance_history_df['Year'] = balance_history_df['date_history'].dt.year
+    balance_history_df['Date'] = balance_history_df['date_history']
+
+    json_data = _process_transaction_data(balance_history_df[['id', 'account__name', 'balance_history', 'Year', 'Date']], context="Accounts")
+
+    print("Accounts Data JSON: ", json_data)
+    return JsonResponse(json_data, safe=False)
+
+def _process_transaction_data(df, context, verbose=True):
     if verbose:
-        print("get_transaction_data_spendings_json: ", df)
+        print("_process_transaction_data Dataframe: \n", df)
+
     if df.empty:
         return {}
-    df["Description"] = df["Description"].str.slice(0, 20)
-    df = df[df["Category"] != "Earnings"]
+    
+    if context == "Spendings":
+        df["Description"] = df["Description"].str.slice(0, 20)
+        group_by = "Account Name"
+    elif context == "Earnings":
+        df["Description"] = df["Description"].str.slice(0, 20)
+        group_by = "Description"
+    elif context == "Accounts":
+        group_by = "account__name"
 
     # Split by Year
-    dict = {}
+    data_by_year = {}
     year_list = df['Year'].unique()
+    group_by_list = df[group_by].unique()
+    print("Group By List: ", group_by_list)
     for year in year_list:
         df_year = df[df['Year'] == year]
-        df_json = df_year.to_dict(orient='records')
-        dict[year] = df_json
-    print("get_transaction_data_spendings_json dict: ", dict)
-    return JsonResponse(df_json, safe=False)
-
-@login_required
-def get_transaction_data_json_earnings(request):
-    df = get_transaction_data(request.user, context="Earnings")
-    if df.empty:
-        return {}
-    df["Description"] = df["Description"].str.slice(0, 20)
-    df_json = df.to_dict(orient='records')  
-    return JsonResponse(df_json, safe=False)
+        df_year_grouped = {}
+        for group in group_by_list:
+            df_year_grouped[group] = df_year[df_year[group_by] == group].to_dict(orient='records')
+        data_by_year[int(year)] = df_year_grouped
+    
+    if verbose:
+        print("Data by Year: ", data_by_year)
+    return data_by_year
 
 # region Accounts
 @login_required
@@ -374,23 +487,39 @@ def add_account(request):
 
 @login_required
 def update_accounts(request):
-    if request.method=="POST":
-        account_id = request.POST.get('account-id')
-        balance_date = request.POST.get('balance-date')
-        balance = request.POST.get('balance-input')
-        # Get the account
-        account = Account.objects.get(user=request.user, id=account_id)
+    if request.method == 'POST':
+        try:
+            # Decode the JSON body from the request
+            data = json.loads(request.body.decode('utf-8'))
 
-        print("Update account details: ", account, balance_date, balance)
-        # Update the account history
-        account_history = AccountHistory(
-            account=account,
-            balance_history=balance,
-            date_history=balance_date,
-        )
-        account_history.save()
-        return view_accounts(request)
+            for transaction_data in data:
+                # Extract the fields for each transaction
+                transaction_id = transaction_data.get('id')
 
+                account_name = transaction_data.get('account_name')
+                account = Account.objects.get(user=request.user, name=account_name)
+                date = transaction_data.get('date')
+                amount = transaction_data.get('amount')
+                amount = float(amount.replace('$', '').replace(',', ''))
+
+                # Update Account and Account history
+                AccountHistory.objects.update_or_create(
+                    id=transaction_id,
+                    defaults={
+                        'date_history': date,
+                        'balance_history': amount,
+                        'account': account
+                    }
+                )
+
+                print("Account History Updated: ", transaction_id, date, account_name, amount)
+
+            return JsonResponse({'success': True})
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 
 @login_required
@@ -466,8 +595,7 @@ def plot_accounts_data_pie(request):
     #print("Response Data: ", response_data)
     return JsonResponse(response_data, safe=False)
 
-
-
+# endregion
 
 # region Settings
 @login_required
@@ -508,6 +636,36 @@ def add_card_account(request):
         
         return view_settings(request)
     return HttpResponse("Add account error")
+
+@login_required
+def update_settings_card_account(request):
+    if request.method == 'POST':
+        try:
+            # Decode the JSON body from the request
+            data = json.loads(request.body.decode('utf-8'))
+            print("Card Account Data: ", data)
+            for card in data:
+                # Extract the fields for each transaction
+                delete_bool = card.get('delete_bool')
+                card_id = card.get('id')
+                card_name = card.get('card_name').strip()
+                print("Update Card Account: ", card_id, card_name)
+
+                CardAccount.objects.update_or_create(
+                    id=card_id,
+                    defaults={
+                        'name': card_name
+                    }
+                )
+
+                print("Card Account Updated: ", card_id, card_name)
+        
+            return JsonResponse({'success': True})
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 @login_required
 def update_row(request):

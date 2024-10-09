@@ -30,12 +30,12 @@ urlpatterns = [
     path("settings", views.view_settings, name="view_settings"),
 
     # Spendings
-    path('transaction-data-spendings/', views.get_transaction_data_json_spendings, name='get_transaction_data_json_spendings'),
+    path('transaction-data-spendings/', views.get_spendings_data_json, name='get_spendings_data_json'),
     path('spending-data/', views.plot_spendings_data, name='plot_spending_data'),  
     path('add_spendings_entry', views.add_spendings_entry, name='add_spendings_entry'),
 
     # Earnings
-    path('transaction-data-earnings/', views.get_transaction_data_json_earnings, name='get_transaction_data_json_earnings'),
+    path('transaction-data-earnings/', views.get_earnings_data_json, name='get_earnings_data_json'),
     path('plot-earnings-data/', views.plot_earnings_data, name='plot_earnings_data'),
     path('add_earnings_entry', views.add_earnings_entry, name='add_earnings_entry'),
 
@@ -49,6 +49,10 @@ urlpatterns = [
     path('import-statements-data', views.import_statements_data, name="import_statements_data"),
 
     # Updating data
+    path('update-spendings/', views.update_spendings, name='update_spendings'),
+    path('update-earnings/', views.update_earnings, name='update_earnings'),
+    path('update-accounts/', views.update_accounts, name='update_accounts'),
+    path('update-settings-card-account/', views.update_settings_card_account, name='update_settings_card_account'),
     path('update-row/', views.update_row, name='update_row'),
     path('delete-row/', views.delete_row, name='delete_row'),
     path("update-accounts", views.update_accounts, name="update_accounts"),

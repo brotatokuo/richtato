@@ -362,7 +362,7 @@ input[type="password"] {
 }
 
 .bar-chart {
-    width: 90%;
+    width: 80%;
     margin: 0 auto; /* Centers the chart horizontally */
     display: flex;
     justify-content: center;
@@ -426,4 +426,22 @@ input[type="password"] {
     align-items: center;      /* Center vertically */
     text-align: center;       /* Center the text inside the container */
     flex-direction: column;   /* Ensure the text stays in a column (not a row) */
+}
+
+.btn-secondary.editButton {
+    margin-bottom: 30px;
+}
+
+.btn-save{
+    width: 100%;
+    padding: 10px;
+    background-color: gold;
+    color: black;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 10px;
+    display: inline-block;
+    margin-bottom: 30px;
 }

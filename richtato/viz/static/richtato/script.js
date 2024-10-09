@@ -24,6 +24,11 @@ document.addEventListener('DOMContentLoaded', (event) => {
         });
     }
     
+    const editButton = document.getElementById('editButton');
+    if (editButton) {
+        editButton.style.display = 'none';
+        console.log("Edit button hidden");
+    }
 });
 
 // Toggle password visibility
@@ -40,7 +45,7 @@ function togglePasswordVisibility(id, button) {
 }
 
 myChart = null;
-async function stackedFetchChartData(url, canvasId, tableData, group_by) {
+async function plotBarChart(url, canvasId, tableData, group_by) {
     try {
         const year = parseInt(document.getElementById('year-filter').value);
         console.log("Year:", year); 
@@ -82,17 +87,14 @@ async function stackedFetchChartData(url, canvasId, tableData, group_by) {
                 },
                 onClick: (event, elements) => {
                     if (elements.length > 0) {
-                        const datasetIndex = elements[0].datasetIndex;
-                        const index = elements[0].index;
-                        const datasetLabel = myChart.data.datasets[datasetIndex].label;
-                        const label = myChart.data.labels[index];
-                        console.log("Clicked:", datasetLabel, year, label);
+                        var datasetIndex = elements[0].datasetIndex;
+                        var index = elements[0].index;
+                        var datasetLabel = myChart.data.datasets[datasetIndex].label;
+                        var month = myChart.data.labels[index];
+                        console.log("Clicked:", year, month, datasetLabel);
 
-                        // Update the table with the dataset details
-                        
-                        updateTable(tableData, label, datasetLabel, index, group_by);
+                        updateTable(tableData, year, month, datasetLabel, group_by);
                     }   
-
 
                     // Update the table with the dataset details
                     // updateTable(datasetLabel, label);
@@ -105,73 +107,121 @@ async function stackedFetchChartData(url, canvasId, tableData, group_by) {
 }
 
 
-function updateTable(transactions, month, account, monthNumber, group_by) {
+function updateTable(tableData, year, month, account, group_by) { 
+    const monthToNumber = (month) => ({
+        jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+        jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12
+    }[month.toLowerCase()] || null);
+
+    const tableData_year_grouped = (tableData[year] || {})[account] || [];
+    const monthNumber = monthToNumber(month);
     const title1 = document.getElementById('detailed-table-title-1');
     const title2 = document.getElementById('detailed-table-title-2');
     const table = document.getElementById('detailsTable');
-    
-    // Determine the non group_by field
-    if (group_by == "Account Name") {
-        var non_group_by = "Decscription";
-    } else {
-        var non_group_by = "Account Name";
-    }
+    console.log("table", table);
 
-    // Loop through transactions and append rows to the table
+    const headers = {
+        "Account Name": ["Delete", "ID", "Date", "Description", "Amount", "Category"],
+        "Description": ["Delete", "ID", "Date", "Account Name", "Amount"],
+        "Account": ["Delete", "ID", "Date", "Account Name", "Amount"]
+    };
+
     table.innerHTML = `
         <thead>
-            <tr>
-                <th>Date</th>
-                <th>${non_group_by}</th>
-                <th>Amount</th>
-                <th>Category</th>
-            </tr>
+            <tr>${headers[group_by].map(header => `<th>${header}</th>`).join('')}</tr>
         </thead>
         <tbody></tbody>
     `;
-    const tableBody = table.querySelector('tbody');
-    var total = 0;
 
-    if (Array.isArray(transactions)) {
-        transactions.forEach(transactions => {
-        const row = document.createElement('tr');
-        
-        console.log("transactions:", transactions);
-        const accountName = transactions[group_by];
-        const transactionDate = transactions.Date.split("T")[0];
-        const transactionYear = transactionDate.split("-")[0];
+    let total = 0;
+
+    tableData_year_grouped.forEach(transaction => {
+        const transactionDate = transaction.Date.split("T")[0];
         const transactionMonth = transactionDate.split("-")[1];
 
-        // Skip transactions that don't match the selected month and account
-        if (accountName == account && transactionMonth == monthNumber) {
-            if (group_by == "Account Name") {
-                var group_by_value = transactions.Description;
-            } else {
-                var group_by_value = transactions["Account Name"];
-            }
-            
-            row.innerHTML = `
-            <td>${transactionDate}</td>
-            <td>${group_by_value}</td>
-            <td>${transactions.Amount}</td>
-            <td>${transactions.Category}</td>
-        `;
-        total += parseFloat(transactions.Amount);
+        if (transactionMonth == monthNumber) {
+            const row = document.createElement('tr');
+            const group_by_value = group_by === "Account Name" ? transaction.Description :
+                                   group_by === "Description" ? transaction["Account Name"] :
+                                   transaction.account__name;
 
-        // Append the row to the table body
-        tableBody.appendChild(row);
+            row.innerHTML = `
+                <td><input type="checkbox" class="delete-checkbox"></td>
+                <td>'ID'</td>
+                <td>${transactionDate}</td>
+                <td>${group_by_value}</td>
+                <td>$${parseFloat(transaction.Amount || transaction.balance_history).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>
+                ${group_by === "Account Name" ? `<td>${transaction.Category}</td>` : ""}
+                <td style="display: none;">${transaction.id}</td>
+            `;
+            total += parseFloat(transaction.Amount || transaction.balance_history);
+            const tableBody = table.querySelector('tbody');
+            tableBody.appendChild(row);
+            console.log("Row added:", row);
+            console.log("Table body:", tableBody);  
         }
-        
     });
 
-    // Update the table title
     title1.innerHTML = `${account}`;
-    // Add total to title
-    title2.innerHTML = `[${month}]: $${total.toFixed(2)}`;
-
-    } else {
-        // Handle cases where transactions is not an array
-        console.error("datasets is not an array:", datasets);
-    }
+    title2.innerHTML = `[${year} ${month}]: $${total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+    toggleEditButton();
 }
 
+
+function editTable(tableID, editButtonID) {
+    console.log("Edit button clicked", tableID, editButtonID);
+    const table = document.getElementById(tableID);
+    console.log("Table:", table);
+    const rows = table.rows;
+
+    for (let i = 1; i < rows.length; i++) {  // Skip header row
+        const cells = rows[i].cells;
+        console.log("Row cells:", cells);
+    
+        for (let j = 0; j < cells.length; j++) {
+            const cell = cells[j];
+    
+            if (j === 0) {
+                console.log("Unhiding delete column");
+                // Show the delete column (remove the display: none style)
+                cell.style.display = '';  // Make the delete checkbox column visible
+            } else if (j===1){
+                console.log("don't show id column");
+            }
+            else {
+                // Convert the other cells into input fields
+                const value = cell.textContent.trim();
+                cell.innerHTML = `<input type="text" value="${value}">`;
+            }
+        }
+    }
+    
+    // Make sure to also make the header of the delete column visible
+    const headerRow = table.rows[0].cells[0];  // Assuming the delete column header is in the first cell
+    headerRow.style.display = '';  // Make the header for the delete column visible
+    
+    
+    // Change the button text to 'Save'
+    const editButton = document.getElementById(editButtonID);
+    console.log("Edit button:", editButton);
+    editButton.textContent = 'Save';
+    editButton.style.backgroundColor = 'gold';
+
+    // Assign the saveTable function as the click handler
+    editButton.onclick = function() {
+        saveTable(tableID, editButtonID);
+    };
+}
+
+
+function toggleEditButton() {
+    const table = document.getElementById('detailsTable');
+    const editButton = document.getElementById('editButton');
+    console.log("Edit Button:", editButton);
+    console.log("Table rows:", table.rows.length);
+    if (table.rows.length > 0) {
+        editButton.style.display = 'block';
+    } else {
+        editButton.style.display = 'none';
+    }
+}
