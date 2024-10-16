@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from . import views
+from . import views, utils
 
 urlpatterns = [
     # Navbar
@@ -31,7 +31,7 @@ urlpatterns = [
 
     # Spendings
     path('transaction-data-spendings/', views.get_spendings_data_json, name='get_spendings_data_json'),
-    path('spending-data/', views.plot_spendings_data, name='plot_spending_data'),  
+    path('spending-data/', views.plot_spendings_data, name='plot_spendings_data'),  
     path('add_spendings_entry', views.add_spendings_entry, name='add_spendings_entry'),
 
     # Earnings
@@ -44,6 +44,11 @@ urlpatterns = [
     path('plot-accounts-data/', views.plot_accounts_data, name='plot_accounts_data'),
     path('plot-accounts-data-pie/', views.plot_accounts_data_pie, name='plot_accounts_data_pie'),
 
+    # Settings
+    path('get-card-settings-data/', views.get_card_settings_data_json, name='get_card_settings_data_json'),
+    path('get-accounts-settings-data/', views.get_accounts_settings_data_json, name='get_accounts_settings_data_json'),
+    path('get-categories-settings-data/', views.get_categories_settings_data_json, name='get_categories_settings_data_json'),
+
     # Data Import/ Export
     path('export-statements-data', views.export_statements_data, name="export_statements_data"),
     path('import-statements-data', views.import_statements_data, name="import_statements_data"),
@@ -53,11 +58,15 @@ urlpatterns = [
     path('update-earnings/', views.update_earnings, name='update_earnings'),
     path('update-accounts/', views.update_accounts, name='update_accounts'),
     path('update-settings-card-account/', views.update_settings_card_account, name='update_settings_card_account'),
-    path('update-row/', views.update_row, name='update_row'),
-    path('delete-row/', views.delete_row, name='delete_row'),
-    path("update-accounts", views.update_accounts, name="update_accounts"),
+    path('update-settings-accounts/', views.update_settings_accounts, name='update_settings_accounts'),
+    path('update-settings-categories/', views.update_settings_categories, name='update_settings_categories'),
 
     # Buttons
     path("add-account", views.add_account, name="add_account"),
+    path("add-account-history", views.add_account_history, name="add_account_history"),
     path("add-card-account", views.add_card_account, name="add_card_account"),
+    path("add-category", views.add_category, name="add_category"),
+
+    # Utils
+    path("get-user-id", utils.get_user_id, name="get_user_id"),
 ]

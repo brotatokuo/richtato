@@ -5,7 +5,6 @@
     <div class="page-container">
         <div id="Card Settings" class="settings-form">
             <h2>Card Accounts</h2>
-        
             
             <div class="form-group">
                 <table class="styled-table" id="settings-card-table">
@@ -16,40 +15,29 @@
                             <th>Card Name</th>
                         </tr>
                     </thead>
-                
                     <tbody>
-                        {% for card in card_options %}
-                        <tr>
-                            <td style="display:none">
-                                <input type="checkbox" class="delete-checkbox">
-                            </td>
-                            <td style="display:none">
-                                <input type="hidden" value="{{ card.id }}"> 
-                            </td>
-                            <td>{{ card.name }}</td>
-                        </tr>
-                        {% endfor %}
+                        <!-- Rows will be populated here by JavaScript -->
                     </tbody>
-                </table>
-                
-            <button class="btn-secondary editButton" id="settingsCardEditButton" onclick="editTable('settings-card-table','settingsCardEditButton')">Edit</button>
+                </table>        
+                <button class="btn-secondary editButton" id="settingsCardEditButton" onclick="editTable('settings-card-table','settingsCardEditButton', 'get-card-settings-data/')">Edit</button>
                 <br>
             </div>
-        <form method="post" action="{% url 'add_card_account'%}">
-            {% csrf_token %}
-            <div class="form-group">
-                <label for="account-name">Card Name</label>
-                <input class="form-control" id="account-name" name="account-name" type="string" required>
-            </div>
-                
-            <br>
+            
+            <form method="post" action="{% url 'add_card_account'%}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="account-name">Card Name</label>
+                    <input class="form-control" id="account-name" name="account-name" type="string" required>
+                </div>
+                    
+                <br>
 
-            {% if error_card_message %}
-                <div class="wrong-password">{{error_card_message}}</div>
-            {% endif %}
+                {% if error_card_message %}
+                    <div class="wrong-password">{{error_card_message}}</div>
+                {% endif %}
 
-            <input class="btn-secondary" id="submit-balance" type="submit" value="Add">
-        </form>  
+                <input class="btn-secondary" id="submit-balance" type="submit" value="Add">
+            </form>  
 
         </div>
         
@@ -58,9 +46,11 @@
 
         <div id="Account Settings"  class="settings-form">
             <h2>Accounts</h2>
-                <table class="styled-table">
+                <table class="styled-table" id="settings-accounts-table">
                     <thead>
                         <tr>
+                            <th style="display:none">Delete</th>
+                            <th style="display:none">Card ID</th>
                             <th>Account Name</th>
                             <th>Account Type</th>
                             <th>Date</th>
@@ -68,19 +58,11 @@
                         </tr>
                     </thead>
                     <tbody>
-                    {% for item in accounts_data %}
-                        <tr>
-                            <td>{{ item.accounts_data.account.name }}</td>
-                            <td>{{ item.accounts_data.account.type|capfirst }}</td>
-                            <td>{% if item.accounts_data.date %}{{ item.accounts_data.date|date:"Y-m-d" }}{% else %}No history{% endif %}</td>
-                            <td>${{ item.accounts_data.balance|floatformat:2|intcomma }}</td>
-                        </tr>
-                    {% endfor %}
-                    
+                        <!-- Rows will be populated here by JavaScript -->                   
                     </tbody>
                 </table>
             
-            <button class="btn-secondary editButton" id="settingsEditButton" onclick="editTable('detailed-table', 'editButton')">Edit</button>
+            <button class="btn-secondary editButton" id="settingsAccountEditButton" onclick="editTable('settings-accounts-table', 'settingsAccountEditButton',  'get-accounts-settings-data/')">Edit</button>
             
             <form method="post" action="{% url 'add_account'%}">
                 {% csrf_token %}
@@ -127,31 +109,44 @@
         <div id="Category Settings"  class="settings-form">
             <h2>Categories and Keywords</h2>
             <div class="form-group"></div>
-                <table id="category-table" class="styled-table">
+                <table class="styled-table" id="settings-categories-table">
                     <thead>
                         <tr>
+                            <th style="display:none">Delete</th>
+                            <th style="display:none">Card ID</th>
                             <th>Categories</th>
                             <th>Keywords</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                 
                     <tbody>
-                        {% for category in category_list %}
-                            <tr>
-                                <td class="category-name"onclick="makeRowEditable(this.parentElement)">{{ category.name }}</td>
-                                <td class="category-keywords" onclick="makeRowEditable(this.parentElement)">{{ category.keywords }}</td>
-                                <td>
-                                    <button class="save-button" style="display: none;">Save</button>
-                                    <button class="delete-button" style="display: none;">Delete</button>
-                                </td>
-                            </tr>
-                        {% endfor %}
-
-                        
+                        <!-- Rows will be populated here by JavaScript -->
                     </tbody>
                 </table>
-                <button class="btn-secondary" onclick="addRow()">Add Row</button>
+
+                <button class="btn-secondary editButton" id="settingsCategoryEditButton" onclick="editTable('settings-categories-table', 'settingsCategoryEditButton',  'get-categories-settings-data/')">Edit</button>
+
+                <form method="post" action="{% url 'add_category'%}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="category-name">Category</label>
+                        <input class="form-control" id="category-name" name="category-name" type="string" required>
+                    </div> 
+
+                        <br>
+                    <div class="form-group"> 
+                        <label for="category-keyword">Keyword</label>
+                        <input class="form-control" id="category-keywords" name="category-keywords" type="string" required>
+                    </div>
+                        
+                    <br>
+    
+                    {% if error_card_message %}
+                        <div class="wrong-password">{{error_card_message}}</div>
+                    {% endif %}
+    
+                    <input class="btn-secondary" id="submit-balance" type="submit" value="Add">
+                </form>  
         </div>
 
         <br>
@@ -169,283 +164,11 @@
     </div>
 
     <script>
-        // Function to make the row editable
-        function makeRowEditable(row) {
-            // Check if the row is already in edit mode
-            if (row.getAttribute('data-editing') === 'true') {
-                return; // Prevent multiple triggers
-            }
-    
-            // Mark the row as being edited
-            row.setAttribute('data-editing', 'true');
-    
-            // Get the cells in the row
-            const cells = row.getElementsByTagName('td');
-    
-            // Loop through the cells, except the last one with the buttons
-            for (let i = 0; i < cells.length - 1; i++) {
-                let currentValue = cells[i].innerText;
-                cells[i].innerHTML = `<input type="text" value="${currentValue}">`;
-            }
-    
-            // Get the Save and Delete buttons from the last <td> element
-            const lastCell = cells[cells.length - 1];
-            const saveButton = lastCell.querySelector('.save-button');
-            const deleteButton = lastCell.querySelector('.delete-button');
-    
-            // Check if save and delete buttons exist before continuing
-            if (!saveButton || !deleteButton) {
-                console.error("Save or Delete button not found in the row.");
-                return;
-            }
-    
-            // Display buttons
-            saveButton.style.display = 'inline';
-            deleteButton.style.display = 'inline';
-    
-            // Attach event listener for save and delete buttons
-            saveButton.addEventListener('click', function () {
-                saveRow(row);
-            });
-    
-            deleteButton.addEventListener('click', function () {
-                deleteRow(row);
-            });
-        }
-        
-        function getCSRFToken() {
-            const cookieValue = document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)')?.pop();
-            return cookieValue || '';
-    }
-        // Function to save the row
-        function saveRow(row) {
-            console.log("Save Row", row); // Check what row is being passed
-            const inputs = row.querySelectorAll('input');
-            const updatedData = {};
-            const updatedDataTest = {
-                'column_0': inputs[0].value, // Assuming first input is the category name
-                'column_1': inputs[1].value  // Assuming second input is the keywords
-            };
-            
-            console.log('Updated data Test:', updatedDataTest);
+    document.addEventListener('DOMContentLoaded', function() {
+        loadTableData("settings-card-table", 'get-card-settings-data/', 'settingsCardEditButton');
+        loadTableData("settings-accounts-table", 'get-accounts-settings-data/', 'settingsAccountEditButton');
+        loadTableData("settings-categories-table", 'get-categories-settings-data/', 'settingsCategoryEditButton');
+    });  
 
-            inputs.forEach((input, index) => {
-                const value = input.value;
-                const parentTd = input.parentElement;
-                parentTd.innerHTML = value; // Replace input with the plain text value
-                updatedData[`column_${index}`] = value; // Store the updated data
-            });
-
-            console.log('Updated data:', updatedData);
-
-            // Send the data via AJAX to the Django server
-            fetch('/update-row/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken(), // Required for Django's CSRF protection
-                },
-                body: JSON.stringify({
-                    data: updatedData
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    console.log('Row updated successfully!');
-                } else {
-                    console.error('Failed to update the row.');
-                }
-            })
-            .catch(error => console.error('Error:', error));
-
-            // Hide Save and Delete buttons after saving
-            const saveButton = row.querySelector('.save-button');
-            const deleteButton = row.querySelector('.delete-button');
-            saveButton.style.display = 'none';
-            deleteButton.style.display = 'none';
-
-            row.removeAttribute('data-editing');
-        }
-        
-        // Function to delete the row
-        function deleteRow(row) {
-            // Handle the delete functionality
-            const inputs = row.querySelectorAll('input');
-            const updatedData = {};
-
-            inputs.forEach((input, index) => {
-                const value = input.value;
-                const parentTd = input.parentElement;
-                parentTd.innerHTML = value; // Replace input with the plain text value
-                updatedData[`column_${index}`] = value; // Store the updated data
-            });
-
-            console.log('Updated data:', updatedData);
-
-            // Send the data via AJAX to the Django server
-            fetch('/delete-row/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken(), // Required for Django's CSRF protection
-                },
-                body: JSON.stringify({
-                    data: updatedData
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    console.log('Row updated successfully!');
-                } else {
-                    console.error('Failed to update the row.');
-                }
-            })
-            .catch(error => console.error('Error:', error));
-
-            
-            row.remove(); // Simple row removal for demonstration purposes
-        }
-
-        // Function to add a new row to the table
-        function addRow() {
-            const tableBody = document.querySelector('#category-table tbody');
-
-            // Create a new row element
-            const newRow = document.createElement('tr');
-
-            // Define the inner HTML for the newRow, with placeholders where needed
-            newRow.innerHTML = `
-                <td class="category-name"><span>Enter category</span><input type="text" style="display:none; width: 100%;"></td>
-                <td class="category-keywords"><span>Enter keywords</span><input type="text" style="display:none; width: 100%;"></td>
-                <td>
-                    <button class="save-button" style="display: none;">Save</button>
-                    <button class="delete-button" style="display: none;">Delete</button>
-                </td>
-            `;
-
-            // Append the new row to the table body
-            tableBody.appendChild(newRow);
-
-            // Find the spans and attach click event listeners to them to make the row editable
-            const spans = newRow.querySelectorAll('span');
-            spans.forEach(span => {
-                span.onclick = () => makeRowEditable(newRow); // Attach event programmatically
-            });
-
-            // Find buttons and attach event listeners
-            const saveButton = newRow.querySelector('.save-button');
-            const deleteButton = newRow.querySelector('.delete-button');
-            
-            saveButton.onclick = () => saveRow(newRow);  // Attach event programmatically
-            deleteButton.onclick = () => deleteRow(newRow);  // Attach event programmatically
-        }
-        
-    function saveTable(tableID, editButtonID) {
-    const table = document.getElementById(tableID);
-    const rows = table.rows;
-    const data = [];
-    let fetch_url = '';  // Declare fetch_url outside the blocks to be available globally
-
-    console.log("Table ID:", tableID, table);
-
-    for (let i = 1; i < rows.length; i++) {  // Skipping the header row
-        const row = rows[i];
-        const cells = row.cells;
-
-        // Extracting values from input fields
-        if (tableID === 'settings-card-table') {
-            console.log("Table case:", tableID);
-            fetch_url = "{% url 'update_settings_card_account' %}";  // Set the fetch_url for this case
-            
-            const row_data = {
-                // Accessing the checkbox state (if it's checked)
-                "delete_bool": cells[0].querySelector('input[type="checkbox"]').checked,  // Get the state of the checkbox
-
-                // Accessing the card ID from the hidden input field
-                "id": cells[1].querySelector('input[type="hidden"]').value,  // Get the card ID from the hidden input
-
-                // Accessing the card name from the plain text content (not an input)
-                "card_name": cells[2].querySelector('input').value,  // Get the card name from the text content
-            };
-    
-            console.log(row_data);
-
-            data.push(row_data);  // Add the row_data to the data array for the card table
-
-        } else {
-            fetch_url = "{% url 'update_spendings' %}";  // Default fetch URL for other tables
-            
-            const row_data = {
-                "account_name": cells[0].querySelector('input').value,  // Get input value for account name
-                "account_type": cells[1].querySelector('input').value,  // Get input value for account type
-                "date": cells[2].querySelector('input').value,  // Get input value for date
-                "balance": cells[3].querySelector('input').value,  // Get input value for balance
-            };
-            data.push(row_data);  // Add the row_data to the data array for the default case
-        }
-    }
-
-    console.log("Data to be saved:", data);
-    console.log("Fetch URL:", fetch_url);
-
-    // Sending data via fetch
-    fetch(fetch_url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}'  // Ensure the CSRF token is correctly added
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(result => {
-        console.log("Data saved?:", result);
-        
-        // Convert table back to non-editable state
-        for (let i = 1; i < rows.length; i++) {  // Skipping the header row
-            const row = rows[i];
-            const cells = row.cells;
-
-            if (tableID === 'settings-card-table') {
-                // Revert the card table cells back to plain text
-                cells[0].innerHTML = cells[0].querySelector('input').value; 
-                cells[1].innerHTML = cells[1].querySelector('input[type="hidden"]').value;  
-                cells[2].innerHTML = cells[2].querySelector('input').value; 
-
-            } else {
-                // Revert the other table cells back to plain text
-                cells[0].innerHTML = cells[0].querySelector('input').value;  // Replace input with plain text for account name
-                cells[1].innerHTML = cells[1].querySelector('input').value;  // Replace input with plain text for account type
-                
-                const sanitizedAmount = cells[2].querySelector('input').value.replace(/[$,]/g, '');  // Sanitize the amount
-                cells[2].innerHTML = `$${parseFloat(sanitizedAmount).toFixed(2)}`;  // Format the amount
-                
-                cells[3].innerHTML = cells[3].querySelector('input').value;  // Replace input with plain text for balance
-            }
-        }
-
-        const deleteColumnHeader = table.rows[0].cells[0];  // Assuming the delete column header is in the first cell
-        deleteColumnHeader.style.display = 'none';
-
-        // Then, hide the delete column for each row
-        for (let i = 1; i < rows.length; i++) {  // Skipping the header row
-            const deleteColumnCell = rows[i].cells[0];  // Assuming the delete column is in the first cell
-            deleteColumnCell.style.display = 'none';  // Hide the delete checkbox column
-        }
-        // Change 'Save' button back to 'Edit'
-        const editButton = document.getElementById(editButtonID);
-        editButton.textContent = 'Edit';
-        editButton.style.backgroundColor = '';  // Reset the button color
-        editButton.onclick =function() {
-            editTable(tableID, editButtonID);
-        }; // Switch back to the editTable function
-    })
-    .catch(error => {
-        console.error('Error saving data:', error);
-    });
-}
     </script>
-    
 {% endblock %}

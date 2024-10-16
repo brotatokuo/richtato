@@ -3,6 +3,7 @@ import os, warnings, re
 from datetime import datetime
 from django.http import HttpResponse, JsonResponse
 from viz.models import *
+from django.contrib.auth.decorators import login_required
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
 script_path = os.path.abspath(__file__)
@@ -184,8 +185,8 @@ def transaction_df_to_db(df, request_user)->None:
         )
     print("\033[92mSuccess!\033[0m")
 
-def get_transaction_data(user, context="Spending", verbose=True)->pd.DataFrame:
-    if context == "Spending":
+def get_transaction_data(user, context="Spendings", verbose=True)->pd.DataFrame:
+    if context == "Spendings":
         dict = Transaction.objects.filter(user=user).select_related('account_name', 'category').values(
             'id', 'date', 'amount', 'account_name__name', 'category__name', 'description'
         )
@@ -219,19 +220,19 @@ def get_accounts_data_monthly_df(request):
     master_df = pd.DataFrame()
     for account in users_accounts:
         df = pd.DataFrame()
-        
+
         balance_history = account.history.all()
         balance_history_df = pd.DataFrame(balance_history.values())
-
-        df["Date"] = pd.to_datetime(balance_history_df['date_history'])
-        df["Balance"] = balance_history_df['balance_history']
-        df["Account Name"] = account.name
+        print("Balance History DF:", balance_history_df)
+        if not balance_history_df.empty:
+            df["Date"] = pd.to_datetime(balance_history_df['date_history'])
+            df["Balance"] = balance_history_df['balance_history']
+            df["Account Name"] = account.name
         master_df = pd.concat([master_df, df])
 
     # Organizing the data
     master_df['Month'] = master_df['Date'].dt.month
     return master_df 
-
 
 # endregion
 
@@ -242,7 +243,7 @@ def _clean_db_df(df, context, verbose):
         print(df.head())
 
     # Organize Columns
-    if context == "Spending":
+    if context == "Spendings":
         df = df.rename(columns={"date": "Date", "account_name__name": "Account Name", "description": "Description", "amount": "Amount", "category__name": "Category"})
         df = df[["id", "Date", "Account Name", "Description", "Amount", "Category"]]
     else:
@@ -296,4 +297,18 @@ def color_picker(i):
     border_color = f"rgba({color}, 1)"
     return background_color, border_color
 
+def month_mapping(month_str):
+    month_mapping = {
+        "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, 
+        "Jun": 6, "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, 
+        "Nov": 11, "Dec": 12
+    }
+
+    month = month_mapping[month_str]
+
+    return month
+
+@login_required
+def get_user_id(request):
+    return JsonResponse({'userID': request.user.id})
 # endregion

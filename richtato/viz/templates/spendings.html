@@ -22,13 +22,21 @@
             </div>
         {% endif %}
         
-        <div class="detailed-table">
+        <div class="detailed-table" style="display: none;">
             <div class="table-header">
                 <h2 class="table-title" id="detailed-table-title-1"></h2>
                 <h2 class="table-title" id="detailed-table-title-2"></h2>
             </div>
-            <table class="styled-table" id="detailsTable"></table>
-            <button class="btn-secondary" id="editButton" onclick="editTable('detailsTable', 'editButton')">Edit</button>
+
+            <table class="styled-table" id="details-table-spendings">
+                <thead>
+                </thead>
+                <tbody>
+                    <!-- Rows will be inserted here dynamically -->
+                </tbody>
+            </table>
+
+            <button class="btn-secondary editButton" id="detailsTableEditButton">Edit</button> 
         </div>
 
 
@@ -60,7 +68,7 @@
                 <!-- Amount field -->
                 <div class="form-group">
                     <label for="amount">Amount:</label>
-                    <input class="form-control" type="number" step="0.01" id="amount" name="amount" required>
+                    <input class="form-control" id='balance-input' type="number" step="0.01" id="amount" name="amount" required>
                 </div> <!-- Closed the div here -->
         
                 <br>
@@ -91,100 +99,30 @@
         </div>       
     </div>
     
-    <script>    
-        document.addEventListener('DOMContentLoaded', () => {
-            const yearFilter = document.getElementById('year-filter');
-            if (yearFilter) {
-                yearFilter.addEventListener('change', () => {
-                    console.log("Year filter change event triggered");
-                    fetchDataAndUpdateChart();
-                });
-            }
-    
-            // Initial fetch and chart setup
-            fetchDataAndUpdateChart();
-        });
+    <script>
 
-        function fetchDataAndUpdateChart() {
-            const graphDataUrl = "{% url 'plot_spending_data' %}";
-            const tableDataUrl = "{% url 'get_spendings_data_json' %}";
-            console.log("Fetching table data");
-            fetch(tableDataUrl)
-                .then(response => response.json())
-                .then(tableData => {
-                    console.log("Table data received:", tableData);
-                    // Call the chart function after data is successfully fetched
-                    plotBarChart(graphDataUrl, "barChart", tableData, group_by="Account Name");
-                })
-                .catch(error => console.error('Error fetching table data:', error));
-        }
+    document.addEventListener('DOMContentLoaded', () => {
+        const graphDataUrl = "{% url 'plot_spendings_data' %}";
+        const tableDataUrl = "{% url 'get_spendings_data_json' %}";
+        const yearFilter = document.getElementById('year-filter');
 
-        function saveTable(tableID, editButtonID) {
-            const table = document.getElementById('detailsTable');
-            const rows = table.rows;
-            const data = [];
-            const account = document.getElementById('account').value;
+        if (yearFilter) {
+            const initialYear = yearFilter.value;
+            console.log("Initial selected year:", initialYear);
 
-            for (let i = 1; i < rows.length; i++) { // Skipping the header row
-                const row = rows[i];
-                const cells = row.cells;
-
-                // Extracting values from input fields
-                const row_data = {
-                    "date": cells[0].querySelector('input').value,  // Get input value for date
-                    "description": cells[1].querySelector('input').value,  // Get input value for description
-                    "amount": cells[2].querySelector('input').value,  // Get input value for amount
-                    "category": cells[3].querySelector('input').value,  // Get input value for category
-                    "id": cells[4].querySelector('input').value,  // Get hidden input value for id
-                    "account_name": document.getElementById('detailed-table-title-1').innerText,  // Get account name from title
-                };
-
-                data.push(row_data);
-            }
-
-            console.log("Data to be saved:", data);
-
-            // Sending data via fetch
-            fetch("{% url 'update_spendings' %}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(result => {
-                console.log("Data successfully saved:", result);
-                
-                // Convert table back to non-editable state
-                for (let i = 1; i < rows.length; i++) {  // Skipping the header row
-                    const row = rows[i];
-                    const cells = row.cells;
-
-                    // Revert each input field back to plain text by using their current values
-                    cells[0].innerHTML = cells[0].querySelector('input').value;  // Replace input with plain text for date
-                    cells[1].innerHTML = cells[1].querySelector('input').value;  // Replace input with plain text for description
-                    const sanitizedAmount = cells[2].querySelector('input').value.replace(/[$,]/g, '');
-                    cells[2].innerHTML = `$${parseFloat(sanitizedAmount).toFixed(2)}`;
-                    cells[3].innerHTML = cells[3].querySelector('input').value;  // Replace input with plain text for category
-                }
-
-                // Change 'Save' button back to 'Edit'
-                const editButton = document.getElementById('editButton');
-                editButton.textContent = 'Edit';
-                editButton.style.backgroundColor = '';  // Reset the button color
-                editButton.onclick = function() {
-                    editTable(tableID, editButtonID);
-                };  // Switch back to the editTable function
-
-                fetchDataAndUpdateChart();  // Update the chart after saving data   
-            })
-            .catch(error => {
-                console.error('Error saving data:', error);
+            plotBarChart(graphDataUrl, 'barChart', 'details-table-spendings', tableDataUrl, initialYear);
+            
+            // Add event listener for when the year filter changes
+            yearFilter.addEventListener('change', () => {
+                const selectedYear = yearFilter.value;
+                console.log("Year filter change event triggered, selected year:", selectedYear);
+                plotBarChart(graphDataUrl, 'barChart', 'details-table-spendings', tableDataUrl, selectedYear);
             });
+            
+        } else {
+            console.error("Year filter element not found!");
         }
+    });
 
-    </script>
-    
+</script>
 {% endblock %}

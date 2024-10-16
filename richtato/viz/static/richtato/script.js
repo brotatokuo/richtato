@@ -10,11 +10,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     const currencyInput = document.getElementById('balance-input');
     if (currencyInput) {
-        currencyInput.addEventListener('blur', function(e) {
-            console.log("Currency input blur event triggered");
-            
+        currencyInput.addEventListener('blur', function(e) {           
             let value = parseFloat(e.target.value);
-
             // Ensure the value is a valid number before formatting
             if (!isNaN(value)) {
                 e.target.value = value.toFixed(2); // Format to two decimal places
@@ -22,13 +19,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 console.log("Invalid input:", e.target.value); // Handle invalid input
             }
         });
-    }
-    
-    const editButton = document.getElementById('editButton');
-    if (editButton) {
-        editButton.style.display = 'none';
-        console.log("Edit button hidden");
-    }
+    }    
 });
 
 // Toggle password visibility
@@ -44,20 +35,36 @@ function togglePasswordVisibility(id, button) {
     }
 }
 
+
+function getCSRFToken() {
+    const cookieValue = document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)')?.pop();
+    return cookieValue || '';
+}
+
+// Bar Chart
 myChart = null;
-async function plotBarChart(url, canvasId, tableData, group_by) {
+let lastChartUrl = '';
+let lastCanvasId = '';
+let lastTableID = '';
+let lastTableUrl = '';
+let lastYear = '';
+
+async function plotBarChart(chartUrl, canvasId, tableID, tableUrl, year) {
     try {
-        const year = parseInt(document.getElementById('year-filter').value);
-        console.log("Year:", year); 
-        const response = await fetch(url);  // Fetch data from the provided URL
+        const response = await fetch(chartUrl);  // Fetch data from the provided chartUrl
         const data = await response.json();
-        console.log("Original data:", data);
-        // Filter the data by year
-        const filteredDataByYear = data.filter(item => item.year === year);
+        console.log("Data received from API:", data, "filter by year:", year);
+        const filteredDataByYear = data.filter(item => item.year === parseInt(year));
         console.log("Filtered data:", filteredDataByYear);
         
         const ctx = document.getElementById(canvasId).getContext('2d');
 
+        lastChartUrl = chartUrl;
+        lastCanvasId = canvasId;
+        lastTableID = tableID;
+        lastTableUrl = tableUrl;
+        lastYear = year;
+        
         // Destroy existing chart instance if it exists
         if (myChart) {
             myChart.destroy();
@@ -92,12 +99,19 @@ async function plotBarChart(url, canvasId, tableData, group_by) {
                         var datasetLabel = myChart.data.datasets[datasetIndex].label;
                         var month = myChart.data.labels[index];
                         console.log("Clicked:", year, month, datasetLabel);
+                        
+                        fetchBarTableData(tableID, tableUrl, year, month, datasetLabel);
+                        
 
-                        updateTable(tableData, year, month, datasetLabel, group_by);
-                    }   
 
-                    // Update the table with the dataset details
-                    // updateTable(datasetLabel, label);
+                        const title_1 = document.getElementById('detailed-table-title-1');
+                        const title_2 = document.getElementById('detailed-table-title-2');
+
+                        if (title_1 && title_2) {
+                            title_1.textContent = `${year} ${month}`;
+                            title_2.textContent = `${datasetLabel}`;
+                        }
+                    }
                 }
             }
         });
@@ -106,122 +120,260 @@ async function plotBarChart(url, canvasId, tableData, group_by) {
     }
 }
 
-
-function updateTable(tableData, year, month, account, group_by) { 
-    const monthToNumber = (month) => ({
-        jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
-        jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12
-    }[month.toLowerCase()] || null);
-
-    const tableData_year_grouped = (tableData[year] || {})[account] || [];
-    const monthNumber = monthToNumber(month);
-    const title1 = document.getElementById('detailed-table-title-1');
-    const title2 = document.getElementById('detailed-table-title-2');
-    const table = document.getElementById('detailsTable');
-    console.log("table", table);
-
-    const headers = {
-        "Account Name": ["Delete", "ID", "Date", "Description", "Amount", "Category"],
-        "Description": ["Delete", "ID", "Date", "Account Name", "Amount"],
-        "Account": ["Delete", "ID", "Date", "Account Name", "Amount"]
-    };
-
-    table.innerHTML = `
-        <thead>
-            <tr>${headers[group_by].map(header => `<th>${header}</th>`).join('')}</tr>
-        </thead>
-        <tbody></tbody>
-    `;
-
-    let total = 0;
-
-    tableData_year_grouped.forEach(transaction => {
-        const transactionDate = transaction.Date.split("T")[0];
-        const transactionMonth = transactionDate.split("-")[1];
-
-        if (transactionMonth == monthNumber) {
-            const row = document.createElement('tr');
-            const group_by_value = group_by === "Account Name" ? transaction.Description :
-                                   group_by === "Description" ? transaction["Account Name"] :
-                                   transaction.account__name;
-
-            row.innerHTML = `
-                <td><input type="checkbox" class="delete-checkbox"></td>
-                <td>'ID'</td>
-                <td>${transactionDate}</td>
-                <td>${group_by_value}</td>
-                <td>$${parseFloat(transaction.Amount || transaction.balance_history).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>
-                ${group_by === "Account Name" ? `<td>${transaction.Category}</td>` : ""}
-                <td style="display: none;">${transaction.id}</td>
-            `;
-            total += parseFloat(transaction.Amount || transaction.balance_history);
-            const tableBody = table.querySelector('tbody');
-            tableBody.appendChild(row);
-            console.log("Row added:", row);
-            console.log("Table body:", tableBody);  
-        }
-    });
-
-    title1.innerHTML = `${account}`;
-    title2.innerHTML = `[${year} ${month}]: $${total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
-    toggleEditButton();
+// Table functions
+function fetchBarTableData(tableID, tableUrl, year, month, label){
+    const urlWithParams = `${tableUrl}?year=${year}&label=${encodeURIComponent(label)}&month=${month}`;
+    const editButton = document.getElementById('detailsTableEditButton');
+    if (editButton) {
+        editButton.onclick = function() {
+            editTable(tableID, 'detailsTableEditButton', urlWithParams);
+        };
+    }
+    loadTableData(tableID, urlWithParams)
 }
 
-
-function editTable(tableID, editButtonID) {
-    console.log("Edit button clicked", tableID, editButtonID);
+function loadTableData(tableID, apiUrl) {
     const table = document.getElementById(tableID);
-    console.log("Table:", table);
-    const rows = table.rows;
+    console.log("loadTableData called with tableID:", tableID, "and apiUrl:", apiUrl);
+    if (!table) {
+        console.error(`Table with ID "${tableID}" not found.`);
+        return;
+    }
 
-    for (let i = 1; i < rows.length; i++) {  // Skip header row
-        const cells = rows[i].cells;
-        console.log("Row cells:", cells);
-    
-        for (let j = 0; j < cells.length; j++) {
-            const cell = cells[j];
-    
-            if (j === 0) {
-                console.log("Unhiding delete column");
-                // Show the delete column (remove the display: none style)
-                cell.style.display = '';  // Make the delete checkbox column visible
-            } else if (j===1){
-                console.log("don't show id column");
+    const tableHead = table.querySelector('thead');
+    const tableBody = table.querySelector('tbody');
+
+    // Clear any existing rows
+    tableBody.innerHTML = '';
+    tableHead.innerHTML = '';
+
+    // Fetch data from the API
+    fetch(apiUrl)
+        .then(response => {
+            const contentType = response.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                throw new Error("Response is not JSON");
             }
-            else {
-                // Convert the other cells into input fields
+            return response.json(); // Parse JSON if content-type is correct
+        })
+        .then(data => {
+            console.log("Data received from API:", data);
+
+            // Select the detailed-table div
+            const detailedTableDiv = document.querySelector('.detailed-table');
+            if (tableID.includes("details-table")) {
+                console.log("details-table detected, showing the div");
+                detailedTableDiv.style.display = 'block';}
+
+            // Dynamically generate the headers based on the first object's keys
+            const headerRow = document.createElement('tr');
+
+            // Add 'Delete' column as the first header
+            const deleteHeader = document.createElement('th');
+            deleteHeader.textContent = 'Delete';
+            deleteHeader.style.fontWeight = 'bold';
+            deleteHeader.style.display = 'none'; // Hide the Delete column initially
+            headerRow.appendChild(deleteHeader);
+
+            // Generate other headers based on the keys of the first object and hide the ID column
+            const headers = Object.keys(data[0]);
+            console.log("headers", headers);
+
+            headers.forEach((header, index) => {
+                const th = document.createElement('th');
+                th.textContent = header.charAt(0).toUpperCase() + header.slice(1);
+                th.style.fontWeight = 'bold';
+
+                if (index === 0) {
+                    th.style.display = 'none'; // Hide the ID column
+                }
+
+                headerRow.appendChild(th);
+            });
+
+            tableHead.appendChild(headerRow);
+
+            // Loop through the data to create table rows
+            data.forEach(item => {
+                const row = document.createElement('tr');
+
+                // Add the checkbox as the first column and hide it
+                const checkboxCell = document.createElement('td');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkboxCell.appendChild(checkbox);
+                checkboxCell.style.display = 'none'; // Hide the checkbox column initially
+                row.appendChild(checkboxCell);
+
+                // Add the rest of the item values as table columns
+                headers.forEach((header, index) => {
+                    const cell = document.createElement('td');
+                    cell.textContent = item[header];
+
+                    if (index === 0) {
+                        cell.style.display = 'none'; // Hide the ID column initially
+                    }
+
+                    row.appendChild(cell);
+                });
+
+                tableBody.appendChild(row);
+            });
+        }
+        )
+        .catch(error => {
+            console.error('Error fetching data:', error);
+        });
+}
+
+// Edit mode functions
+function toggleEditMode(tableID, editButton, buttonText, buttonColor) {
+    const table = document.getElementById(tableID);
+    const tableHead = table.querySelector('thead');
+    const tableBody = table.querySelector('tbody');
+
+    const headers = tableHead.querySelectorAll('th');
+    const rows = tableBody.querySelectorAll('tr');
+
+    // Toggle visibility for Delete and ID columns in the header
+    if (headers.length >= 2) {
+        const isHidden = headers[0].style.display === 'none';
+        headers[0].style.display = isHidden ? '' : 'none'; // Toggle display for Delete column
+        // headers[1].style.display = isHidden ? '' : 'none'; // Toggle display for ID column
+    }
+
+    // Toggle visibility for Delete and ID columns in each row
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 2) {
+            const isHidden = cells[0].style.display === 'none';
+            cells[0].style.display = isHidden ? '' : 'none'; // Toggle display for Delete column
+            // cells[1].style.display = isHidden ? '' : 'none'; // Toggle display for ID column
+        }
+
+        // Toggle between edit and non-edit modes for non-hidden cells
+        for (let j = 2; j < cells.length; j++) {
+            const cell = cells[j];
+
+            // Special case for 'settings-accounts-table': Exclude the last two columns
+            if (tableID === 'settings-accounts-table' && j >= cells.length - 2) {
+                continue; // Skip the last two columns
+            }
+
+            const input = cell.querySelector('input');
+
+            if (input) {
+                const value = input.value;
+                cell.innerHTML = value ? value : ''; // Set the value as plain text
+            } else {
                 const value = cell.textContent.trim();
                 cell.innerHTML = `<input type="text" value="${value}">`;
             }
         }
-    }
-    
-    // Make sure to also make the header of the delete column visible
-    const headerRow = table.rows[0].cells[0];  // Assuming the delete column header is in the first cell
-    headerRow.style.display = '';  // Make the header for the delete column visible
-    
-    
-    // Change the button text to 'Save'
-    const editButton = document.getElementById(editButtonID);
-    console.log("Edit button:", editButton);
-    editButton.textContent = 'Save';
-    editButton.style.backgroundColor = 'gold';
+    });
 
-    // Assign the saveTable function as the click handler
-    editButton.onclick = function() {
-        saveTable(tableID, editButtonID);
-    };
+    // Update the button's text and color
+    editButton.innerHTML = buttonText;
+    editButton.style.backgroundColor = buttonColor;
 }
 
+function editTable(tableID, editButtonID, refreshUrl) {
+    const editButton = document.getElementById(editButtonID);
 
-function toggleEditButton() {
-    const table = document.getElementById('detailsTable');
-    const editButton = document.getElementById('editButton');
-    console.log("Edit Button:", editButton);
-    console.log("Table rows:", table.rows.length);
-    if (table.rows.length > 0) {
-        editButton.style.display = 'block';
+    if (editButton.innerHTML === 'Edit') {
+        toggleEditMode(tableID, editButton, 'Save', 'gold');
     } else {
-        editButton.style.display = 'none';
+        let apiUrl;  // Declare apiUrl outside the block
+        
+        // Assign the appropriate API URL based on the table ID
+        if (tableID === 'settings-card-table') {
+            apiUrl = "update-settings-card-account/";
+        } else if (tableID === 'settings-accounts-table') {
+            apiUrl = "update-settings-accounts/";
+        } else if (tableID === 'settings-categories-table') {
+            apiUrl = "update-settings-categories/";
+        } else if (tableID === 'details-table-spendings') {
+            apiUrl = "update-spendings/";
+        } else if (tableID === 'details-table-earnings') {
+            apiUrl = "update-earnings/";
+        } else if (tableID === 'details-table-accounts') {
+            apiUrl = "update-accounts/";
+        }
+
+        // Call saveTable with the correct apiUrl and refreshUrl
+        if (apiUrl) {
+            saveTable(tableID, editButton, apiUrl, refreshUrl);
+        } else {
+            console.error(`No API URL available for table ID "${tableID}"`);
+        }
+    }        
+}
+
+async function saveTable(tableID, editButton, apiUrl, refreshUrl) {
+    const userID = await getUserID();
+    console.log("userID:", userID);
+    console.log("saveTable called with tableID:", tableID, "apiUrl:", apiUrl, "refreshUrl:", refreshUrl);
+    const table = document.getElementById(tableID);
+    const rows = table.rows;
+    const data = [];
+
+    // Get the headers from the first row (the header row)
+    const headers = [];
+    const headerCells = table.rows[0].cells;
+
+    for (let i = 0; i < headerCells.length; i++) {
+        const headerText = headerCells[i].textContent.trim().toLowerCase().replace(/\s+/g, '_');
+        headers.push(headerText);
     }
+
+    // Loop through each row (skipping the header row)
+    for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.cells;
+        const row_data = {};
+
+        for (let j = 0; j < cells.length; j++) {
+            const header = headers[j];
+            if (header === 'delete') {
+                row_data[header] = cells[j].querySelector('input[type="checkbox"]').checked;
+            } else {
+                const inputElement = cells[j].querySelector('input');
+                if (inputElement) {
+                    row_data[header] = inputElement.value;
+                } else {
+                    row_data[header] = cells[j].textContent.trim();
+                }
+            }
+        }
+        row_data['user'] = userID;
+        console.log("row_data:", row_data);
+        data.push(row_data);
+    }
+
+    const csrfToken = getCSRFToken();
+
+    fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        console.log("Data saved?:", result);
+        loadTableData(tableID, refreshUrl);
+        plotBarChart(lastChartUrl, lastCanvasId, lastTableID, lastTableUrl, lastYear);
+        toggleEditMode(tableID, editButton, 'Edit', '#98cc2c');
+    })
+    .catch(error => {
+        console.error('Error saving data:', error);
+    });
+}
+
+function getUserID() {
+    return fetch('get-user-id')
+        .then(response => response.json())
+        .then(data => data.userID);
 }
