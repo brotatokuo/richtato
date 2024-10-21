@@ -942,3 +942,62 @@ def add_category(request):
         
         return view_settings(request)
     return HttpResponse("Add category error")
+
+def one_time_import(request):
+    return HttpResponse("Disabled")
+    print("One time transfer")
+    df = pd.read_excel("/Users/alan/Desktop/Richtato/TepSpending.xlsx", sheet_name="Transactions", header=1)
+    print(df.head())
+    # Add accounts to the database
+    accounts = df["Account"].unique()
+    for account in accounts:
+        account = CardAccount(user=request.user, name=account)
+        account.save()
+    
+    print("Added Accounts: ", accounts)
+
+    # Add categories to the database
+    cat_df = pd.read_excel("/Users/alan/Desktop/Richtato/TepSpending.xlsx", sheet_name="Category", header=1)
+    print(cat_df.head())
+    categories = cat_df["Category"].unique()
+    
+    for c in categories:
+        keywords = []
+        filtered_df = cat_df[cat_df["Category"] == c]
+        print(filtered_df)
+        for index, row in filtered_df.iterrows():
+            item = row["Description"]
+            print("Item: ", item)
+            keywords.append(item)
+        keywords = ','.join(keywords)
+
+        c = Category(user=request.user, name=c, keywords=keywords)
+        c.save()
+
+    print("Added Categories: ", categories)
+
+    # Iterate over the rows of the DataFrame
+    for index, row in df.iterrows():
+        date = row["Date"]
+        description = row["Description"]
+        amount = row["Amount"]
+        category = row["Category"]
+        account = row["Account"]
+
+        print(date, description, amount, category, account)
+
+        category = Category.objects.get(user=request.user, name=category)
+        account_name = CardAccount.objects.get(user=request.user, name=account)
+
+        # Create and save the transaction
+        transaction = Transaction(
+            user=request.user,
+            account_name = account_name,
+            description=description,
+            category=category,
+            date=date,
+            amount=amount,
+        )
+        transaction.save()
+
+    return HttpResponse("Data transfer complete")

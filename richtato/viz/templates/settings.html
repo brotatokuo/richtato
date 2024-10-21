@@ -156,7 +156,7 @@
             <h2>Data Options</h2>
             <div class="form-group">
                 <p>Import Path: {{import_path}}</p>
-                <button class="btn-primary" a href="{% url 'import_statements_data' %}">Import Data</button>
+                <a class="btn-primary" a href="{% url 'one_time_import' %}">Don't Use Import Data</a>
                 <p>Export Path: {{export_path}}</p>
                 <button class="btn-primary" a href="{% url 'export_statements_data' %}">Export Data</button>
             </div>

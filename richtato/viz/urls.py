@@ -52,7 +52,8 @@ urlpatterns = [
     # Data Import/ Export
     path('export-statements-data', views.export_statements_data, name="export_statements_data"),
     path('import-statements-data', views.import_statements_data, name="import_statements_data"),
-
+    path('one-time-import', views.one_time_import, name="one_time_import"),
+    
     # Updating data
     path('update-spendings/', views.update_spendings, name='update_spendings'),
     path('update-earnings/', views.update_earnings, name='update_earnings'),
