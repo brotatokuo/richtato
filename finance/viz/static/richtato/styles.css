@@ -1,0 +1,447 @@
+/* #region Ensure no overflow and hide unnecessary scrollbars */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding-top: 30px;
+    font-family: Arial, sans-serif;
+    background-color: #ffffff; /* Set background color to white */
+}
+
+.page-container{
+    display:flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 0px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.btn-small {
+    width: auto !important; /* Override width to fit content */
+    padding: 3px 8px; /* Reduce padding for smaller button */
+    font-size: 12px; /* Reduce font size */
+    display: inline-block; /* Ensure it only takes as much space as needed */
+    text-decoration: none;
+}
+
+.form-control {
+    width: 100%; /* Full width */
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    margin-top: 10px;
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+/* #endregion */
+
+/* #region Home Page */
+.home-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #ffffff; /* Set background color to white */
+    margin: 0;
+}
+
+.home-container {
+    text-align: center;
+    max-width: 600px;
+    padding-left: 20px;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: none;
+    background: none; /* Ensure no background color difference */
+}
+
+.typewriter {
+    display: inline-block;
+    margin-bottom: 20px;
+}
+
+.typewriter-text {
+    font-size: medium;
+    letter-spacing: 10px;
+    border-right: 5px solid;
+    width: 100%; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    animation: 
+        typing 2s steps(25),
+        cursor .4s step-end infinite alternate;
+}
+
+/* The typewriter cursor effect */
+@keyframes cursor {
+    50% { border-color: transparent; }
+}
+
+@keyframes typing {
+    from { width: 0 }
+}
+
+.gif-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px; /* Add margin if needed */
+}
+
+.growth-gif {
+    transform: scale(2); /* Stretch the GIF to twice its size */
+    transform-origin: center; /* Ensure the GIF scales from its center */
+}
+
+@media (max-width: 768px) {
+    .growth-gif {
+        max-width: 100%; /* Adjust for smaller screens */
+        height: auto; /* Maintain aspect ratio */
+    }
+}
+
+/* #endregion */
+
+/* #region Login/Register Page */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh; /* Maintain minimum height of 100vh */
+    background-color: #ffffff;
+}
+
+.login-form {
+    width: 100%;
+    max-width: 500px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-align: left;
+}
+
+.settings-form {
+    width: 100%;
+    max-width: 700px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-align: left;
+}
+
+.settings-form h2 {
+    text-align: center;
+}
+
+.wrong-password {
+    color: red;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+
+h2 {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.password-container {
+    position: relative;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+    appearance: none; /* Reset browser-specific styling */
+    -webkit-appearance: none; /* Reset browser-specific styling for WebKit browsers */
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+    appearance: none; /* Reset browser-specific styling */
+    -webkit-appearance: none; /* Reset browser-specific styling for WebKit browsers */
+}
+
+.show-password {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    color: #007bff;
+    outline: none;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 10px;
+    background-color: #000;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 10px;
+    display: inline-block;
+}
+
+.btn-secondary {
+    width: 100%;
+    padding: 10px;
+    background-color: #98cc2c;
+    color: black;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 10px;
+    display: inline-block;
+}
+
+.btn-primary:hover {
+    background-color: #444;
+}
+
+.login-link {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.login-link a {
+    font-size: 14px;
+    color: #000;
+    text-decoration: underline;
+}
+
+/* Additional responsive adjustments */
+@media (max-width: 576px) {
+    .login-container {
+        padding: 10px;
+    }
+}
+/* #endregion */
+
+/* #region Stock Page */
+.grid-item {
+    background-color: white;
+    font-size: 20px;
+    padding: 20px;
+    text-align: center;
+}
+.stock-item {
+    width: 100%; /* Make it take full width */
+    box-sizing: border-box; /* Ensure padding and border are included in the width and height */
+}
+
+.page-item {
+    background-color: white;
+    color: #000;
+    font-size: 20px;
+    margin: 20px;
+    flex: 1 1 300px; /* Adjust the width and make it flexible */
+    text-decoration: none;
+    box-sizing: border-box; /* Ensure padding and border are included in the width and height */
+    margin-bottom: 20px;
+}
+
+.stock-container {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.buy-stock-container {
+    flex: 1;
+    max-width: 300px;
+}
+
+.stock-date-range {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.stock-date-range button {
+    margin-right: 5px;
+} 
+
+/* #endregion */
+
+.stock-detail-container {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.stock-detail-item {
+    background-color: #98cc2c;
+    color:#000;
+    font-size: 20px;
+    margin: 20px;
+    padding: 20px;
+    width: 250px;
+    text-decoration: none;
+}
+
+/* Additional rule to ensure text-decoration is none */
+.stock-link{
+    text-decoration: none;
+}
+
+.stock-detail-item:hover {
+    background-color: #B2B2B2; /* Change background color on hover */
+}
+
+.stock-analysis{
+    justify-content: left;
+}
+
+.plot-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.plot-container img {
+    max-width: 100%;
+    height: auto;
+}
+
+#gain {
+    display: inline-block;
+    justify-content: left;
+    margin-left: 10px;
+}
+
+.gain-positive {
+    color: #98cc2c;
+}
+
+.gain-negative {
+    color: red;
+}
+
+.button-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.button-container .btn-primary {
+    margin: 0 5px;
+}
+
+.bar-chart {
+    width: 80%;
+    margin: 0 auto; /* Centers the chart horizontally */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 70vh; /* Adjust the height as needed */
+}
+
+.styled-table {
+    border-collapse: collapse;
+    margin: 25px 0;
+    font-size: 18px;
+    min-width: 700px;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    border: 1px solid #dddddd; /* Adds border around the table */
+}
+
+.styled-table th,
+.styled-table td {
+    padding: 12px 15px; /* Increases spacing between columns */
+    border: 1px solid #dddddd; /* Adds lines between rows and columns */
+    text-align: left; /* Ensures text is aligned to the left */
+}
+
+.styled-table thead tr {
+    background-color: black;
+    color: #ffffff;
+    text-align: left;
+}
+
+.styled-table tbody tr:hover {
+    background-color: #98cc2c; /* Highlight row on hover */
+}
+
+.detailed-table {
+    display: flex;
+    justify-content: center; /* Centers the content horizontally */
+    align-items: center; /* Centers the content vertically (if necessary) */
+    flex-direction: column; /* Ensures the heading and table are stacked vertically */
+    margin: 0 auto; /* Ensures the div itself is centered */
+}
+
+.table-title {
+    justify-content: center;  /* Center horizontally */
+    align-items: center;      /* Center vertically */
+    text-align: center;       /* Center the text inside the container */
+    flex-direction: column;   /* Ensure the text stays in a column (not a row) */
+}
+
+.page-title{
+    display: flex;           /* Enable flexbox */
+    justify-content: center;  /* Center horizontally */
+    align-items: center;      /* Center vertically */
+    text-align: center;       /* Center the text inside the container */
+    flex-direction: column;   /* Ensure the text stays in a column (not a row) */
+}
+
+.subtitle{    /* Enable flexbox */
+    justify-content: center;  /* Center horizontally */
+    align-items: center;      /* Center vertically */
+    text-align: center;       /* Center the text inside the container */
+    flex-direction: column;   /* Ensure the text stays in a column (not a row) */
+}
+
+.btn-secondary.editButton {
+    margin-bottom: 30px;
+}
+
+.btn-save{
+    width: 100%;
+    padding: 10px;
+    background-color: gold;
+    color: black;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 10px;
+    display: inline-block;
+    margin-bottom: 30px;
+}
