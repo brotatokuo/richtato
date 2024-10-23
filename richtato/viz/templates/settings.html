@@ -1,0 +1,174 @@
+{% extends "layout.html" %}
+{% load static %}
+{% load humanize %}
+{% block body %}
+    <div class="page-container">
+        <div id="Card Settings" class="settings-form">
+            <h2>Card Accounts</h2>
+            
+            <div class="form-group">
+                <table class="styled-table" id="settings-card-table">
+                    <thead>
+                        <tr>
+                            <th style="display:none">Delete</th>
+                            <th style="display:none">Card ID</th>
+                            <th>Card Name</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Rows will be populated here by JavaScript -->
+                    </tbody>
+                </table>        
+                <button class="btn-secondary editButton" id="settingsCardEditButton" onclick="editTable('settings-card-table','settingsCardEditButton', 'get-card-settings-data/')">Edit</button>
+                <br>
+            </div>
+            
+            <form method="post" action="{% url 'add_card_account'%}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="account-name">Card Name</label>
+                    <input class="form-control" id="account-name" name="account-name" type="string" required>
+                </div>
+                    
+                <br>
+
+                {% if error_card_message %}
+                    <div class="wrong-password">{{error_card_message}}</div>
+                {% endif %}
+
+                <input class="btn-secondary" id="submit-balance" type="submit" value="Add">
+            </form>  
+
+        </div>
+        
+        <br>
+        <br>
+
+        <div id="Account Settings"  class="settings-form">
+            <h2>Accounts</h2>
+                <table class="styled-table" id="settings-accounts-table">
+                    <thead>
+                        <tr>
+                            <th style="display:none">Delete</th>
+                            <th style="display:none">Card ID</th>
+                            <th>Account Name</th>
+                            <th>Account Type</th>
+                            <th>Date</th>
+                            <th>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Rows will be populated here by JavaScript -->                   
+                    </tbody>
+                </table>
+            
+            <button class="btn-secondary editButton" id="settingsAccountEditButton" onclick="editTable('settings-accounts-table', 'settingsAccountEditButton',  'get-accounts-settings-data/')">Edit</button>
+            
+            <form method="post" action="{% url 'add_account'%}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="account-type">Account Type</label>
+                    <select class="form-control" id="account-type" name="account-type" required>
+                        {% for value, label in account_types %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <br>
+
+                <div class="form-group">
+                    <label for="account-name">Account Name</label>
+                    <input class="form-control" id="account-name" name="account-name" type="string" required>
+                </div>
+
+                <br>
+
+                <div class="form-group">
+                    <label for="account-name">Balance Date</label>
+                    <input class="form-control" type="date" id="balance-date" name="balance-date" value="{{ today_date }}" required>
+                </div>
+
+                <br>
+
+                <div class="form-group">
+                    <label for="firstname">Balance</label>
+                    <input class="form-control" id="balance-input" name="balance-input" type="number" min="0.01" step="0.01" required>
+                </div>
+
+                {% if error_account_message %}
+                    <div class="wrong-password">{{error_account_message}}</div>
+                {% endif %}
+                <input class="btn-secondary" id="submit-balance" type="submit" value="Add">
+            </form>
+        </div>
+
+        <br>
+        <br>
+
+        <div id="Category Settings"  class="settings-form">
+            <h2>Categories and Keywords</h2>
+            <div class="form-group"></div>
+                <table class="styled-table" id="settings-categories-table">
+                    <thead>
+                        <tr>
+                            <th style="display:none">Delete</th>
+                            <th style="display:none">Card ID</th>
+                            <th>Categories</th>
+                            <th>Keywords</th>
+                        </tr>
+                    </thead>
+                
+                    <tbody>
+                        <!-- Rows will be populated here by JavaScript -->
+                    </tbody>
+                </table>
+
+                <button class="btn-secondary editButton" id="settingsCategoryEditButton" onclick="editTable('settings-categories-table', 'settingsCategoryEditButton',  'get-categories-settings-data/')">Edit</button>
+
+                <form method="post" action="{% url 'add_category'%}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="category-name">Category</label>
+                        <input class="form-control" id="category-name" name="category-name" type="string" required>
+                    </div> 
+
+                        <br>
+                    <div class="form-group"> 
+                        <label for="category-keyword">Keyword</label>
+                        <input class="form-control" id="category-keywords" name="category-keywords" type="string" required>
+                    </div>
+                        
+                    <br>
+    
+                    {% if error_card_message %}
+                        <div class="wrong-password">{{error_card_message}}</div>
+                    {% endif %}
+    
+                    <input class="btn-secondary" id="submit-balance" type="submit" value="Add">
+                </form>  
+        </div>
+
+        <br>
+        <br>
+
+        <div id="Data Settings"  class="settings-form">
+            <h2>Data Options</h2>
+            <div class="form-group">
+                <p>Import Path: {{import_path}}</p>
+                <a class="btn-primary" a href="{% url 'one_time_import' %}">Don't Use Import Data</a>
+                <p>Export Path: {{export_path}}</p>
+                <button class="btn-primary" a href="{% url 'export_statements_data' %}">Export Data</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        loadTableData("settings-card-table", 'get-card-settings-data/', 'settingsCardEditButton');
+        loadTableData("settings-accounts-table", 'get-accounts-settings-data/', 'settingsAccountEditButton');
+        loadTableData("settings-categories-table", 'get-categories-settings-data/', 'settingsCategoryEditButton');
+    });  
+
+    </script>
+{% endblock %}
