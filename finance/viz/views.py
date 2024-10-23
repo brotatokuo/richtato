@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.db import IntegrityError
 from django.http import JsonResponse
 import random, pandas as pd
+from django.db.models import Sum
 import os, calendar
 from viz.models import Category, Transaction, Account, User
 from django.http import HttpResponse
@@ -91,7 +92,16 @@ def view_register(request):
 
 @login_required
 def view_budget(request):
-    return render(request, 'budget.html')
+    spending_dates = Transaction.objects.filter(user=request.user).exclude(date__isnull=True).values_list('date', flat=True).distinct()
+    years_list = sorted(set(date.year for date in spending_dates), reverse=True)
+    months_list = sorted(set(date.month for date in spending_dates), reverse=True)
+    
+    print("Budget Years: ", years_list)
+    print("Budget Months: ", months_list)
+    return render(request, 'budget.html',
+                  {"years": years_list,
+                   "months": months_list,
+                   })
 
 @login_required
 def view_spendings(request):
@@ -101,7 +111,7 @@ def view_spendings(request):
     try:
         print("Request User: ", request.user)
         spending_dates = Transaction.objects.filter(user=request.user).exclude(date__isnull=True).values_list('date', flat=True).distinct()
-        years_list = sorted(set(date.year for date in spending_dates))
+        years_list = sorted(set(date.year for date in spending_dates), reverse=True)
         transaction_accounts = CardAccount.objects.filter(user=request.user).values_list('name', flat=True).distinct()
         category_list = list(Category.objects.filter(user=request.user).values_list('name', flat=True))
         print("Transaction Accounts: ", transaction_accounts)
@@ -125,7 +135,7 @@ def view_spendings(request):
 @login_required
 def view_earnings(request):
     earnings_dates = Earning.objects.filter(user=request.user).exclude(date__isnull=True).values_list('date', flat=True).distinct()
-    years_list = sorted(set(date.year for date in earnings_dates))
+    years_list = sorted(set(date.year for date in earnings_dates), reverse=True)
     account_names = Account.objects.filter(user=request.user)
     account_name_list = [account.name for account in account_names]
     entries = Earning.objects.filter(user=request.user).order_by('-date')
@@ -150,7 +160,7 @@ def view_accounts(request):
         balance_history_df['date_history'] = pd.to_datetime(balance_history_df['date_history'])
         # Extract year and month-day for labels
         balance_history_df['year'] = balance_history_df['date_history'].dt.year
-        years =  balance_history_df['year'].unique()
+        years =  sorted(balance_history_df['year'].unique(), reverse=True)
 
     return render(request, "accounts.html", {
         "networth": request.user.networth(),
@@ -170,7 +180,73 @@ def view_settings(request):
         "today_date": datetime.today().strftime('%Y-%m-%d'),
         "category_types": VARIANT_CHOICES
     })
+# region Budget
+@login_required
+def plot_budget_data(request):
+    print("Plot Budget Data")
+    years = list(Transaction.objects.filter(user=request.user).exclude(date__isnull=True).dates('date', 'year').values_list('date__year', flat=True))
+    json_data = []
+    for year in years:
+        months = list(Transaction.objects.filter(user=request.user, date__year=year).dates('date', 'month').values_list('date__month', flat=True))
 
+        month_data = []
+        for month in months:
+            transactions = Transaction.objects.filter(user=request.user, date__year=year, date__month=month)
+            categories = list(transactions.values_list('category__name', flat=True).distinct())
+            data = []
+            for category in categories:
+                category_transactions = transactions.filter(category__name=category)
+                category_sum = float(category_transactions.aggregate(Sum('amount'))['amount__sum'] or 0)
+                category_budget = Category.objects.get(user=request.user, name=category).budget
+                category_budget_percent = round(category_sum*100 / float(category_budget))
+                print("Category: ", category, "Sum: ", category_sum, "Budget: ", category_budget, "Budget Percent: ", category_budget_percent)
+                data.append({
+                    'label': category,
+                    'data': category_budget_percent
+                })
+            month_data.append({
+                'month': month,
+                'data': data
+            })
+        json_data.append({
+            'year': year,
+            'data': month_data
+        })
+    print("Budget Data: ", json_data)
+    return JsonResponse(json_data, safe=False)
+
+@login_required
+def get_budget_data_json(request):
+    print("Get Budget Table Data")
+    year = request.GET.get('year')
+    label = request.GET.get('label')
+    month = request.GET.get('month')
+
+    print("Year: ", year, "Label: ", label, "Month: ", month)
+    df = get_transaction_data(request.user, context="Spendings")
+
+    # Filter data by year, label (description), and month
+    df_filtered = df[df['Year'] == int(year)]
+    df_filtered = df_filtered[df_filtered['Category'] == label]
+    df_filtered = df_filtered[df_filtered['Month'] == int(month)]
+    
+    # Print filtered data for debugging
+    print("Filtered Spendings Data: ", df_filtered)
+
+    # Convert Date to 'YYYY-MM-DD' format and Balance to currency format
+    df_filtered['Date'] = pd.to_datetime(df_filtered['Date']).dt.strftime('%Y-%m-%d')
+    df_filtered['Amount'] = df_filtered['Amount'].apply(lambda x: f"${x:,.2f}")  # Format to 2 decimal places with currency symbol
+
+    # Rename columns for JSON response
+    df_filtered = df_filtered.rename(columns={
+        'Account Name': 'Name',           
+        'Date': 'Date',           
+        'id': 'Id'                
+    })
+
+    json_data = df_filtered[['Id', 'Date', 'Name', 'Description', 'Category', 'Amount']].to_dict(orient='records')
+    return JsonResponse(json_data, safe=False)
+# endregion
 # region Spendings
 @login_required
 def add_spendings_entry(request):
@@ -915,6 +991,8 @@ def update_settings_categories(request):
                 category_id = category.get('id')
                 category_name = category.get('name').strip()
                 category_keywords = category.get('keywords').lower()
+                category_budget = category.get('budget')
+                category_type = category.get('type')
                 # Ensure keywords are in CSV format
                 if isinstance(category_keywords, str):
                     category_keywords = ','.join([kw.strip() for kw in category_keywords.split(',')])
@@ -929,7 +1007,9 @@ def update_settings_categories(request):
                     id=category_id,
                     defaults={
                         'name': category_name,
-                        'keywords': category_keywords
+                        'keywords': category_keywords,
+                        'budget': category_budget,
+                        'variant': category_type
                     }
                 )
         

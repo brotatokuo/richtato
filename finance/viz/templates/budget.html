@@ -8,7 +8,77 @@
         <h1>Budget</h1>
     </div>
     
+    {% if years %}
+        <div class="year-filter">
+            <label for="year-filter">Year:</label>
+            <select id="year-filter" name="year-filter">
+                {% for year in years %}
+                    <option value="{{ year }}">{{ year }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="month-filter">Month:</label>
+            <select id="month-filter" name="month-filter">
+                {% for month in months %}
+                    <option value="{{ month }}">{{ month }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="bar-chart">
+            <canvas id="barChart"></canvas>
+        </div>
+    {% endif %}
+
+    <div class="detailed-table" style="display: none;">
+        <div class="table-header">
+            <h2 class="table-title" id="detailed-table-title-1"></h2>
+            <h2 class="table-title" id="detailed-table-title-2"></h2>
+        </div>
+
+        <table class="styled-table" id="details-table-budget">
+            <thead>
+            </thead>
+            <tbody>
+                <!-- Rows will be inserted here dynamically -->
+            </tbody>
+        </table>
+
+        <button class="btn-secondary editButton" id="detailsTableEditButton">Edit</button> 
+    </div>
+
 
 </div>
-    
+
+<script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const graphDataUrl = "{% url 'plot_budget_data' %}";
+        const tableDataUrl = "{% url 'get_budget_data_json' %}";
+        const yearFilter = document.getElementById('year-filter');
+        const monthFilter = document.getElementById('month-filter');
+
+        if (yearFilter && monthFilter) {
+            const initialYear = yearFilter.value;
+            const initialMonth = monthFilter.value;
+            console.log("Selected Options:", initialYear, initialMonth);
+
+            plotBudgetBarChart(graphDataUrl, 'barChart', 'details-table-budget', tableDataUrl, initialYear, initialMonth);
+            
+            // Add event listener for when the year filter changes
+            const updateChart = () => {
+                const selectedYear = yearFilter.value;
+                const selectedMonth = monthFilter.value;
+                console.log("Filter change event triggered:", selectedYear, selectedMonth);
+                plotBudgetBarChart(graphDataUrl, 'barChart', 'details-table-budget', tableDataUrl, selectedYear, selectedMonth);
+            };
+
+            yearFilter.addEventListener('change', updateChart);
+            monthFilter.addEventListener('change', updateChart);
+            
+        } else {
+            console.error("Year filter element not found!");
+        }
+
+      });
+</script>
 {% endblock %}

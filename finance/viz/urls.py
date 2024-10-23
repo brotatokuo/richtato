@@ -30,6 +30,10 @@ urlpatterns = [
     path("accounts", views.view_accounts, name="view_accounts"),
     path("settings", views.view_settings, name="view_settings"),
 
+    # Budget
+    path('plot-budget-data/', views.plot_budget_data, name='plot_budget_data'),
+    path('get-budget-data/', views.get_budget_data_json, name='get_budget_data_json'),
+
     # Spendings
     path('transaction-data-spendings/', views.get_spendings_data_json, name='get_spendings_data_json'),
     path('spending-data/', views.plot_spendings_data, name='plot_spendings_data'),  

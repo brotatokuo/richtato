@@ -120,9 +120,98 @@ async function plotBarChart(chartUrl, canvasId, tableID, tableUrl, year) {
     }
 }
 
+async function plotBudgetBarChart(chartUrl, canvasId, tableID, tableUrl, year, month) {
+    try {
+        const response = await fetch(chartUrl);  // Fetch data from the provided chartUrl
+        const data = await response.json();
+        console.log("Data received from API:", data);
+        const filteredDataByYear = data.filter(item => item.year === parseInt(year))[0];
+        console.log("Filtered data by year:", filteredDataByYear);
+        const filteredDataByMonth = filteredDataByYear.data.find(monthData => monthData.month === parseInt(month));
+        console.log("Filtered data by month:", filteredDataByMonth);
+        const plotData = filteredDataByMonth.data;
+        console.log("Plot data:", plotData);
+
+        const ctx = document.getElementById(canvasId).getContext('2d');
+
+        lastChartUrl = chartUrl;
+        lastCanvasId = canvasId;
+        lastTableID = tableID;
+        lastTableUrl = tableUrl;
+        lastYear = year;
+        
+        // Destroy existing chart instance if it exists
+        if (myChart) {
+            myChart.destroy();
+        }
+
+        // Generate chart data: categories as labels, amounts as data
+        const labels = plotData.map(d => d.label);  // Extract 'label' for labels
+        const amounts = plotData.map(d => d.data);  // Extract 'data' for amounts
+        console.log("Labels:", labels, "Amounts:", amounts);
+        
+        // Create the chart
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,  // Use categories as labels
+                datasets: [{
+                    label: labels,
+                    data: amounts,  // Use amounts as data
+                    backgroundColor: 'rgba(75, 192, 192, 0.5)',  // Bar color
+                    borderColor: 'rgba(75, 192, 192, 1)',        // Border color
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        stacked: true
+                    },
+                    y: {
+                        beginAtZero: true,
+                        stacked: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';  // Append '%' to each y-axis tick label
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        var datasetLabel = myChart.data.datasets[0].label;
+                        console.log("Clicked:", year, month, datasetLabel);
+                        
+                        fetchBarTableData(tableID, tableUrl, year, month, datasetLabel);
+                    
+
+                        const title_1 = document.getElementById('detailed-table-title-1');
+                        const title_2 = document.getElementById('detailed-table-title-2');
+
+                        if (title_1 && title_2) {
+                            title_1.textContent = `${year} ${month}`;
+                            title_2.textContent = `${datasetLabel}`;
+                        }
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching stacked chart data:", error);
+    }
+}
+
 // Table functions
 function fetchBarTableData(tableID, tableUrl, year, month, label){
     const urlWithParams = `${tableUrl}?year=${year}&label=${encodeURIComponent(label)}&month=${month}`;
+    console.log("fetchBarTableData called with tableID:", tableID, "urlWithParams:", urlWithParams);
     const editButton = document.getElementById('detailsTableEditButton');
     if (editButton) {
         editButton.onclick = function() {
