@@ -31,6 +31,7 @@ urlpatterns = [
     path("settings", views.view_settings, name="view_settings"),
 
     # Budget
+    path('get-budget-months/', views.get_budget_months, name='get_budget_months'),
     path('plot-budget-data/', views.plot_budget_data, name='plot_budget_data'),
     path('get-budget-data/', views.get_budget_data_json, name='get_budget_data_json'),
 

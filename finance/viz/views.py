@@ -182,6 +182,16 @@ def view_settings(request):
     })
 # region Budget
 @login_required
+def get_budget_months(request):
+    year = request.GET.get('year')
+    print("Get Budget Months: ", year)
+
+    # Filter transactions by year and get relavant months
+    months = list(Transaction.objects.filter(user=request.user, date__year=year).dates('date', 'month').values_list('date__month', flat=True))
+    print("Months: ", months)
+    return JsonResponse(months, safe=False)
+
+@login_required
 def plot_budget_data(request):
     print("Plot Budget Data")
     years = list(Transaction.objects.filter(user=request.user).exclude(date__isnull=True).dates('date', 'year').values_list('date__year', flat=True))
@@ -244,9 +254,11 @@ def get_budget_data_json(request):
         'id': 'Id'                
     })
 
-    json_data = df_filtered[['Id', 'Date', 'Name', 'Description', 'Category', 'Amount']].to_dict(orient='records')
+    json_data = df_filtered[['Id', 'Date', 'Name', 'Description', 'Amount']].to_dict(orient='records')
     return JsonResponse(json_data, safe=False)
+
 # endregion
+
 # region Spendings
 @login_required
 def add_spendings_entry(request):

@@ -191,12 +191,21 @@ async function plotBudgetBarChart(chartUrl, canvasId, tableID, tableUrl, year, m
                         
                         fetchBarTableData(tableID, tableUrl, year, month, datasetLabel);
                     
+                        // Convert month number to 3-letter abbreviation (MMM) if it's a number
+                        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+                        let displayMonth = month;
+
+                        // Check if the month is a number and convert it to MMM
+                        if (!isNaN(month) && month >= 1 && month <= 12) {
+                            displayMonth = monthNames[month - 1]; // Convert month number to its respective abbreviation
+                        }
 
                         const title_1 = document.getElementById('detailed-table-title-1');
                         const title_2 = document.getElementById('detailed-table-title-2');
-
+                        
                         if (title_1 && title_2) {
-                            title_1.textContent = `${year} ${month}`;
+                            title_1.textContent = `${year} ${displayMonth}`;
                             title_2.textContent = `${datasetLabel}`;
                         }
                     }
