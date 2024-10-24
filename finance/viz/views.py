@@ -1055,9 +1055,9 @@ def add_category(request):
     return HttpResponse("Add category error")
 
 def one_time_import(request):
-    return HttpResponse("Disabled")
+    # return HttpResponse("Disabled")
     print("One time transfer")
-    df = pd.read_excel("/Users/alan/Desktop/Richtato/TepSpending.xlsx", sheet_name="Transactions", header=1)
+    df = pd.read_excel("viz/static/historic_data/TepSpending.xlsx", sheet_name="Transactions", header=1)
     print(df.head())
     # Add accounts to the database
     accounts = df["Account"].unique()
@@ -1068,7 +1068,7 @@ def one_time_import(request):
     print("Added Accounts: ", accounts)
 
     # Add categories to the database
-    cat_df = pd.read_excel("/Users/alan/Desktop/Richtato/TepSpending.xlsx", sheet_name="Category", header=1)
+    cat_df = pd.read_excel("viz/static/historic_data/TepSpending.xlsx", sheet_name="Category", header=1)
     print(cat_df.head())
     categories = cat_df["Category"].unique()
     
@@ -1082,7 +1082,7 @@ def one_time_import(request):
             keywords.append(item)
         keywords = ','.join(keywords)
 
-        c = Category(user=request.user, name=c, keywords=keywords)
+        c = Category(user=request.user, name=c, keywords=keywords, budget=500, variant="Non Essential")
         c.save()
 
     print("Added Categories: ", categories)
