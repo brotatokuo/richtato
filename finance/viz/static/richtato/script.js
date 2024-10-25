@@ -41,19 +41,13 @@ function getCSRFToken() {
     return cookieValue || '';
 }
 
-// Bar Chart
-myChart = null;
-let lastChartUrl = '';
-let lastCanvasId = '';
-let lastTableID = '';
-let lastTableUrl = '';
-let lastYear = '';
+let chartInstances = {};  // Object to store chart instances by canvasId
 
 async function plotBarChart(chartUrl, canvasId, tableID, tableUrl, year) {
     try {
         const response = await fetch(chartUrl);  // Fetch data from the provided chartUrl
         const data = await response.json();
-        console.log("Data received from API:", data, "filter by year:", year);
+        console.log("plotBarChart data received from API:", data, "filter by year:", year);
         const filteredDataByYear = data.filter(item => item.year === parseInt(year));
         console.log("Filtered data:", filteredDataByYear);
         
@@ -65,44 +59,35 @@ async function plotBarChart(chartUrl, canvasId, tableID, tableUrl, year) {
         lastTableUrl = tableUrl;
         lastYear = year;
         
-        // Destroy existing chart instance if it exists
-        if (myChart) {
-            myChart.destroy();
+        // Destroy existing chart instance for this canvas if it exists
+        if (chartInstances[canvasId]) {
+            chartInstances[canvasId].destroy();
         }
 
-        myChart = new Chart(ctx, {
+        chartInstances[canvasId] = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: filteredDataByYear.map(d => d.labels).flat(),  // Ensure your data structure supports this
-                datasets: filteredDataByYear.map(d => d.data).flat()  // Adjust if your data structure is different
+                labels: filteredDataByYear.map(d => d.labels).flat(),
+                datasets: filteredDataByYear.map(d => d.data).flat()
             },
             options: {
                 responsive: true,
                 scales: {
-                    x: {
-                        stacked: true
-                    },
-                    y: {
-                        beginAtZero: true,
-                        stacked: true
-                    }
+                    x: { stacked: true },
+                    y: { beginAtZero: true, stacked: true }
                 },
                 plugins: {
-                    legend: {
-                        position: 'top'
-                    }
+                    legend: { position: 'top' }
                 },
                 onClick: (event, elements) => {
                     if (elements.length > 0) {
                         var datasetIndex = elements[0].datasetIndex;
                         var index = elements[0].index;
-                        var datasetLabel = myChart.data.datasets[datasetIndex].label;
-                        var month = myChart.data.labels[index];
+                        var datasetLabel = chartInstances[canvasId].data.datasets[datasetIndex].label;
+                        var month = chartInstances[canvasId].data.labels[index];
                         console.log("Clicked:", year, month, datasetLabel);
                         
                         fetchBarTableData(tableID, tableUrl, year, month, datasetLabel);
-                        
-
 
                         const title_1 = document.getElementById('detailed-table-title-1');
                         const title_2 = document.getElementById('detailed-table-title-2');
@@ -113,6 +98,41 @@ async function plotBarChart(chartUrl, canvasId, tableID, tableUrl, year) {
                         }
                     }
                 }
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching stacked chart data:", error);
+    }
+}
+
+async function plotBudgetCategoryBarChart(chartUrl, canvasId) {
+    try {
+        const response = await fetch(chartUrl);
+        const data = await response.json();
+        console.log("plotBudgetCategoryBarChart data received from API:", data);
+        
+        const ctx = document.getElementById(canvasId).getContext('2d');
+
+        lastChartUrl = chartUrl;
+        lastCanvasId = canvasId;
+
+        // Destroy existing chart instance for this canvas if it exists
+        if (chartInstances[canvasId]) {
+            chartInstances[canvasId].destroy();
+        }
+
+        chartInstances[canvasId] = new Chart(ctx, {
+            type: 'bar',
+            data: data,
+            options: {
+                responsive: true,
+                scales: {
+                    x: { stacked: true },
+                    y: { beginAtZero: true, stacked: true }
+                },
+                plugins: {
+                    legend: { position: 'top' }
+                },
             }
         });
     } catch (error) {
@@ -140,29 +160,14 @@ async function plotBudgetBarChart(chartUrl, canvasId, tableID, tableUrl, year, m
         lastTableUrl = tableUrl;
         lastYear = year;
         
-        // Destroy existing chart instance if it exists
-        if (myChart) {
-            myChart.destroy();
+        // Destroy existing chart instance for this canvas if it exists
+        if (chartInstances[canvasId]) {
+            chartInstances[canvasId].destroy();
         }
-
-        // Generate chart data: categories as labels, amounts as data
-        const labels = plotData.map(d => d.label);  // Extract 'label' for labels
-        const amounts = plotData.map(d => d.data);  // Extract 'data' for amounts
-        console.log("Labels:", labels, "Amounts:", amounts);
-        
         // Create the chart
-        myChart = new Chart(ctx, {
+        chartInstances[canvasId] = new Chart(ctx, {
             type: 'bar',
-            data: {
-                labels: labels,  // Use categories as labels
-                datasets: [{
-                    label: labels,
-                    data: amounts,  // Use amounts as data
-                    backgroundColor: 'rgba(75, 192, 192, 0.5)',  // Bar color
-                    borderColor: 'rgba(75, 192, 192, 1)',        // Border color
-                    borderWidth: 1
-                }]
-            },
+            data: plotData,
             options: {
                 responsive: true,
                 scales: {
@@ -186,7 +191,7 @@ async function plotBudgetBarChart(chartUrl, canvasId, tableID, tableUrl, year, m
                 },
                 onClick: (event, elements) => {
                     if (elements.length > 0) {
-                        var datasetLabel = myChart.data.datasets[0].label;
+                        var datasetLabel = chartInstances[canvasId].data.datasets[0].label;
                         console.log("Clicked:", year, month, datasetLabel);
                         
                         fetchBarTableData(tableID, tableUrl, year, month, datasetLabel);

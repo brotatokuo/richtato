@@ -46,8 +46,26 @@
 
         <!-- <button class="btn-secondary editButton" id="detailsTableEditButton">Edit</button>  -->
     </div>
+    <br>
+    <br>
+    <br>
+    <br>
+    <div class="year-filter">
+        <label for="category-filter">Category:</label>
+        <select id="category-filter" name="category-filter">
+            {% for category in categories %}
+                <option value="{{ category }}">{{ category }}</option>
+            {% endfor %}
+        </select>
+    </div>
 
-
+    <div class="bar-chart">
+        <canvas id="barChartCategory"></canvas>
+    </div>
+    <br>
+    <br>
+    <br>
+    <br>
 </div>
 
 <script>
@@ -68,7 +86,21 @@
         } else {
             console.error("Year or Month filter element not found!");
         }
+        const graphCategoryDataUrl = "/plot-category-budget-data/";
+        const categoryFilter = document.getElementById('category-filter');
+
+        function updateCategoryChart() {
+            const urlWithParams = `${graphCategoryDataUrl}?year=${yearFilter.value}&category=${encodeURIComponent(categoryFilter.value)}`;
+            console.log("URL with params:", urlWithParams);
+            plotBudgetCategoryBarChart(urlWithParams, 'barChartCategory');
+        }
+
+        // Plot the category-wise budget chart
+        categoryFilter.addEventListener('change', updateCategoryChart);
+        updateCategoryChart();
     });
+
+
 
     // Function to update chart based on selected filters
     function updateChart(graphDataUrl, tableDataUrl, yearFilter, monthFilter) {
