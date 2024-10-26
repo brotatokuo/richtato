@@ -5,7 +5,7 @@ from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
 from django.db import IntegrityError
 from django.http import JsonResponse
-import random, pandas as pd
+import pandas as pd
 from django.db.models import Sum
 import os, calendar
 from viz.models import Category, Transaction, Account, User
