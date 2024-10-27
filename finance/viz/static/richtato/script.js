@@ -218,6 +218,21 @@ async function plotBudgetBarChart(chartUrl, canvasId, tableID, tableUrl, year, m
                             title_1.textContent = `${year} ${displayMonth}`;
                             title_2.textContent = `${datasetLabel}`;
                         }
+
+                        // Change category chart to the same datasetLabel
+                        categoryDropDown = document.getElementById('category-filter');
+                        if (categoryDropDown) {
+                            for (let i = 0; i < categoryDropDown.options.length; i++) {
+                                if (categoryDropDown.options[i].value === datasetLabel) {
+                                    categoryDropDown.selectedIndex = i;
+
+                                    // Create and dispatch a change event to trigger the event listener
+                                    var event = new Event('change');
+                                    categoryDropDown.dispatchEvent(event);
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
             }

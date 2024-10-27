@@ -1,5 +1,5 @@
 import pandas as pd
-import os, warnings, re
+import os, warnings, calendar
 from datetime import datetime
 from django.http import HttpResponse, JsonResponse
 from viz.models import *
@@ -9,183 +9,96 @@ warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 script_path = os.path.abspath(__file__)
 parent_path = os.path.dirname(script_path)
 
-data_folder_path = os.path.join(parent_path, "static/data")
-card_statements_folder_path = os.path.join(data_folder_path, "Credit Card Statements")
+@login_required
+def get_latest_accounts_data(request)->JsonResponse:
+    user_accounts = request.user.account.all()
+    user_accounts = sorted(user_accounts, key=lambda x: x.name)
+    json_data = []
+    for account in user_accounts:
+        # Get the latest balance history record for the account
+        balance_history = account.history.all()
+        balance_list = []
+        date_list = []
 
-script_path = os.path.abspath(__file__)
-parent_path = os.path.dirname(script_path)
-print("card statements path", card_statements_folder_path)
+        for history in balance_history:
+            balance_list.append(history.balance_history)  # Add balance to list
+            date_list.append(history.date_history)  # Add date to list
 
-# region Excel Functions
-def sort_statements()->None:
-    bank_list = [folder for folder in os.listdir(card_statements_folder_path)  if os.path.isdir(os.path.join(card_statements_folder_path, folder))]
-    for bank in bank_list:
-        folder_path = os.path.join(card_statements_folder_path, bank)
-        
-        # Rename Statements
-        if bank == "American Express":
-            statements_list = [file for file in os.listdir(folder_path)  if os.path.isfile(os.path.join(folder_path, file))]
-            for statement in statements_list:
-                if ".xlsx" in statement and ".csv" not in statement:
-                    # print("Statement:", statement)
-                    excel_path = os.path.join(folder_path, statement)
-                    # print("Excel Path:", excel_path)
-                    df = pd.read_excel(excel_path, header=None, engine='openpyxl')
+        # Zip the balance and date lists together, then sort by the date
+        sorted_history = sorted(zip(date_list, balance_list), key=lambda x: x[0], reverse=True)
 
-                    text = df.iloc[0,1]
-                    account = re.split(r'\/', text, maxsplit=1)[0]
+        # Unzip the sorted result back into separate lists (if you need them)
+        date_list_sorted, balance_list_sorted = zip(*sorted_history) if sorted_history else ([], [])
 
-                    # Date Range
-                    df_table = pd.read_excel(excel_path, header=6, engine='openpyxl')
-                    min_date = min(df_table['Date'])
-                    max_date = max(df_table['Date'])
-                    rename_statements(excel_path, folder_path, bank, account, min_date, max_date)
+        # Get the latest balance and date
+        latest_date = date_list_sorted[0] if date_list_sorted else None
+        latest_balance = balance_list_sorted[0] if balance_list_sorted else None
 
-        elif bank == "Citi":
-            statements_list = [file for file in os.listdir(folder_path)  if os.path.isfile(os.path.join(folder_path, file))]
-            for statement in statements_list:
-                excel_path = os.path.join(folder_path, statement)
-                df = pd.read_csv(excel_path, header=0)
+        # Get account id
+        account_id = account.id
 
-                # Date Range
-                min_date = min(df['Date'])
-                max_date = max(df['Date'])
+        # Get account type
+        account_type = account.type
 
-                # Diffrentiate Costco vs Custom Cash
-                if "Member Name" in df.columns.to_list(): # Costco
-                    rename_statements(excel_path, folder_path, bank, "Costco", min_date, max_date)
-                else:
-                    rename_statements(excel_path, folder_path, bank, "Custom Cash", min_date, max_date)
+        # Collect the necessary data for each account
+        accounts_data = {
+            'id': account_id,
+            'account': account,
+            'type': account_type,
+            'balance': latest_balance,
+            'date': latest_date,
+            'history': list(zip(balance_list, date_list)) 
+        }
+        json_data.append({
+            "account_name": account.name,
+            "accounts_data": accounts_data})
+    return json_data
 
-def rename_statements(excel_path, folder_path, bank, account, min_date, max_date) -> None:
-    def date_formatter(date):
-        date_obj = datetime.strptime(str(date), "%m/%d/%Y")
-        # Format the date object to the desired format (YYYYMonDD)
-        formatted_start_date = date_obj.strftime("%Y%b%d")
-        return formatted_start_date
-
-    start_date = date_formatter(min_date)
-    end_date = date_formatter(max_date)
-    if ".csv" in excel_path:
-        suffix = "csv"
+@login_required
+def plot_data(request, context, group_by, verbose=False)->JsonResponse:
+    df = get_transaction_data(request.user, context=context)
+    if df.empty:
+        print("\033[91mviews.py - _plot_data: No data available. Please import data first.\033[0m")
     else:
-        suffix = "xlsx"
-    new_name = os.path.join(folder_path, f"{bank} [{account}] ({start_date}-{end_date}).{suffix}")
-    os.rename(excel_path, new_name)
-            
-def compile_statements()->pd.DataFrame:
-    bank_list = [folder for folder in os.listdir(card_statements_folder_path)  if os.path.isdir(os.path.join(card_statements_folder_path, folder))]
-    print("bank_list:", bank_list)
-    master_df = pd.DataFrame()
-    # Regex pattern to find text between square brackets
-    pattern = r'\[([^\]]+)\]'
+        datasets = []
+        # Split by Year
+        year_list = df['Year'].unique()
+        for year in year_list:
+            df_year = df[df['Year'] == year]
+            # Generating Labels (Months)
+            labels = [calendar.month_abbr[i] for i in range(1, 13)]
+            # Get Unique Account Names
+            group_list = df_year[group_by].unique()
+            #print("Unique Accounts: ", group_list)
+            year_dataset_list = []
+            for i in range(len(group_list)):
+                df_account = df_year[df_year[group_by] == group_list[i]]
+                df_monthly_sum = df_account.groupby('Month')['Amount'].sum().reset_index()
+                max_month = df_monthly_sum['Month'].max()
+                all_months = pd.DataFrame({'Month': range(1, max_month+1)})
+                df_complete = all_months.merge(df_monthly_sum, on='Month', how='left').fillna(0)
+                monthly_spending_sum_list = df_complete['Amount'].tolist()
 
-    for bank in bank_list:
-        print("bank:", bank)
-        folder_path = os.path.join(card_statements_folder_path, bank)
-        statements_list = [file for file in os.listdir(folder_path)  if os.path.isfile(os.path.join(folder_path, file))]
-
-        if bank == "American Express":
-            header_no = 6
-        elif bank == "Citi":
-            header_no = 0
-
-        for statement in statements_list:
-            if ".xlsx" in statement or ".csv" in statement:
-                account_name = re.search(pattern, statement).group(1)
-                excel_path = os.path.join(card_statements_folder_path, bank, statement)   
-                if "Citi" in excel_path:
-                    df = pd.read_csv(excel_path, header=header_no)
-                    df['Amount'] = df['Debit'].fillna(0) + df['Credit'].fillna(0)
-
-                    # if "[Costco]" in excel_path:
-                    #     df = df[df['Member Name'] == "KUO YUEH-LUNG"]
-                else:
-                    df = pd.read_excel(excel_path, header=header_no, engine='openpyxl')
-                df['Account Name'] = account_name
-                df = df[['Date', 'Account Name', 'Description', 'Amount']]
-                master_df = pd.concat([master_df, df])
-
-    # Save to Excel
-    master_df.to_excel(os.path.join(data_folder_path, "Master Statements.xlsx"), index=False)
-    return master_df
-
-# endregion
-
-# region Category Functions
-def categorize_transactions(df):
-    # Convert 'Date' to datetime
-    df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-
-    # Convert 'Amount' to numeric
-    df['Amount'] = round(pd.to_numeric(df['Amount'], errors='coerce'), 2)
-
-    # Handle missing values if necessary (optional)
-    df = df.dropna()  # or use fillna()
-
-    # Select specific columns in the desired order
-    df = df[["Date", "Account Name", "Description", "Amount"]]
-    df = df.sort_values(by="Date", ascending=True)
-
-    # Categorization
-    def form_category_dictionary() -> dict:
-        categories = Category.objects.all().values()
-        categories_dict = {}
-        for category in categories:
-            categories_dict[category['name']] = category['keywords']
-
-        # print("\nCategory Dictionary: ", categories_dict)
-        return categories_dict
-    
-    category_dictionary = form_category_dictionary()
-
-    def auto_categorization(description, account, category_dictionary, verbose=False):
-        description = description.lower()
-        for category, keywords in category_dictionary.items():
-            # Split the keywords string into a list
-            keyword_list = [keyword.strip() for keyword in keywords.split(",")]
-            
-            for keyword in keyword_list:
-                if keyword.lower() in description:
-                    if verbose:
-                        print("Description: ", description)
-                        print("Matched Keyword: ", keyword)
-                        print("Category: ", category)
-                        print("\n")
-                    return category
-                
-        # Additional account-based categorization
-        if account == "Costco":
-            return "Costco Uncategorized"
-        elif account == "Custom Cash":
-            return "Dining (Auto)"
-        else:
-            return "Error"
-            
-    # print("Category Dictionary: ", category_dictionary)
-    df['Category'] = df.apply(lambda row: auto_categorization(row['Description'], row['Account Name'], category_dictionary), axis=1)
-    return df
-# endregion
-
-# region Spendings/Earnings    
-def transaction_df_to_db(df, request_user)->None:
-    """
-    Post the dataframe to the SQL database
-    """
-    for _, row in df.iterrows():
-        Transaction.objects.get_or_create(
-            user=request_user,
-            account_name=row['Account Name'],
-            description=row['Description'],
-            date=row['Date'],
-            amount=round(row['Amount'], 2),
-            defaults={
-                'category': row['Category']
-            }
-        )
-    print("\033[92mSuccess!\033[0m")
+                year_dataset = {
+                    "label": group_list[i],  # Dataset label
+                    "backgroundColor": color_picker(i)[0],  # Background color
+                    "borderColor": color_picker(i)[1],  # Border color
+                    "borderWidth": 1,
+                    "data": monthly_spending_sum_list
+                }
+                year_dataset_list.append(year_dataset)
+            datasets.append({
+                "year": int(year),
+                "labels": labels[0:max_month],
+                "data": year_dataset_list})
+        if verbose:
+            print("Plot Data - Datasets: ", datasets)
+        return JsonResponse(datasets, safe=False)
 
 def get_transaction_data(user, context="Spendings", verbose=True)->pd.DataFrame:
+    """
+    Get the transaction data from the SQL database
+    """
     if context == "Spendings":
         dict = Transaction.objects.filter(user=user).select_related('account_name', 'category').values(
             'id', 'date', 'amount', 'account_name__name', 'category__name', 'description'
@@ -214,7 +127,6 @@ def get_transaction_data(user, context="Spendings", verbose=True)->pd.DataFrame:
         df['Day'] = df['Day'].astype(int)
         return df
 
-# region Accounts
 def get_accounts_data_monthly_df(request):
     users_accounts = Account.objects.filter(user=request.user)
     master_df = pd.DataFrame()
@@ -234,9 +146,6 @@ def get_accounts_data_monthly_df(request):
     master_df['Month'] = master_df['Date'].dt.month
     return master_df 
 
-# endregion
-
-# region Helper functions
 def _clean_db_df(df, context, verbose):
     if verbose:
         print("Structure SQL Data")
@@ -258,7 +167,6 @@ def _clean_db_df(df, context, verbose):
         print("Renamed and Organized Columns")
         print(df.head())
 
-    # Cleanup Data
     df = df[~df['Description'].str.contains("MOBILE PAYMENT", case=False, na=False)]
     df = df[~df['Description'].str.contains("ONLINE PAYMENT", case=False, na=False)]
 
@@ -272,6 +180,23 @@ def _clean_db_df(df, context, verbose):
         print("Structured Transactions Data")
         print(df.head())
     return df
+
+# def transaction_df_to_db(df, request_user)->None:
+#     """
+#     Post the dataframe to the SQL database
+#     """
+#     for _, row in df.iterrows():
+#         Transaction.objects.get_or_create(
+#             user=request_user,
+#             account_name=row['Account Name'],
+#             description=row['Description'],
+#             date=row['Date'],
+#             amount=round(row['Amount'], 2),
+#             defaults={
+#                 'category': row['Category']
+#             }
+#         )
+#     print("\033[92mSuccess!\033[0m")
 
 def color_picker(i):
     # Preset colors
@@ -311,4 +236,3 @@ def month_mapping(month_str):
 @login_required
 def get_user_id(request):
     return JsonResponse({'userID': request.user.id})
-# endregion
