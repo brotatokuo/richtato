@@ -95,7 +95,7 @@ def view_budget(request):
     spending_dates = Transaction.objects.filter(user=request.user).exclude(date__isnull=True).values_list('date', flat=True).distinct()
     years_list = sorted(set(date.year for date in spending_dates), reverse=True)
     months_list = sorted(set(date.month for date in spending_dates), reverse=True)
-    category_list = list(Category.objects.filter(user=request.user).values_list('name', flat=True))
+    category_list = sorted(list(Category.objects.filter(user=request.user).values_list('name', flat=True)))
 
     print("Budget Years: ", years_list)
     print("Budget Months: ", months_list)
@@ -653,6 +653,7 @@ def get_accounts_data_json(request):
 @login_required
 def get_latest_accounts_data(request):
     user_accounts = request.user.account.all()
+    user_accounts = sorted(user_accounts, key=lambda x: x.name)
     json_data = []
     for account in user_accounts:
         # Get the latest balance history record for the account
@@ -914,7 +915,7 @@ def add_card_account(request):
 
 @login_required
 def get_card_settings_data_json(request):
-    card_options = CardAccount.objects.filter(user=request.user).values('id', 'name')
+    card_options = CardAccount.objects.filter(user=request.user).values('id', 'name').order_by('name')
     json_data = []
     for card in card_options:
         card_id = card['id']
@@ -1021,7 +1022,7 @@ def update_settings_accounts(request):
 
 @login_required
 def get_categories_settings_data_json(request):
-    category_options = Category.objects.filter(user=request.user).values('id', 'name', 'keywords', 'budget', 'variant')
+    category_options = Category.objects.filter(user=request.user).values('id', 'name', 'keywords', 'budget', 'variant').order_by('name')
 
     json_data = []
     for category in category_options:

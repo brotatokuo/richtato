@@ -81,6 +81,7 @@ async function plotBarChart(chartUrl, canvasId, tableID, tableUrl, year) {
                 },
                 onClick: (event, elements) => {
                     if (elements.length > 0) {
+                        console.log("elements:", elements);
                         var datasetIndex = elements[0].datasetIndex;
                         var index = elements[0].index;
                         var datasetLabel = chartInstances[canvasId].data.datasets[datasetIndex].label;
@@ -177,6 +178,7 @@ async function plotBudgetBarChart(chartUrl, canvasId, tableID, tableUrl, year, m
                     y: {
                         beginAtZero: true,
                         stacked: true,
+                        suggestedMax: 100,
                         ticks: {
                             callback: function(value) {
                                 return value + '%';  // Append '%' to each y-axis tick label
@@ -191,7 +193,10 @@ async function plotBudgetBarChart(chartUrl, canvasId, tableID, tableUrl, year, m
                 },
                 onClick: (event, elements) => {
                     if (elements.length > 0) {
-                        var datasetLabel = chartInstances[canvasId].data.datasets[0].label;
+                        console.log("elements:", elements);
+                        var datasetIndex = elements[0].datasetIndex;
+                        var datasetLabel = chartInstances[canvasId].data.datasets[datasetIndex].label;
+                        // var datasetLabel = chartInstances[canvasId].data.datasets[0].label;
                         console.log("Clicked:", year, month, datasetLabel);
                         
                         fetchBarTableData(tableID, tableUrl, year, month, datasetLabel);
