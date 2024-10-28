@@ -125,15 +125,12 @@ def plot_category_monthly_data(request):
         # Get the data
         df = get_category_table_data(request, year, category)
 
-        # Group by Month and sum the Amount
-        df_grouped = df.groupby(['Month'])['Amount'].sum().reset_index()
-
         # Prepare the JSON response for Chart.js
         json_data = {
             'labels': [calendar.month_abbr[i] for i in range(1, 13)],  # Abbreviated month names
             'datasets': [{
                 'label': category,  # You might want to add the category label for the dataset
-                'data': df_grouped['Amount'].round(2).tolist(),  # Monthly summed amounts
+                'data': df['Amount'].round(2).tolist(),  # Monthly summed amounts
                 'backgroundColor': 'rgba(75, 192, 192, 0.4)',  # Example background color
                 'borderColor': 'rgba(75, 192, 192, 1)',  # Example border color
                 'borderWidth': 1,
@@ -151,5 +148,17 @@ def get_category_table_data(request, year, category):
         
     # Correct filtering with parentheses
     df_filtered = df[(df['Year'] == int(year)) & (df['Category'] == category)] # This needs to be exported to the table data function
-    
-    return df_filtered     
+    print("Filtered Category Data: ", df_filtered)
+
+    df_grouped = df_filtered.groupby(['Month'])['Amount'].sum().reset_index()
+    print("Grouped Category Data: ", df_grouped)
+
+    # Ensure every month exists in the data
+    for month in range(1, 13):
+        if month not in df_grouped['Month'].values:
+            df_grouped = df_grouped._append({'Month': month, 'Amount': 0}, ignore_index=True)
+
+    # Sort the data by month
+    df_grouped = df_grouped.sort_values('Month')
+    print("Sorted Category Data: ", df_grouped)
+    return df_grouped

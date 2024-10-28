@@ -42,6 +42,11 @@ function getCSRFToken() {
 }
 
 let chartInstances = {};  // Object to store chart instances by canvasId
+var lastChartUrl = "";
+var lastCanvasId = "";
+var lastTableID = "";
+var lastTableUrl = "";
+var lastYear = "";
 
 async function plotBarChart(chartUrl, canvasId, tableID, tableUrl, year) {
     try {
@@ -74,7 +79,26 @@ async function plotBarChart(chartUrl, canvasId, tableID, tableUrl, year) {
                 responsive: true,
                 scales: {
                     x: { stacked: true },
-                    y: { beginAtZero: true, stacked: true }
+                    y: {beginAtZero: true, 
+                        stacked: true,
+                        title: {
+                            display: true,            // Enable the y-axis title
+                            text: 'Amount',     // Set the y-axis label text
+                            position: 'left',
+                            padding: {
+                                top: 0,        // No padding on top
+                                bottom: 20,     // No padding on bottom
+                            },
+                            font: {
+                                size: 20
+                            }
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return "$" + Math.round(value).toLocaleString();
+                            }
+                        }
+                    }
                 },
                 plugins: {
                     legend: { position: 'top' }
@@ -128,8 +152,29 @@ async function plotBudgetCategoryBarChart(chartUrl, canvasId) {
             options: {
                 responsive: true,
                 scales: {
-                    x: { stacked: true },
-                    y: { beginAtZero: true, stacked: true }
+                    x: {stacked: true,
+
+                    },
+                    y: {beginAtZero: true, 
+                        stacked: true,
+                        title: {
+                            display: true,            // Enable the y-axis title
+                            text: 'Amount',     // Set the y-axis label text
+                            position: 'left',
+                            padding: {
+                                top: 0,        // No padding on top
+                                bottom: 20,     // No padding on bottom
+                            },
+                            font: {
+                                size: 20
+                            }
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return "$" + Math.round(value).toLocaleString();
+                            }
+                        }
+                    }
                 },
                 plugins: {
                     legend: { position: 'top' }
@@ -179,6 +224,18 @@ async function plotBudgetBarChart(chartUrl, canvasId, tableID, tableUrl, year, m
                         beginAtZero: true,
                         stacked: true,
                         suggestedMax: 100,
+                        title: {
+                            display: true,            // Enable the y-axis title
+                            text: 'Percentage of Budget',     // Set the y-axis label text
+                            position: 'left',
+                            padding: {
+                                top: 0,        // No padding on top
+                                bottom: 20,     // No padding on bottom
+                            },
+                            font: {
+                                size: 20
+                            }
+                        },
                         ticks: {
                             callback: function(value) {
                                 return value + '%';  // Append '%' to each y-axis tick label
@@ -487,7 +544,9 @@ async function saveTable(tableID, editButton, apiUrl, refreshUrl) {
     .then(result => {
         console.log("Data saved?:", result);
         loadTableData(tableID, refreshUrl);
-        plotBarChart(lastChartUrl, lastCanvasId, lastTableID, lastTableUrl, lastYear);
+        if (lastChartUrl) {
+            plotBarChart(lastChartUrl, lastCanvasId, lastTableID, lastTableUrl, lastYear);
+        }
         toggleEditMode(tableID, editButton, 'Edit', '#98cc2c');
     })
     .catch(error => {
