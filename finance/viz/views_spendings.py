@@ -23,7 +23,7 @@ def view_spendings(request):
         years_list = sorted(set(date.year for date in spending_dates), reverse=True)
         transaction_accounts = CardAccount.objects.filter(user=request.user).values_list('name', flat=True).distinct()
         category_list = list(Category.objects.filter(user=request.user).values_list('name', flat=True))
-        category_list.insert(0, "")
+        print("Transaction Accounts: ", transaction_accounts)
 
     except Exception as e:
         print(f"Error while querying transactions: {e}")
@@ -32,12 +32,13 @@ def view_spendings(request):
                                                 .values_list('name', flat=True)\
                                                 .distinct()
         category_list = list(Category.objects.filter(user=request.user).values_list('name', flat=True))
+
     print("Transaction Accounts: ", transaction_accounts)
     return render(request, 'spendings.html',
                 {"years": years_list,
                 "transaction_accounts": transaction_accounts,
                 "category_list": category_list,
-                "today_date": datetime.today().strftime('%Y-%m-%d')
+                    "today_date": datetime.today().strftime('%Y-%m-%d')
                 })
 
 @login_required
@@ -145,18 +146,3 @@ def get_spendings_data_json(request):
 
     # Return JSON response
     return JsonResponse(json_data, safe=False)
-
-@login_required
-def get_category_from_description(request):
-    print("Get Category From Description")
-    if request.method == 'GET':
-        description = request.GET.get('description')
-        print("Category Description: ", description)
-        all_categories = Category.objects.filter(user=request.user)
-
-        # loop through all categories and check if the description is in the category
-        for category in all_categories:
-            for keyword in category.keywords.split(','):
-                if keyword.lower() in description.lower():
-                    return JsonResponse({'category': category.name})
-    return JsonResponse({'category': ''})

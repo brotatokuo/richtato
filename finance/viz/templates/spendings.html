@@ -107,6 +107,7 @@
         const graphDataUrl = "{% url 'plot_spendings_data' %}";
         const tableDataUrl = "{% url 'get_spendings_data_json' %}";
         const yearFilter = document.getElementById('year-filter');
+
         if (yearFilter) {
             const initialYear = yearFilter.value;
             console.log("Initial selected year:", initialYear);
@@ -123,37 +124,6 @@
         } else {
             console.error("Year filter element not found!");
         }
-
-        const descriptionEntry = document.getElementById('description');
-        const categoryEntry = document.getElementById('category');
-
-        // Add event listener for when description blur
-        descriptionEntry.addEventListener('input', () => {
-            const description = descriptionEntry.value;
-            console.log("Description entry blur event triggered, description:", description);
-
-            if (!description) {
-                console.log("Description is empty, clearing category field");
-                categoryEntry.value = "";
-            } else{
-                const encodedDescription = encodeURIComponent(description);
-            const urlWithParams = `/get-category-from-description/?description=${encodedDescription}`;
-            console.log("URL with params:", urlWithParams);
-            fetch(urlWithParams)
-                .then(response => response.json())
-                .then(data => {
-                    console.log("Response data:", data);
-                    const auto_category = data['category'];
-                    console.log("Auto category:", auto_category);
-                    if (auto_category) {
-                        categoryEntry.value = auto_category;
-                    }
-                })
-                .catch(error => {
-                    console.error("Error fetching data:", error);
-                });
-            } 
-        });
     });
 
 </script>
