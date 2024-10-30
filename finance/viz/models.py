@@ -72,6 +72,7 @@ class Category(models.Model):
     keywords = models.TextField()
     budget = models.DecimalField(max_digits=10, decimal_places=2)
     variant = models.CharField(max_length=12, choices=VARIANT_CHOICES)
+    color = models.CharField(max_length=7, default="#000000")
 
     def __str__(self):
         return f"[{self.user}] {self.name}: {self.keywords}"

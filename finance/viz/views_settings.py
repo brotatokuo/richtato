@@ -127,7 +127,7 @@ def update_settings_accounts(request):
 
 @login_required
 def get_categories_settings_data_json(request):
-    category_options = Category.objects.filter(user=request.user).values('id', 'name', 'keywords', 'budget', 'variant').order_by('name')
+    category_options = Category.objects.filter(user=request.user).values('id', 'name', 'keywords', 'budget', 'variant', 'color').order_by('name')
 
     json_data = []
     for category in category_options:
@@ -136,6 +136,7 @@ def get_categories_settings_data_json(request):
         category_keywords = category['keywords']
         category_budget = category['budget']
         category_type = category['variant'].title()
+        color = category['color']
 
         json_data.append({
             "Id": category_id,
@@ -143,6 +144,7 @@ def get_categories_settings_data_json(request):
             "Name": category_name,
             "Budget": category_budget,
             "Keywords": category_keywords,
+            "Color": color
         })
     
     return JsonResponse(json_data, safe=False)
@@ -160,6 +162,7 @@ def update_settings_categories(request):
                 category_keywords = category.get('keywords').lower()
                 category_budget = category.get('budget')
                 category_type = category.get('type')
+                category_color = category.get('color')
 
                 if isinstance(category_keywords, str):
                     category_keywords = ','.join([kw.strip() for kw in category_keywords.split(',')])
@@ -176,7 +179,8 @@ def update_settings_categories(request):
                         'name': category_name,
                         'keywords': category_keywords,
                         'budget': category_budget,
-                        'variant': category_type
+                        'variant': category_type,
+                        'color': category_color
                     }
                 )
         

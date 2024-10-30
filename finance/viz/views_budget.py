@@ -11,6 +11,7 @@ from viz.models import Category, Transaction, Account, User
 from django.http import HttpResponse
 from viz.utils import *
 import json
+from urllib.parse import unquote
 
 @login_required
 def view_budget(request):
@@ -55,12 +56,13 @@ def plot_budget_data(request):
                 category_sum = category_transactions.aggregate(Sum('amount'))['amount__sum'] or 0
                 category_budget = Category.objects.get(user=request.user, name=category).budget
                 category_budget_percent = round(category_sum * 100 / category_budget)
+                category_color = Category.objects.get(user=request.user, name=category).color
                 data_placeholder = [0] * len(categories)
                 data_placeholder[index] = category_budget_percent
                 category_percentages_datapoint = {
                     'label': category,
-                    'backgroundColor': color_picker(index)[0],
-                    'borderColor': color_picker(index)[1],
+                    'backgroundColor':category_color,
+                    'borderColor': category_color,
                     'borderWidth': 1,
                     'data': data_placeholder
                 }
@@ -120,8 +122,12 @@ def plot_category_monthly_data(request):
     if request.method == 'GET':
         year = request.GET.get('year')
         category = request.GET.get('category')
+        # Get color from the category
+        category_obj = Category.objects.get(user=request.user, name=category)
+        color = category_obj.color
+        print("Category Color: ", color)
         print("Plot Category Monthly Data", year, category)
-        
+
         # Get the data
         df = get_category_table_data(request, year, category)
 
@@ -129,10 +135,10 @@ def plot_category_monthly_data(request):
         json_data = {
             'labels': [calendar.month_abbr[i] for i in range(1, 13)],  # Abbreviated month names
             'datasets': [{
-                'label': category,  # You might want to add the category label for the dataset
-                'data': df['Amount'].round(2).tolist(),  # Monthly summed amounts
-                'backgroundColor': 'rgba(75, 192, 192, 0.4)',  # Example background color
-                'borderColor': 'rgba(75, 192, 192, 1)',  # Example border color
+                'label': category,
+                'data': df['Amount'].round(2).tolist(),
+                'backgroundColor': color,  
+                'borderColor': color,
                 'borderWidth': 1,
             }]
         }
