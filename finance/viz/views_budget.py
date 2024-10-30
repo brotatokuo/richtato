@@ -140,8 +140,8 @@ def plot_category_monthly_data(request):
             'datasets': [{
                 'label': category,  # You might want to add the category label for the dataset
                 'data': df_grouped['Amount'].round(2).tolist(),  # Monthly summed amounts
-                'backgroundColor': 'rgba(75, 192, 192, 0.4)',  # Example background color
-                'borderColor': 'rgba(75, 192, 192, 1)',  # Example border color
+                'backgroundColor': color,
+                'borderColor': color,
                 'borderWidth': 1,
             }]
         }
