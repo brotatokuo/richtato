@@ -130,3 +130,33 @@ def get_earnings_data_json(request):
 
     # Return JSON response
     return JsonResponse(json_data, safe=False)
+
+@login_required
+def import_earnings_from_csv(request):
+    assert "DO NOT USE THIS FUNCTION" == "This function is for testing purposes only"
+    print("Importing Earnings from CSV")
+    csv_file = "viz/static/historic_data/tep_earning_20241110.csv"
+    if request.method == 'GET':
+        try:
+            df = pd.read_csv(csv_file)
+            print("CSV Data: ", df.head())
+            for index, row in df.iterrows():
+                description = row['description']
+                amount = row['amount']
+                date = pd.to_datetime(row['date']).strftime('%Y-%m-%d')
+                account_name = row['account_name']
+                account = Account.objects.get(user=request.user, name=account_name)
+                # Create and save the transaction
+                transaction = Earning(
+                    user=request.user,
+                    account_name = account,
+                    description=description,
+                    date=date,
+                    amount=amount,
+                )
+                transaction.save()
+            return HttpResponseRedirect(reverse("view_earnings"))
+        except Exception as e:
+            print("Error while importing earnings: ", e)
+            return HttpResponse("Error while importing earnings")
+    return HttpResponse("Invalid request")

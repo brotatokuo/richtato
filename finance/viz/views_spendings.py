@@ -146,3 +146,41 @@ def get_spendings_data_json(request):
 
     # Return JSON response
     return JsonResponse(json_data, safe=False)
+
+@login_required
+def import_spendings_from_csv(request):
+    assert"You should not be using this function"
+    print("Importing Spendings from CSV")
+    csv_file = "viz/static/DONOTUSE.csv"
+    if request.method == 'GET':
+        try:
+            df = pd.read_csv(csv_file)
+            print("CSV Data: ", df.head())
+            
+            for index, row in df.iterrows():
+                description = row['description']
+                amount = row['amount']
+                date = row['date']
+                category = row['category']
+                account = row['card']
+
+                category = Category.objects.get(user=request.user, name=category)
+                account_name = CardAccount.objects.get(user=request.user, name=account)
+
+                transaction = Transaction(
+                    user=request.user,
+                    account_name = account_name,
+                    description=description,
+                    category=category,
+                    date=date,
+                    amount=amount,
+                )
+                transaction.save()
+
+            return HttpResponseRedirect(reverse("view_spendings"))
+
+        except Exception as e:
+            print("Error while importing spendings: ", e)
+            return HttpResponse("Error while importing spendings")
+
+    return HttpResponse("Invalid request")

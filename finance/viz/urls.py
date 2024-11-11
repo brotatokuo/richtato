@@ -72,4 +72,8 @@ urlpatterns = [
 
     # Utils
     path("get-user-id", utils.get_user_id, name="get_user_id"),
+
+    # Import Spendings from CSV
+    path("import-spendings", views_spendings.import_spendings_from_csv, name="import_spendings"),
+    path("import-earnings", views_earnings.import_earnings_from_csv, name="import_earnings"),
 ]

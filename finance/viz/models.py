@@ -34,11 +34,7 @@ class Account(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="account")
     type = models.CharField(choices=account_choices, max_length=50)
     name = models.CharField(max_length=100)
-
-    @property
-    def latest_balance(self):
-        latest_history = self.history.order_by('-date_history').first()
-        return latest_history.balance_history if latest_history else 0
+    latest_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     def __str__(self):
         return f"[{self.user}] {self.name}"
@@ -53,7 +49,19 @@ class AccountHistory(models.Model):
 
     def __str__(self):
         return f"{self.account} Balance on {self.date_history}: {self.balance_history}"
-
+    
+    def save(self, *args, **kwargs):
+        # Call the parent save method to save the history entry first
+        super().save(*args, **kwargs)
+        
+         # After saving, find the latest balance by checking the most recent history entry
+        latest_history = AccountHistory.objects.filter(account=self.account).order_by('-date_history').first()
+        
+        if latest_history and latest_history.date_history == self.date_history:
+            # If the current entry is the latest one, update the latest_balance in the Account model
+            self.account.latest_balance = latest_history.balance_history
+            self.account.save()
+            
 class CardAccount(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="card_account")
     name = models.CharField(max_length=100)
@@ -71,7 +79,7 @@ class Category(models.Model):
     name = models.CharField(max_length=100)
     keywords = models.TextField()
     budget = models.DecimalField(max_digits=10, decimal_places=2)
-    variant = models.CharField(max_length=12, choices=VARIANT_CHOICES)
+    variant = models.CharField(max_length=50, choices=VARIANT_CHOICES)
     color = models.CharField(max_length=7, default="#000000")
 
     def __str__(self):

@@ -77,8 +77,15 @@ WSGI_APPLICATION = 'finance.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'mydatabase',          # Matches POSTGRES_DB
+        'USER': 'myuser',              # Matches POSTGRES_USER
+        'PASSWORD': 'mypassword',      # Matches POSTGRES_PASSWORD
+        'HOST': 'localhost',         # The name of your Docker service
+        'PORT': '5432',                # The default PostgreSQL port
+        'OPTIONS': {
+            'options': '-c search_path=finance'
+        },
     }
 }
 
