@@ -421,6 +421,8 @@ function editTable(tableID, editButtonID, refreshUrl) {
             apiUrl = "update-earnings/";
         } else if (tableID === 'details-table-accounts') {
             apiUrl = "update-accounts/";
+        } else if (tableID === 'details-table-budget') {
+            apiUrl = "update-spendings/";
         }
 
         // Call saveTable with the correct apiUrl and refreshUrl

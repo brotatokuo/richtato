@@ -78,7 +78,8 @@ def update_spendings(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body.decode('utf-8'))
-
+            print("Update Spendings Data: ", data)
+            
             for transaction_data in data:
                 delete_bool = transaction_data.get('delete')
                 transaction_id = transaction_data.get('id') 
@@ -95,9 +96,15 @@ def update_spendings(request):
                     print("Transaction Deleted: ", transaction_id)
                     continue
 
-                category_name = transaction_data.get('category') 
-                category = Category.objects.get(user=request.user, name=category_name)
+                category_name = transaction_data.get('category', None) 
+                if category_name:
+                    category = Category.objects.get(user=request.user, name=category_name)
+                else:
+                    category = Transaction.objects.get(id=transaction_id).category
+                    
+                print("Category: ", category)
                 account_name = CardAccount.objects.get(user=request.user, name=account_name)
+                print("Account Name: ", account_name)
                 
                 Transaction.objects.update_or_create(
                     user=request.user,
