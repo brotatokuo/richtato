@@ -40,6 +40,7 @@ urlpatterns = [
     path('transaction-data-spendings/', views_spendings.get_spendings_data_json, name='get_spendings_data_json'),
     path('spending-data/', views_spendings.plot_spendings_data, name='plot_spendings_data'),  
     path('add_spendings_entry', views_spendings.add_spendings_entry, name='add_spendings_entry'),
+    path('get-category/', views_spendings.get_category, name='get_category'),
 
     # Earnings
     path('transaction-data-earnings/', views_earnings.get_earnings_data_json, name='get_earnings_data_json'),

@@ -1,36 +1,19 @@
-version: '3.8'
 services:
-  db:
-    image: postgres:13
-    container_name: postgres_db
-    environment:
-      POSTGRES_DB: mydatabase
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypassword
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - backend
-
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
-      - "3000:3000"
+      - "3100:3100"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_SECURITY_ADMIN_USER=admin
     volumes:
       - grafana_data:/var/lib/grafana
     networks:
-      - backend
+      - backend  # Connecting to backend network
 
 volumes:
-  postgres_data:
-  grafana_data:
+  grafana_data:  # Volume for Grafana data persistence
 
 networks:
-  backend:
-    driver: bridge
+  backend:  # Isolated network for Django and Grafana communication

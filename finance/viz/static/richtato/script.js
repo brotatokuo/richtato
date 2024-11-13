@@ -487,8 +487,11 @@ async function saveTable(tableID, editButton, apiUrl, refreshUrl) {
     .then(result => {
         console.log("Data saved?:", result);
         loadTableData(tableID, refreshUrl);
-        plotBarChart(lastChartUrl, lastCanvasId, lastTableID, lastTableUrl, lastYear);
         toggleEditMode(tableID, editButton, 'Edit', '#98cc2c');
+        if (tableID.includes("details-table")) {
+            plotBarChart(lastChartUrl, lastCanvasId, lastTableID, lastTableUrl, lastYear);
+        }
+        
     })
     .catch(error => {
         console.error('Error saving data:', error);
