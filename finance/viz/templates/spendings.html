@@ -4,7 +4,7 @@
 {% block body %}
     <div class="page-container">
         <div class="page-title">
-            <h1>Spending</h1>
+            <h1>Spendings</h1>
         </div>
         
         {% if years %}
@@ -107,7 +107,7 @@
         const graphDataUrl = "{% url 'plot_spendings_data' %}";
         const tableDataUrl = "{% url 'get_spendings_data_json' %}";
         const yearFilter = document.getElementById('year-filter');
-
+        
         if (yearFilter) {
             const initialYear = yearFilter.value;
             console.log("Initial selected year:", initialYear);
@@ -123,6 +123,26 @@
             
         } else {
             console.error("Year filter element not found!");
+        }
+
+        const description = document.getElementById('description');
+        if (description) {
+            description.addEventListener('input', () => {
+                const descriptionValue = description.value;
+                console.log("Description value:", descriptionValue);
+                fetch('/get-category?description=' + description.value)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Category:', data);
+                        const categorySelect = document.getElementById('category');
+                        if (categorySelect) {
+                            categorySelect.value = data.category;
+                        }
+                    })
+                    .catch(error => console.error('Error fetching category:', error));
+            });
+        } else {
+            console.error("Description element not found!");
         }
     });
 

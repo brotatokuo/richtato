@@ -148,6 +148,23 @@ def get_spendings_data_json(request):
     return JsonResponse(json_data, safe=False)
 
 @login_required
+def get_category(request):
+    if request.method == 'GET':
+        print("Getting Category")
+        description = request.GET.get('description', '')
+        
+        # Search for a category where the description is in the keywords
+        category = Category.objects.filter(keywords__icontains=description).first()
+        if category:
+            print(f"Category found: {category.name}")
+            return JsonResponse({'category': category.name}, status=200)
+        else:
+            print("No matching category found")
+            return JsonResponse({'error': 'No matching category found'}, status=404)
+
+    return None
+    
+@login_required
 def import_spendings_from_csv(request):
     assert"You should not be using this function"
     print("Importing Spendings from CSV")
