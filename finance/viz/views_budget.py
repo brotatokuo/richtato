@@ -12,6 +12,7 @@ from django.http import HttpResponse
 from viz.utils import *
 import json
 from urllib.parse import unquote
+from collections import defaultdict
 
 @login_required
 def view_budget(request):
@@ -40,46 +41,80 @@ def get_budget_months(request):
 
 @login_required
 def plot_budget_data(request):
-    print("Plot Budget Data")
-    years = list(Transaction.objects.filter(user=request.user).exclude(date__isnull=True).dates('date', 'year').values_list('date__year', flat=True))
-    json_data = []
-    for year in years:
-        months = list(Transaction.objects.filter(user=request.user, date__year=year).dates('date', 'month').values_list('date__month', flat=True))
+    # Fetch all transactions in one query, aggregating by year, month, and category
+    transactions = (
+        Transaction.objects
+        .filter(user=request.user)
+        .exclude(date__isnull=True)
+        .values('date__year', 'date__month', 'category__name')
+        .annotate(total_amount=Sum('amount'))
+    )
 
+    # Fetch all categories in bulk
+    categories = Category.objects.filter(user=request.user).values('name', 'budget', 'color')
+
+    # Create a lookup table for category budgets and colors
+    category_info = {cat['name']: cat for cat in categories}
+
+    # Initialize the data structure
+    data_by_year = defaultdict(lambda: defaultdict(dict))
+
+    print("Data by Year initialized: ", data_by_year)
+
+    # Organize transactions by year, month, and category
+    for transaction in transactions:
+        year = transaction['date__year']
+        month = transaction['date__month']
+        category = transaction['category__name']
+        total_amount = transaction['total_amount']
+
+        # Get category budget and color
+        if category in category_info:
+            budget = category_info[category]['budget']
+            color = category_info[category]['color']
+            budget_percent = round(total_amount * 100 / budget) if budget else 0
+
+            # Add the budget percentage for the category in the correct year and month
+            if 'datasets' not in data_by_year[year][month]:
+                data_by_year[year][month]['datasets'] = []
+                data_by_year[year][month]['labels'] = []
+
+            # Append the label only once
+            if category not in data_by_year[year][month]['labels']:
+                data_by_year[year][month]['labels'].append(category)
+            
+            data_placeholder = [0] * len(category_info)
+            category_index = data_by_year[year][month]['labels'].index(category)
+            data_placeholder[category_index] = budget_percent
+
+            # Prepare the dataset for each category
+            data_by_year[year][month]['datasets'].append({
+                'label': category,
+                'backgroundColor': color,
+                'borderColor': color,
+                'borderWidth': 1,
+                'data': data_placeholder
+            })
+
+    # Convert the defaultdict structure to a list
+    json_data = []
+    for year, months in data_by_year.items():
         month_data = []
-        for month in months:
-            transactions = Transaction.objects.filter(user=request.user, date__year=year, date__month=month)
-            categories = list(transactions.values_list('category__name', flat=True).distinct())
-            category_percentages_dataset = []
-            for index, category in enumerate(categories):
-                category_transactions = transactions.filter(category__name=category)
-                category_sum = category_transactions.aggregate(Sum('amount'))['amount__sum'] or 0
-                category_budget = Category.objects.get(user=request.user, name=category).budget
-                category_budget_percent = round(category_sum * 100 / category_budget)
-                category_color = Category.objects.get(user=request.user, name=category).color
-                data_placeholder = [0] * len(categories)
-                data_placeholder[index] = category_budget_percent
-                category_percentages_datapoint = {
-                    'label': category,
-                    'backgroundColor':category_color,
-                    'borderColor': category_color,
-                    'borderWidth': 1,
-                    'data': data_placeholder
-                }
-                category_percentages_dataset.append(category_percentages_datapoint)
-                
-            data = {
-                'labels': categories,
-                'datasets': category_percentages_dataset
-            }
+        for month, data in months.items():
             month_data.append({
                 'month': month,
-                'data': data
+                'data': {
+                    'labels': data['labels'],
+                    'datasets': data['datasets']
+                }
             })
         json_data.append({
             'year': year,
             'data': month_data
         })
+
+    print("New function JSON Data: ", json_data)
+    # Return the JSON response
     return JsonResponse(json_data, safe=False)
 
 @login_required
@@ -142,7 +177,7 @@ def plot_category_monthly_data(request):
                 'data': df_grouped['Amount'].round(2).tolist(),  # Monthly summed amounts
                 'backgroundColor': color,
                 'borderColor': color,
-                'borderWidth': 1,
+                'borderWidth': 10,
             }]
         }
 
