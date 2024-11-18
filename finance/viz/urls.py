@@ -15,7 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import path
-from . import views, utils, views_accounts, views_budget, views_earnings, views_settings, views_spendings
+from . import views, utils, views_accounts, views_budget, views_earnings, views_settings, views_spendings, utils_import_statements
 
 
 urlpatterns = [
@@ -75,6 +75,9 @@ urlpatterns = [
     path("get-user-id", utils.get_user_id, name="get_user_id"),
 
     # Import Spendings from CSV
-    path("import-spendings", views_spendings.import_spendings_from_csv, name="import_spendings"),
-    path("import-earnings", views_earnings.import_earnings_from_csv, name="import_earnings"),
+    # path("import-spendings", views_spendings.import_spendings_from_csv, name="import_spendings"),
+    # path("import-earnings", views_earnings.import_earnings_from_csv, name="import_earnings"),
+
+    # Import Statements
+    path("import-statements", utils_import_statements.import_statements, name="import_statements"),
 ]

@@ -181,23 +181,6 @@ def _clean_db_df(df, context, verbose):
         print(df.head())
     return df
 
-# def transaction_df_to_db(df, request_user)->None:
-#     """
-#     Post the dataframe to the SQL database
-#     """
-#     for _, row in df.iterrows():
-#         Transaction.objects.get_or_create(
-#             user=request_user,
-#             account_name=row['Account Name'],
-#             description=row['Description'],
-#             date=row['Date'],
-#             amount=round(row['Amount'], 2),
-#             defaults={
-#                 'category': row['Category']
-#             }
-#         )
-#     print("\033[92mSuccess!\033[0m")
-
 def color_picker(i):
     # Preset colors
     colors = [
