@@ -7,15 +7,13 @@ os.environ["GRPC_VERBOSITY"] = "ERROR"
 os.environ["GLOG_minloglevel"] = "2"
 API_KEY = os.environ.get("API_KEY")
 genai.configure(api_key=API_KEY)  # Ensure the right key is used
-
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 def ai_description_simplifier(input_text):
     
     prompt = f"""
     Simplify this transcation description: "{input_text}", into a more concise description. 
     """
-
-    model = genai.GenerativeModel("gemini-1.5-flash")
     result = model.generate_content([prompt])
     best_match = result.text.strip()
 
@@ -35,7 +33,6 @@ def ai_auto_categorization(input_text, category_list) -> str:
     Please choose only from the given categories.
     """
 
-    model = genai.GenerativeModel("gemini-1.5-flash")
     result = model.generate_content([prompt])
     model_response = result.text.strip()
 

@@ -10,7 +10,7 @@ import time
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 statements_folder_path = os.path.join((os.path.dirname(os.getcwd())), "Statements")
 
-def sort_statements() -> None:
+def sort_statements_and_generate_csv(request) -> None:
     print("Folders in statements_folder_path", os.listdir(statements_folder_path))
 
     bank_list = [folder for folder in os.listdir(statements_folder_path) if os.path.isdir(os.path.join(statements_folder_path, folder))]
@@ -31,8 +31,12 @@ def sort_statements() -> None:
             assert False, f"Bank {bank_name} not supported"
         df_combined = pd.concat([df_combined, df], ignore_index=True)
 
+        output_filename = f"viz/static/historic_data/alan_{datetime.now().strftime('%Y%m%d')}.csv"
+        df_combined.to_csv(output_filename, index=False)
+
     print(colorama.Fore.GREEN + "All statements processed." + colorama.Style.RESET_ALL)
-    return df_combined
+    return HttpResponse(f"Statements sorted and saved to {output_filename}")
+
 def handle_amex_statements(folder_path, bank):
     """
     Handle American Express statements and compile them into a single DataFrame with the columns:
@@ -194,7 +198,7 @@ def rename_statements(excel_path, folder_path, bank, account, min_date, max_date
     new_path = os.path.join(folder_path, new_name)
     os.rename(excel_path, new_path)
     print(colorama.Fore.GREEN + f"{new_name}" + colorama.Style.RESET_ALL)
-    
+
 def import_statements(request):
     # Helper function to save a transaction
     def save_transaction(user, account, description, category, date, amount):
@@ -207,7 +211,7 @@ def import_statements(request):
             amount=amount,
         )
         transaction.save()
-
+    
     # Helper function to handle rate-limited AI calls
     def get_category_with_ai(description, categories, call_counter, start_time):
         if call_counter < 15:
@@ -232,48 +236,65 @@ def import_statements(request):
     categories = Category.objects.filter(user=user)
     account_list = list(CardAccount.objects.filter(user=user).values_list('name', flat=True))
 
-    # Import and process the combined statements
-    df_combined = sort_statements()
-    output_filename = f"viz/static/historic_data/alan_{datetime.now().strftime('%Y%m%d')}.csv"
-    df_combined.to_csv(output_filename, index=False)
-
     # Initialize counters and start time for API rate-limiting
     transactions_processed = 0
     call_counter = 0
     start_time = time.time()
 
-    total = len(df_combined)
-    for index, row in df_combined.iterrows():
-        description = simplify_description(row['Description'])
-        amount = round(float(row['Amount']), 2)
-        date = datetime.strptime(row['Date'], '%m/%d/%Y').strftime('%Y-%m-%d')
-        account = row['Card']
+    # Load the combined CSV file
+    file_name = "viz/static/historic_data/import.csv"
+    df_combined = pd.read_csv(file_name)
 
-        print(f"Processing: {description} | Amount: {amount} | Date: {date} | Account: {account}")
+    try:
+        total = len(df_combined)
+        for index, row in df_combined.iterrows():
+            description = simplify_description(row['Description']).lower().strip()
+            amount = round(float(row['Amount']), 2)
+            date = datetime.strptime(row['Date'], '%m/%d/%Y').strftime('%Y-%m-%d')
+            account = row['Card']
 
-        # Check if account exists for the user
-        if account not in account_list:
-            print(colorama.Fore.RED + "Users available accounts: " + str(account_list) + colorama.Style.RESET_ALL)
-            return HttpResponse(f"Account {account} not found in available accounts. Please add the account first.")
+            # Check if there is an identical entry in the database
+            if Transaction.objects.filter(user=user, description=description, amount=amount, date=date, account_name__name=account).exists():
+                print(f"Skipping duplicate: {description} | {amount} | {date} | {account}")
+                continue
 
-        # Search for a category based on the description
-        category = categories.filter(keywords__icontains=description).first()
+            print(f"Processing: {description} | Amount: {amount} | Date: {date} | Account: {account}")
 
-        if not category:
-            print("\033[95mUsing AI to determine category\033[0m")
-            category, call_counter, start_time = get_category_with_ai(description, categories, call_counter, start_time)
-            print(f"Category found by AI: {category} | Call counter: {call_counter}")
+            # Check if account exists for the user
+            if account not in account_list:
+                print(colorama.Fore.RED + "Users available accounts: " + str(account_list) + colorama.Style.RESET_ALL)
+                return HttpResponse(f"Account {account} not found in available accounts. Please add the account first.")
 
-        # Create and save the transaction
-        try:
-            account_instance = CardAccount.objects.get(user=user, name=account)
-            category_instance = categories.get(name=category)
-            save_transaction(user, account_instance, description, category_instance, date, amount)
-            transactions_processed += 1
-        except (CardAccount.DoesNotExist, Category.DoesNotExist) as e:
-            print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
-            return HttpResponse(f"Error: {str(e)}")
+            # Search for a category based on the description
+            description_words = description.split()
+            category_instance = None
+            for word in description_words:
+                print(f"Searching for: {word}")
+                category_instance = categories.filter(keywords__icontains=word).first()
+                if category_instance:
+                    print(f"Category found: {category_instance.name}")
+                    break
 
+            if category_instance == None:
+                print("\033[95mUsing AI to determine category\033[0m")
+                category_name, call_counter, start_time = get_category_with_ai(description, categories, call_counter, start_time)
+                print(f"Category found by AI: {category_name} | Call counter: {call_counter}")
+                category_instance = categories.get(name=category_name)
+
+            # Create and save the transaction
+            try:
+                account_instance = CardAccount.objects.get(user=user, name=account)
+                save_transaction(user, account_instance, description, category_instance, date, amount)
+                transactions_processed += 1
+            except (CardAccount.DoesNotExist, Category.DoesNotExist) as e:
+                print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
+                return HttpResponse(f"Error: {str(e)}")
+    except Exception as e:
+        print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
+        # Save df
+        unprocessed_df = df_combined.iloc[index:]
+        unprocessed_df.to_csv(file_name, index=False)
+        return HttpResponse(f"Error: {str(e)}")
     return HttpResponse(f"Processed {transactions_processed} out of {total} transactions.")
 
 
@@ -281,12 +302,52 @@ def simplify_description(description):
     """
     Simplify the description if too long ai_description_simplifier 
     """
-    words_to_remove = ["AplPay", "TST*"]
+    print(f"Original description: {description}")
+    simple_description = None
+    if "delta" in description.lower():
+            description = "Delta Airlines"
+    elif "eva air" in description.lower():
+        simple_description = "EVA Air"
+    elif "jetblue" in description.lower():
+        simple_description = "JetBlue Airways"
+    elif "southwest" in description.lower():
+        simple_description = "Southwest Airlines"
+    elif "united" in description.lower():
+        simple_description = "United Airlines"
+    elif "american airlines" in description.lower():
+        simple_description = "American Airlines"
+    elif "spirit airlines" in description.lower():
+        simple_description = "Spirit Airlines"
+    elif "alaska air" in description.lower():
+        simple_description = "Alaska Airlines"
+    elif "frontier airlines" in description.lower():
+        simple_description = "Frontier Airlines"
+
+    if simple_description:
+        return simple_description
+
+    words_to_remove = ["AplPay"]
     for word in words_to_remove:
         description = description.replace(word, "")
     description = description.strip()
 
     if len(description) > 40:
-        description = ai_description_simplifier(description)
-
+            description = ai_description_simplifier(description)
+    print(f"Simplified description: {description}")
     return description
+
+
+def test_category_search(request):
+    categories = Category.objects.filter(user=request.user)
+    print(categories)
+
+    # description = 'WHOLEFDS ANN ARBOR'
+    description_words = ['wholefds', 'crb', 'ann', 'arbor', 'mi']
+    
+    # Try to find a category for any word in the description
+    for word in description_words:
+        # Check if any category matches the current word
+        category = categories.filter(keywords__icontains=word.lower()).first()
+        if category:
+            return HttpResponse(f"Category found: {category.name}")  # Return as soon as a match is found
+    return HttpResponse("Category not found")

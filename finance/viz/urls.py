@@ -80,4 +80,6 @@ urlpatterns = [
 
     # Import Statements
     path("import-statements", utils_import_statements.import_statements, name="import_statements"),
+    path("sort-statements-and-generate-csv", utils_import_statements.sort_statements_and_generate_csv, name="sort_statements_and_generate_csv"),
+    path("test-category-search", utils_import_statements.test_category_search, name="test_category_search"),
 ]
