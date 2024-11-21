@@ -127,7 +127,7 @@
 
         const description = document.getElementById('description');
         if (description) {
-            description.addEventListener('input', () => {
+            description.addEventListener('blur', () => {
                 const descriptionValue = description.value;
                 console.log("Description value:", descriptionValue);
                 fetch('/get-category?description=' + description.value)

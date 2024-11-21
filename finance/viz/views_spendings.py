@@ -1,16 +1,15 @@
-from django.contrib.auth import authenticate, login, logout
+import pandas as pd
+import json
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
-from django.db import IntegrityError
 from django.http import JsonResponse
-import pandas as pd
-from django.db.models import Sum
-import os, calendar
-from viz.models import Category, Transaction, Account, User
 from django.http import HttpResponse
+
+from viz.models import Category, Transaction, Account, User
 from viz.utils import *
-import json
+from viz.utils_ai import ai_auto_categorization
 
 @login_required
 def view_spendings(request):
@@ -23,6 +22,7 @@ def view_spendings(request):
         years_list = sorted(set(date.year for date in spending_dates), reverse=True)
         transaction_accounts = CardAccount.objects.filter(user=request.user).values_list('name', flat=True).distinct()
         category_list = list(Category.objects.filter(user=request.user).values_list('name', flat=True))
+        category_list.insert(0, "")
         print("Transaction Accounts: ", transaction_accounts)
 
     except Exception as e:
@@ -157,19 +157,18 @@ def get_spendings_data_json(request):
 @login_required
 def get_category(request):
     if request.method == 'GET':
-        print("Getting Category")
         description = request.GET.get('description', '')
-        
+        categories = Category.objects.filter(user=request.user)
         # Search for a category where the description is in the keywords
-        category = Category.objects.filter(keywords__icontains=description).first()
+        category = categories.filter(keywords__icontains=description).first()
         if category:
             print(f"Category found: {category.name}")
             return JsonResponse({'category': category.name}, status=200)
         else:
-            print("No matching category found")
-            return JsonResponse({'error': 'No matching category found'}, status=404)
-
-    return None
+            print("\033[95mUsing AI to determine category\033[0m")
+            category = ai_auto_categorization(description, [category.name for category in categories])
+            return JsonResponse({'category': category}, status=200)
+    
     
 @login_required
 def import_spendings_from_csv(request):

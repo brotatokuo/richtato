@@ -61,7 +61,7 @@ def get_accounts_data_json(request):
     df_filtered['Date'] = pd.to_datetime(df_filtered['Date']).dt.strftime('%Y-%m-%d')
     df_filtered['Balance'] = df_filtered['Balance'].apply(lambda x: f"${x:,.2f}")  # Format to 2 decimal places with currency symbol
 
-    print("Filtered Accounts Data: ", df_filtered)
+ 
     json_data = df_filtered[['id', 'Date', 'Name', 'Balance']].to_dict(orient='records')
     # json_data = _process_transaction_data(balance_history_df[['id', 'account__name', 'balance_history', 'Year', 'Date']], context="Accounts")
 
