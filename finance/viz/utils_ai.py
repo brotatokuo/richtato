@@ -7,7 +7,7 @@ os.environ["GRPC_VERBOSITY"] = "ERROR"
 os.environ["GLOG_minloglevel"] = "2"
 API_KEY = os.environ.get("API_KEY")
 genai.configure(api_key=API_KEY)  # Ensure the right key is used
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel("gemini-1.5-flash-8b")
 
 def ai_description_simplifier(input_text):
     
