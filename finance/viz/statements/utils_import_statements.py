@@ -4,7 +4,7 @@ import os, warnings, re
 from datetime import datetime
 from django.http import HttpResponse
 from viz.models import Category, Transaction, Account, User, CardAccount
-from viz.utils_ai import ai_description_simplifier, ai_auto_categorization
+from viz.ai.utils_ai import ai_description_simplifier, ai_auto_categorization
 import time
 
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")

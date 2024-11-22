@@ -9,7 +9,7 @@ from django.http import HttpResponse
 
 from viz.models import Category, Transaction, Account, User
 from viz.utils import *
-from viz.utils_ai import ai_auto_categorization
+from ai.utils_ai import AI
 
 @login_required
 def view_spendings(request):
