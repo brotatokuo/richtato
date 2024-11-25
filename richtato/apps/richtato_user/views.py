@@ -16,16 +16,16 @@ class LoginView(View):
         return render(request, 'login.html', {"username": '', "message": None})
 
     def post(self, request):
-        email = request.POST["email"]
+        username = request.POST["username"]
         password = request.POST["password"]
-        user = authenticate(request, username=email, password=password)
+        user = authenticate(request, username=username, password=password)
 
         if user is not None:
             login(request, user)
             return HttpResponseRedirect(reverse("index"))
         else:
             return render(request, "login.html", {
-                "email": email,
+                "username": username,
                 "message": "Invalid username and/or password."
             })
 
@@ -40,7 +40,6 @@ class RegisterView(View):
 
     def post(self, request):
         username = request.POST["username"]
-        email = request.POST["email"]
         password = request.POST["password"]
         confirmation = request.POST["password2"]
 
@@ -52,7 +51,6 @@ class RegisterView(View):
         try:
             user = User.objects.create_user(
                 username=username,
-                email=email,
                 password=password
             )
             user.save()

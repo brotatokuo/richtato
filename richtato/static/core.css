@@ -1,4 +1,5 @@
-html, body {
+html,
+body {
     height: 100%;
     margin: 0;
     padding-top: 30px;
@@ -6,19 +7,21 @@ html, body {
     background-color: #ffffff;
 }
 
-.page-container{
-    display:flex;
+.page-container {
+    display: flex;
     flex-direction: column;
     align-items: center;
     padding-top: 0px;
     padding-left: 10px;
     padding-right: 10px;
 }
+
 .login-container {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh; /* Maintain minimum height of 100vh */
+    min-height: 100vh;
+    /* Maintain minimum height of 100vh */
     background-color: #ffffff;
 }
 
@@ -47,6 +50,7 @@ html, body {
     width: 100%;
     max-width: 1000px;
     padding: 20px;
+    padding-bottom: 50px;
     border: 1px solid #ddd;
     border-radius: 8px;
     background-color: #fff;
@@ -75,6 +79,10 @@ h2 {
     margin-bottom: 20px;
 }
 
+.settings-add-form {
+    padding-top: 20px;
+}
+
 .form-group {
     position: relative;
     margin-bottom: 15px;
@@ -98,8 +106,10 @@ h2 {
     border: 1px solid #ddd;
     border-radius: 4px;
     box-sizing: border-box;
-    appearance: none; /* Reset browser-specific styling */
-    -webkit-appearance: none; /* Reset browser-specific styling for WebKit browsers */
+    appearance: none;
+    /* Reset browser-specific styling */
+    -webkit-appearance: none;
+    /* Reset browser-specific styling for WebKit browsers */
 }
 
 input[type="text"],
@@ -112,8 +122,10 @@ input[type="password"] {
     border: 1px solid #ddd;
     border-radius: 4px;
     box-sizing: border-box;
-    appearance: none; /* Reset browser-specific styling */
-    -webkit-appearance: none; /* Reset browser-specific styling for WebKit browsers */
+    appearance: none;
+    /* Reset browser-specific styling */
+    -webkit-appearance: none;
+    /* Reset browser-specific styling for WebKit browsers */
 }
 
 .show-password {
@@ -170,9 +182,54 @@ input[type="password"] {
     text-decoration: underline;
 }
 
-/* Additional responsive adjustments */
 @media (max-width: 576px) {
     .login-container {
         padding: 10px;
     }
+}
+
+.detailed-table {
+    display: flex;
+    justify-content: center;
+    /* Centers the content horizontally */
+    align-items: center;
+    /* Centers the content vertically (if necessary) */
+    flex-direction: column;
+    /* Ensures the heading and table are stacked vertically */
+    margin: 0 auto;
+    /* Ensures the div itself is centered */
+    padding-bottom: 100px;
+}
+
+.styled-table {
+    border-collapse: collapse;
+    margin: 25px 0;
+    font-size: 18px;
+    min-width: 700px;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    border: 1px solid #dddddd;
+    /* Adds border around the table */
+}
+
+.styled-table th,
+.styled-table td {
+    padding: 12px 15px;
+    /* Increases spacing between columns */
+    border: 1px solid #dddddd;
+    /* Adds lines between rows and columns */
+    text-align: left;
+    /* Ensures text is aligned to the left */
+}
+
+.styled-table thead tr {
+    background-color: black;
+    color: #ffffff;
+    text-align: left;
+}
+
+.styled-table tbody tr:hover {
+    background-color: #98cc2c;
+    /* Highlight row on hover */
 }

@@ -28,7 +28,7 @@ def account(request):
     )
 
 @login_required
-def add(request):
+def add_account(request):
     if request.method == "POST":
         account_type = request.POST.get("account-type")
         account_name = request.POST.get("account-name")

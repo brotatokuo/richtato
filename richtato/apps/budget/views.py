@@ -19,7 +19,10 @@ from utilities.utils import *
 
 
 @login_required
-def budget(request):
+def budget(request) -> HttpResponse:
+    """
+    Budget view that renders the budget.html template
+    """
     spending_dates = Transaction.objects.filter(user=request.user).exclude(date__isnull=True).values_list('date', flat=True).distinct()
     years_list = sorted(set(date.year for date in spending_dates), reverse=True)
     months_list = sorted(set(date.month for date in spending_dates), reverse=True)
@@ -38,7 +41,6 @@ def get_budget_months(request):
     year = request.GET.get('year')
     print("Get Budget Months: ", year)
 
-    # Filter transactions by year and get relavant months
     months = sorted(list(Transaction.objects.filter(user=request.user, date__year=year).dates('date', 'month').values_list('date__month', flat=True)), reverse=True)
     print("Months: ", months)
     return JsonResponse(months, safe=False)
@@ -198,4 +200,4 @@ def get_category_table_data(request, year, category):
     df_filtered = df[(df['Year'] == int(year)) & (df['Category'] == category)] # This needs to be exported to the table data function
     
     return df_filtered         
-    return df_filtered     
+ 

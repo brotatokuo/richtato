@@ -1,0 +1,67 @@
+{% extends "layout.html" %}
+{% load static %}
+{% load humanize %}
+{% block body %}
+
+<div class="page-container">
+    <div class="page-title">
+        <h1>Budget</h1>
+    </div>
+    
+    {% if years %}
+        <div class="year-filter">
+            <label for="year-filter">Year:</label>
+            <select id="year-filter" name="year-filter">
+                {% for year in years %}
+                    <option value="{{ year }}">{{ year }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="month-filter">Month:</label>
+            <select id="month-filter" name="month-filter">
+                {% for month in months %}
+                    <option value="{{ month }}">{{ month }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="bar-chart">
+            <canvas id="barChart"></canvas>
+        </div>
+    {% endif %}
+
+    <div class="detailed-table" style="display: none;">
+        <div class="table-header">
+            <h2 class="table-title" id="detailed-table-title-1"></h2>
+            <h2 class="table-title" id="detailed-table-title-2"></h2>
+        </div>
+
+        <table class="styled-table" id="details-table-budget">
+            <thead>
+            </thead>
+            <tbody>
+                <!-- Rows will be inserted here dynamically -->
+            </tbody>
+        </table>
+
+        <button class="btn-secondary editButton" id="detailsTableEditButton">Edit</button> 
+    </div>
+
+    <div class="year-filter">
+        <label for="category-filter">Category:</label>
+        <select id="category-filter" name="category-filter">
+            {% for category in categories %}
+                <option value="{{ category }}">{{ category }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="bar-chart">
+        <canvas id="barChartCategory"></canvas>
+    </div>
+
+</div>
+
+<script src="{% static 'budget/budget.js' %}"></script>
+
+{% endblock %}

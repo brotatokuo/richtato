@@ -222,7 +222,7 @@ def add_category(request):
         )
         category.save()
 
-        return view_settings(request)
+        return settings(request)
     return HttpResponse("Add category error")
 
 
@@ -252,5 +252,5 @@ def add_card_account(request):
         )
         card_account.save()
 
-        return view_settings(request)
+        return settings(request)
     return HttpResponse("Add account error")
