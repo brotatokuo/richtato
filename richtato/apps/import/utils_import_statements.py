@@ -1,13 +1,15 @@
-import pandas as pd
-import colorama
 import os
-import warnings
 import re
-from datetime import datetime
-from django.http import HttpResponse
-from apps.richtato_user.models import Category, Transaction, CardAccount
-from utilities.ai import AI
 import time
+import warnings
+from datetime import datetime
+
+import colorama
+import pandas as pd
+from django.http import HttpResponse
+
+from apps.richtato_user.models import CardAccount, Category, Expense
+from utilities.ai import AI
 
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 statements_folder_path = os.path.join((os.path.dirname(os.getcwd())), "Statements")
@@ -204,7 +206,7 @@ def rename_statements(excel_path, folder_path, bank, account, min_date, max_date
 def import_statements(request):
     # Helper function to save a transaction
     def save_transaction(user, account, description, category, date, amount):
-        transaction = Transaction(
+        transaction = Expense(
             user=user,
             account_name=account,
             description=description,
@@ -236,7 +238,7 @@ def import_statements(request):
             account = row['Card']
 
             # Check if there is an identical entry in the database
-            if Transaction.objects.filter(user=request.user, description=description, amount=amount, date=date, account_name__name=account).exists():
+            if Expense.objects.filter(user=request.user, description=description, amount=amount, date=date, account_name__name=account).exists():
                 print(f"Skipping duplicate: {description} | {amount} | {date} | {account}")
                 continue
 

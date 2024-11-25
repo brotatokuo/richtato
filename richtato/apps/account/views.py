@@ -4,7 +4,7 @@ import pandas as pd
 from typing import Any
 from datetime import datetime
 
-from django.db.models import F, Value, CharField
+from django.db.models import F, CharField
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import HttpResponse, render
 from django.http import JsonResponse
@@ -14,7 +14,7 @@ from apps.account.models import Account, AccountHistory
 from utilities.tools import color_picker, month_mapping
 
 @login_required
-def account(request):
+def view(request):
     accounts_data, unique_years = get_accounts_data(request)
     return render(
         request,

@@ -1,16 +1,16 @@
 import json
-import pandas as pd
 from datetime import datetime
 
+import pandas as pd
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
-from django.http import JsonResponse
 
-from apps.income.models import Income
 from apps.account.models import Account
-from utilities.utils import get_transaction_data
+from apps.income.models import Income
 from utilities.tools import month_mapping
+from utilities.utils import get_transaction_data
 
 
 @login_required
@@ -103,7 +103,7 @@ def update_earnings(request):
                 )
 
                 print(
-                    "Transaction Updated: ", transaction_id, date, account_name, amount
+                    "Expense Updated: ", transaction_id, date, account_name, amount
                 )
 
             return JsonResponse({"success": True})

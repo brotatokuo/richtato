@@ -5,9 +5,9 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
-from apps.expense.models import Transaction
-from apps.richtato_user.models import CardAccount, Category
 from apps.account.models import Account
+from apps.expense.models import Expense
+from apps.richtato_user.models import CardAccount, Category
 
 
 @login_required
@@ -25,81 +25,124 @@ def settings(request):
     )
 
 
-# @login_required
-# def get_card_settings_data_json(request):
-#     card_options = (
-#         CardAccount.objects.filter(user=request.user)
-#         .values("id", "name")
-#         .order_by("name")
-#     )
-#     json_data = []
-#     for card in card_options:
-#         card_id = card["id"]
-#         card_name = card["name"]
-#         json_data.append({"Id": card_id, "Card": card_name})
-#     return JsonResponse(json_data, safe=False)
-
-
-# @login_required
-# def update_settings_card_account(request):
-#     if request.method == "POST":
-#         try:
-#             # Decode the JSON body from the request
-#             data = json.loads(request.body.decode("utf-8"))
-#             print("Card Account Data: ", data)
-#             for card in data:
-#                 # Extract the fields for each transaction
-#                 delete_bool = card.get("delete")
-#                 card_id = card.get("id")
-#                 card_name = card.get("card").strip()
-#                 print("Update Card Account: ", delete_bool, card_id, card_name)
-
-#                 if delete_bool:
-#                     CardAccount.objects.get(id=card_id).delete()
-#                     print("Card Account Deleted: ", card_id)
-#                     continue
-
-#                 CardAccount.objects.update_or_create(
-#                     user=request.user, id=card_id, defaults={"name": card_name}
-#                 )
-
-#                 print("Card Account Updated: ", card_id, card_name)
-
-#             return JsonResponse({"success": True})
-
-#         except Exception as e:
-#             return JsonResponse({"success": False, "error": str(e)})
-
-#     return JsonResponse({"success": False, "error": "Invalid request"})
-
-
-# @login_required
-# def get_accounts_settings_data_json(request):
-#     accounts_data = get_latest_accounts_data(request)
-#     # print("Accounts Data: ", accounts_data)
-#     json_data = []
-#     for account in accounts_data:
-#         account_id = account["accounts_data"]["account"].id
-#         account_name = account["account_name"]
-#         account_type = account["accounts_data"]["type"]
-#         account_balance = account["accounts_data"]["balance"]
-#         account_date = account["accounts_data"]["date"]
-
-#         json_data.append(
-#             {
-#                 "Id": account_id,
-#                 "Name": account_name,
-#                 "Type": account_type,
-#                 "Balance": account_balance,
-#                 "Date": account_date,
-#             }
-#         )
-
-#     return JsonResponse(json_data, safe=False)
+@login_required
+def get_card_data(request):
+    card_options = (
+        CardAccount.objects.filter(user=request.user)
+        .values("id", "name")
+        .order_by("name")
+    )
+    json_data = []
+    for card in card_options:
+        card_id = card["id"]
+        card_name = card["name"]
+        json_data.append({"Id": card_id, "Card": card_name})
+    return JsonResponse(json_data, safe=False)
 
 
 @login_required
-def update_settings_accounts(request):
+def update_card_account(request):
+    if request.method == "POST":
+        try:
+            # Decode the JSON body from the request
+            data = json.loads(request.body.decode("utf-8"))
+            print("Card Account Data: ", data)
+            for card in data:
+                # Extract the fields for each transaction
+                delete_bool = card.get("delete")
+                card_id = card.get("id")
+                card_name = card.get("card").strip()
+                print("Update Card Account: ", delete_bool, card_id, card_name)
+
+                if delete_bool:
+                    CardAccount.objects.get(id=card_id).delete()
+                    print("Card Account Deleted: ", card_id)
+                    continue
+
+                CardAccount.objects.update_or_create(
+                    user=request.user, id=card_id, defaults={"name": card_name}
+                )
+
+                print("Card Account Updated: ", card_id, card_name)
+
+            return JsonResponse({"success": True})
+
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)})
+
+    return JsonResponse({"success": False, "error": "Invalid request"})
+
+def get_latest_accounts_data(request)->JsonResponse:
+    user_accounts = request.user.account.all()
+    user_accounts = sorted(user_accounts, key=lambda x: x.name)
+    json_data = []
+    for account in user_accounts:
+        # Get the latest balance history record for the account
+        balance_history = account.history.all()
+        balance_list = []
+        date_list = []
+
+        for history in balance_history:
+            balance_list.append(history.balance_history)  # Add balance to list
+            date_list.append(history.date_history)  # Add date to list
+
+        # Zip the balance and date lists together, then sort by the date
+        sorted_history = sorted(zip(date_list, balance_list), key=lambda x: x[0], reverse=True)
+
+        # Unzip the sorted result back into separate lists (if you need them)
+        date_list_sorted, balance_list_sorted = zip(*sorted_history) if sorted_history else ([], [])
+
+        # Get the latest balance and date
+        latest_date = date_list_sorted[0] if date_list_sorted else None
+        latest_balance = balance_list_sorted[0] if balance_list_sorted else None
+
+        # Get account id
+        account_id = account.id
+
+        # Get account type
+        account_type = account.type
+
+        # Collect the necessary data for each account
+        accounts_data = {
+            'id': account_id,
+            'account': account,
+            'type': account_type,
+            'balance': latest_balance,
+            'date': latest_date,
+            'history': list(zip(balance_list, date_list)) 
+        }
+        json_data.append({
+            "account_name": account.name,
+            "accounts_data": accounts_data})
+    return json_data
+
+@login_required
+def get_accounts_data(request):
+    accounts_data = get_latest_accounts_data(request)
+    # print("Accounts Data: ", accounts_data)
+    json_data = []
+    for account in accounts_data:
+        account_id = account["accounts_data"]["account"].id
+        account_name = account["account_name"]
+        account_type = account["accounts_data"]["type"]
+        account_balance = account["accounts_data"]["balance"]
+        account_date = account["accounts_data"]["date"]
+
+        json_data.append(
+            {
+                "Id": account_id,
+                "Name": account_name,
+                "Type": account_type,
+                "Balance": account_balance,
+                "Date": account_date,
+            }
+        )
+
+    return JsonResponse(json_data, safe=False)
+
+
+@login_required
+def update_accounts(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body.decode("utf-8"))
@@ -129,10 +172,10 @@ def update_settings_accounts(request):
 
 
 @login_required
-def get_categories_settings_data_json(request):
+def get_categories_data(request):
     category_options = (
         Category.objects.filter(user=request.user)
-        .values("id", "name", "keywords", "budget", "variant", "color")
+        .values("id", "name", "keywords", "budget", "type", "color")
         .order_by("name")
     )
 
@@ -142,7 +185,7 @@ def get_categories_settings_data_json(request):
         category_name = category["name"]
         category_keywords = category["keywords"]
         category_budget = category["budget"]
-        category_type = category["variant"].title()
+        category_type = category["type"].title()
         color = category["color"]
 
         json_data.append(
@@ -160,7 +203,7 @@ def get_categories_settings_data_json(request):
 
 
 @login_required
-def update_settings_categories(request):
+def update_categories(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body.decode("utf-8"))
@@ -218,7 +261,7 @@ def add_category(request):
             name=category_name,
             keywords=keywords,
             budget=budget,
-            variant=category_type,
+            type=category_type,
         )
         category.save()
 
@@ -227,14 +270,11 @@ def add_category(request):
 
 
 @login_required
-def add_card_account(request):
+def add_card(request):
     if request.method == "POST":
-        user_transactions = Transaction.objects.filter(user=request.user)
-        all_accounts_names = [
-            transaction.account_name for transaction in user_transactions
-        ]
-        account_name = request.POST.get("account-name")
+        account_name = request.POST.get("account-name").strip()
 
+        all_accounts_names = CardAccount.objects.filter(user=request.user).values_list('name', flat=True)
         # Check if account name already exists
         if account_name in all_accounts_names:
             return render(

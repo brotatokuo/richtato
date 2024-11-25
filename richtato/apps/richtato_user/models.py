@@ -62,7 +62,7 @@ class Category(models.Model):
     name = models.CharField(max_length=100)
     keywords = models.TextField()
     budget = models.DecimalField(max_digits=10, decimal_places=2)
-    types = models.CharField(max_length=50, choices=CATEGORY_TYPES, default='essential')
+    type = models.CharField(max_length=50, choices=CATEGORY_TYPES, default='essential')
     color = models.CharField(max_length=7, default="#000000")
 
     def __str__(self):

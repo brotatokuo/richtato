@@ -1,8 +1,10 @@
 from django.db import models
-from apps.richtato_user.models import User, Category, CardAccount
+
+from apps.richtato_user.models import CardAccount, Category, User
+
 
 # Create your models here.
-class Transaction(models.Model):
+class Expense(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="transaction")
     account_name = models.ForeignKey(CardAccount, on_delete=models.CASCADE, related_name="transactions")
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="transactions")

@@ -1,15 +1,16 @@
-import pandas as pd
 import json
 from datetime import datetime
 
+import pandas as pd
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
-from django.http import JsonResponse
 
-from apps.richtato_user.models import Category, User, CardAccount
-from apps.expense.models import Transaction
+from apps.expense.models import Expense
+from apps.richtato_user.models import CardAccount, Category, User
 from utilities.ai import AI
+
 
 @login_required
 def expense(request):
@@ -18,12 +19,12 @@ def expense(request):
 
     try:
         print("Request User: ", request.user)
-        spending_dates = Transaction.objects.filter(user=request.user).exclude(date__isnull=True).values_list('date', flat=True).distinct()
+        spending_dates = Expense.objects.filter(user=request.user).exclude(date__isnull=True).values_list('date', flat=True).distinct()
         years_list = sorted(set(date.year for date in spending_dates), reverse=True)
         transaction_accounts = CardAccount.objects.filter(user=request.user).values_list('name', flat=True).distinct()
         category_list = list(Category.objects.filter(user=request.user).values_list('name', flat=True))
         category_list.insert(0, "")
-        print("Transaction Accounts: ", transaction_accounts)
+        print("Expense Accounts: ", transaction_accounts)
 
     except Exception as e:
         print(f"Error while querying transactions: {e}")
@@ -33,7 +34,7 @@ def expense(request):
                                                 .distinct()
         category_list = list(Category.objects.filter(user=request.user).values_list('name', flat=True))
 
-    print("Transaction Accounts: ", transaction_accounts)
+    print("Expense Accounts: ", transaction_accounts)
     return render(request, 'spendings.html',
                 {"years": years_list,
                 "transaction_accounts": transaction_accounts,
@@ -54,7 +55,7 @@ def add_spendings_entry(request):
         account = request.POST.get('account')
         account_name = CardAccount.objects.get(user=request.user, name=account)
 
-        transaction = Transaction(
+        transaction = Expense(
             user=request.user,
             account_name = account_name,
             description=description,
@@ -92,21 +93,21 @@ def update_spendings(request):
                 print("Update Spendings Data: ", delete_bool, transaction_id, account_name, description, date, amount)
 
                 if delete_bool:
-                    Transaction.objects.get(id=transaction_id).delete()
-                    print("Transaction Deleted: ", transaction_id)
+                    Expense.objects.get(id=transaction_id).delete()
+                    print("Expense Deleted: ", transaction_id)
                     continue
 
                 category_name = transaction_data.get('category', None) 
                 if category_name:
                     category = Category.objects.get(user=request.user, name=category_name)
                 else:
-                    category = Transaction.objects.get(id=transaction_id).category
+                    category = Expense.objects.get(id=transaction_id).category
                     
                 print("Category: ", category)
                 account_name = CardAccount.objects.get(user=request.user, name=account_name)
                 print("Account Name: ", account_name)
                 
-                Transaction.objects.update_or_create(
+                Expense.objects.update_or_create(
                     user=request.user,
                     id=transaction_id,
                     defaults={
@@ -117,7 +118,7 @@ def update_spendings(request):
                         'account_name': account_name
                     }
                 )
-                print("Transaction Updated: ", transaction_id, date, description, amount, category, account_name)
+                print("Expense Updated: ", transaction_id, date, description, amount, category, account_name)
 
             return JsonResponse({'success': True})
 
@@ -191,7 +192,7 @@ def get_category(request):
 #                 category = Category.objects.get(user=request.user, name=category)
 #                 account_name = CardAccount.objects.get(user=request.user, name=account)
 
-#                 transaction = Transaction(
+#                 transaction = Expense(
 #                     user=request.user,
 #                     account_name = account_name,
 #                     description=description,

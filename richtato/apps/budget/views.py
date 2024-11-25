@@ -13,7 +13,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
 
-from apps.expense.models import Transaction
+from apps.expense.models import Expense
 from apps.richtato_user.models import Category, User
 from utilities.utils import *
 
@@ -23,7 +23,7 @@ def budget(request) -> HttpResponse:
     """
     Budget view that renders the budget.html template
     """
-    spending_dates = Transaction.objects.filter(user=request.user).exclude(date__isnull=True).values_list('date', flat=True).distinct()
+    spending_dates = Expense.objects.filter(user=request.user).exclude(date__isnull=True).values_list('date', flat=True).distinct()
     years_list = sorted(set(date.year for date in spending_dates), reverse=True)
     months_list = sorted(set(date.month for date in spending_dates), reverse=True)
     category_list = sorted(list(Category.objects.filter(user=request.user).values_list('name', flat=True)))
@@ -41,7 +41,7 @@ def get_budget_months(request):
     year = request.GET.get('year')
     print("Get Budget Months: ", year)
 
-    months = sorted(list(Transaction.objects.filter(user=request.user, date__year=year).dates('date', 'month').values_list('date__month', flat=True)), reverse=True)
+    months = sorted(list(Expense.objects.filter(user=request.user, date__year=year).dates('date', 'month').values_list('date__month', flat=True)), reverse=True)
     print("Months: ", months)
     return JsonResponse(months, safe=False)
 
@@ -49,7 +49,7 @@ def get_budget_months(request):
 def plot_budget_data(request):
     # Fetch all transactions in one query, aggregating by year, month, and category
     transactions = (
-        Transaction.objects
+        Expense.objects
         .filter(user=request.user)
         .exclude(date__isnull=True)
         .values('date__year', 'date__month', 'category__name')

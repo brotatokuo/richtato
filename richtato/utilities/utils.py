@@ -1,8 +1,11 @@
-import pandas as pd
-import os, warnings, calendar
+import calendar
+import os
+import warnings
 from datetime import datetime
-from django.http import HttpResponse, JsonResponse
+
+import pandas as pd
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse, JsonResponse
 
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
@@ -110,7 +113,7 @@ def get_transaction_data(user, context="Spendings", verbose=True) -> pd.DataFram
     """
     if context == "Spendings":
         dict = (
-            Transaction.objects.filter(user=user)
+            Expense.objects.filter(user=user)
             .select_related("account_name", "category")
             .values(
                 "id",
@@ -132,7 +135,7 @@ def get_transaction_data(user, context="Spendings", verbose=True) -> pd.DataFram
         df = pd.DataFrame(list(dict))
     if verbose:
         print("User Accounts Dataframe:", dict)
-        print("User Transactions Dataframe:", df)
+        print("User Expenses Dataframe:", df)
 
     if df.empty:
         print("No data found in the database. Import data first.")
@@ -213,6 +216,6 @@ def _clean_db_df(df, context, verbose):
     df["Date"] = pd.to_datetime(df["Date"], format="%m/%d/%Y").dt.date
 
     if verbose:
-        print("Structured Transactions Data")
+        print("Structured Expenses Data")
         print(df.head())
     return df
