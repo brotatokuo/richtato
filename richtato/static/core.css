@@ -262,3 +262,9 @@ input[type="password"] {
     border-color: #007BFF; /* Focus color */
     box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Add focus shadow */
 }
+
+.page-title {
+    justify-content: center;
+    text-align: center;
+    margin-bottom: 20px;
+}

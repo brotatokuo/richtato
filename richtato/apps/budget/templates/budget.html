@@ -48,12 +48,14 @@
     </div>
 
     <div class="year-filter">
+        {% if categories %}
         <label for="category-filter">Category:</label>
-        <select id="category-filter" name="category-filter">
-            {% for category in categories %}
-                <option value="{{ category }}">{{ category }}</option>
-            {% endfor %}
-        </select>
+            <select id="category-filter" name="category-filter">
+                {% for category in categories %}
+                    <option value="{{ category }}">{{ category }}</option>
+                {% endfor %}
+            </select>
+        {% endif %}
     </div>
 
     <div class="bar-chart">
