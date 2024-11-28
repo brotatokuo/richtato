@@ -41,6 +41,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = "username"  # Only username is used for login
     REQUIRED_FIELDS = []  # No additional required fields for creating a superuser
 
+    def __str__(self):
+        return self.username
+    
+    def networth(self):
+        return sum(account.latest_balance for account in self.account.all())
 
 class CardAccount(models.Model):
     user = models.ForeignKey(

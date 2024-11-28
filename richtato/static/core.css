@@ -233,3 +233,32 @@ input[type="password"] {
     background-color: #98cc2c;
     /* Highlight row on hover */
 }
+
+.year-filter {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.year-filter select {
+    padding: 10px 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #fff;
+    color: #333;
+    font-size: 16px;
+    cursor: pointer;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    appearance: none; /* Remove default arrow in certain browsers */
+    outline: none;
+}
+
+.year-filter select:hover {
+    border-color: #888; /* Highlight border on hover */
+}
+
+.year-filter select:focus {
+    border-color: #007BFF; /* Focus color */
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Add focus shadow */
+}

@@ -18,7 +18,7 @@ def view(request):
     accounts_data, unique_years = get_accounts_data(request)
     return render(
         request,
-        "accounts.html",
+        "account.html",
         {
             "networth": request.user.networth(),
             "accounts_data": accounts_data,

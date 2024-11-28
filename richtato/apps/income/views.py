@@ -30,7 +30,7 @@ def income(request):
     print("Incomes Entries: ", entries)
     return render(
         request,
-        "earnings.html",
+        "income.html",
         {
             "years": years_list,
             "entries": entries,
@@ -41,7 +41,7 @@ def income(request):
 
 
 @login_required
-def add_earnings_entry(request):
+def add_earning_entry(request):
     if request.method == "POST":
         # Get the form data
         description = request.POST.get("description")

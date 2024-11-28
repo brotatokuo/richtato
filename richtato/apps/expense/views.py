@@ -35,7 +35,7 @@ def expense(request):
         category_list = list(Category.objects.filter(user=request.user).values_list('name', flat=True))
 
     print("Expense Accounts: ", transaction_accounts)
-    return render(request, 'spendings.html',
+    return render(request, 'expense.html',
                 {"years": years_list,
                 "transaction_accounts": transaction_accounts,
                 "category_list": category_list,
@@ -43,7 +43,7 @@ def expense(request):
                 })
 
 @login_required
-def add_spendings_entry(request):
+def add_expense_entry(request):
     if request.method == "POST":
         description = request.POST.get('description')
         amount = request.POST.get('amount')
