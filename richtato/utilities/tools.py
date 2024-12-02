@@ -46,7 +46,9 @@ def month_mapping(month):
         month = month_mapping[month]
     return month
 
+def format_currency(value):
+    return "${:,.2f}".format(value)
 
-# @login_required
-# def get_user_id(request):
-#     return JsonResponse({"userID": request.user.id})
+def format_date(value):
+    return value.strftime("%Y-%m-%d")
+

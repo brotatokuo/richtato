@@ -4,6 +4,7 @@ from django.contrib.auth.models import (
     PermissionsMixin,
 )
 from django.db import models
+from django.db.models import Sum
 
 
 # Custom user manager
@@ -55,7 +56,6 @@ class CardAccount(models.Model):
 
     def __str__(self):
         return f"[{self.user}] {self.name}"
-
 
 class Category(models.Model):
     CATEGORY_TYPES = [

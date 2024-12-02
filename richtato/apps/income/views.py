@@ -10,7 +10,6 @@ from django.urls import reverse
 from apps.account.models import Account
 from apps.income.models import Income
 from utilities.tools import month_mapping
-from utilities.utils import get_transaction_data
 
 
 @login_required
@@ -114,39 +113,39 @@ def update_earnings(request):
     return JsonResponse({"success": False, "error": "Invalid request"})
 
 
-@login_required
-def get_earnings_data_json(request):
-    year = request.GET.get("year")
-    label = request.GET.get("label")
-    month_str = request.GET.get("month")
-    month = month_mapping(month_str)
+# @login_required
+# def get_earnings_data_json(request):
+#     year = request.GET.get("year")
+#     label = request.GET.get("label")
+#     month_str = request.GET.get("month")
+#     month = month_mapping(month_str)
 
-    # Fetch the transaction data based on the user's context
-    df = get_transaction_data(request.user, context="Incomes")
+#     # Fetch the transaction data based on the user's context
+#     df = get_transaction_data(request.user, context="Incomes")
 
-    # Filter data by year, label (description), and month
-    df_filtered = df[df["Year"] == int(year)]
-    df_filtered = df_filtered[df_filtered["Description"] == label]
-    df_filtered = df_filtered[df_filtered["Month"] == int(month)]
+#     # Filter data by year, label (description), and month
+#     df_filtered = df[df["Year"] == int(year)]
+#     df_filtered = df_filtered[df_filtered["Description"] == label]
+#     df_filtered = df_filtered[df_filtered["Month"] == int(month)]
 
-    # Print filtered data for debugging
-    print("Filtered Incomes Data: ", df_filtered)
+#     # Print filtered data for debugging
+#     print("Filtered Incomes Data: ", df_filtered)
 
-    # Convert Date to 'YYYY-MM-DD' format and Balance to currency format
-    df_filtered["Date"] = pd.to_datetime(df_filtered["Date"]).dt.strftime("%Y-%m-%d")
-    df_filtered["Amount"] = df_filtered["Amount"].apply(
-        lambda x: f"${x:,.2f}"
-    )  # Format to 2 decimal places with currency symbol
+#     # Convert Date to 'YYYY-MM-DD' format and Balance to currency format
+#     df_filtered["Date"] = pd.to_datetime(df_filtered["Date"]).dt.strftime("%Y-%m-%d")
+#     df_filtered["Amount"] = df_filtered["Amount"].apply(
+#         lambda x: f"${x:,.2f}"
+#     )  # Format to 2 decimal places with currency symbol
 
-    # Rename columns for JSON response
-    df_filtered = df_filtered.rename(
-        columns={"Account Name": "Name", "Date": "Date", "id": "Id"}
-    )
+#     # Rename columns for JSON response
+#     df_filtered = df_filtered.rename(
+#         columns={"Account Name": "Name", "Date": "Date", "id": "Id"}
+#     )
 
-    json_data = df_filtered[["Id", "Date", "Name", "Amount"]].to_dict(orient="records")
+#     json_data = df_filtered[["Id", "Date", "Name", "Amount"]].to_dict(orient="records")
 
-    # Return JSON response
-    return JsonResponse(json_data, safe=False)
+#     # Return JSON response
+#     return JsonResponse(json_data, safe=False)
 
 
 # @login_required

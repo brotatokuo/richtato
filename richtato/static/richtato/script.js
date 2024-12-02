@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', (event) => {
-    // Swap GIF with a static image after 2 seconds
     var gif = document.getElementById('growth-gif');
     if (gif) {
         setTimeout(function () {
@@ -37,4 +36,10 @@ function togglePasswordVisibility(id, button) {
 function getCSRFToken() {
     const cookieValue = document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)')?.pop();
     return cookieValue || '';
+}
+
+function getUserID() {
+    return fetch('/get-user-id')
+        .then(response => response.json())
+        .then(data => data.userID);
 }

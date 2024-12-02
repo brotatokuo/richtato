@@ -11,9 +11,8 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-top: 0px;
-    padding-left: 10px;
-    padding-right: 10px;
+    padding: 2%;
+    margin: 0 auto;
 }
 
 .login-container {
@@ -28,17 +27,6 @@ body {
 .login-header {
     text-align: center;
     margin-bottom: 50px;
-}
-
-.login-form {
-    width: 100%;
-    max-width: 500px;
-    padding: 20px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background-color: #fff;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    text-align: left;
 }
 
 .login-footer {
@@ -188,17 +176,20 @@ input[type="password"] {
     }
 }
 
+
+.table-title {
+    justify-content: center;  /* Center horizontally */
+    align-items: center;      /* Center vertically */
+    text-align: center;       /* Center the text inside the container */
+    flex-direction: column;   /* Ensure the text stays in a column (not a row) */
+}
+
 .detailed-table {
     display: flex;
-    justify-content: center;
-    /* Centers the content horizontally */
-    align-items: center;
-    /* Centers the content vertically (if necessary) */
     flex-direction: column;
-    /* Ensures the heading and table are stacked vertically */
+    justify-content: center;
+    align-items: center;
     margin: 0 auto;
-    /* Ensures the div itself is centered */
-    padding-bottom: 100px;
 }
 
 .styled-table {
@@ -231,40 +222,138 @@ input[type="password"] {
 
 .styled-table tbody tr:hover {
     background-color: #98cc2c;
-    /* Highlight row on hover */
 }
 
 .year-filter {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-top: 20px;
+    display: inline-block;
+    margin-right: 5px;
 }
 
 .year-filter select {
-    padding: 10px 15px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+    font-size: 22px;
+    appearance: none;
+    font-weight: bold;
+    border: none;
+    border-radius: 2px;
     background-color: #fff;
-    color: #333;
-    font-size: 16px;
     cursor: pointer;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
-    appearance: none; /* Remove default arrow in certain browsers */
     outline: none;
+    padding-left: 30px; /* Add padding to the left for the arrow */
+    background: url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2024%22%20width=%2224%22%20height=%2224%22%3E%3Cpath%20d=%22M12.7071%2014.7071C12.3166%2015.0976%2011.6834%2015.0976%2011.2929%2014.7071L6.29289%209.70711C5.90237%209.31658%205.90237%208.68342%206.29289%208.29289C6.68342%207.90237%207.31658%207.90237%207.70711%208.29289L12%2012.5858L16.2929%208.29289C16.6834%207.90237%2017.3166%207.90237%2017.7071%208.29289C18.0976%208.68342%2018.0976%209.31658%2017.7071%209.70711L12.7071%2014.7071Z%22%20fill=%22none%22%20stroke=%22%23000%22%20stroke-width=%222%22%2F%3E%3C/svg%3E') no-repeat left center;
+    background-size: 20px 16px; 
+    background-position: 5px center; /* Position the arrow on the left */
+    padding-right: 5px; /* Optional: Adjust right padding for better spacing */
+}
+
+.year-filter select:focus {
+    outline: none; /* Removes the default outline when focused */
 }
 
 .year-filter select:hover {
     border-color: #888; /* Highlight border on hover */
 }
 
-.year-filter select:focus {
-    border-color: #007BFF; /* Focus color */
-    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Add focus shadow */
-}
 
 .page-title {
     justify-content: center;
     text-align: center;
     margin-bottom: 20px;
+}
+
+/* Year filter dropdown styling */
+.year-filter {
+    text-align: center;
+}
+
+.year-filter label {
+    margin-right: 10px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+/* Chart and form container layout */
+.chart-form-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    width: 100%;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* Chart container styling */
+.chart-container {
+    flex: 1 1 70%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 300px; 
+    width: 100%;  
+    box-sizing: border-box;
+}
+
+.chart {
+    height: 80vh;
+    max-width: 100%; 
+}
+
+/* Chart title styling */
+.chart-title {
+    text-align: center;
+    font-size: 22px;
+    font-weight: bold;
+    display: inline-block;
+}
+
+.chart-title-container {
+    display: flex;
+    justify-content: flex-start; 
+    align-items: center; 
+}
+
+/* Form container styling */
+.form-container {
+    flex: 0 0 auto;
+    width: 20%;
+    max-width: 500px;
+    margin-top: 5%;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    align-self: flex-start;
+}
+
+/* Form subtitle styling */
+.form-subtitle {
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* Form group styling */
+.form-group {
+    margin-bottom: 20px;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 900px) {
+    .chart-form-container {
+        flex-direction: column;
+    }
+
+    .chart-container {
+        width: 100%;
+        min-width: unset;
+    }
+
+    .form-container {
+        width: 80%;
+        justify-content: center;
+        align-self: center;
+    }
 }

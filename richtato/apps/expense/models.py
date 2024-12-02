@@ -1,5 +1,4 @@
 from django.db import models
-
 from apps.richtato_user.models import CardAccount, Category, User
 
 
@@ -14,3 +13,14 @@ class Expense(models.Model):
 
     def __str__(self):
         return f"{self.date} [{self.account_name}] (${self.amount}) {self.description}"
+    
+    @classmethod
+    def existing_years_for_user(cls, user):
+        # Query all expenses for the given user where the date is not null
+        expenses = cls.objects.filter(user=user, date__isnull=False)
+
+        years = {expense.date.year for expense in expenses}
+
+        # Return the dictionary where keys are years and values are lists of months
+        return sorted(years)
+

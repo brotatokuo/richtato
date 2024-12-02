@@ -1,4 +1,6 @@
 # views/auth_views.py
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.contrib.auth import authenticate, login, logout
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -6,6 +8,10 @@ from django.shortcuts import render
 from django.views import View
 from django.db import IntegrityError
 from apps.richtato_user.models import User
+
+@login_required
+def get_user_id(request):
+    return JsonResponse({"userID": request.user.id})
 
 class IndexView(View):
     def get(self, request):

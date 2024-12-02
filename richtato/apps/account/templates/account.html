@@ -15,18 +15,20 @@
     </div>
     
     <h2>Historical Data</h2>
-    <div class="bar-chart">
-        <div class="year-filter">
-            <label for="year-filter">Year:</label>
-            <select id="year-filter" name="year-filter">
-                {% for year in years %}
-                    <option value="{{ year }}">{{ year }}</option>
-                {% endfor %}
-            </select>
+    {% if years %}
+        <div class="bar-chart">
+            <div class="year-filter">
+                <label for="year-filter">Year:</label>
+                <select id="year-filter" name="year-filter">
+                    {% for year in years %}
+                        <option value="{{ year }}">{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <canvas id="barChart"></canvas>
         </div>
-        <canvas id="barChart"></canvas>
-    </div>
-
+    {% endif %}
+    
     <div class="detailed-table" style="display: none;">
         <div class="table-header">
             <h2 class="table-title" id="detailed-table-title-1"></h2>
@@ -44,7 +46,7 @@
         <button class="btn-secondary editButton" id="detailsTableEditButton">Edit</button> 
     </div>
 
-    <div class="login-form">
+    <div class="form-container">
         <h2 class="subtitle">Update Account Balance</h2>
         <form method="post" action="{% url 'add_account_history' %}">
             {% csrf_token %}
