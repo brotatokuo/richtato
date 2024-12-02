@@ -7,7 +7,7 @@ class ChartPlotter {
         this.editButton = editButton;
 
         // Initialize TableManager
-        this.tableManager = new TableManager(tableID, tableUrl, editButton, saveTableEndpoint);
+        this.tableManager = new TableManager(tableID, tableUrl, editButton, saveTableEndpoint, this);
     }
 
     // Fetch chart data from the server
@@ -77,18 +77,15 @@ class ChartPlotter {
         }
     }
 }
-
-// TableManager class to handle table data and interactions
 class TableManager {
-    constructor(tableID, tableUrl, editButton, saveTableEndpoint) {
+    constructor(tableID, tableUrl, editButton, saveTableEndpoint, chartInstance) {
         this.tableID = tableID;
         this.tableUrl = tableUrl;
         this.saveTableEndpoint = saveTableEndpoint;
         this.table = document.getElementById(tableID); 
         this.editButton = editButton;
         this.mode = 'view'; // Initial mode is 'view'
-        this.tableQueryEndpoint = null;
-        
+        this.chartInstance = chartInstance || null;        
     }
 
     updateTableTitles(title1, title2) {
@@ -97,12 +94,12 @@ class TableManager {
     }
     
     fetchBarTableData(year, month, label) {
-        this.tableQueryEndpoint = `${this.tableUrl}?year=${year}&label=${encodeURIComponent(label)}&month=${month}`;
-        this.editButton.onclick = this.toggleEditMode.bind(this, this.tableQueryEndpoint);
-        this.loadTableData(this.tableQueryEndpoint);
+        this.tableUrl = `${this.tableUrl}?year=${year}&label=${encodeURIComponent(label)}&month=${month}`;
+        this.editButton.onclick = this.toggleEditMode.bind(this, this.tableUrl);
+        this.loadTableData();
     }
 
-    loadTableData(tableQueryUrl) {
+    loadTableData() {
         const table = document.getElementById(this.tableID);
         if (!table) {
             console.error(`Table with ID "${this.tableID}" not found.`);
@@ -110,9 +107,10 @@ class TableManager {
         }
 
         // Fetch data from the API
-        fetch(tableQueryUrl)
+        fetch(this.tableUrl)
             .then(response => response.json())
             .then(data => {
+                console.log("Fetched table data:", data);
                 this.modifyTableData(data);
                 this.showTable();
             })
@@ -120,88 +118,63 @@ class TableManager {
     }
 
     modifyTableData(data) {
-        const tableHead = this.table.querySelector('thead');
-        const tableBody = this.table.querySelector('tbody');
+        if (data) {
+            const tableHead = this.table.querySelector('thead');
+            const tableBody = this.table.querySelector('tbody');
+            
+            // Clear existing table content
+            tableBody.innerHTML = '';
+            tableHead.innerHTML = '';
         
-        // Clear existing table content
-        tableBody.innerHTML = '';
-        tableHead.innerHTML = '';
-    
-        // Create and append header row
-        const headerRow = document.createElement('tr');
-    
-        // Add 'Delete' column (hidden by default)
-        const deleteHeader = document.createElement('th');
-        deleteHeader.textContent = 'Delete';
-        deleteHeader.style.display = 'none'; // Initially hide the Delete column
-        headerRow.appendChild(deleteHeader);
-    
-        // Generate headers from the data keys (skip the ID column)
-        Object.keys(data[0]).forEach((header, index) => {
-            const th = document.createElement('th');
-            th.textContent = header.charAt(0).toUpperCase() + header.slice(1);
-            if (index === 0) th.style.display = 'none'; // Hide the ID column
-            headerRow.appendChild(th);
-        });
-    
-        tableHead.appendChild(headerRow);
-    
-        // Create and append data rows
-        data.forEach(item => {
-            const row = document.createElement('tr');
-    
-            // Add hidden checkbox column
-            const checkboxCell = document.createElement('td');
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkboxCell.style.display = 'none'; // Initially hide the Delete column
-            checkboxCell.appendChild(checkbox);
-            row.appendChild(checkboxCell);
-    
-            // Populate row cells (skip the ID column)
-            Object.keys(item).forEach((key, index) => {
-                const cell = document.createElement('td');
-                cell.textContent = item[key];
-                if (index === 0) cell.style.display = 'none'; // Hide the ID column
-                row.appendChild(cell);
+            // Create and append header row
+            const headerRow = document.createElement('tr');
+        
+            // Add 'Delete' column (hidden by default)
+            const deleteHeader = document.createElement('th');
+            deleteHeader.textContent = 'Delete';
+            deleteHeader.style.display = 'none'; // Initially hide the Delete column
+            headerRow.appendChild(deleteHeader);
+        
+            // Generate headers from the data keys (skip the ID column)
+            Object.keys(data[0]).forEach((header, index) => {
+                const th = document.createElement('th');
+                th.textContent = header.charAt(0).toUpperCase() + header.slice(1);
+                if (index === 0) th.style.display = 'none'; // Hide the ID column
+                headerRow.appendChild(th);
             });
-    
-            tableBody.appendChild(row);
-        });
+        
+            tableHead.appendChild(headerRow);
+        
+            // Create and append data rows
+            data.forEach(item => {
+                const row = document.createElement('tr');
+        
+                // Add hidden checkbox column
+                const checkboxCell = document.createElement('td');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkboxCell.style.display = 'none'; // Initially hide the Delete column
+                checkboxCell.appendChild(checkbox);
+                row.appendChild(checkboxCell);
+        
+                // Populate row cells (skip the ID column)
+                Object.keys(item).forEach((key, index) => {
+                    const cell = document.createElement('td');
+                    cell.textContent = item[key];
+                    if (index === 0) cell.style.display = 'none'; // Hide the ID column
+                    row.appendChild(cell);
+                });
+        
+                tableBody.appendChild(row);
+            });
+        }
     }
     
     showTable() {
-        document.querySelector('.detailed-table').style.display = 'block';
-    }
-
-    // Edit mode for table
-    editTable() {
-        // if (this.mode === 'view') {
-        //     this.toggleEditMode();
-        // } else {
-        //     // Use a mapping object for tableID to API URL
-        //     const apiUrlMapping = {
-        //         'detailsTableExpense': "update-expenses/",
-
-        //         'settings-card-table': "update-settings-card-account/",
-        //         'settings-accounts-table': "update-settings-accounts/",
-        //         'settings-categories-table': "update-settings-categories/",
-        //         'details-table-earnings': "update-earnings/",
-        //         'details-table-accounts': "update-accounts/",
-        //         'details-table-budget': "update-spendings/",
-        //     };
-
-        //     // Get the API URL based on the tableID
-        //     const apiUrl = apiUrlMapping[this.tableID];
-
-        //     if (!apiUrl) {
-        //         console.error(`No API URL available for table ID "${this.tableID}"`);
-        //         return;
-        //     }
-
-        //     // Call saveTable with the correct apiUrl and refreshUrl
-        //     this.saveTable();
-        // }
+        const detailedTable = document.querySelector('.detailed-table');
+        if (detailedTable) {
+            detailedTable.style.display = 'block';
+        }
     }
 
     toggleEditMode() {
@@ -233,7 +206,6 @@ class TableManager {
         if (headers.length >= 2) {
             const isHidden = headers[0].style.display === 'none';
             headers[0].style.display = isHidden ? '' : 'none'; // Toggle display for Delete column
-            // headers[1].style.display = isHidden ? '' : 'none'; // Toggle display for ID column
         }
     
         // Toggle visibility for Delete and ID columns in each row
@@ -264,7 +236,6 @@ class TableManager {
 
 
     saveTable() {
-        const filter = document.getElementById('detailed-table-title-2').textContent.trim();
         const rows = this.table.rows;
         const data = [];
     
@@ -297,7 +268,13 @@ class TableManager {
                 }
             }
 
-            row_data['filter'] = filter;
+            // Add the filter value to the row data
+            const filterElement = document.getElementById('detailed-table-title-2');
+            if (filterElement) {
+                const filter = filterElement.textContent.trim();
+                row_data['filter'] = filter;
+            }
+
             data.push(row_data);
         }
 
@@ -316,7 +293,10 @@ class TableManager {
             .then(response => response.json())
             .then(result => {
                 console.log("Data saved?:", result);
-                this.loadTableData(this.tableQueryEndpoint);
+                this.loadTableData(this.tableUrl);
+                if (this.chartInstance) {
+                    this.chartInstance.plotChart();
+                }
             })
             .catch(error => {
                 console.error('Error saving data:', error);

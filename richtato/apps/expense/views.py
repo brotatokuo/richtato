@@ -1,7 +1,6 @@
 import json
 from datetime import datetime
 
-import pandas as pd
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
@@ -11,39 +10,26 @@ from apps.expense.models import Expense
 from apps.richtato_user.models import CardAccount, Category, User
 from utilities.ai import AI
 from django.db.models import Sum
-from utilities.tools import month_mapping, color_picker, format_currency, format_date
+from utilities.tools import month_mapping, format_currency, format_date
 
 
 @login_required
-def expense(request):
-    if not isinstance(request.user, User):
-        print(f"request.user is not a User instance: {request.user}")
-
-    try:
-        print("Request User: ", request.user)
-        spending_dates = Expense.objects.filter(user=request.user).exclude(date__isnull=True).values_list('date', flat=True).distinct()
-        years_list = sorted(set(date.year for date in spending_dates), reverse=True)
-        transaction_accounts = CardAccount.objects.filter(user=request.user).values_list('name', flat=True).distinct()
-        category_list = list(Category.objects.filter(user=request.user).values_list('name', flat=True))
-        category_list.insert(0, "")
-
-    except Exception as e:
-        print(f"Error while querying transactions: {e}")
-        years_list = sorted(set(date.year for date in spending_dates)) if spending_dates else []
-        transaction_accounts = CardAccount.objects.filter(user=request.user)\
-                                                .values_list('name', flat=True)\
-                                                .distinct()
-        category_list = list(Category.objects.filter(user=request.user).values_list('name', flat=True))
+def main(request):
+    spending_dates = Expense.objects.filter(user=request.user).exclude(date__isnull=True).values_list('date', flat=True).distinct()
+    years_list = sorted(set(date.year for date in spending_dates), reverse=True)
+    transaction_accounts = CardAccount.objects.filter(user=request.user).values_list('name', flat=True).distinct()
+    category_list = list(Category.objects.filter(user=request.user).values_list('name', flat=True))
+    category_list.insert(0, "")
 
     return render(request, 'expense.html',
                 {"years": years_list,
                 "transaction_accounts": transaction_accounts,
                 "category_list": category_list,
-                    "today_date": datetime.today().strftime('%Y-%m-%d')
+                "today_date": datetime.today().strftime('%Y-%m-%d')
                 })
 
 @login_required
-def add_expense_entry(request):
+def add_entry(request):
     if request.method == "POST":
         description = request.POST.get('description')
         amount = request.POST.get('amount')
@@ -51,7 +37,6 @@ def add_expense_entry(request):
         category = request.POST.get('category')
 
         category = Category.objects.get(user=request.user, name=category)
-        print("Category Search: ", category, type(category))
         account = request.POST.get('account')
         account_name = CardAccount.objects.get(user=request.user, name=account)
 
@@ -68,7 +53,7 @@ def add_expense_entry(request):
     return HttpResponse("Data Entry Error")
 
 @login_required
-def update_expenses(request):
+def update(request):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
@@ -76,7 +61,6 @@ def update_expenses(request):
         data = json.loads(request.body.decode('utf-8'))
 
         for transaction_data in data:
-            print("Transaction Data: ", transaction_data)
             account_name = transaction_data.get('filter')
             delete_bool = transaction_data.get('delete')
             transaction_id = transaction_data.get('id')
@@ -99,7 +83,7 @@ def update_expenses(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
-def get_expense_plot_data(request, year):
+def get_plot_data(request, year):
     month_list = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
     cards = CardAccount.objects.filter(user=request.user)
@@ -108,8 +92,6 @@ def get_expense_plot_data(request, year):
     datasets = []
     for card in cards:
         card_expenses = []
-        card_name = card.name
-        print("Card Name: ", card_name)
 
         for month in range(1, 13): 
             total_expenses_for_card = all_expenses.filter(account_name=card, date__month=month).aggregate(Sum('amount'))['amount__sum']
@@ -130,16 +112,12 @@ def get_expense_plot_data(request, year):
         }
         datasets.append(dataset)
 
-    print("Datasets: ", datasets)
-
     return JsonResponse({'labels': month_list, 'datasets': datasets})
 
-def get_expense_table_data(request) -> JsonResponse:
-    print("Getting Expense Table Data")
+def get_table_data(request) -> JsonResponse:
     year = request.GET.get('year', None)
     month = month_mapping(request.GET.get('month', None))
     account = request.GET.get('label', None)
-    print(f"Year: {year}, Month: {month}, Account: {account}")
 
     table_data = []
     if year and month and account:
@@ -152,17 +130,14 @@ def get_expense_table_data(request) -> JsonResponse:
                 'amount': format_currency(expense.amount),
                 'category': expense.category.name
             })
-        
-        print("Table Data: ", table_data)
 
     return JsonResponse(table_data, safe=False)
     
 def _delete_expense(transaction_id):
     try:
         Expense.objects.get(id=transaction_id).delete()
-        print(f"Expense Deleted: {transaction_id}")
     except Expense.DoesNotExist:
-        print(f"Expense with ID {transaction_id} does not exist.")
+        raise ValueError(f"Transaction with ID '{transaction_id}' does not exist.")
 
 def _get_category(user, category_name, transaction_id):
     if category_name:
@@ -191,4 +166,3 @@ def _update_or_create_expense(transaction_id, user, date, description, amount, c
             'account_name': account
         }
     )
-    print(f"Expense Updated: {transaction_id} - {date} {description} {amount} {category.name} {account.name}")

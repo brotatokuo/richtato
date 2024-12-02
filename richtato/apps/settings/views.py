@@ -5,9 +5,10 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
-from apps.account.models import Account
+from apps.account.models import Account, AccountHistory
 from apps.expense.models import Expense
 from apps.richtato_user.models import CardAccount, Category
+from utilities.tools import format_currency
 
 
 @login_required
@@ -24,9 +25,9 @@ def settings(request):
         },
     )
 
-
+# region Card Accounts
 @login_required
-def get_card_data(request):
+def get_cards(request):
     card_options = (
         CardAccount.objects.filter(user=request.user)
         .values("id", "name")
@@ -39,9 +40,34 @@ def get_card_data(request):
         json_data.append({"Id": card_id, "Card": card_name})
     return JsonResponse(json_data, safe=False)
 
+@login_required
+def add_card(request):
+    if request.method == "POST":
+        account_name = request.POST.get("account-name").strip()
+
+        all_accounts_names = CardAccount.objects.filter(user=request.user).values_list('name', flat=True)
+        # Check if account name already exists
+        if account_name in all_accounts_names:
+            return render(
+                request,
+                "settings.html",
+                {
+                    "error_card_message": "Card Name already exists. Please choose a different name.",
+                },
+            )
+
+        # Create and save the Card account
+        card_account = CardAccount(
+            user=request.user,
+            name=account_name,
+        )
+        card_account.save()
+
+        return settings(request)
+    return HttpResponse("Add account error")
 
 @login_required
-def update_card_account(request):
+def update_cards(request):
     if request.method == "POST":
         try:
             # Decode the JSON body from the request
@@ -72,53 +98,12 @@ def update_card_account(request):
 
     return JsonResponse({"success": False, "error": "Invalid request"})
 
-def get_latest_accounts_data(request)->JsonResponse:
-    user_accounts = request.user.account.all()
-    user_accounts = sorted(user_accounts, key=lambda x: x.name)
-    json_data = []
-    for account in user_accounts:
-        # Get the latest balance history record for the account
-        balance_history = account.history.all()
-        balance_list = []
-        date_list = []
+# endregion
 
-        for history in balance_history:
-            balance_list.append(history.balance_history)  # Add balance to list
-            date_list.append(history.date_history)  # Add date to list
-
-        # Zip the balance and date lists together, then sort by the date
-        sorted_history = sorted(zip(date_list, balance_list), key=lambda x: x[0], reverse=True)
-
-        # Unzip the sorted result back into separate lists (if you need them)
-        date_list_sorted, balance_list_sorted = zip(*sorted_history) if sorted_history else ([], [])
-
-        # Get the latest balance and date
-        latest_date = date_list_sorted[0] if date_list_sorted else None
-        latest_balance = balance_list_sorted[0] if balance_list_sorted else None
-
-        # Get account id
-        account_id = account.id
-
-        # Get account type
-        account_type = account.type
-
-        # Collect the necessary data for each account
-        accounts_data = {
-            'id': account_id,
-            'account': account,
-            'type': account_type,
-            'balance': latest_balance,
-            'date': latest_date,
-            'history': list(zip(balance_list, date_list)) 
-        }
-        json_data.append({
-            "account_name": account.name,
-            "accounts_data": accounts_data})
-    return json_data
-
+# region Account
 @login_required
-def get_accounts_data(request):
-    accounts_data = get_latest_accounts_data(request)
+def get_accounts(request):
+    accounts_data = _get_latest_accounts_data(request)
     # print("Accounts Data: ", accounts_data)
     json_data = []
     for account in accounts_data:
@@ -140,6 +125,71 @@ def get_accounts_data(request):
 
     return JsonResponse(json_data, safe=False)
 
+@login_required
+def _get_latest_accounts_data(request)->JsonResponse:
+    user_accounts = request.user.account.all()
+    user_accounts = sorted(user_accounts, key=lambda x: x.name)
+    json_data = []
+    for account in user_accounts:
+        # Get the latest balance history record for the account
+        balance_history = account.history.all()
+        balance_list = []
+        date_list = []
+
+        for history in balance_history:
+            balance_list.append(history.balance_history)  # Add balance to list
+            date_list.append(history.date_history)  # Add date to list
+
+        sorted_history = sorted(zip(date_list, balance_list), key=lambda x: x[0], reverse=True)
+        date_list_sorted, balance_list_sorted = zip(*sorted_history) if sorted_history else ([], [])
+        latest_date = date_list_sorted[0] if date_list_sorted else None
+        latest_balance = balance_list_sorted[0] if balance_list_sorted else None
+
+        accounts_data = {
+            'id': account.id,
+            'account': account,
+            'type': account.get_type_display(),
+            'balance': format_currency(latest_balance),
+            'date': latest_date,
+            'history': list(zip(balance_list, date_list)) 
+        }
+        json_data.append({
+            "account_name": account.name,
+            "accounts_data": accounts_data})
+    return json_data
+
+@login_required
+def add_account(request):
+    if request.method=="POST":
+        all_accounts_names = [account.name for account in request.user.account.all()]
+
+        account_type = request.POST.get('account-type')
+        account_name = request.POST.get('account-name')
+        balance_date = request.POST.get('balance-date')
+        balance = request.POST.get('balance-input')
+
+        if account_name in all_accounts_names:
+            print("Account name already exists. Please choose a different name.")
+            return render(request, "settings.html",{
+                "error_account_message": "Account name already exists. Please choose a different name.",
+            })
+
+        account = Account(
+            user=request.user,
+            type=account_type,
+            name=account_name,
+        )
+        account.save()
+
+        account_history = AccountHistory(
+            account=account,
+            balance_history=balance,
+            date_history=balance_date,
+        )
+        account_history.save()
+        
+        return settings(request)
+    return HttpResponse("Add account error")
 
 @login_required
 def update_accounts(request):
@@ -169,10 +219,11 @@ def update_accounts(request):
             return JsonResponse({"success": False, "error": str(e)})
 
     return JsonResponse({"success": False, "error": "Invalid request"})
+# endregion
 
-
+# region Categories
 @login_required
-def get_categories_data(request):
+def get_categories(request):
     category_options = (
         Category.objects.filter(user=request.user)
         .values("id", "name", "keywords", "budget", "type", "color")
@@ -193,7 +244,7 @@ def get_categories_data(request):
                 "Id": category_id,
                 "Type": category_type,
                 "Name": category_name,
-                "Budget": category_budget,
+                "Budget": format_currency(category_budget),
                 "Keywords": category_keywords,
                 "Color": color,
             }
@@ -201,6 +252,27 @@ def get_categories_data(request):
 
     return JsonResponse(json_data, safe=False)
 
+@login_required
+def add_category(request):
+    if request.method == "POST":
+        category_name = request.POST.get("category-name")
+        keywords = request.POST.get("category-keywords").lower()
+        budget = request.POST.get("category-budget")
+        category_type = request.POST.get("category-type")
+
+        if Category.objects.filter(user=request.user, name=category_name).exists():
+            return HttpResponse("Category already exists, edit the existing category")
+        category = Category(
+            user=request.user,
+            name=category_name,
+            keywords=keywords,
+            budget=budget,
+            type=category_type,
+        )
+        category.save()
+
+        return settings(request)
+    return HttpResponse("Add category error")
 
 @login_required
 def update_categories(request):
@@ -244,53 +316,4 @@ def update_categories(request):
             return JsonResponse({"success": False, "error": str(e)})
 
     return JsonResponse({"success": False, "error": "Invalid request"})
-
-
-@login_required
-def add_category(request):
-    if request.method == "POST":
-        category_name = request.POST.get("category-name")
-        keywords = request.POST.get("category-keywords").lower()
-        budget = request.POST.get("category-budget")
-        category_type = request.POST.get("category-type")
-
-        if Category.objects.filter(user=request.user, name=category_name).exists():
-            return HttpResponse("Category already exists, edit the existing category")
-        category = Category(
-            user=request.user,
-            name=category_name,
-            keywords=keywords,
-            budget=budget,
-            type=category_type,
-        )
-        category.save()
-
-        return settings(request)
-    return HttpResponse("Add category error")
-
-
-@login_required
-def add_card(request):
-    if request.method == "POST":
-        account_name = request.POST.get("account-name").strip()
-
-        all_accounts_names = CardAccount.objects.filter(user=request.user).values_list('name', flat=True)
-        # Check if account name already exists
-        if account_name in all_accounts_names:
-            return render(
-                request,
-                "settings.html",
-                {
-                    "error_card_message": "Card Name already exists. Please choose a different name.",
-                },
-            )
-
-        # Create and save the Card account
-        card_account = CardAccount(
-            user=request.user,
-            name=account_name,
-        )
-        card_account.save()
-
-        return settings(request)
-    return HttpResponse("Add account error")
+# endregion

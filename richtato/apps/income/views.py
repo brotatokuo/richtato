@@ -1,19 +1,19 @@
 import json
 from datetime import datetime
 
-import pandas as pd
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
+from django.db.models import Sum
 
 from apps.account.models import Account
 from apps.income.models import Income
-from utilities.tools import month_mapping
+from utilities.tools import month_mapping, format_currency, format_date
 
 
 @login_required
-def income(request):
+def main(request):
     earnings_dates = (
         Income.objects.filter(user=request.user)
         .exclude(date__isnull=True)
@@ -24,9 +24,6 @@ def income(request):
     account_names = Account.objects.filter(user=request.user)
     account_name_list = [account.name for account in account_names]
     entries = Income.objects.filter(user=request.user).order_by("-date")
-    print("Incomes Dates: ", earnings_dates)
-    print("Accounts: ", account_name_list)
-    print("Incomes Entries: ", entries)
     return render(
         request,
         "income.html",
@@ -40,7 +37,7 @@ def income(request):
 
 
 @login_required
-def add_earning_entry(request):
+def add_entry(request):
     if request.method == "POST":
         # Get the form data
         description = request.POST.get("description")
@@ -58,28 +55,18 @@ def add_earning_entry(request):
             amount=amount,
         )
         transaction.save()
-        return HttpResponseRedirect(reverse("view_earnings"))
+        return HttpResponseRedirect(reverse("income"))
     return HttpResponse("Data Entry Error")
 
 
-# @login_required
-# def plot_earnings_data(request, verbose=False):
-#     return plot_data(
-#         request, context="Incomes", group_by="Description", verbose=verbose
-#     )
-
-
 @login_required
-def update_earnings(request):
+def update(request):
     if request.method == "POST":
         try:
-            print("Update Incomes Request: ")
-            # Decode the JSON body from the request
             data = json.loads(request.body.decode("utf-8"))
             print("Update Incomes Data: ", data)
 
             for transaction_data in data:
-                # Extract the fields for each transaction
                 delete_bool = transaction_data.get("delete")
                 transaction_id = transaction_data.get("id")
                 account_name = transaction_data.get("name")
@@ -89,7 +76,6 @@ def update_earnings(request):
 
                 if delete_bool:
                     Income.objects.get(id=transaction_id).delete()
-                    print("Income Deleted: ", transaction_id)
                     continue
 
                 Income.objects.update_or_create(
@@ -112,68 +98,52 @@ def update_earnings(request):
 
     return JsonResponse({"success": False, "error": "Invalid request"})
 
+@login_required
+def get_plot_data(request, year):
+    month_list = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-# @login_required
-# def get_earnings_data_json(request):
-#     year = request.GET.get("year")
-#     label = request.GET.get("label")
-#     month_str = request.GET.get("month")
-#     month = month_mapping(month_str)
+    accounts = Account.objects.filter(user=request.user)
+    all_incomes = Income.objects.filter(user=request.user, date__year=year)
+    
+    datasets = []
+    for account in accounts:
+        income_list = []
 
-#     # Fetch the transaction data based on the user's context
-#     df = get_transaction_data(request.user, context="Incomes")
+        for month in range(1, 13): 
+            total = all_incomes.filter(account_name=account, date__month=month).aggregate(Sum('amount'))['amount__sum']
 
-#     # Filter data by year, label (description), and month
-#     df_filtered = df[df["Year"] == int(year)]
-#     df_filtered = df_filtered[df_filtered["Description"] == label]
-#     df_filtered = df_filtered[df_filtered["Month"] == int(month)]
+            if total is None:
+                total = 0
+            
+            income_list.append(total)
 
-#     # Print filtered data for debugging
-#     print("Filtered Incomes Data: ", df_filtered)
+        # Build the dataset for the chart
+        dataset = {
+            'label': account.name,
+            'data': income_list,
+            'backgroundColor': 'rgba(255, 99, 132, 0.2)',
+            'borderColor': 'rgba(255, 99, 132, 1)',
+            'borderWidth': 1
+        }
+        datasets.append(dataset)
 
-#     # Convert Date to 'YYYY-MM-DD' format and Balance to currency format
-#     df_filtered["Date"] = pd.to_datetime(df_filtered["Date"]).dt.strftime("%Y-%m-%d")
-#     df_filtered["Amount"] = df_filtered["Amount"].apply(
-#         lambda x: f"${x:,.2f}"
-#     )  # Format to 2 decimal places with currency symbol
+    return JsonResponse({'labels': month_list, 'datasets': datasets})
 
-#     # Rename columns for JSON response
-#     df_filtered = df_filtered.rename(
-#         columns={"Account Name": "Name", "Date": "Date", "id": "Id"}
-#     )
+@login_required
+def get_table_data(request):
+    year = request.GET.get('year', None)
+    month = month_mapping(request.GET.get('month', None))
+    account = request.GET.get('label', None)
 
-#     json_data = df_filtered[["Id", "Date", "Name", "Amount"]].to_dict(orient="records")
+    table_data = []
+    if year and month and account:
+        incomes = Income.objects.filter(user=request.user, date__year=year, date__month=month, account_name__name=account)
+        for income in incomes:
+            table_data.append({
+                'id': income.id,
+                'date': format_date(income.date),
+                'description': income.description,
+                'amount': format_currency(income.amount),
+            })
 
-#     # Return JSON response
-#     return JsonResponse(json_data, safe=False)
-
-
-# @login_required
-# def import_earnings_from_csv(request):
-#     assert "DO NOT USE THIS FUNCTION" == "This function is for testing purposes only"
-#     print("Importing Incomes from CSV")
-#     csv_file = "viz/static/historic_data/tep_earning_20241110.csv"
-#     if request.method == 'GET':
-#         try:
-#             df = pd.read_csv(csv_file)
-#             print("CSV Data: ", df.head())
-#             for index, row in df.iterrows():
-#                 description = row['description']
-#                 amount = row['amount']
-#                 date = pd.to_datetime(row['date']).strftime('%Y-%m-%d')
-#                 account_name = row['account_name']
-#                 account = Account.objects.get(user=request.user, name=account_name)
-#                 # Create and save the transaction
-#                 transaction = Income(
-#                     user=request.user,
-#                     account_name = account,
-#                     description=description,
-#                     date=date,
-#                     amount=amount,
-#                 )
-#                 transaction.save()
-#             return HttpResponseRedirect(reverse("view_earnings"))
-#         except Exception as e:
-#             print("Error while importing earnings: ", e)
-#             return HttpResponse("Error while importing earnings")
-#     return HttpResponse("Invalid request")
+    return JsonResponse(table_data, safe=False)

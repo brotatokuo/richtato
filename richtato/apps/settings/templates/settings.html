@@ -3,8 +3,6 @@
 {% load humanize %}
 {% block body %}
 
-<script src="{% static 'richtato/settings_table.js' %}"></script>
-
 <div class="page-container">
     <div id="Card Settings" class="settings-form">
         <h2>Card Accounts</h2>
@@ -23,8 +21,7 @@
                 </tbody>
             </table>
 
-            <button class="btn-secondary editButton" id="settingsCardEditButton"
-                onclick="editTable('settings-card-table','settingsCardEditButton', 'get-card-settings-data/')">Edit</button>
+            <button class="btn-secondary editButton" id="settingsCardEditButton">Edit</button>
 
 
             <form class="settings-add-form" , method="post" action="{% url 'add_card'%}">
@@ -67,8 +64,7 @@
                 </tbody>
             </table>
 
-            <button class="btn-secondary editButton" id="settingsAccountEditButton"
-                onclick="editTable('settings-accounts-table', 'settingsAccountEditButton',  'get-accounts-settings-data/')">Edit</button>
+            <button class="btn-secondary editButton" id="settingsAccountEditButton">Edit</button>
 
             <form class="settings-add-form" method="post" action="{% url 'add_account'%}">
                 {% csrf_token %}
@@ -124,8 +120,7 @@
                 </tbody>
             </table>
 
-            <button class="btn-secondary editButton" id="settingsCategoryEditButton"
-                onclick="editTable('settings-categories-table', 'settingsCategoryEditButton',  'get-categories-settings-data/')">Edit</button>
+            <button class="btn-secondary editButton" id="settingsCategoryEditButton">Edit</button>
 
             <form class="settings-add-form" method="post" action="{% url 'add_category'%}">
                 {% csrf_token %}
@@ -163,13 +158,8 @@
     </div>
 </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        loadTableData("settings-card-table", "{% url 'get_card_data' %}", 'settingsCardEditButton');
-        loadTableData("settings-accounts-table", "{% url 'get_accounts_data' %}", 'settingsAccountEditButton');
-        loadTableData("settings-categories-table", "{% url 'get_categories_data' %}", 'settingsCategoryEditButton');
-    });
+<script src="{% static 'richtato/script.js' %}"></script> 
+<script src="{% static 'richtato/plotter.js' %}"></script> 
+<script src="{% static 'richtato/settings.js' %}"></script>
 
-
-</script>
 {% endblock %}

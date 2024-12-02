@@ -1,22 +1,33 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const graphDataUrl = "{% url 'plot_earnings_data' %}";
-    const tableDataUrl = "{% url 'get_earnings_data_json' %}";
+    const tableDataUrl = "get-table-data/";
     const yearFilter = document.getElementById('year-filter');
+    const editTableButton = document.getElementById('detailsTableEditButton');
+    
+    const updateChart = () => {
+        const selectedYear = yearFilter.value;
+        const plotDataUrl = `/income/get-plot-data/${selectedYear}/`;
 
-    if (yearFilter) {
-        const initialYear = yearFilter.value;
-        console.log("Initial selected year:", initialYear);
+        // Create or update the ChartPlotter instance
+        if (!window.expenseChart) {
+            console.log('Creating new chart');
+            window.expenseChart = new ChartPlotter(
+                plotDataUrl,                    // chartUrl
+                'incomeBarChart',              // canvasId
+                'detailsTableIncome',          // tableID
+                tableDataUrl,                   // tableUrl
+                selectedYear,                   // year
+                editTableButton,                // editButton
+                'update/',
+            );
+        } else {
+            console.log('Updating existing chart');
+            window.expenseChart.chartUrl = plotDataUrl;
+            window.expenseChart.year = selectedYear;
+        }
 
-        plotBarChart(graphDataUrl, 'barChart', 'details-table-earnings', tableDataUrl, initialYear);
+        window.expenseChart.plotChart();
+    };
 
-        // Add event listener for when the year filter changes
-        yearFilter.addEventListener('change', () => {
-            const selectedYear = yearFilter.value;
-            console.log("Year filter change event triggered, selected year:", selectedYear);
-            plotBarChart(graphDataUrl, 'barChart', 'details-table-earnings', tableDataUrl, selectedYear);
-        });
-
-    } else {
-        console.error("Year filter element not found!");
-    }
+    updateChart();
+    yearFilter.addEventListener('change', updateChart);
 });
