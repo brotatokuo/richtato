@@ -18,6 +18,15 @@
                     </div>
                     <h1 class="chart-title">Expense</h1>
                 </div>
+                <div class="chart-title-container">
+                    <h4>Group By</h4>
+                    <div class="dropdown-filter">
+                        <select id="group-by-filter" name="group-by-filter">
+                            <option value="name">Card</option>
+                            <option value="type">Category</option>
+                        </select>
+                    </div>
+                </div>
                 <canvas class="chart" id="expenseBarChart"></canvas>
             </div>
         {% endif %}

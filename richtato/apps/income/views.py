@@ -9,7 +9,7 @@ from django.db.models import Sum
 
 from apps.account.models import Account
 from apps.income.models import Income
-from utilities.tools import month_mapping, format_currency, format_date
+from utilities.tools import month_mapping, format_currency, format_date, color_picker
 
 
 @login_required
@@ -101,22 +101,20 @@ def get_plot_data(request, year):
     all_incomes = Income.objects.filter(user=request.user, date__year=year)
     
     datasets = []
-    for account in accounts:
+    for index, account in enumerate(accounts):
         annual_total = []
 
         for month in range(1, 13): 
             monthly_total = all_incomes.filter(account_name=account, date__month=month).aggregate(Sum('amount'))['amount__sum']
-
             monthly_total = float(monthly_total or 0)
-
             annual_total.append(monthly_total)
 
-        # Build the dataset for the chart
+        background_color, border_color = color_picker(index)
         dataset = {
             'label': account.name,
             'data': annual_total,
-            'backgroundColor': 'rgba(255, 99, 132, 0.2)',
-            'borderColor': 'rgba(255, 99, 132, 1)',
+            'backgroundColor': background_color,
+            'borderColor': border_color,
             'borderWidth': 1
         }
         datasets.append(dataset)

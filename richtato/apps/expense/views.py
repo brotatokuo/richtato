@@ -10,7 +10,7 @@ from apps.expense.models import Expense
 from apps.richtato_user.models import CardAccount, Category, User
 from utilities.ai import AI
 from django.db.models import Sum
-from utilities.tools import month_mapping, format_currency, format_date
+from utilities.tools import month_mapping, format_currency, format_date, color_picker
 
 
 @login_required
@@ -19,7 +19,6 @@ def main(request):
     years_list = sorted(set(date.year for date in spending_dates), reverse=True)
     transaction_accounts = CardAccount.objects.filter(user=request.user).values_list('name', flat=True).distinct()
     category_list = list(Category.objects.filter(user=request.user).values_list('name', flat=True))
-    category_list.insert(0, "")
 
     return render(request, 'expense.html',
                 {"years": years_list,
@@ -90,22 +89,20 @@ def get_plot_data(request, year):
     all_expenses = Expense.objects.filter(user=request.user, date__year=year)
     
     datasets = []
-    for card in cards:
+    for index, card in enumerate(cards):
         annual_total = []
 
         for month in range(1, 13): 
             monthly_total = all_expenses.filter(account_name=card, date__month=month).aggregate(Sum('amount'))['amount__sum']
-
             monthly_total = float(monthly_total or 0)
-            
             annual_total.append(monthly_total)
-
-        # Build the dataset for the chart
+            
+        background_color, border_color = color_picker(index)
         dataset = {
             'label': card.name,
             'data': annual_total,
-            'backgroundColor': 'rgba(255, 99, 132, 0.2)',
-            'borderColor': 'rgba(255, 99, 132, 1)',
+            'backgroundColor': background_color,
+            'borderColor': border_color,
             'borderWidth': 1
         }
         datasets.append(dataset)

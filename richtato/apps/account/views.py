@@ -59,7 +59,7 @@ def get_plot_data(request, year) -> JsonResponse:
     all_accounts_transactions = AccountTransaction.objects.annotate(year=ExtractYear('date')).filter(year=year, account__in=accounts)
 
     datasets = []
-    for account in accounts:
+    for index, account in enumerate(accounts):
         annual_total = []
         for month in range(1, 13):
             monthly_total = all_accounts_transactions.filter(account=account, date__month=month).aggregate(Sum('amount'))['amount__sum']
@@ -67,12 +67,12 @@ def get_plot_data(request, year) -> JsonResponse:
 
             annual_total.append(monthly_total)
 
-        # Build the dataset for the chart
+        background_color, border_color = color_picker(index)
         dataset = {
             'label': account.name,
             'data': annual_total,
-            'backgroundColor': 'rgba(255, 99, 132, 0.2)',
-            'borderColor': 'rgba(255, 99, 132, 1)',
+            'backgroundColor': background_color,
+            'borderColor': border_color,
             'borderWidth': 1
         }
         datasets.append(dataset)

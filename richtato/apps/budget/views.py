@@ -15,16 +15,18 @@ from django.urls import reverse
 
 from apps.expense.models import Expense
 from apps.richtato_user.models import Category, User
+from utilities.tools import month_mapping, color_picker
 
 
 @login_required
-def budget(request) -> HttpResponse:
+def main(request) -> HttpResponse:
     """
     Budget view that renders the budget.html template
     """
-    spending_dates = Expense.objects.filter(user=request.user).exclude(date__isnull=True).values_list('date', flat=True).distinct()
-    years_list = sorted(set(date.year for date in spending_dates), reverse=True)
-    months_list = sorted(set(date.month for date in spending_dates), reverse=True)
+    expense_dates = Expense.objects.filter(user=request.user).exclude(date__isnull=True).values_list('date', flat=True).distinct()
+    years_list = sorted(list(set([date.year for date in expense_dates])), reverse=True)
+    months_list = [calendar.month_abbr[i] for i in range(1, 13)]
+    print(years_list, months_list)
     category_list = sorted(list(Category.objects.filter(user=request.user).values_list('name', flat=True)))
 
     return render(request, 'budget.html',
@@ -33,92 +35,48 @@ def budget(request) -> HttpResponse:
                    "categories": category_list
                    })
 
+# @login_required
+# def get_budget_months(request):
+#     year = request.GET.get('year')
+
+#     months = sorted(list(Expense.objects.filter(user=request.user, date__year=year).dates('date', 'month').values_list('date__month', flat=True)), reverse=True)
+#     print("Months: ", months)
+#     return JsonResponse(months, safe=False)
+
 @login_required
-def get_budget_months(request):
-    year = request.GET.get('year')
-    print("Get Budget Months: ", year)
+def get_plot_data(request, year, month):
+    category_list = Category.objects.filter(user=request.user)
 
-    months = sorted(list(Expense.objects.filter(user=request.user, date__year=year).dates('date', 'month').values_list('date__month', flat=True)), reverse=True)
-    print("Months: ", months)
-    return JsonResponse(months, safe=False)
+    month_number = month_mapping(month)
 
-@login_required
-def plot_budget_data(request):
-    # Fetch all transactions in one query, aggregating by year, month, and category
-    transactions = (
-        Expense.objects
-        .filter(user=request.user)
-        .exclude(date__isnull=True)
-        .values('date__year', 'date__month', 'category__name')
-        .annotate(total_amount=Sum('amount'))
-    )
+    expense_for_month = Expense.objects.filter(
+        user=request.user, 
+        date__year=year, 
+        date__month=month_number
+    ).values('date__month', 'category__name').annotate(total_amount=Sum('amount'))
+    
+    datasets = []
+    for index, category in enumerate(category_list):
+        # Find the corresponding expense entry for this category
+        expense = next(
+            (exp for exp in expense_for_month if exp['category__name'] == category.name),
+            None
+        )
 
-    # Fetch all categories in bulk
-    categories = Category.objects.filter(user=request.user).values('name', 'budget', 'color')
-
-    # Create a lookup table for category budgets and colors
-    category_info = {cat['name']: cat for cat in categories}
-
-    # Initialize the data structure
-    data_by_year = defaultdict(lambda: defaultdict(dict))
-
-    print("Data by Year initialized: ", data_by_year)
-
-    # Organize transactions by year, month, and category
-    for transaction in transactions:
-        year = transaction['date__year']
-        month = transaction['date__month']
-        category = transaction['category__name']
-        total_amount = transaction['total_amount']
-
-        # Get category budget and color
-        if category in category_info:
-            budget = category_info[category]['budget']
-            color = category_info[category]['color']
-            budget_percent = round(total_amount * 100 / budget) if budget else 0
-
-            # Add the budget percentage for the category in the correct year and month
-            if 'datasets' not in data_by_year[year][month]:
-                data_by_year[year][month]['datasets'] = []
-                data_by_year[year][month]['labels'] = []
-
-            # Append the label only once
-            if category not in data_by_year[year][month]['labels']:
-                data_by_year[year][month]['labels'].append(category)
-            
-            data_placeholder = [0] * len(category_info)
-            category_index = data_by_year[year][month]['labels'].index(category)
-            data_placeholder[category_index] = budget_percent
-
-            # Prepare the dataset for each category
-            data_by_year[year][month]['datasets'].append({
-                'label': category,
-                'backgroundColor': color,
-                'borderColor': color,
-                'borderWidth': 1,
-                'data': data_placeholder
-            })
-
-    # Convert the defaultdict structure to a list
-    json_data = []
-    for year, months in data_by_year.items():
-        month_data = []
-        for month, data in months.items():
-            month_data.append({
-                'month': month,
-                'data': {
-                    'labels': data['labels'],
-                    'datasets': data['datasets']
-                }
-            })
-        json_data.append({
-            'year': year,
-            'data': month_data
+        # Get the total amount spent for this category in the month
+        total_amount = expense['total_amount'] if expense else 0
+        
+        # Append the data for this category to the dataset
+        background_color, border_color = color_picker(index)
+        datasets.append({
+            'label': category.name,
+            'data': [float(total_amount)],
+            'backgroundColor': background_color,
+            'borderColor': border_color,
+            'borderWidth': 1
         })
-
-    print("New function JSON Data: ", json_data)
-    # Return the JSON response
-    return JsonResponse(json_data, safe=False)
+    print("Expense for Month: ", expense_for_month)
+    return JsonResponse(None, safe=False)
 
 @login_required
 def get_budget_data_json(request):

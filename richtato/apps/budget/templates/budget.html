@@ -10,14 +10,12 @@
     
     {% if years %}
         <div class="dropdown-filter">
-            <label for="year-filter">Year:</label>
             <select id="year-filter" name="year-filter">
                 {% for year in years %}
                     <option value="{{ year }}">{{ year }}</option>
                 {% endfor %}
             </select>
 
-            <label for="month-filter">Month:</label>
             <select id="month-filter" name="month-filter">
                 {% for month in months %}
                     <option value="{{ month }}">{{ month }}</option>
@@ -26,7 +24,7 @@
         </div>
 
         <div class="bar-chart">
-            <canvas id="barChart"></canvas>
+            <canvas id="budgetBarChart"></canvas>
         </div>
     {% endif %}
 
@@ -36,7 +34,7 @@
             <h2 class="table-title" id="detailed-table-title-2"></h2>
         </div>
 
-        <table class="styled-table" id="details-table-budget">
+        <table class="styled-table" id="detailsTableBudget">
             <thead>
             </thead>
             <tbody>
@@ -49,7 +47,6 @@
 
     <div class="dropdown-filter">
         {% if categories %}
-        <label for="category-filter">Category:</label>
             <select id="category-filter" name="category-filter">
                 {% for category in categories %}
                     <option value="{{ category }}">{{ category }}</option>
@@ -64,6 +61,8 @@
 
 </div>
 
-<script src="{% static 'budget/budget.js' %}"></script>
+<script src="{% static 'richtato/script.js' %}"></script> 
+<script src="{% static 'richtato/plotter.js' %}"></script> 
+<script src="{% static 'richtato/budget.js' %}"></script>
 
 {% endblock %}
