@@ -71,24 +71,19 @@ def update_cards(request):
         try:
             # Decode the JSON body from the request
             data = json.loads(request.body.decode("utf-8"))
-            print("Card Account Data: ", data)
             for card in data:
                 # Extract the fields for each transaction
                 delete_bool = card.get("delete")
                 card_id = card.get("id")
                 card_name = card.get("card").strip()
-                print("Update Card Account: ", delete_bool, card_id, card_name)
 
                 if delete_bool:
                     CardAccount.objects.get(id=card_id).delete()
-                    print("Card Account Deleted: ", card_id)
                     continue
 
                 CardAccount.objects.update_or_create(
                     user=request.user, id=card_id, defaults={"name": card_name}
                 )
-
-                print("Card Account Updated: ", card_id, card_name)
 
             return JsonResponse({"success": True})
 
@@ -160,7 +155,6 @@ def add_account(request):
         balance = request.POST.get('balance-input')
 
         if account_name in all_accounts_names:
-            print("Account name already exists. Please choose a different name.")
             return render(request, "settings.html",{
                 "error_account_message": "Account name already exists. Please choose a different name.",
             })
@@ -189,7 +183,6 @@ def update_accounts(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body.decode("utf-8"))
-            print("update_settings_accounts ", data)
             for account in data:
                 delete_bool = account.get("delete")
                 card_id = account.get("id")
@@ -198,7 +191,6 @@ def update_accounts(request):
 
                 if delete_bool:
                     Account.objects.get(id=card_id).delete()
-                    print("Account Deleted: ", card_id)
                     continue
 
                 account = Account.objects.get(id=card_id)
@@ -288,7 +280,6 @@ def update_categories(request):
 
                 if delete_bool:
                     Category.objects.get(id=category_id).delete()
-                    print("Category Deleted: ", category_id)
                     continue
 
                 Category.objects.update_or_create(

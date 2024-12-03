@@ -15,7 +15,6 @@ from django.urls import reverse
 
 from apps.expense.models import Expense
 from apps.richtato_user.models import Category, User
-from utilities.utils import *
 
 
 @login_required
@@ -28,8 +27,6 @@ def budget(request) -> HttpResponse:
     months_list = sorted(set(date.month for date in spending_dates), reverse=True)
     category_list = sorted(list(Category.objects.filter(user=request.user).values_list('name', flat=True)))
 
-    print("Budget Years: ", years_list)
-    print("Budget Months: ", months_list)
     return render(request, 'budget.html',
                   {"years": years_list,
                    "months": months_list,
@@ -131,8 +128,8 @@ def get_budget_data_json(request):
     month = request.GET.get('month')
 
     print("Year: ", year, "Label: ", label, "Month: ", month)
-    df = get_transaction_data(request.user, context="Spendings")
-
+    # df = get_transaction_data(request.user, context="Spendings")
+    df = None
     # Filter data by year, label (description), and month
     df_filtered = df[df['Year'] == int(year)]
     df_filtered = df_filtered[df_filtered['Category'] == label]
@@ -194,7 +191,8 @@ def plot_category_monthly_data(request):
 
 @login_required
 def get_category_table_data(request, year, category):
-    df = get_transaction_data(request.user, context="Spendings")
+    # df = get_transaction_data(request.user, context="Spendings")
+    df = None
         
     # Correct filtering with parentheses
     df_filtered = df[(df['Year'] == int(year)) & (df['Category'] == category)] # This needs to be exported to the table data function

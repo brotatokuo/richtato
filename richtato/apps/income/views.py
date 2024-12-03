@@ -86,10 +86,6 @@ def update(request):
                     },
                 )
 
-                print(
-                    "Expense Updated: ", transaction_id, date, account_name, amount
-                )
-
             return JsonResponse({"success": True})
 
         except Exception as e:

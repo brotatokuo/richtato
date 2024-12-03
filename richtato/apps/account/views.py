@@ -57,7 +57,7 @@ def get_plot_data(request, year) -> JsonResponse:
     
     accounts = Account.objects.filter(user=request.user)
     all_accounts_transactions = AccountTransaction.objects.annotate(year=ExtractYear('date')).filter(year=year, account__in=accounts)
-    print("all_accounts_transactions", all_accounts_transactions)
+
     datasets = []
     for account in accounts:
         annual_total = []
@@ -76,7 +76,6 @@ def get_plot_data(request, year) -> JsonResponse:
             'borderWidth': 1
         }
         datasets.append(dataset)
-    print("datasets", datasets)
     return JsonResponse({'labels': month_list, 'datasets': datasets})
 
 def get_table_data(request):
@@ -99,11 +98,9 @@ def get_table_data(request):
     return JsonResponse(table_data, safe=False)
 
 def update(request):
-    print("Update request", request)
     if request.method == "POST":
         try:
             data = json.loads(request.body.decode("utf-8"))
-            print("Data", type(data), data)
 
             for transaction_data in data:
                 delete_bool = transaction_data.get("delete")
@@ -112,14 +109,12 @@ def update(request):
                 date = transaction_data.get("date")
                 amount = float(transaction_data.get("amount").replace("$", "").replace(",", ""))
 
-                print("Delete Bool", delete_bool, "Transaction ID", transaction_id, "Account Name", account_name, "Date", date, "Amount", amount)
                 if delete_bool:
                     AccountTransaction.objects.get(id=transaction_id).delete()
                     continue
                 
                 account = Account.objects.get(user=request.user, name=account_name)
-                print("Account", account)
-                
+
                 AccountTransaction.objects.update_or_create(
                     account = account,
                     id=transaction_id,
@@ -128,7 +123,6 @@ def update(request):
                         "amount": amount,
                     },
                 )
-                print("AccountTransaction Updated: ", transaction_id, date, account_name, amount)
             return JsonResponse({"success": True})
 
         except Exception as e:
