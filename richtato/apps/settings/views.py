@@ -5,14 +5,14 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
-from apps.account.models import Account, AccountHistory
+from apps.account.models import Account, AccountTransaction
 from apps.expense.models import Expense
 from apps.richtato_user.models import CardAccount, Category
-from utilities.tools import format_currency
+from utilities.tools import format_currency, format_date
 
 
 @login_required
-def settings(request):
+def main(request):
     category_list = list(Category.objects.filter(user=request.user))
     return render(
         request,
@@ -46,7 +46,6 @@ def add_card(request):
         account_name = request.POST.get("account-name").strip()
 
         all_accounts_names = CardAccount.objects.filter(user=request.user).values_list('name', flat=True)
-        # Check if account name already exists
         if account_name in all_accounts_names:
             return render(
                 request,
@@ -63,7 +62,7 @@ def add_card(request):
         )
         card_account.save()
 
-        return settings(request)
+        return main(request)
     return HttpResponse("Add account error")
 
 @login_required
@@ -103,60 +102,52 @@ def update_cards(request):
 # region Account
 @login_required
 def get_accounts(request):
-    accounts_data = _get_latest_accounts_data(request)
-    # print("Accounts Data: ", accounts_data)
+    accounts = Account.objects.filter(user=request.user)
     json_data = []
-    for account in accounts_data:
-        account_id = account["accounts_data"]["account"].id
-        account_name = account["account_name"]
-        account_type = account["accounts_data"]["type"]
-        account_balance = account["accounts_data"]["balance"]
-        account_date = account["accounts_data"]["date"]
-
+    for account in accounts:
         json_data.append(
             {
-                "Id": account_id,
-                "Name": account_name,
-                "Type": account_type,
-                "Balance": account_balance,
-                "Date": account_date,
+                "Id": account.id,
+                "Name": account.name,
+                "Type": account.type,
+                "Balance": format_currency(account.latest_balance),
+                "Date":format_date(account.latest_balance_date),
             }
         )
-
     return JsonResponse(json_data, safe=False)
 
-@login_required
-def _get_latest_accounts_data(request)->JsonResponse:
-    user_accounts = request.user.account.all()
-    user_accounts = sorted(user_accounts, key=lambda x: x.name)
-    json_data = []
-    for account in user_accounts:
-        # Get the latest balance history record for the account
-        balance_history = account.history.all()
-        balance_list = []
-        date_list = []
+# @login_required
+# def _get_latest_accounts_data(request)->JsonResponse:
+#     user_accounts = request.user.account.all()
+#     user_accounts = sorted(user_accounts, key=lambda x: x.name)
+#     json_data = []
+#     for account in user_accounts:
+#         # Get the latest balance history record for the account
+#         balance_history = account.history.all()
+#         balance_list = []
+#         date_list = []
 
-        for history in balance_history:
-            balance_list.append(history.balance_history)  # Add balance to list
-            date_list.append(history.date_history)  # Add date to list
+#         for history in balance_history:
+#             balance_list.append(history.balance_history)  # Add balance to list
+#             date_list.append(history.date_history)  # Add date to list
 
-        sorted_history = sorted(zip(date_list, balance_list), key=lambda x: x[0], reverse=True)
-        date_list_sorted, balance_list_sorted = zip(*sorted_history) if sorted_history else ([], [])
-        latest_date = date_list_sorted[0] if date_list_sorted else None
-        latest_balance = balance_list_sorted[0] if balance_list_sorted else None
+#         sorted_history = sorted(zip(date_list, balance_list), key=lambda x: x[0], reverse=True)
+#         date_list_sorted, balance_list_sorted = zip(*sorted_history) if sorted_history else ([], [])
+#         latest_date = date_list_sorted[0] if date_list_sorted else None
+#         latest_balance = balance_list_sorted[0] if balance_list_sorted else None
 
-        accounts_data = {
-            'id': account.id,
-            'account': account,
-            'type': account.get_type_display(),
-            'balance': format_currency(latest_balance),
-            'date': latest_date,
-            'history': list(zip(balance_list, date_list)) 
-        }
-        json_data.append({
-            "account_name": account.name,
-            "accounts_data": accounts_data})
-    return json_data
+#         accounts_data = {
+#             'id': account.id,
+#             'account': account,
+#             'type': account.get_type_display(),
+#             'balance': format_currency(latest_balance),
+#             'date': latest_date,
+#             'history': list(zip(balance_list, date_list)) 
+#         }
+#         json_data.append({
+#             "account_name": account.name,
+#             "accounts_data": accounts_data})
+#     return json_data
 
 @login_required
 def add_account(request):
@@ -178,17 +169,19 @@ def add_account(request):
             user=request.user,
             type=account_type,
             name=account_name,
+            latest_balance=balance,
+            latest_balance_date=balance_date,
         )
         account.save()
 
-        account_history = AccountHistory(
+        account_history = AccountTransaction(
             account=account,
-            balance_history=balance,
-            date_history=balance_date,
+            amount=balance,
+            date=balance_date,
         )
         account_history.save()
         
-        return settings(request)
+        return main(request)
     return HttpResponse("Add account error")
 
 @login_required
@@ -271,7 +264,7 @@ def add_category(request):
         )
         category.save()
 
-        return settings(request)
+        return main(request)
     return HttpResponse("Add category error")
 
 @login_required

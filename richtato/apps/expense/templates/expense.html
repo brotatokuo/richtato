@@ -6,26 +6,20 @@
     <div class="chart-form-container">
 
         {% if years %}
-
-        <div class="chart-container">
-
-            <div class="chart-title-container">
-
-                <div class="year-filter">
-                    <label for="year-filter"></label>
-                    <select id="year-filter" name="year-filter">
-                        {% for year in years %}
-                        <option value="{{ year }}">{{ year }}</option>
-                        {% endfor %}
-                    </select>
+            <div class="chart-container">
+                <div class="chart-title-container">
+                    <div class="dropdown-filter">
+                        <label for="year-filter"></label>
+                        <select id="year-filter" name="year-filter">
+                            {% for year in years %}
+                            <option value="{{ year }}">{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <h1 class="chart-title">Expense</h1>
                 </div>
-
-                <h1 class="chart-title">Expense</h1>
-                
+                <canvas class="chart" id="expenseBarChart"></canvas>
             </div>
-
-            <canvas class="chart" id="expenseBarChart"></canvas>
-        </div>
         {% endif %}
     
         <div class="form-container">

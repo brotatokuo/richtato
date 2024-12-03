@@ -224,12 +224,12 @@ input[type="password"] {
     background-color: #98cc2c;
 }
 
-.year-filter {
+.dropdown-filter {
     display: inline-block;
     margin-right: 5px;
 }
 
-.year-filter select {
+.dropdown-filter select {
     font-size: 22px;
     appearance: none;
     font-weight: bold;
@@ -246,11 +246,11 @@ input[type="password"] {
     padding-right: 5px; /* Optional: Adjust right padding for better spacing */
 }
 
-.year-filter select:focus {
+.dropdown-filter select:focus {
     outline: none; /* Removes the default outline when focused */
 }
 
-.year-filter select:hover {
+.dropdown-filter select:hover {
     border-color: #888; /* Highlight border on hover */
 }
 
@@ -262,11 +262,11 @@ input[type="password"] {
 }
 
 /* Year filter dropdown styling */
-.year-filter {
+.dropdown-filter {
     text-align: center;
 }
 
-.year-filter label {
+.dropdown-filter label {
     margin-right: 10px;
     font-size: 16px;
     font-weight: bold;

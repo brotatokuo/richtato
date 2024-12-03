@@ -54,7 +54,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="AccountHistory",
+            name="AccountTransaction",
             fields=[
                 (
                     "id",

@@ -9,7 +9,7 @@
     </div>
     
     {% if years %}
-        <div class="year-filter">
+        <div class="dropdown-filter">
             <label for="year-filter">Year:</label>
             <select id="year-filter" name="year-filter">
                 {% for year in years %}
@@ -47,7 +47,7 @@
         <button class="btn-secondary editButton" id="detailsTableEditButton">Edit</button> 
     </div>
 
-    <div class="year-filter">
+    <div class="dropdown-filter">
         {% if categories %}
         <label for="category-filter">Category:</label>
             <select id="category-filter" name="category-filter">

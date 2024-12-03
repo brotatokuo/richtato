@@ -24,7 +24,7 @@
             <button class="btn-secondary editButton" id="settingsCardEditButton">Edit</button>
 
 
-            <form class="settings-add-form" , method="post" action="{% url 'add_card'%}">
+            <form class="settings-add-form" , method="post" action="{% url 'settings_add_card'%}">
                 {% csrf_token %}
                 <div class="form-group">
                     <label for="account-name">Card Name</label>
@@ -39,10 +39,7 @@
 
                 <input class="btn-secondary" id="submit-balance" type="submit" value="Add">
             </form>
-
         </div>
-
-
     </div>
 
     <div id="Account Settings" class="settings-form">
@@ -66,7 +63,7 @@
 
             <button class="btn-secondary editButton" id="settingsAccountEditButton">Edit</button>
 
-            <form class="settings-add-form" method="post" action="{% url 'add_account'%}">
+            <form class="settings-add-form" method="post" action="{% url 'settings_add_account'%}">
                 {% csrf_token %}
                 <div class="form-group">
                     <label for="account-type">Account Type</label>
@@ -122,7 +119,7 @@
 
             <button class="btn-secondary editButton" id="settingsCategoryEditButton">Edit</button>
 
-            <form class="settings-add-form" method="post" action="{% url 'add_category'%}">
+            <form class="settings-add-form" method="post" action="{% url 'settings_add_category'%}">
                 {% csrf_token %}
                 <div class="form-group">
                     <label for="category-name">Category</label>

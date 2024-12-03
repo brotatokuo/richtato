@@ -64,7 +64,6 @@ def update(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body.decode("utf-8"))
-            print("Update Incomes Data: ", data)
 
             for transaction_data in data:
                 delete_bool = transaction_data.get("delete")
@@ -107,20 +106,19 @@ def get_plot_data(request, year):
     
     datasets = []
     for account in accounts:
-        income_list = []
+        annual_total = []
 
         for month in range(1, 13): 
-            total = all_incomes.filter(account_name=account, date__month=month).aggregate(Sum('amount'))['amount__sum']
+            monthly_total = all_incomes.filter(account_name=account, date__month=month).aggregate(Sum('amount'))['amount__sum']
 
-            if total is None:
-                total = 0
-            
-            income_list.append(total)
+            monthly_total = float(monthly_total or 0)
+
+            annual_total.append(monthly_total)
 
         # Build the dataset for the chart
         dataset = {
             'label': account.name,
-            'data': income_list,
+            'data': annual_total,
             'backgroundColor': 'rgba(255, 99, 132, 0.2)',
             'borderColor': 'rgba(255, 99, 132, 1)',
             'borderWidth': 1

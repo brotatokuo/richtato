@@ -91,21 +91,19 @@ def get_plot_data(request, year):
     
     datasets = []
     for card in cards:
-        card_expenses = []
+        annual_total = []
 
         for month in range(1, 13): 
-            total_expenses_for_card = all_expenses.filter(account_name=card, date__month=month).aggregate(Sum('amount'))['amount__sum']
+            monthly_total = all_expenses.filter(account_name=card, date__month=month).aggregate(Sum('amount'))['amount__sum']
 
-            # Handle cases where there are no expenses (None values)
-            if total_expenses_for_card is None:
-                total_expenses_for_card = 0
+            monthly_total = float(monthly_total or 0)
             
-            card_expenses.append(total_expenses_for_card)
+            annual_total.append(monthly_total)
 
         # Build the dataset for the chart
         dataset = {
             'label': card.name,
-            'data': card_expenses,
+            'data': annual_total,
             'backgroundColor': 'rgba(255, 99, 132, 0.2)',
             'borderColor': 'rgba(255, 99, 132, 1)',
             'borderWidth': 1
