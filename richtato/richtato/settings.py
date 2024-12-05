@@ -77,23 +77,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "richtato.wsgi.application"
 
-
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'postgres',          # Matches POSTGRES_DB
-#         'USER': 'brotato',              # Matches POSTGRES_USER
-#         'PASSWORD': 'Tawse7dives_a',      # Matches POSTGRES_PASSWORD
-#         'HOST': 'kuo.ctyack00qpp0.us-west-2.rds.amazonaws.com',         # The name of your Docker service
-#         'PORT': '5432',                # The default PostgreSQL port
-#         'OPTIONS': {
-#             'options': '-c search_path=richtato'
-#         },
-#     }
-# }
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
