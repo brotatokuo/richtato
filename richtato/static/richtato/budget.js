@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const tableDataUrl = "get-table-data/";
     const yearFilter = document.getElementById('year-filter');
+    const monthFilter = document.getElementById('month-filter');
     const editTableButton = document.getElementById('detailsTableEditButton');
     
     const updateChart = () => {
@@ -32,4 +33,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateChart();
     yearFilter.addEventListener('change', updateChart);
+    monthFilter.addEventListener('change', updateChart);
 });

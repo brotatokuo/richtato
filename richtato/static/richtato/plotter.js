@@ -69,7 +69,16 @@ class ChartPlotter {
             const datasetIndex = elements[0].datasetIndex;
             const index = elements[0].index;
             const datasetLabel = this.chartInstance.data.datasets[datasetIndex].label;
-            const month = this.chartInstance.data.labels[index];
+            const monthFilter = document.getElementById("month-filter");
+            let month;
+            if (monthFilter) {
+                console.log("Month filter found:", monthFilter);
+                month = monthFilter.value;
+            } else{
+                console.log("Month filter not found, using chart labels");
+                month = this.chartInstance.data.labels[index];
+            }
+            
             console.log("Clicked:", this.year, month, datasetLabel);
 
             this.tableManager.fetchBarTableData(this.year, month, datasetLabel);

@@ -4,14 +4,10 @@
 {% block body %}
 
 <div class="page-container">
-    <div class="page-title">
-        <h1>Budget</h1>
-    </div>
-    
-
     {% if years %}
         <div class="chart-container">
             <div class="chart-title-container">
+                <h1 class="chart-title">Budget</h1>
                 <div class="dropdown-filter">
                     <select id="year-filter" name="year-filter">
                         {% for year in years %}

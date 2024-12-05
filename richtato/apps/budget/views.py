@@ -1,21 +1,14 @@
 import calendar
-import json
-import os
-from collections import defaultdict
-from urllib.parse import unquote
-
+import pprint
 import pandas as pd
-from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.db import IntegrityError
 from django.db.models import Sum
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import HttpResponse, HttpResponseRedirect, render
-from django.urls import reverse
+from django.shortcuts import render
 
 from apps.expense.models import Expense
-from apps.richtato_user.models import Category, User
-from utilities.tools import month_mapping, color_picker
+from apps.richtato_user.models import Category
+from utilities.tools import month_mapping, format_currency
 
 
 @login_required
@@ -35,49 +28,64 @@ def main(request) -> HttpResponse:
                    "categories": category_list
                    })
 
-# @login_required
-# def get_budget_months(request):
-#     year = request.GET.get('year')
-
-#     months = sorted(list(Expense.objects.filter(user=request.user, date__year=year).dates('date', 'month').values_list('date__month', flat=True)), reverse=True)
-#     print("Months: ", months)
-#     return JsonResponse(months, safe=False)
-
 @login_required
 def get_plot_data(request, year, month):
-    categories = Category.objects.filter(user=request.user)
-
     month_number = month_mapping(month)
-
     expense_for_month = Expense.objects.filter(
         user=request.user, 
         date__year=year, 
         date__month=month_number
-    ).values('date__month', 'category__name').annotate(total_amount=Sum('amount'))
+    ).values('category__name').annotate(total_amount=Sum('amount'))
     
+    categories = Category.objects.filter(user=request.user).values('name', 'budget', 'color')
+
     datasets = []
-    for index, category in enumerate(categories):
-        # Find the corresponding expense entry for this category
+    labels = []
+    
+    for i, category in enumerate(categories):
+        category_name = category['name']
+        budget = category['budget']
+        color = category['color']
+        
         expense = next(
-            (exp for exp in expense_for_month if exp['category__name'] == category.name),
+            (exp for exp in expense_for_month if exp['category__name'] == category_name),
             None
         )
-
-        # Get the total amount spent for this category in the month
         total_amount = expense['total_amount'] if expense else 0
-        
-        # Append the data for this category to the dataset
-        background_color, border_color = color_picker(index)
+        budget_percent = round(total_amount * 100 / budget) if budget else 0
+
+        labels.append(category_name)        
+        budget_placeholder = [0] * len(categories)
+        budget_placeholder[i] = budget_percent
         datasets.append({
-            'label': category.name,
-            'data': [float(total_amount)],
-            'backgroundColor': background_color,
-            'borderColor': border_color,
-            'borderWidth': 1
+            'label': category_name,
+            'backgroundColor': color,
+            'borderColor': color,
+            'borderWidth': 1,
+            'data': budget_placeholder
         })
-    print("Expense for Month: ", expense_for_month)
-    category_list = [category.name for category in categories]
-    return JsonResponse({'labels': category_list, 'datasets': datasets})
+
+    return JsonResponse({
+        'labels': labels,
+        'datasets': datasets
+    })
+
+def get_table_data(request):
+    year = request.GET.get('year')
+    month = month_mapping(request.GET.get('month'))
+    category = request.GET.get('label')
+
+    table_data =[]
+    expenses = Expense.objects.filter(user=request.user, date__year=year, date__month=month, category__name=category)
+    for expense in expenses:
+        table_data.append({
+            'id': expense.id,
+            'date': expense.date,
+            'description': expense.description,
+            'amount': format_currency(expense.amount)
+        })
+
+    return JsonResponse(table_data, safe=False)
 
 @login_required
 def get_budget_data_json(request):

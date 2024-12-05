@@ -27,8 +27,18 @@ class AccountTransaction(models.Model):
         return f"{self.account} Amount: {self.amount} Date: {self.date}"
 
     def save(self, *args, **kwargs):
-        transaction_date = datetime.strptime(self.date, "%Y-%m-%d").date()
-        latest_balance_date = datetime.strptime(self.account.latest_balance_date, "%Y-%m-%d").date()
+        if isinstance(self.date,str):
+            transaction_date = datetime.strptime(self.date, "%Y-%m-%d").date()
+        else:
+            transaction_date = self.date
+        
+        if isinstance(self.account.latest_balance_date,str):
+            self.account.latest_balance_date = datetime.strptime(self.account.latest_balance_date, "%Y-%m-%d").date()
+        else:
+            latest_balance_date = self.account.latest_balance_date
+
+        print(f"Transaction Date: {transaction_date}", type(transaction_date))
+        print(f"Latest Balance Date: {latest_balance_date}", type(latest_balance_date))
         # Compare if the transaction date is later than the latest balance date
         if transaction_date >= latest_balance_date:
             # Save the transaction first

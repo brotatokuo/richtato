@@ -1,12 +1,15 @@
 import json
+import colorama
+import decimal
 from datetime import datetime
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
+from django.shortcuts import HttpResponseRedirect
 from django.shortcuts import render
+from django.urls import reverse
 
 from apps.account.models import Account, AccountTransaction
-from apps.expense.models import Expense
 from apps.richtato_user.models import CardAccount, Category
 from utilities.tools import format_currency, format_date
 
@@ -55,14 +58,13 @@ def add_card(request):
                 },
             )
 
-        # Create and save the Card account
         card_account = CardAccount(
             user=request.user,
             name=account_name,
         )
         card_account.save()
 
-        return main(request)
+        return HttpResponseRedirect(reverse("settings"))
     return HttpResponse("Add account error")
 
 @login_required
@@ -111,39 +113,6 @@ def get_accounts(request):
         )
     return JsonResponse(json_data, safe=False)
 
-# @login_required
-# def _get_latest_accounts_data(request)->JsonResponse:
-#     user_accounts = request.user.account.all()
-#     user_accounts = sorted(user_accounts, key=lambda x: x.name)
-#     json_data = []
-#     for account in user_accounts:
-#         # Get the latest balance history record for the account
-#         balance_history = account.history.all()
-#         balance_list = []
-#         date_list = []
-
-#         for history in balance_history:
-#             balance_list.append(history.balance_history)  # Add balance to list
-#             date_list.append(history.date_history)  # Add date to list
-
-#         sorted_history = sorted(zip(date_list, balance_list), key=lambda x: x[0], reverse=True)
-#         date_list_sorted, balance_list_sorted = zip(*sorted_history) if sorted_history else ([], [])
-#         latest_date = date_list_sorted[0] if date_list_sorted else None
-#         latest_balance = balance_list_sorted[0] if balance_list_sorted else None
-
-#         accounts_data = {
-#             'id': account.id,
-#             'account': account,
-#             'type': account.get_type_display(),
-#             'balance': format_currency(latest_balance),
-#             'date': latest_date,
-#             'history': list(zip(balance_list, date_list)) 
-#         }
-#         json_data.append({
-#             "account_name": account.name,
-#             "accounts_data": accounts_data})
-#     return json_data
-
 @login_required
 def add_account(request):
     if request.method=="POST":
@@ -175,7 +144,7 @@ def add_account(request):
         )
         account_history.save()
         
-        return main(request)
+        return HttpResponseRedirect(reverse("settings"))
     return HttpResponse("Add account error")
 
 @login_required
@@ -264,35 +233,38 @@ def update_categories(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body.decode("utf-8"))
+            print("Data:", data)
             for category in data:
                 delete_bool = category.get("delete")
                 category_id = category.get("id")
                 category_name = category.get("name").strip()
                 category_keywords = category.get("keywords").lower()
-                category_budget = category.get("budget")
+                category_budget_str = category.get("budget")
+                category_budget = decimal.Decimal(category_budget_str.replace("$", "").replace(",", "").strip())
                 category_type = category.get("type")
                 category_color = category.get("color")
-
-                if isinstance(category_keywords, str):
-                    category_keywords = ",".join(
-                        [kw.strip() for kw in category_keywords.split(",")]
-                    )
 
                 if delete_bool:
                     Category.objects.get(id=category_id).delete()
                     continue
+                
+                try:
+                    Category.objects.update_or_create(
+                        user=request.user,
+                        id=category_id,
+                        defaults={
+                            "name": category_name,
+                            "keywords": category_keywords,
+                            "budget": category_budget,
+                            "type": category_type,
+                            "color": category_color,
+                        },
+                    )
+                    print(colorama.Fore.GREEN + "Categories updated successfully")
+                except Exception as e:
+                    print(colorama.Fore.RED + "Error updating category:", e)
 
-                Category.objects.update_or_create(
-                    user=request.user,
-                    id=category_id,
-                    defaults={
-                        "name": category_name,
-                        "keywords": category_keywords,
-                        "budget": category_budget,
-                        "variant": category_type,
-                        "color": category_color,
-                    },
-                )
+            
 
             return JsonResponse({"success": True})
 
