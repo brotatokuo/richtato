@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedYear = yearFilter.value;
         const selectedMonth = document.getElementById('month-filter').value;
         const plotDataUrl = `/budget/get-plot-data/${selectedYear}/${selectedMonth}`;
+        console.log("plot data url: ", plotDataUrl);
 
         // Create or update the ChartPlotter instance
         if (!window.expenseChart) {

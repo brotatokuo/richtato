@@ -45,7 +45,7 @@ def main(request) -> HttpResponse:
 
 @login_required
 def get_plot_data(request, year, month):
-    category_list = Category.objects.filter(user=request.user)
+    categories = Category.objects.filter(user=request.user)
 
     month_number = month_mapping(month)
 
@@ -56,7 +56,7 @@ def get_plot_data(request, year, month):
     ).values('date__month', 'category__name').annotate(total_amount=Sum('amount'))
     
     datasets = []
-    for index, category in enumerate(category_list):
+    for index, category in enumerate(categories):
         # Find the corresponding expense entry for this category
         expense = next(
             (exp for exp in expense_for_month if exp['category__name'] == category.name),
@@ -76,7 +76,8 @@ def get_plot_data(request, year, month):
             'borderWidth': 1
         })
     print("Expense for Month: ", expense_for_month)
-    return JsonResponse(None, safe=False)
+    category_list = [category.name for category in categories]
+    return JsonResponse({'labels': category_list, 'datasets': datasets})
 
 @login_required
 def get_budget_data_json(request):

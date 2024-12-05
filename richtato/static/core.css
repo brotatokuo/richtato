@@ -300,6 +300,11 @@ input[type="password"] {
     max-width: 100%; 
 }
 
+.categoryChart {
+    max-height: 70vh;
+    max-width: 80%; 
+}
+
 /* Chart title styling */
 .chart-title {
     text-align: center;
@@ -356,4 +361,8 @@ input[type="password"] {
         justify-content: center;
         align-self: center;
     }
+}
+
+.category-dropdown-filter{
+    padding-top: 100%;
 }
