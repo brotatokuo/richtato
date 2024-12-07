@@ -3,3 +3,4 @@ pandas
 google-generativeai
 fuzzywuzzy
 colorama
+psycopg2-binary
