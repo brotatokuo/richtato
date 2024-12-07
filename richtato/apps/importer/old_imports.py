@@ -1,19 +1,5 @@
-import os
-import re
-import time
-import warnings
-from datetime import datetime
 
-import colorama
-import pandas as pd
-from django.http import HttpResponse
-
-from apps.richtato_user.models import CardAccount, Category, Expense
-from utilities.ai import AI
-
-warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
-statements_folder_path = os.path.join((os.path.dirname(os.getcwd())), "Statements")
-
+    
 def sort_statements_and_generate_csv(request) -> HttpResponse:
     print("Folders in statements_folder_path", os.listdir(statements_folder_path))
 

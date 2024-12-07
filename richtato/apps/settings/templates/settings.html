@@ -31,7 +31,6 @@
                     <input class="form-control" id="account-name" name="account-name" type="string" required>
                 </div>
 
-                <br>
 
                 {% if error_card_message %}
                 <div class="wrong-password">{{error_card_message}}</div>
@@ -152,6 +151,29 @@
                 <input class="btn-secondary" id="submit-balance" type="submit" value="Add">
             </form>
         </div>
+    </div>
+
+    <div id="Category Settings" class="settings-form">
+        <h2>Import</h2>
+        <form class="settings-add-form" method="post" action="{% url 'settings_generate_csv_templates' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="target-folder-generation-path">Enter Folder Path to Export Data</label>
+                <input class="form-control" id="export-folder" name="path" type="text" placeholder="Enter the folder path">
+            </div>
+            <p id="selected-folder-display"></p>
+            <input class="btn-secondary" id="submit-balance" type="submit" value="Generate CSVs">
+        </form>
+        
+        <form class="settings-add-form" method="post" action="{% url 'settings_import_csv' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="target-folder-generation-path">Enter Import Path to Import Data</label>
+                <input class="form-control" id="import-folder" name="import-folder" type="text" placeholder="Enter the folder path">
+            </div>
+            <p id="selected-folder-display"></p>
+            <input class="btn-secondary" id="submit-balance" type="submit" value="Import all">
+        </form>
     </div>
 </div>
 

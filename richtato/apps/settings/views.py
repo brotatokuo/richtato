@@ -11,6 +11,7 @@ from django.urls import reverse
 
 from apps.account.models import Account, AccountTransaction
 from apps.richtato_user.models import CardAccount, Category
+from apps.settings.models import DataImporter
 from utilities.tools import format_currency, format_date
 
 
@@ -102,13 +103,14 @@ def get_accounts(request):
     accounts = Account.objects.filter(user=request.user)
     json_data = []
     for account in accounts:
+
         json_data.append(
             {
                 "Id": account.id,
                 "Name": account.name,
                 "Type": account.type,
                 "Balance": format_currency(account.latest_balance),
-                "Date":format_date(account.latest_balance_date),
+                "Date":format_date(account.latest_balance_date) if account.latest_balance_date else None,
             }
         )
     return JsonResponse(json_data, safe=False)
@@ -273,3 +275,28 @@ def update_categories(request):
 
     return JsonResponse({"success": False, "error": "Invalid request"})
 # endregion
+
+# region Import
+@login_required
+def generate_csv_templates(request):
+    if request.method == "POST":
+        path = request.POST.get("path")
+        request.user.import_path = path
+        request.user.save()
+        DataImporter(user=request.user, path=request.user.import_path).generate_csv_templates()
+        return HttpResponseRedirect(reverse("settings"))
+    return HttpResponseRedirect(reverse("settings"))
+
+@login_required
+def import_csv(request):
+    if request.method == "POST":
+        path = request.POST.get("import-folder")
+        print
+        request.user.import_path = path
+        print("Path:", path)
+        request.user.save()
+        importer = DataImporter(user=request.user, path=request.user.import_path)
+        print("Importing from CSV")
+        importer.import_from_csv()
+        return HttpResponseRedirect(reverse("settings"))
+    return HttpResponseRedirect(reverse("settings"))

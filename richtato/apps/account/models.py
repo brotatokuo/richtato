@@ -10,7 +10,7 @@ class Account(models.Model):
     type = models.CharField(choices=ACCOUNT_TYPES, max_length=50)
     name = models.CharField(max_length=100)
     latest_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    latest_balance_date = models.DateField()
+    latest_balance_date = models.DateField(null=True, blank=True)
 
     def __str__(self):
         return f"[{self.user}] {self.name}"
@@ -40,7 +40,7 @@ class AccountTransaction(models.Model):
         print(f"Transaction Date: {transaction_date}", type(transaction_date))
         print(f"Latest Balance Date: {latest_balance_date}", type(latest_balance_date))
         # Compare if the transaction date is later than the latest balance date
-        if transaction_date >= latest_balance_date:
+        if latest_balance_date is None or transaction_date >= latest_balance_date:
             # Save the transaction first
             super().save(*args, **kwargs)
 

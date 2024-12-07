@@ -1,5 +1,4 @@
 import calendar
-import pprint
 import pandas as pd
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
@@ -18,7 +17,8 @@ def main(request) -> HttpResponse:
     """
     expense_dates = Expense.objects.filter(user=request.user).exclude(date__isnull=True).values_list('date', flat=True).distinct()
     years_list = sorted(list(set([date.year for date in expense_dates])), reverse=True)
-    months_list = [calendar.month_abbr[i] for i in range(1, 13)]
+    months_list = sorted(list(set([(date.year, date.month) for date in expense_dates])), reverse=True)
+    months_list = [calendar.month_abbr[month[1]] for month in months_list]
     print(years_list, months_list)
     category_list = sorted(list(Category.objects.filter(user=request.user).values_list('name', flat=True)))
 

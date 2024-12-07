@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedYear,                   // year
                 editTableButton,                // editButton
                 'update/',
+                'percentage'
             );
         } else {
             console.log('Updating existing chart');

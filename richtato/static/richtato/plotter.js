@@ -1,10 +1,11 @@
 class ChartPlotter {
-    constructor(chartUrl, canvasId, tableID, tableUrl, year, editButton, saveTableEndpoint) {
+    constructor(chartUrl, canvasId, tableID, tableUrl, year, editButton, saveTableEndpoint, yAxisFormat = 'currency') {
         this.chartUrl = chartUrl;  // URL for the chart data
         this.canvasId = canvasId;  // Canvas ID where the chart will be plotted
         this.year = year;          // Year filter for the data
         this.chartInstance = null; // Chart instance to manage chart lifecycle
         this.editButton = editButton;
+        this.yAxisFormat = yAxisFormat; // Y-axis format, default is 'currency'
 
         // Initialize TableManager
         this.tableManager = new TableManager(tableID, tableUrl, editButton, saveTableEndpoint, this);
@@ -30,6 +31,7 @@ class ChartPlotter {
         }
         
         const data = await this.fetchData();
+        const yAxisFormat = this.yAxisFormat; // Store reference to yAxisFormat
         const ctx = document.getElementById(this.canvasId).getContext('2d');
 
         // Create a new chart instance
@@ -45,12 +47,17 @@ class ChartPlotter {
                         stacked: true,
                         ticks: {
                             callback: function(value) {
-                                return value.toLocaleString('en-US', { 
-                                    style: 'currency', 
-                                    currency: 'USD',
-                                    minimumFractionDigits: 0,  
-                                    maximumFractionDigits: 2   
-                                });
+                                if (yAxisFormat === 'percentage') {
+                                    console.log("Formatting as percentage");
+                                    return `${value}%`;  // Format as percentage
+                                } else {
+                                    return value.toLocaleString('en-US', { 
+                                        style: 'currency', 
+                                        currency: 'USD',
+                                        minimumFractionDigits: 0,  
+                                        maximumFractionDigits: 2   
+                                    });
+                                };
                             }
                         }
                      }

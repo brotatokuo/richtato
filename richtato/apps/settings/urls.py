@@ -21,4 +21,7 @@ urlpatterns = [
     path('add-category/', views.add_category, name=f'{page_name}_add_category'),
     path('update-categories/', views.update_categories, name=f'{page_name}_update_categories'),
     
+    # Import
+    path('generate-csv-templates/', views.generate_csv_templates, name=f'{page_name}_generate_csv_templates'),
+    path('import-csv/', views.import_csv, name=f'{page_name}_import_csv'),
 ]
