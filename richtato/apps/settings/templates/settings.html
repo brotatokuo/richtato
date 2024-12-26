@@ -155,7 +155,7 @@
 
     <div id="Category Settings" class="settings-form">
         <h2>Import</h2>
-        <form class="settings-add-form" method="post" action="{% url 'settings_generate_csv_templates' %}" enctype="multipart/form-data">
+        <!-- <form class="settings-add-form" method="post" action="{% url 'settings_generate_csv_templates' %}" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="form-group">
                 <label for="target-folder-generation-path">Enter Folder Path to Export Data</label>
@@ -163,9 +163,9 @@
             </div>
             <p id="selected-folder-display"></p>
             <input class="btn-secondary" id="submit-balance" type="submit" value="Generate CSVs">
-        </form>
+        </form> -->
         
-        <form class="settings-add-form" method="post" action="{% url 'settings_import_csv' %}" enctype="multipart/form-data">
+        <!-- <form class="settings-add-form" method="post" action="{% url 'settings_import_csv' %}" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="form-group">
                 <label for="target-folder-generation-path">Enter Import Path to Import Data</label>
@@ -173,13 +173,15 @@
             </div>
             <p id="selected-folder-display"></p>
             <input class="btn-secondary" id="submit-balance" type="submit" value="Import all">
-        </form>
+        </form> -->
 
         <form action="{% url 'settings_generate_google_sheets_templates' %}" method="post">
             {% csrf_token %}
-            <button class="btn-secondary" id="generateGoogleSheetsButton">Generate Google Sheets Importer</button>
+            <button class="btn-secondary" id="generateGoogleSheetsTempalateButton">Generate Template</button>
         </form>
 
+        <br>
+        
         <form action="{% url 'settings_import_google_sheets_data' %}" method="post">
             {% csrf_token %}
             <button type="submit" class="btn-secondary" id="importGoogleSheetsButton">Import from Google Sheets</button>

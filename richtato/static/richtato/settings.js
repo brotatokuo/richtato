@@ -38,4 +38,16 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('settingsCategoryEditButton').onclick = function() {
         categoriesTable.toggleEditMode();
     };
+
+    // Import Data Table
+    const generateTemplateButton = document.getElementById('generateGoogleSheetsTempalateButton');
+    generateTemplateButton.onclick = function() {
+        alert('Are you sure you want to generate a new Google Sheets template? This will overwrite any existing template.');
+    };
+
+    const importData = document.getElementById('importGoogleSheetsButton');
+    importData.onclick = function() {
+        alert('Are you sure you want to import data from Google Sheets?');
+    };
+    
 });

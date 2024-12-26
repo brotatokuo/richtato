@@ -33,7 +33,7 @@ class AccountTransaction(models.Model):
             transaction_date = self.date
         
         if isinstance(self.account.latest_balance_date,str):
-            self.account.latest_balance_date = datetime.strptime(self.account.latest_balance_date, "%Y-%m-%d").date()
+            latest_balance_date = datetime.strptime(self.account.latest_balance_date, "%Y-%m-%d").date()
         else:
             latest_balance_date = self.account.latest_balance_date
 

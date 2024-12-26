@@ -106,7 +106,7 @@ class ImporterClient(GoogleSheetsClient):
             print("Successfully imported cards")
         except Exception as e:
             print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
-            print(e)
+            
             
     
     def import_categories(self):
@@ -130,13 +130,12 @@ class ImporterClient(GoogleSheetsClient):
                 )
                 category.save()
 
-            id = row["id"]
-            self.categories_dict[id] = category
+                id = row["id"]
+                self.categories_dict[id] = category
 
             print("Successfully imported categories")
         except Exception as e:
             print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
-            print(e)
 
     def import_accounts(self):
         print("Importing accounts")
@@ -151,6 +150,8 @@ class ImporterClient(GoogleSheetsClient):
                     user=self.user,
                     type=row["type"],
                     name=row["name"],
+                    latest_balance=row["latest_balance"],
+                    latest_balance_date=row["latest_balance_date"]
                 )
                 account.save()
 
@@ -160,7 +161,6 @@ class ImporterClient(GoogleSheetsClient):
             print("Successfully imported accounts")
         except Exception as e:
             print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
-            print(e)
 
     def import_account_transactions(self):
         print("Importing account transactions")
@@ -175,7 +175,7 @@ class ImporterClient(GoogleSheetsClient):
                 elif "account_id" in df.columns and "account_name" not in df.columns:
                     account = self.accounts_dict[row["account_id"]]
                 else:
-                    raise Exception("Account name or account id must be provided")
+                    raise Exception("Account name or account id must be provided for account transactions")
                 
                 transaction = AccountTransaction(
                     account=account,
@@ -187,32 +187,30 @@ class ImporterClient(GoogleSheetsClient):
                 print("Successfully imported account transactions") 
         except Exception as e:
             print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
-            print(e)
-
 
     def import_expenses(self):
         print("Importing expenses")
         try:
-            data = self.workbook.worksheet("expenses")
+            data = self.workbook.worksheet("expense")
             df = pd.DataFrame(data.get_all_records())
             print(df.head())
             
             for _, row in df.iterrows():
-
                 if "account_name" in df.columns and "account_name_id" not in df.columns:
                     account = CardAccount.objects.get(user=self.user, name=row["account_name"])
                 elif "account_name_id" in df.columns and "account_name" not in df.columns:
                     account = self.cards_dict[row["account_name_id"]]
                 else:
-                    raise Exception("Account name or account id must be provided")
-            
+                    raise Exception("account_name or account_name_id must be provided for expenses")
+
                 if "category_name" in df.columns and "category_id" not in df.columns:
                     category = Category.objects.get(user=self.user, name=row["category_name"])
                 elif "category_id" in df.columns and "category_name" not in df.columns:
                     category = self.categories_dict[row["category_id"]]
                 else:
-                    raise Exception("Category name or category id must be provided")
+                    raise Exception("Category name or category id must be provided for expenses")
                 
+
                 try:
                     expense = Expense(
                         user=self.user,
@@ -223,17 +221,16 @@ class ImporterClient(GoogleSheetsClient):
                         category=category
                     )
                     expense.save()
+
                 except Exception as e:
                     print(colorama.Fore.RED + f"Error importing {row}" + colorama.Style.RESET_ALL)
-                    print(e)
                     print(f"Error importing {row}")
         
             print("Successfully imported expenses")
 
         except Exception as e:
             print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
-            print(e)
-
+            
     def import_incomes(self):
         print("Importing incomes")
         try:
@@ -242,12 +239,12 @@ class ImporterClient(GoogleSheetsClient):
             print(df.head())
 
             for _, row in df.iterrows():
-                if "account_name" in df.columns and "account_id" not in df.columns:
+                if "account_name" in df.columns and "account_name_id" not in df.columns:
                     account = Account.objects.get(user=self.user, name=row["account_name"])
-                elif "account_id" in df.columns and "account_name" not in df.columns:
-                    account = self.accounts_dict[row["account_id"]]
+                elif "account_name_id" in df.columns and "account_name" not in df.columns:
+                    account = self.accounts_dict[row["account_name_id"]]
                 else:
-                    raise Exception("Account name or account id must be provided")
+                    raise Exception("account_name or account_name_id must be provided for incomes")
                 
                 income = Income(
                     user=self.user,
@@ -261,4 +258,4 @@ class ImporterClient(GoogleSheetsClient):
             print("Successfully imported incomes")
         except Exception as e:
             print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
-            print(e)
+            

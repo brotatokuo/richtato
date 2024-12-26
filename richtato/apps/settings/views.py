@@ -321,6 +321,6 @@ def generate_google_sheets_templates(request):
 def import_google_sheets_data(request):
     if request.method == "POST":
         importer = ImporterClient(request.user)
-        importer.import_cards()
+        importer.import_data()
         return HttpResponseRedirect(reverse("settings"))
     return HttpResponseRedirect(reverse("settings"))
