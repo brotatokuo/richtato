@@ -43,7 +43,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const generateTemplateButton = document.getElementById('generateGoogleSheetsTempalateButton');
     generateTemplateButton.onclick = function() {
         alert('Are you sure you want to generate a new Google Sheets template? This will overwrite any existing template.');
-        open link
     };
 
     const importData = document.getElementById('importGoogleSheetsButton');
