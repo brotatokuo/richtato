@@ -12,6 +12,7 @@ from django.urls import reverse
 from apps.account.models import Account, AccountTransaction
 from apps.richtato_user.models import CardAccount, Category
 from apps.settings.models import DataImporter
+from utilities.google_drive.client import ImporterClient
 from utilities.tools import format_currency, format_date
 
 
@@ -291,12 +292,20 @@ def generate_csv_templates(request):
 def import_csv(request):
     if request.method == "POST":
         path = request.POST.get("import-folder")
-        print
         request.user.import_path = path
         print("Path:", path)
         request.user.save()
         importer = DataImporter(user=request.user, path=request.user.import_path)
         print("Importing from CSV")
         importer.import_from_csv()
+        return HttpResponseRedirect(reverse("settings"))
+    return HttpResponseRedirect(reverse("settings"))
+
+
+@login_required
+def import_google_sheets_data(request):
+    if request.method == "POST":
+        importer = ImporterClient(request.user)
+        importer.import_cards()
         return HttpResponseRedirect(reverse("settings"))
     return HttpResponseRedirect(reverse("settings"))

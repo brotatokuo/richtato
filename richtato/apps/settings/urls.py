@@ -24,4 +24,5 @@ urlpatterns = [
     # Import
     path('generate-csv-templates/', views.generate_csv_templates, name=f'{page_name}_generate_csv_templates'),
     path('import-csv/', views.import_csv, name=f'{page_name}_import_csv'),
+    path('import-google-sheets-data', views.import_google_sheets_data, name=f'{page_name}_import_google_sheets_data'),
 ]
