@@ -53,7 +53,7 @@ class ImporterClient(GoogleSheetsClient):
         self.workbook = self.client.open_by_key(sheet_id)
         self.user = User.objects.get(username=username)
 
-    def generate_import_template(self):
+    def generate_templates(self):
         sheets_dict = {
             "cards": ["id", "name"],
             "categories": ["id", "name", "keywords", "budget", "type", "color",],

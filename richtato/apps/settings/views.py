@@ -301,6 +301,21 @@ def import_csv(request):
         return HttpResponseRedirect(reverse("settings"))
     return HttpResponseRedirect(reverse("settings"))
 
+@login_required
+def generate_google_sheets_templates(request):
+    if request.method == "POST":
+        importer = ImporterClient(request.user)
+        importer.generate_templates()
+        return render(
+            request,
+            "settings.html",
+            {
+            "template_url": "https://docs.google.com/spreadsheets/d/101_Ov7waagUS_pplSgyzQ_eekttQ_l0mvlpragcCqcQ/edit?usp=sharing",
+            },
+        )
+        return HttpResponseRedirect(reverse("settings"))
+    return HttpResponseRedirect(reverse("settings"))
+
 
 @login_required
 def import_google_sheets_data(request):
