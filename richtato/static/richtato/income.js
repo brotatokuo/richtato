@@ -2,10 +2,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const tableDataUrl = "get-table-data/";
     const yearFilter = document.getElementById('year-filter');
     const editTableButton = document.getElementById('detailsTableEditButton');
-    
+    const groupByFilter = document.getElementById('group-by-filter');
+
     const updateChart = () => {
-        const selectedYear = yearFilter.value;
-        const plotDataUrl = `/income/get-plot-data/${selectedYear}/`;
+        const selectedYear = parseInt(yearFilter.value, 10);
+        const groupBy = groupByFilter.value;
+        console.log('Updating chart for year:', selectedYear, 'group by:', groupBy);
+        const plotDataUrl = `/income/get-plot-data?year=${selectedYear}&group_by=${groupBy}`;
 
         // Create or update the ChartPlotter instance
         if (!window.expenseChart) {
@@ -30,4 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateChart();
     yearFilter.addEventListener('change', updateChart);
+
+    // Add event listener to group by
+    groupByFilter.addEventListener('change', updateChart);
 });

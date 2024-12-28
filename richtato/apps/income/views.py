@@ -94,30 +94,43 @@ def update(request):
     return JsonResponse({"success": False, "error": "Invalid request"})
 
 @login_required
-def get_plot_data(request, year):
+def get_plot_data(request):
+    year = request.GET.get('year')
+    group_by = request.GET.get('group_by')
+
     month_list = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-    accounts = Account.objects.filter(user=request.user)
     all_incomes = Income.objects.filter(user=request.user, date__year=year)
-    
     datasets = []
-    for index, account in enumerate(accounts):
+
+    if group_by == 'account':
+        group_items = Account.objects.filter(user=request.user)
+        item_key = 'account_name'
+    elif group_by == 'description':
+        group_items = Income.objects.filter(user=request.user, date__year=year).values_list('description', flat=True).distinct()
+        item_key = 'description'
+    else:
+        return JsonResponse({'error': 'Invalid group_by value'}, status=400)
+
+    for index, item in enumerate(group_items):
         annual_total = []
 
-        for month in range(1, 13): 
-            monthly_total = all_incomes.filter(account_name=account, date__month=month).aggregate(Sum('amount'))['amount__sum']
-            monthly_total = float(monthly_total or 0)
-            annual_total.append(monthly_total)
+        for month in range(1, 13):
+            monthly_total = all_incomes.filter(**{item_key: item, 'date__month': month}).aggregate(Sum('amount'))['amount__sum']
+            annual_total.append(float(monthly_total or 0))
 
         background_color, border_color = color_picker(index)
-        dataset = {
-            'label': account.name,
+        if type(item) == str:
+            label = item
+        else:
+            label = item.name
+        datasets.append({
+            'label': label,
             'data': annual_total,
             'backgroundColor': background_color,
             'borderColor': border_color,
             'borderWidth': 1
-        }
-        datasets.append(dataset)
+        })
 
     return JsonResponse({'labels': month_list, 'datasets': datasets})
 
