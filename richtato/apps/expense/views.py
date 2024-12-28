@@ -18,7 +18,7 @@ def main(request):
     spending_dates = Expense.objects.filter(user=request.user).exclude(date__isnull=True).values_list('date', flat=True).distinct()
     years_list = sorted(set(date.year for date in spending_dates), reverse=True)
     transaction_accounts = CardAccount.objects.filter(user=request.user).values_list('name', flat=True).distinct()
-    category_list = list(Category.objects.filter(user=request.user).values_list('name', flat=True))
+    category_list = [''] + list(Category.objects.filter(user=request.user).values_list('name', flat=True))
 
     return render(request, 'expense.html',
                 {"years": years_list,
@@ -166,10 +166,21 @@ def guess_category(request):
     """
     Guess the category of an expense based on the description.
     """
-    description = request.GET.get('description', '').lower()
-    user_categories_dict = Category.objects.filter(user=request.user).values('keywords', 'name')
-    for category in user_categories_dict:
-        if description in category['keywords'].lower():
-            return JsonResponse({'category': category['name']})
-    category_str = AI().categorize_transaction(request.user, description)
-    return JsonResponse({'category': category_str})
+    description = request.GET.get('description', '').lower().strip()
+    
+    if not description:
+        return JsonResponse({'category': ''})
+    
+    # Try to find a category that matches the description
+    user_categories = Category.objects.filter(user=request.user)
+    
+    for category in user_categories:
+        if description in category.keywords.lower():
+            return JsonResponse({'category': category.name})
+    
+    # Use AI categorization if no match is found
+    try:
+        category_str = AI().categorize_transaction(request.user, description)
+        return JsonResponse({'category': category_str})
+    except Exception:
+        return JsonResponse({'category': ''})
