@@ -38,6 +38,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_superuser = models.BooleanField(default=False)
     import_path = models.CharField(max_length=100, default="", blank=True, null=True)
     objects = UserManager()
+    google_sheets_link = models.CharField(max_length=100, default="", blank=True, null=True)
 
     USERNAME_FIELD = "username"  # Only username is used for login
     REQUIRED_FIELDS = []  # No additional required fields for creating a superuser

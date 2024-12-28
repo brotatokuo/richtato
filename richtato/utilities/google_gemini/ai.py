@@ -1,4 +1,3 @@
-import os
 import google.generativeai as genai
 from fuzzywuzzy import fuzz
 from apps.richtato_user.models import User, Category

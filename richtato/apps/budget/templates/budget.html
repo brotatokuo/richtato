@@ -43,21 +43,6 @@
         <button class="btn-secondary editButton" id="detailsTableEditButton">Edit</button> 
     </div>
 
-    {% if categories %}
-    <div class="chart-container">
-        <div class="chart-title-container">
-            <div class="category-dropdown-filter dropdown-filter">
-                <select id="category-filter" name="category-filter">
-                    {% for category in categories %}
-                        <option value="{{ category }}">{{ category }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-        <canvas class="categoryChart" id="barChartCategory"></canvas>
-    </div>
-{% endif %}
-
 </div>
 
 <script src="{% static 'richtato/script.js' %}"></script> 

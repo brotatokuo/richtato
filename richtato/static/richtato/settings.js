@@ -50,4 +50,22 @@ document.addEventListener('DOMContentLoaded', function () {
         alert('Are you sure you want to import data from Google Sheets?');
     };
     
+    toggleEditButton('settings-card-table', 'settingsCardEditButton');
+    toggleEditButton('settings-accounts-table', 'settingsAccountEditButton');
+    toggleEditButton('settings-categories-table', 'settingsCategoryEditButton');
+
 });
+
+function toggleEditButton(tableId, buttonId) {
+    const tbody = document.querySelector(`#${tableId} tbody`);
+    const editButton = document.getElementById(buttonId);
+
+    // Check if tbody has any rows
+    if (tbody && tbody.rows.length === 0) {
+        // Hide the button if tbody is empty
+        editButton.style.display = 'none';
+    } else {
+        // Show the button if tbody has rows
+        editButton.style.display = 'block';
+    }
+}

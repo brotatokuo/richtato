@@ -8,7 +8,7 @@ from django.urls import reverse
 
 from apps.expense.models import Expense
 from apps.richtato_user.models import CardAccount, Category, User
-from utilities.ai import AI
+from richtato.utilities.google_gemini.ai import AI
 from django.db.models import Sum
 from utilities.tools import month_mapping, format_currency, format_date, color_picker
 

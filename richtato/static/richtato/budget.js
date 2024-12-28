@@ -35,4 +35,5 @@ document.addEventListener('DOMContentLoaded', () => {
     updateChart();
     yearFilter.addEventListener('change', updateChart);
     monthFilter.addEventListener('change', updateChart);
-});
+}
+);
