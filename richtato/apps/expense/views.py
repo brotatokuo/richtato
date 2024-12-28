@@ -161,3 +161,15 @@ def _update_or_create_expense(transaction_id, user, date, description, amount, c
             'account_name': account
         }
     )
+
+def guess_category(request):
+    """
+    Guess the category of an expense based on the description.
+    """
+    description = request.GET.get('description', '').lower()
+    user_categories_dict = Category.objects.filter(user=request.user).values('keywords', 'name')
+    for category in user_categories_dict:
+        if description in category['keywords'].lower():
+            return JsonResponse({'category': category['name']})
+    category_str = AI().categorize_transaction(request.user, description)
+    return JsonResponse({'category': category_str})

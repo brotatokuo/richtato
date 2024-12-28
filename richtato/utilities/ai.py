@@ -3,14 +3,13 @@ import google.generativeai as genai
 from fuzzywuzzy import fuzz
 from apps.richtato_user.models import User, Category
 
-API_KEY = os.environ.get("API_KEY")
-genai.configure(api_key=API_KEY)
+API_KEY = "AIzaSyDCFP4GULu6gl7jJY07KblHX1gjCD9vOkk"
 model = genai.GenerativeModel("gemini-1.5-flash-8b")
 
 
 class AI:
     def __init__(self):
-        genai.configure(api_key=os.environ.get("API_KEY"))
+        genai.configure(api_key=API_KEY)
         self.model = genai.GenerativeModel("gemini-1.5-flash-8b")
 
     @classmethod
