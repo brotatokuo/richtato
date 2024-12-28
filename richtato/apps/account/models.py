@@ -13,7 +13,7 @@ class Account(models.Model):
     latest_balance_date = models.DateField(null=True, blank=True)
 
     def __str__(self):
-        return f"[{self.user}] {self.name}"
+        return self.name
 
 
 class AccountTransaction(models.Model):

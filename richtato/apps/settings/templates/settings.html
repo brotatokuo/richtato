@@ -154,38 +154,42 @@
     </div>
 
     <div id="Category Settings" class="settings-form">
-        <h2>Import</h2>
-        <!-- <form class="settings-add-form" method="post" action="{% url 'settings_generate_csv_templates' %}" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div class="form-group">
-                <label for="target-folder-generation-path">Enter Folder Path to Export Data</label>
-                <input class="form-control" id="export-folder" name="path" type="text" placeholder="Enter the folder path">
-            </div>
-            <p id="selected-folder-display"></p>
-            <input class="btn-secondary" id="submit-balance" type="submit" value="Generate CSVs">
-        </form> -->
-        
-        <!-- <form class="settings-add-form" method="post" action="{% url 'settings_import_csv' %}" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div class="form-group">
-                <label for="target-folder-generation-path">Enter Import Path to Import Data</label>
-                <input class="form-control" id="import-folder" name="import-folder" type="text" placeholder="Enter the folder path">
-            </div>
-            <p id="selected-folder-display"></p>
-            <input class="btn-secondary" id="submit-balance" type="submit" value="Import all">
-        </form> -->
+        <h2>Google Sheets</h2>
 
-        <form action="{% url 'settings_generate_google_sheets_templates' %}" method="post">
-            {% csrf_token %}
-            <button class="btn-secondary" id="generateGoogleSheetsTempalateButton">Generate Template</button>
-        </form>
+        {% if google_sheets_link %}
+            
+            <div class="google-sheets-actions">
+                <button class="btn-primary" onclick="window.open('{{ google_sheets_link }}', '_blank')">
+                    Open Google Sheets
+                </button>
+            
+                <form action="{% url 'settings_import_google_sheets_data' %}" method="post" class="import-form">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-secondary" id="importGoogleSheetsButton">Import from Google Sheets</button>
+                </form>
+            
+                <form action="{% url 'settings_export_google_sheets_data' %}" method="post" class="export-form">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-secondary" id="exportGoogleSheetsButton">Export to Excel</button>
+                    <p>{{ export_excel_file_path }}</p>
+                </form>
+            </div>
 
+        {% else %}
+            <p>Generate Google Sheets template</p>
+            <ol>
+                <li>Create a blank Google Sheets.</li>
+                <li>Click share.</li>
+                <li>Provide <strong>richtato@gen-lang-client-0729966195.iam.gserviceaccount.com</strong> edit access.</li>
+            </ol>
+            <form action="{% url 'settings_generate_google_sheets_templates' %}" method="post">
+                {% csrf_token %}
+                <input id="googleSheetsLink" name="googleSheetsLink" type="text" placeholder="Enter Google Sheets link" style="width: 500px;">
+                <button class="btn-secondary" id="generateGoogleSheetsTempalateButton">Generate Template</button>
+            </form>
+        {% endif %}
         <br>
         
-        <form action="{% url 'settings_import_google_sheets_data' %}" method="post">
-            {% csrf_token %}
-            <button type="submit" class="btn-secondary" id="importGoogleSheetsButton">Import from Google Sheets</button>
-        </form>
         
     </div>
 </div>

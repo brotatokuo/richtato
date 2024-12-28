@@ -12,13 +12,14 @@ from django.urls import reverse
 from apps.account.models import Account, AccountTransaction
 from apps.richtato_user.models import CardAccount, Category
 from apps.settings.models import DataImporter
-from utilities.google_drive.client import ImporterClient
+from utilities.google_drive.client import ImporterClient, ExporterClient
 from utilities.tools import format_currency, format_date
 
 
 @login_required
 def main(request):
     category_list = list(Category.objects.filter(user=request.user))
+    export_excel_file_path = ExporterClient(request.user).file_path
     return render(
         request,
         "settings.html",
@@ -27,6 +28,8 @@ def main(request):
             "category_list": category_list,
             "today_date": datetime.today().strftime("%Y-%m-%d"),
             "category_types": Category.CATEGORY_TYPES,
+            "google_sheets_link": request.user.google_sheets_link,
+            "export_excel_file_path": export_excel_file_path,
         },
     )
 
@@ -304,16 +307,11 @@ def import_csv(request):
 @login_required
 def generate_google_sheets_templates(request):
     if request.method == "POST":
+        google_sheets_link = request.POST.get("googleSheetsLink")
+        request.user.google_sheets_link = google_sheets_link
+        request.user.save()
         importer = ImporterClient(request.user)
         importer.generate_templates()
-        return render(
-            request,
-            "settings.html",
-            {
-            "template_url": "https://docs.google.com/spreadsheets/d/101_Ov7waagUS_pplSgyzQ_eekttQ_l0mvlpragcCqcQ/edit?usp=sharing",
-            },
-        )
-        return HttpResponseRedirect(reverse("settings"))
     return HttpResponseRedirect(reverse("settings"))
 
 
@@ -322,5 +320,12 @@ def import_google_sheets_data(request):
     if request.method == "POST":
         importer = ImporterClient(request.user)
         importer.import_data()
+        return HttpResponseRedirect(reverse("settings"))
+    return HttpResponseRedirect(reverse("settings"))
+
+@login_required
+def export_google_sheets_data(request):
+    if request.method == "POST":
+        exporter = ExporterClient(request.user).export_data()
         return HttpResponseRedirect(reverse("settings"))
     return HttpResponseRedirect(reverse("settings"))

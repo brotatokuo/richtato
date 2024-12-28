@@ -2,60 +2,29 @@ import gspread
 import pandas as pd
 import os
 import colorama
+import re
 from apps.richtato_user.models import User, CardAccount, Category
 from apps.expense.models import Expense
 from apps.income.models import Income
 from apps.account.models import Account, AccountTransaction
 
 from google.oauth2.service_account import Credentials
-from gspread_formatting import format_cell_range, CellFormat, TextFormat
 
 
 class GoogleSheetsClient:
+    def __init__(self, user: User):
+        self.user = user
 
-    def __init__(self):
+        print("User: ", user)
+        print("User google sheets link: ", user.google_sheets_link)
+        
         scopes = ["https://www.googleapis.com/auth/spreadsheets"]
         parent_path = os.path.dirname(os.path.abspath(__file__))
-        print(parent_path)
         creds = Credentials.from_service_account_file(f"{parent_path}/credentials/credentials.json", scopes=scopes)
+        
         self.client = gspread.authorize(creds)
-
-class ExpenseClient(GoogleSheetsClient):
-    def __init__(self):
-        super().__init__()
-        sheet_id = "1eWiI0nPGNITBAdbDqfV9CWf3d6eMcy1zVnS3teE8-tI"
-        self.workbook = self.client.open_by_key(sheet_id)
-        self.header = ["Date", "Card", "Description", "Category", "Amount"]
-    
-    def get_table(self):
-        data = self.workbook.worksheet("Expenses")
-        df = pd.DataFrame(data.get_all_records())
-        return df
-
-    def clear_table(self):
-        data = self.workbook.worksheet("Expenses")
-        data.clear()
-
-    def add_header(self):
-        data = self.workbook.worksheet("Expenses")
-        data.insert_row(self.header, 1)
-        cell_range = 'A1:E1'
-        header_format = CellFormat(
-            textFormat=TextFormat(bold=True)
-        )
-        format_cell_range(data, cell_range, header_format)
-
-class ImporterClient(GoogleSheetsClient):
-    def __init__(self, username):
-        super().__init__()
-        sheet_id = "101_Ov7waagUS_pplSgyzQ_eekttQ_l0mvlpragcCqcQ"
-        self.sheets = ["cards", "categories", "income", "expense", "account"]
-        self.workbook = self.client.open_by_key(sheet_id)
-        self.user = User.objects.get(username=username)
-
-    
-    def generate_templates(self):
-        sheets_dict = {
+        self.sheet_id = re.search(r"/d/([a-zA-Z0-9-_]+)", user.google_sheets_link).group(1)
+        self.sheets_dict = {
             "cards": ["id", "name"],
             "categories": ["id", "name", "keywords", "budget", "type", "color",],
             "income": ["id", "description", "date", "amount", "account_name", "account_name_id"],
@@ -64,20 +33,26 @@ class ImporterClient(GoogleSheetsClient):
             "account_transactions": ["id", "amount", "date", "account_id"]
         }
 
+        self.workbook = self.client.open_by_key(self.sheet_id)
+    
+    def generate_templates(self):
         worksheets = self.workbook.worksheets()
         worksheet_names = [sheet.title for sheet in worksheets]
-        for sheet in self.sheets:
+        print("Worksheet names: ", worksheet_names)
+        for sheet in self.sheets_dict.keys():
+            print("Sheet: ", sheet)
             if sheet not in worksheet_names:
                 self.workbook.add_worksheet(title=sheet, rows="100", cols="20")
                 data = self.workbook.worksheet(sheet)
                 data.clear()
-                data.insert_row(sheets_dict[sheet], 1)
+                data.insert_row(self.sheets_dict[sheet], 1)
 
     def _delete_sheets(self):
-        for sheet in self.sheets:
-            if sheet in self.sheets:
+        for sheet in self.sheets_dict.keys():
+            if sheet in self.sheets_dict.keys():
                 self.workbook.del_worksheet(self.workbook.worksheet(sheet))
 
+class ImporterClient(GoogleSheetsClient):   
     def import_data(self):
         self.import_cards()
         self.import_categories()
@@ -260,3 +235,119 @@ class ImporterClient(GoogleSheetsClient):
         except Exception as e:
             print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
             
+
+class ExporterClient():
+    def __init__(self, user: User):
+        self.user = user
+        self.sheets_dict = GoogleSheetsClient(user).sheets_dict
+        self.path = os.path.expanduser("~")
+        self.file_path = f"{self.path}/richtato_export.xlsx"
+    
+    def export_data(self):
+        with pd.ExcelWriter(self.file_path) as writer:
+            self.export_cards(writer)
+            self.export_categories(writer)
+            self.export_accounts(writer)
+            self.export_account_transactions(writer)
+            self.export_expenses(writer)
+            self.export_incomes(writer)
+
+    def export_cards(self, writer):
+        print("Exporting cards")
+        try:
+            cards = CardAccount.objects.filter(user=self.user)
+            data = [
+                [i + 1, card.name] for i, card in enumerate(cards)
+            ]
+
+            # Write the 'cards' data to the sheet
+            df = pd.DataFrame(data, columns=self.sheets_dict['cards'])
+            df.to_excel(writer, sheet_name='cards', index=False, header=True)
+
+            print("Successfully exported cards")
+        except Exception as e:
+            print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
+
+    def export_categories(self, writer):
+        print("Exporting categories")
+        try:
+            categories = Category.objects.filter(user=self.user)
+            data = [
+                [i + 1, category.name, category.keywords, category.budget, category.type, category.color] for i, category in enumerate(categories)
+            ]
+
+            # Write the 'categories' data to the sheet
+            df = pd.DataFrame(data, columns=self.sheets_dict['categories'])
+            df.to_excel(writer, sheet_name='categories', index=False, header=True)
+
+            print("Successfully exported categories")
+        except Exception as e:
+            print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
+
+    def export_accounts(self, writer):
+        print("Exporting accounts")
+        try:
+            accounts = Account.objects.filter(user=self.user)
+            data = [
+                [i + 1, account.type, account.name, account.latest_balance, self._date_to_string(account.latest_balance_date)] for i, account in enumerate(accounts)
+            ]
+
+            # Write the 'accounts' data to the sheet
+            df = pd.DataFrame(data, columns=self.sheets_dict['account'])
+            df.to_excel(writer, sheet_name='account', index=False, header=True)
+
+            print("Successfully exported accounts")
+        except Exception as e:
+            print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
+
+    def export_account_transactions(self, writer):
+        print("Exporting account transactions")
+        try:
+            transactions = AccountTransaction.objects.filter(account__user=self.user)
+            data = [
+                [i + 1, transaction.amount, self._date_to_string(transaction.date), transaction.account.id] for i, transaction in enumerate(transactions)
+            ]
+
+            # Write the 'account_transactions' data to the sheet
+            df = pd.DataFrame(data, columns=self.sheets_dict['account_transactions'])
+            df.to_excel(writer, sheet_name='account_transactions', index=False, header=True)
+
+            print("Successfully exported account transactions")
+        except Exception as e:
+            print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
+
+    
+    def export_expenses(self, writer):
+        print("Exporting expenses")
+        try:
+            expenses = Expense.objects.filter(user=self.user)
+            data = [
+                [i + 1, expense.description, self._date_to_string(expense.date), expense.amount, expense.account_name.id, expense.category.id] for i, expense in enumerate(expenses)
+            ]
+
+            # Write the 'expenses' data to the sheet
+            df = pd.DataFrame(data, columns=self.sheets_dict['expense'])
+            df.to_excel(writer, sheet_name='expense', index=False, header=True)
+
+            print("Successfully exported expenses")
+        except Exception as e:
+            print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
+
+    def export_incomes(self, writer):
+        print("Exporting incomes")
+        try:
+            incomes = Income.objects.filter(user=self.user)
+            data = [
+                [i + 1, income.description, self._date_to_string(income.date), income.amount, income.account_name, income.account_name.id] for i, income in enumerate(incomes)
+            ]
+
+            # Write the 'incomes' data to the sheet
+            df = pd.DataFrame(data, columns=self.sheets_dict['income'])
+            df.to_excel(writer, sheet_name='income', index=False, header=True)
+
+            print("Successfully exported incomes")
+        except Exception as e:
+            print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
+
+    def _date_to_string(self, date):
+        return date.strftime("%Y-%m-%d")
