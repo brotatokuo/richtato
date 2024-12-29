@@ -239,7 +239,14 @@ class ImporterClient(GoogleSheetsClient):
 class ExporterClient():
     def __init__(self, user: User):
         self.user = user
-        self.sheets_dict = GoogleSheetsClient(user).sheets_dict
+        self.sheets_dict = {
+            "cards": ["id", "name"],
+            "categories": ["id", "name", "keywords", "budget", "type", "color",],
+            "income": ["id", "description", "date", "amount", "account_name", "account_name_id"],
+            "expense": ["id", "description", "date", "amount", "account_name_id", "category_id"],
+            "account": ["id", "type", "name", "latest_balance", "latest_balance_date"],
+            "account_transactions": ["id", "amount", "date", "account_id"]
+        }
         self.path = os.path.expanduser("~")
         self.file_path = f"{self.path}/richtato_export.xlsx"
     
