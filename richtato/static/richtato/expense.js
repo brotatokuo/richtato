@@ -43,17 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add event listener to group by
     groupByFilter.addEventListener('change', updateChart);
 
-    const balanceInput = document.getElementById('balance-input');
-
-    balanceInput.addEventListener('blur', () => {
-        let balance = balanceInput.value;
-        newBalance = computeBalance(balance);
-
-        if (newBalance) {
-            balanceInput.value = newBalance;
-            console.log('New balance:', newBalance);
-        }
-    });
 });
 
 function guessCategoryFromDescription(description) {
@@ -77,20 +66,3 @@ function guessCategoryFromDescription(description) {
         });
 }
 
-function computeBalance(balance){
-        // Check if it's a formula starting with '='
-        if (balance.startsWith('=')) {
-            try {
-                // Evaluate the formula (strip the leading '=')
-                balance = eval(balance.slice(1));  // Caution: Use math.js for safety in production
-                console.log('Evaluated formula:', balance);
-            } catch (error) {
-                console.error('Invalid formula:', error);
-                return;  // Stop further processing if the formula is invalid
-            }
-        }
-    
-        // Convert to a float for regular numbers or evaluated formulas
-        balance = parseFloat(balance).toFixed(2);
-        return balance;
-}

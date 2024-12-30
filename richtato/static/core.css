@@ -3,7 +3,8 @@ body {
     height: 100%;
     margin: 0;
     font-family: Arial, sans-serif;
-    background-color: #ffffff;
+    background-color: black;
+    color: white;
 }
 
 .page-container {
@@ -21,7 +22,7 @@ body {
     align-items: center;
     min-height: 100vh;
     /* Maintain minimum height of 100vh */
-    background-color: #ffffff;
+    background-color: black;
 }
 
 .login-header {

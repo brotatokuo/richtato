@@ -19,6 +19,21 @@ document.addEventListener('DOMContentLoaded', (event) => {
             }
         });
     }
+
+    const balanceInput = document.getElementById('balance-input');
+
+    balanceInput.addEventListener('blur', () => {
+        let balance = balanceInput.value;
+        
+        if (balance){
+            newBalance = computeBalance(balance);
+
+            if (newBalance) {
+                balanceInput.value = newBalance;
+                console.log('New balance:', newBalance);
+            }
+        }
+    });
 });
 
 function togglePasswordVisibility(id, button) {
@@ -42,4 +57,23 @@ function getUserID() {
     return fetch('/get-user-id')
         .then(response => response.json())
         .then(data => data.userID);
+}
+
+function computeBalance(balance){
+    // Check if it's a formula starting with '='
+    if (balance.startsWith('=')) {
+        try {
+            // Evaluate the formula (strip the leading '=')
+            balance = eval(balance.slice(1));  // Caution: Use math.js for safety in production
+            console.log('Evaluated formula:', balance);
+        } catch (error) {
+            console.error('Invalid formula:', error);
+            return;  // Stop further processing if the formula is invalid
+        }
+    }
+    
+
+    // Convert to a float for regular numbers or evaluated formulas
+    balance = parseFloat(balance).toFixed(2);
+    return balance;
 }
