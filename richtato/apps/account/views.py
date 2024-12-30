@@ -9,6 +9,8 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import HttpResponse, render
 from django.http import JsonResponse
 from django.db.models.functions import Cast, TruncYear, TruncMonth, TruncDate, ExtractYear
+from django.shortcuts import HttpResponse, HttpResponseRedirect, render
+from django.urls import reverse
 from django.db.models import Sum
 
 from apps.account.models import Account, AccountTransaction
@@ -48,7 +50,7 @@ def add_entry(request):
             date=date,
         )
         account_history.save()
-        return main(request)
+        return HttpResponseRedirect(reverse("account"))
     return HttpResponse("Add account history error")
 
 def get_plot_data(request, year) -> JsonResponse:
