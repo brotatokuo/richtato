@@ -171,7 +171,6 @@
                 <form action="{% url 'settings_export_excel_data' %}" method="post" class="export-form">
                     {% csrf_token %}
                     <button type="submit" class="btn-secondary" id="exportGoogleSheetsButton">Export to Excel</button>
-                    <p>{{ export_excel_file_path }}</p>
                 </form>
             </div>
 

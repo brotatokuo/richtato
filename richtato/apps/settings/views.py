@@ -19,7 +19,6 @@ from utilities.tools import format_currency, format_date
 @login_required
 def main(request):
     category_list = list(Category.objects.filter(user=request.user))
-    export_excel_file_path = ExporterClient(request.user).file_path
     return render(
         request,
         "settings.html",
@@ -29,7 +28,6 @@ def main(request):
             "today_date": datetime.today().strftime("%Y-%m-%d"),
             "category_types": Category.CATEGORY_TYPES,
             "google_sheets_link": request.user.google_sheets_link,
-            "export_excel_file_path": export_excel_file_path,
         },
     )
 
