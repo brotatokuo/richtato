@@ -41,11 +41,22 @@ class ChartPlotter {
             options: {
                 responsive: true,
                 scales: {
-                    x: { stacked: true },
+                    x: { stacked: true,
+                        ticks: {
+                            color: 'white'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.2)' // Optional: grid line color
+                        }
+                     },
                     y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.2)' // Optional: grid line color
+                        },
                         beginAtZero: true,
                         stacked: true,
                         ticks: {
+                            color: 'white',
                             callback: function(value) {
                                 if (yAxisFormat === 'percentage') {
                                     console.log("Formatting as percentage");
@@ -63,7 +74,16 @@ class ChartPlotter {
                      }
                 },
                 plugins: {
-                    legend: { position: 'top' }
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: 'white' // White text for legend labels
+                        }
+                    },
+                    tooltip: {
+                        titleColor: 'white', // White text for tooltip title
+                        bodyColor: 'white', // White text for tooltip body
+                    }
                 },
                 onClick: (event, elements) => this.handleChartClick(event, elements)
             }

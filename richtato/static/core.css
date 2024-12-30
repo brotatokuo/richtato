@@ -3,7 +3,7 @@ body {
     height: 100%;
     margin: 0;
     font-family: Arial, sans-serif;
-    background-color: black;
+    background-color: #121212;
     color: white;
 }
 
@@ -22,7 +22,6 @@ body {
     align-items: center;
     min-height: 100vh;
     /* Maintain minimum height of 100vh */
-    background-color: black;
 }
 
 .login-header {
@@ -42,7 +41,6 @@ body {
     padding-bottom: 50px;
     border: 1px solid #ddd;
     border-radius: 8px;
-    background-color: #fff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     text-align: left;
     display: flex;
@@ -93,6 +91,7 @@ h2 {
     padding: 10px;
     font-size: 14px;
     border: 1px solid #ddd;
+    background-color: black;
     border-radius: 4px;
     box-sizing: border-box;
     appearance: none;
@@ -235,6 +234,7 @@ input[type="password"] {
     font-size: 22px;
     appearance: none;
     font-weight: bold;
+    color: white;
     border: none;
     border-radius: 2px;
     background-color: #fff;
@@ -330,7 +330,6 @@ input[type="password"] {
     padding: 20px;
     border: 1px solid #ddd;
     border-radius: 8px;
-    background-color: #fff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     align-self: flex-start;
 }
