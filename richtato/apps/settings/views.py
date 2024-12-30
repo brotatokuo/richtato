@@ -326,8 +326,12 @@ def import_google_sheets_data(request):
 @login_required
 def export_excel_data(request):
     if request.method == "POST":
-        exporter = ExporterClient(request.user).export_data()
-        return HttpResponseRedirect(reverse("settings"))
+        try:
+            exporter = ExporterClient(request.user)
+            return exporter.export_data()
+        except Exception as e:
+            print(f"Error exporting data: {e}")
+            return HttpResponseRedirect(reverse("settings"))
+
+    # If it's not a POST request, redirect back to settings
     return HttpResponseRedirect(reverse("settings"))
-
-
