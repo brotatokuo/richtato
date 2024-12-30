@@ -266,7 +266,10 @@ class ExporterClient():
     def download_excel(self):
         try:
             date_str = datetime.now().strftime("%Y%m%d")
-            return FileResponse(open(self.file_path, 'rb'), as_attachment=True, filename=f'{self.user.username}_richtato_export_{date_str}.xlsx')
+            print("username: ", self.user.username)
+            file_name = f'{self.user.username}_richtato_export_{date_str}.xlsx'
+            print("File name: ", file_name)
+            return FileResponse(open(self.file_path, 'rb'), as_attachment=True, filename=file_name)
         except FileNotFoundError:
             raise Http404("File not found.")
 
