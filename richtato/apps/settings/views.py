@@ -12,7 +12,7 @@ from django.urls import reverse
 from apps.account.models import Account, AccountTransaction
 from apps.richtato_user.models import CardAccount, Category
 from apps.settings.models import DataImporter
-from utilities.google_drive.client import ImporterClient, ExporterClient
+from utilities.google_drive.client import ImporterClient, ExporterClient, GoogleExporterClient
 from utilities.tools import format_currency, format_date
 
 
@@ -322,11 +322,11 @@ def import_google_sheets_data(request):
     return HttpResponseRedirect(reverse("settings"))
 
 @login_required
-def export_excel_data(request):
+def export_google_sheets_data(request):
     if request.method == "POST":
         try:
-            exporter = ExporterClient(request.user)
-            return exporter.export_data()
+            GoogleExporterClient(request.user).export_data()
+            return HttpResponseRedirect(reverse("settings"))
         except Exception as e:
             print(f"Error exporting data: {e}")
             return HttpResponseRedirect(reverse("settings"))

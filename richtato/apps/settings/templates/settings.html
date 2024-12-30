@@ -168,9 +168,9 @@
                     <button type="submit" class="btn-secondary" id="importGoogleSheetsButton">Import from Google Sheets</button>
                 </form>
             
-                <form action="{% url 'settings_export_excel_data' %}" method="post" class="export-form">
+                <form action="{% url 'settings_export_google_sheets_data' %}" method="post" class="export-form">
                     {% csrf_token %}
-                    <button type="submit" class="btn-secondary" id="exportGoogleSheetsButton">Export to Excel</button>
+                    <button type="submit" class="btn-secondary" id="exportGoogleSheetsButton">Export to Google Sheets</button>
                 </form>
             </div>
 

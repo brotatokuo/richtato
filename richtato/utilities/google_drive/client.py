@@ -4,6 +4,7 @@ import os
 import colorama
 import re
 from django.http import FileResponse, Http404
+from gspread_dataframe import set_with_dataframe
 from apps.richtato_user.models import User, CardAccount, Category
 from apps.expense.models import Expense
 from apps.income.models import Income
@@ -237,6 +238,111 @@ class ImporterClient(GoogleSheetsClient):
         except Exception as e:
             print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
             
+class GoogleExporterClient(GoogleSheetsClient):
+    def export_data(self):
+        self.export_cards()
+        self.export_categories()
+        self.export_accounts()
+        self.export_account_transactions()
+        self.export_expenses()
+        self.export_incomes()
+
+    def export_cards(self):
+        print("Exporting cards")
+        try:
+            cards = CardAccount.objects.filter(user=self.user)
+            data = [
+                [i + 1, card.name] for i, card in enumerate(cards)
+            ]
+            # Write the 'cards' data to google sheets
+            df = pd.DataFrame(data, columns=self.sheets_dict['cards'])
+            self.workbook.worksheet("cards").clear()
+            set_with_dataframe(self.workbook.worksheet("cards"), df)
+        
+            print("Successfully exported cards")
+        except Exception as e:
+            print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
+
+    def export_categories(self):
+        print("Exporting categories")
+        try:
+            categories = Category.objects.filter(user=self.user)
+            data = [
+                [i + 1, category.name, category.keywords, category.budget, category.type, category.color] for i, category in enumerate(categories)
+            ]
+            # Write the 'categories' data to google sheets
+            df = pd.DataFrame(data, columns=self.sheets_dict['categories'])
+            self.workbook.worksheet("categories").clear()
+            set_with_dataframe(self.workbook.worksheet("categories"), df)
+
+            print("Successfully exported categories")
+        except Exception as e:
+            print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
+
+    def export_accounts(self):
+        print("Exporting accounts")
+        try:
+            accounts = Account.objects.filter(user=self.user)
+            data = [
+                [i + 1, account.type, account.name, account.latest_balance, account.latest_balance_date] for i, account in enumerate(accounts)
+            ]
+            # Write the 'accounts' data to google sheets
+            df = pd.DataFrame(data, columns=self.sheets_dict['account'])
+            self.workbook.worksheet("account").clear()
+            set_with_dataframe(self.workbook.worksheet("account"), df)
+
+            print("Successfully exported accounts")
+        except Exception as e:
+            print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
+
+    def export_account_transactions(self):
+        print("Exporting account transactions")
+        try:
+            transactions = AccountTransaction.objects.filter(account__user=self.user)
+            data = [
+                [i + 1, transaction.amount, transaction.date, transaction.account.id] for i, transaction in enumerate(transactions)
+            ]
+            # Write the 'account_transactions' data to google sheets
+            df = pd.DataFrame(data, columns=self.sheets_dict['account_transactions'])
+            self.workbook.worksheet("account_transactions").clear()
+            set_with_dataframe(self.workbook.worksheet("account_transactions"), df)
+
+            print("Successfully exported account transactions")
+        except Exception as e:
+            print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
+
+    def export_expenses(self):
+        print("Exporting expenses")
+        try:
+            expenses = Expense.objects.filter(user=self.user)
+            data = [
+                [i + 1, expense.description, expense.date, expense.amount, expense.account_name.id, expense.category.id] for i, expense in enumerate(expenses)
+            ]
+            # Write the 'expenses' data to google sheets
+            df = pd.DataFrame(data, columns=self.sheets_dict['expense'])
+            self.workbook.worksheet("expense").clear()
+            set_with_dataframe(self.workbook.worksheet("expense"), df)
+
+            print("Successfully exported expenses")
+        except Exception as e:
+            print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
+
+    def export_incomes(self):
+        print("Exporting incomes")
+        try:
+            incomes = Income.objects.filter(user=self.user)
+            data = [
+                [i + 1, income.description, income.date, income.amount, income.account_name, income.account_name.id] for i, income in enumerate(incomes)
+            ]
+            # Write the 'incomes' data to google sheets
+            df = pd.DataFrame(data, columns=self.sheets_dict['income'])
+            self.workbook.worksheet("income").clear()
+            set_with_dataframe(self.workbook.worksheet("income"), df)
+
+            print("Successfully exported incomes")
+        except Exception as e:
+            print(colorama.Fore.RED + str(e) + colorama.Style.RESET_ALL)
+
 
 class ExporterClient():
     def __init__(self, user: User):
