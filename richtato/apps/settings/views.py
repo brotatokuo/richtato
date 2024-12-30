@@ -324,8 +324,10 @@ def import_google_sheets_data(request):
     return HttpResponseRedirect(reverse("settings"))
 
 @login_required
-def export_google_sheets_data(request):
+def export_excel_data(request):
     if request.method == "POST":
         exporter = ExporterClient(request.user).export_data()
         return HttpResponseRedirect(reverse("settings"))
     return HttpResponseRedirect(reverse("settings"))
+
+

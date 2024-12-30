@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import colorama
 import re
+from django.http import FileResponse, Http404
 from apps.richtato_user.models import User, CardAccount, Category
 from apps.expense.models import Expense
 from apps.income.models import Income
@@ -258,6 +259,14 @@ class ExporterClient():
             self.export_account_transactions(writer)
             self.export_expenses(writer)
             self.export_incomes(writer)
+
+        return self.download_excel()
+
+    def download_excel(self):
+        try:
+            return FileResponse(open(self.file_path, 'rb'), as_attachment=True, filename='richtato_export.xlsx')
+        except FileNotFoundError:
+            raise Http404("File not found.")
 
     def export_cards(self, writer):
         print("Exporting cards")
