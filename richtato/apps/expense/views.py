@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+import pytz
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -12,6 +13,7 @@ from utilities.google_gemini.ai import AI
 from django.db.models import Sum
 from utilities.tools import month_mapping, format_currency, format_date, color_picker
 
+pst = pytz.timezone('US/Pacific')
 
 @login_required
 def main(request):
@@ -24,7 +26,7 @@ def main(request):
                 {"years": years_list,
                 "transaction_accounts": transaction_accounts,
                 "category_list": category_list,
-                "today_date": datetime.today().strftime('%Y-%m-%d')
+                "today_date": datetime.now(pst).strftime('%Y-%m-%d')
                 })
 
 @login_required
