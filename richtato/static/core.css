@@ -235,12 +235,11 @@ input[type="password"] {
 
 .dropdown-filter select {
     font-size: 22px;
+    color: #98cc2c;
     appearance: none;
     font-weight: bold;
-    color: white;
     border: none;
     border-radius: 2px;
-    background-color: #fff;
     cursor: pointer;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
     outline: none;

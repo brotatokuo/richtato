@@ -165,7 +165,5 @@ def update_accounts(request):
 
     return JsonResponse({"success": False, "error": "Invalid request"})
 
-def plot_data(request):
-    accounts_data, unique_years = get_accounts_data(request)
-    return JsonResponse({"accounts_data": accounts_data, "years": unique_years})
+
 
