@@ -110,6 +110,8 @@ input[type="password"] {
     padding: 10px;
     font-size: 14px;
     border: 1px solid #ddd;
+    background-color: black;
+    color:white;
     border-radius: 4px;
     box-sizing: border-box;
     appearance: none;

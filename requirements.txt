@@ -11,3 +11,4 @@ gspread
 gspread-formatting
 gspread-dataframe
 openpyxl
+python-Levenshtein

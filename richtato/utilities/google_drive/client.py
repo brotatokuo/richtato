@@ -175,10 +175,10 @@ class ImporterClient(GoogleSheetsClient):
             print(df.head())
             
             for _, row in df.iterrows():
-                if "account_name" in df.columns and "account_name_id" not in df.columns:
-                    account = CardAccount.objects.get(user=self.user, name=row["account_name"])
-                elif "account_name_id" in df.columns and "account_name" not in df.columns:
+                if "account_name_id" in df.columns:
                     account = self.cards_dict[row["account_name_id"]]
+                elif "account_name" in df.columns:
+                    account = CardAccount.objects.get(user=self.user, name=row["account_name"])
                 else:
                     raise Exception("account_name or account_name_id must be provided for expenses")
 
@@ -218,10 +218,10 @@ class ImporterClient(GoogleSheetsClient):
             print(df.head())
 
             for _, row in df.iterrows():
-                if "account_name" in df.columns and "account_name_id" not in df.columns:
-                    account = Account.objects.get(user=self.user, name=row["account_name"])
-                elif "account_name_id" in df.columns and "account_name" not in df.columns:
+                if "account_name_id" in df.columns:
                     account = self.accounts_dict[row["account_name_id"]]
+                elif "account_name" in df.columns:
+                    account = Account.objects.get(user=self.user, name=row["account_name"])
                 else:
                     raise Exception("account_name or account_name_id must be provided for incomes")
                 
