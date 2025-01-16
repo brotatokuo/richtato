@@ -8,6 +8,7 @@ from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
 
 from apps.expense.models import Expense
+from apps.income.models import Income
 from apps.richtato_user.models import CardAccount, Category, User
 from utilities.google_gemini.ai import AI
 from django.db.models import Sum
@@ -194,3 +195,22 @@ def guess_category(request):
         return JsonResponse({'category': category_str})
     except Exception:
         return JsonResponse({'category': ''})
+
+def get_monthly_diff(request):
+    """
+    Get the monthly diff between income and expenses.
+    """
+    year = request.GET.get('year') or 2024
+    
+    annual_diff = {}
+    for month in range(1, 13):
+        incomes = Income.objects.filter(user=request.user, date__year=year, date__month=month)
+        expenses = Expense.objects.filter(user=request.user, date__year=year, date__month=month)
+        
+        incomes_sum = incomes.aggregate(Sum('amount'))['amount__sum'] or 0
+        expenses_sum = expenses.aggregate(Sum('amount'))['amount__sum'] or 0
+        print(f"{year}-{month}: {incomes_sum} - {expenses_sum} = {incomes_sum - expenses_sum}")
+        annual_diff[month] = float(incomes_sum - expenses_sum)
+
+    
+    return JsonResponse(annual_diff)

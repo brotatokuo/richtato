@@ -95,6 +95,17 @@
 
         <button class="btn-secondary editButton" id="detailsTableEditButton">Edit</button>
     </div>
+
+    <div class="chart-form-container">
+        {% if years %}
+            <div class="chart-container">
+                <div class="chart-title-container">
+                    <h1 class="chart-title">Monthly Savings</h1>
+                </div>
+                <canvas class="chart" id="monthlySavingsBarChart"></canvas>
+            </div>
+        {% endif %}
+    </div>
 </div>
 
  
