@@ -1,4 +1,4 @@
-{% extends "layout_v2.html" %}
+{% extends "layout.html" %}
 {% load static %}
 
 {% block body %}
@@ -95,9 +95,20 @@
 
         <button class="btn-secondary editButton" id="detailsTableEditButton">Edit</button>
     </div>
+
+    <div class="chart-form-container">
+        {% if years %}
+            <div class="chart-container">
+                <div class="chart-title-container">
+                    <h1 class="chart-title">Monthly Savings</h1>
+                </div>
+                <canvas class="chart" id="monthlySavingsBarChart"></canvas>
+            </div>
+        {% endif %}
+    </div>
 </div>
 
-<script src="{% static 'richtato/script.js' %}"></script> 
+ 
 <script src="{% static 'richtato/plotter.js' %}"></script> 
 <script src="{% static 'richtato/expense.js' %}"></script>
 

@@ -8,6 +8,7 @@ from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
 
 from apps.expense.models import Expense
+from apps.income.models import Income
 from apps.richtato_user.models import CardAccount, Category, User
 from utilities.google_gemini.ai import AI
 from django.db.models import Sum
@@ -194,3 +195,34 @@ def guess_category(request):
         return JsonResponse({'category': category_str})
     except Exception:
         return JsonResponse({'category': ''})
+
+def get_monthly_diff(request):
+    """
+    Get the monthly diff between income and expenses.
+    """
+    year = request.GET.get('year') or 2024
+
+    month_list = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    datasets = []
+    all_expenses = Expense.objects.filter(user=request.user, date__year=year)
+    all_incomes = Income.objects.filter(user=request.user, date__year=year)
+
+    
+    for month in range(len(month_list)):
+        
+        monthly_expense = all_expenses.filter(date__month=month).aggregate(Sum('amount'))['amount__sum']
+        monthly_income = all_incomes.filter(date__month=month).aggregate(Sum('amount'))['amount__sum']
+        monthly_diff = round(float(monthly_income or 0) - float(monthly_expense or 0))
+
+        background_color, border_color = color_picker(0)
+        annual_total = [0] * len(month_list)
+        annual_total[month] = monthly_diff
+        datasets.append({
+            'label': month_list[month - 1],
+            'data': annual_total,
+            'backgroundColor': background_color,
+            'borderColor': border_color,
+            'borderWidth': 1
+        })
+
+    return JsonResponse({'labels': month_list, 'datasets': datasets})
