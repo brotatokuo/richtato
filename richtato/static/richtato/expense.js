@@ -30,19 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
         window.expenseChart.plotChart();
     };
 
-    updateChart();
-    yearFilter.addEventListener('change', updateChart);
-
-    // Add event listener to description
-    const descriptionInput = document.getElementById('description');
-    descriptionInput.addEventListener('blur', () => {
-        const description = descriptionInput.value;
-        guessCategoryFromDescription(description);
-    });
-
-    // Add event listener to group by
-    groupByFilter.addEventListener('change', updateChart);
-
     const updatemonthlySavingsBarChartChart = () => {
         const selectedYear = parseInt(yearFilter.value, 10);
         console.log('Updating updatemonthlySavingsBarChartChart for year:', selectedYear);
@@ -67,8 +54,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.monthlySavingsBarChartChart.plotChart();
     }
-    updatemonthlySavingsBarChartChart();
+    const updateAllCharts = () => {
+        updateChart();
+        updatemonthlySavingsBarChartChart();
+    };
 
+    // Trigger both chart updates on year filter change
+    yearFilter.addEventListener('change', updateAllCharts);
+
+    // Trigger both chart updates on group by filter change
+    groupByFilter.addEventListener('change', updateAllCharts);
+
+    // Initial update when the page loads
+    updateAllCharts();
+
+    // Add event listener to description
+    const descriptionInput = document.getElementById('description');
+    descriptionInput.addEventListener('blur', () => {
+        const description = descriptionInput.value;
+        guessCategoryFromDescription(description);
+    });
 });
 
 function guessCategoryFromDescription(description) {
