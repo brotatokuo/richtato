@@ -43,6 +43,32 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add event listener to group by
     groupByFilter.addEventListener('change', updateChart);
 
+    const updatemonthlySavingsBarChartChart = () => {
+        const selectedYear = parseInt(yearFilter.value, 10);
+        console.log('Updating updatemonthlySavingsBarChartChart for year:', selectedYear);
+        const plotDataUrl = `/expense/get-monthly-diff?year=${selectedYear}`;
+
+        // Create or update the ChartPlotter instance
+        if (!window.monthlySavingsBarChartChart) {
+            console.log('Creating new updatemonthlySavingsBarChartChart');
+            window.monthlySavingsBarChartChart = new ChartPlotter(
+                plotDataUrl,                    // chartUrl
+                'monthlySavingsBarChart',              // canvasId
+                '',          // tableID
+                '',                   // tableUrl
+                selectedYear,                   // year
+                '',                // editButton
+                'update/',
+            );
+        } else {
+            window.monthlySavingsBarChartChart.chartUrl = plotDataUrl;
+            window.monthlySavingsBarChartChart.year = selectedYear;
+        }
+
+        window.monthlySavingsBarChartChart.plotChart();
+    }
+    updatemonthlySavingsBarChartChart();
+
 });
 
 function guessCategoryFromDescription(description) {
@@ -64,30 +90,8 @@ function guessCategoryFromDescription(description) {
         .catch(error => {
             console.error('Error:', error);
         });
+
+    
 }
 
-const updateChart = () => {
-    const selectedYear = parseInt(yearFilter.value, 10);
-    const groupBy = groupByFilter.value;
-    console.log('Updating chart for year:', selectedYear, 'group by:', groupBy);
-    const plotDataUrl = `/expense/get-plot-data?year=${selectedYear}&group_by=${groupBy}`;
-
-    // Create or update the ChartPlotter instance
-    if (!window.expenseChart) {
-        console.log('Creating new chart');
-        window.expenseChart = new ChartPlotter(
-            plotDataUrl,                    // chartUrl
-            'expenseBarChart',              // canvasId
-            'detailsTableExpense',          // tableID
-            tableDataUrl,                   // tableUrl
-            selectedYear,                   // year
-            editTableButton,                // editButton
-            'update/',
-        );
-    } else {
-        window.expenseChart.chartUrl = plotDataUrl;
-        window.expenseChart.year = selectedYear;
-    }
-
-    window.expenseChart.plotChart();
-}
+   

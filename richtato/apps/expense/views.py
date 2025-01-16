@@ -201,16 +201,28 @@ def get_monthly_diff(request):
     Get the monthly diff between income and expenses.
     """
     year = request.GET.get('year') or 2024
-    
-    annual_diff = {}
-    for month in range(1, 13):
-        incomes = Income.objects.filter(user=request.user, date__year=year, date__month=month)
-        expenses = Expense.objects.filter(user=request.user, date__year=year, date__month=month)
-        
-        incomes_sum = incomes.aggregate(Sum('amount'))['amount__sum'] or 0
-        expenses_sum = expenses.aggregate(Sum('amount'))['amount__sum'] or 0
-        print(f"{year}-{month}: {incomes_sum} - {expenses_sum} = {incomes_sum - expenses_sum}")
-        annual_diff[month] = float(incomes_sum - expenses_sum)
+
+    month_list = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    datasets = []
+    all_expenses = Expense.objects.filter(user=request.user, date__year=year)
+    all_incomes = Income.objects.filter(user=request.user, date__year=year)
 
     
-    return JsonResponse(annual_diff)
+    for month in range(len(month_list)):
+        
+        monthly_expense = all_expenses.filter(date__month=month).aggregate(Sum('amount'))['amount__sum']
+        monthly_income = all_incomes.filter(date__month=month).aggregate(Sum('amount'))['amount__sum']
+        monthly_diff = round(float(monthly_income or 0) - float(monthly_expense or 0))
+
+        background_color, border_color = color_picker(0)
+        annual_total = [0] * len(month_list)
+        annual_total[month] = monthly_diff
+        datasets.append({
+            'label': month_list[month - 1],
+            'data': annual_total,
+            'backgroundColor': background_color,
+            'borderColor': border_color,
+            'borderWidth': 1
+        })
+
+    return JsonResponse({'labels': month_list, 'datasets': datasets})
