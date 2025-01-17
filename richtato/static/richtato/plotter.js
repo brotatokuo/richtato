@@ -148,7 +148,8 @@ class TableManager {
         this.table = document.getElementById(tableID); 
         this.editButton = editButton;
         this.mode = 'view'; // Initial mode is 'view'
-        this.chartInstance = chartInstance || null;        
+        this.chartInstance = chartInstance || null;     
+        this.sortDirections = {}; // Track the current sorting order for each column   
     }
 
     updateTableTitles(title1, title2) {
@@ -204,6 +205,18 @@ class TableManager {
                 th.textContent = header.charAt(0).toUpperCase() + header.slice(1);
                 if (index === 0) th.style.display = 'none'; // Hide the ID column
                 headerRow.appendChild(th);
+    
+                // Add event listener to handle sorting
+                th.addEventListener('click', () => {
+                    const direction = this.sortDirections[header] === 'asc' ? 'desc' : 'asc';
+                    console.log("Sorting by:", header, direction);
+                    console.log("sorting directions:", this.sortDirections);
+                    this.sortDirections[header] = direction; // Toggle sort direction
+                    this.sortTable(data, index, direction); // Sort by the clicked column
+    
+                    // Update header arrows
+                    this.updateSortArrows(headerRow, index, direction);
+                });
             });
         
             tableHead.appendChild(headerRow);
@@ -233,6 +246,57 @@ class TableManager {
         }
     }
     
+    updateSortArrows(headerRow, sortedIndex, direction) {
+        // Get all headers (th elements) in the header row
+        const headers = headerRow.querySelectorAll('th');
+        
+        headers.forEach((header, index) => {
+            if (index > 0) { // Skip the delete column (index 0 is hidden)
+                const actualIndex = index - 1; // Adjust index for sorting (skip the delete column)
+                if (actualIndex === sortedIndex) {
+                    // If this is the sorted column, add the arrow (▲ or ▼)
+                    const arrow = direction === 'asc' ? ' ▲' : ' ▼';
+                    header.textContent = header.textContent.replace(/[▲▼]/g, '') + arrow; // Remove any existing arrow and append the new one
+                } else {
+                    // Remove arrow from other columns
+                    header.textContent = header.textContent.replace(/[▲▼]/g, '');
+                }
+            }
+        });
+    }
+
+    sortTable(data, columnIndex, direction) {
+        // Sort the data array
+        data.sort((a, b) => {
+            const keyA = Object.keys(a)[columnIndex];
+            const keyB = Object.keys(b)[columnIndex];
+            let valueA = a[keyA];
+            let valueB = b[keyB];
+    
+            // If values are numeric, compare as numbers
+            if (!isNaN(valueA) && !isNaN(valueB)) {
+                valueA = Number(valueA);
+                valueB = Number(valueB);
+            }
+
+            console.log("Sorting:", direction);
+    
+            if (direction === 'asc') {
+                return valueA > valueB ? 1 : -1;
+            } else {
+                return valueA < valueB ? 1 : -1;
+            }
+        });
+    
+        // After sorting, re-render the table with the sorted data
+        this.modifyTableData(data);
+    
+        // Update the sorting arrows after sorting
+        const tableHead = this.table.querySelector('thead');
+        const headerRow = tableHead.querySelector('tr');
+        this.updateSortArrows(headerRow, columnIndex, direction);
+    }
+
     showTable() {
         const detailedTable = document.querySelector('.detailed-table');
         if (detailedTable) {
