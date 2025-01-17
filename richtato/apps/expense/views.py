@@ -208,21 +208,26 @@ def get_monthly_diff(request):
     all_incomes = Income.objects.filter(user=request.user, date__year=year)
 
     
-    for month in range(len(month_list)):
-        
-        monthly_expense = all_expenses.filter(date__month=month).aggregate(Sum('amount'))['amount__sum']
-        monthly_income = all_incomes.filter(date__month=month).aggregate(Sum('amount'))['amount__sum']
-        monthly_diff = round(float(monthly_income or 0) - float(monthly_expense or 0))
+    monthly_diffs = []
 
-        background_color, border_color = color_picker(0)
-        annual_total = [0] * len(month_list)
-        annual_total[month] = monthly_diff
-        datasets.append({
-            'label': month_list[month - 1],
-            'data': annual_total,
-            'backgroundColor': background_color,
-            'borderColor': border_color,
-            'borderWidth': 1
-        })
+    for month in range(1, 13):
+        # Filter expenses and incomes for the specific month and calculate totals
+        monthly_expense = all_expenses.filter(date__month=month).aggregate(Sum('amount'))['amount__sum'] or 0
+        monthly_income = all_incomes.filter(date__month=month).aggregate(Sum('amount'))['amount__sum'] or 0
+        monthly_diff = round(float(monthly_income) - float(monthly_expense))
 
+        # Append the difference to the monthly_diffs list
+        monthly_diffs.append(monthly_diff)
+
+    # Create the dataset for the chart
+    background_color, border_color = color_picker(0)  # Assuming this function returns the correct colors
+    datasets.append({
+        'label': 'Monthly Diff',
+        'data': monthly_diffs,
+        'backgroundColor': background_color,
+        'borderColor': border_color,
+        'borderWidth': 1
+    })
+
+    # Return the JSON response
     return JsonResponse({'labels': month_list, 'datasets': datasets})
