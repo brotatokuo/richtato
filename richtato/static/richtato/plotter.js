@@ -83,6 +83,33 @@ class ChartPlotter {
                     tooltip: {
                         titleColor: 'white', // White text for tooltip title
                         bodyColor: 'white', // White text for tooltip body
+                        callbacks: {
+                            label: (tooltipItem) => {
+                                const label = tooltipItem.dataset.label || '';
+                                const value = tooltipItem.raw; // Get the raw value for that label
+                                const totalForMonth = data.datasets.reduce((acc, dataset) => {
+                                    return acc + dataset.data[tooltipItem.dataIndex];
+                                }, 0); // Sum up the values for all datasets in the current month
+    
+                                if (yAxisFormat === 'percentage') {
+                                    return `${label}: ${value}% (Total: ${totalForMonth}%)`;
+                                } else {
+                                    const formattedValue = value.toLocaleString('en-US', { 
+                                        style: 'currency', 
+                                        currency: 'USD',
+                                        minimumFractionDigits: 0,  
+                                        maximumFractionDigits: 2   
+                                    });
+                                    const formattedTotal = totalForMonth.toLocaleString('en-US', {
+                                        style: 'currency',
+                                        currency: 'USD',
+                                        minimumFractionDigits: 0,
+                                        maximumFractionDigits: 2
+                                    });
+                                    return `${label}: ${formattedValue} (Total: ${formattedTotal})`;
+                                }
+                            }
+                        }
                     }
                 },
                 onClick: (event, elements) => this.handleChartClick(event, elements)
