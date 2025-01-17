@@ -74,10 +74,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const description = descriptionInput.value;
         guessCategoryFromDescription(description);
     });
+
+    const updateFullTable = () =>{
+        console.log('Updating full table');
+        const fullTableDataUrl = '/expense/get-full-table-data'
+        if (!window.tableManager) {
+            console.log('Creating new TableManager');
+            window.tableManager = new TableManager(
+                'fullTableExpense',             // tableID
+                fullTableDataUrl,               // tableUrl
+                editTableButton,                // editButton
+                'update/',                      // saveTableEndpoint (URL for saving changes)
+                null,                           // no chart instance
+            );
+        }
+        window.tableManager.loadTableData();
+    }
+
+    updateFullTable();
 });
 
 function guessCategoryFromDescription(description) {
-    console.log('Guessing category for:', description);
+    console.log('Guessing category for:', description); 
     // Encode the description before sending it
     const url = `/expense/guess-category/?description=${encodeURIComponent(description)}`;
 

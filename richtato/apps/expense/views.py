@@ -231,3 +231,17 @@ def get_monthly_diff(request):
 
     # Return the JSON response
     return JsonResponse({'labels': month_list, 'datasets': datasets})
+
+def get_full_table_data(request):
+    table_data = []
+    expenses = Expense.objects.filter(user=request.user)
+    for expense in expenses:
+        table_data.append({
+            'id': expense.id,
+            'date': format_date(expense.date),
+            'description': expense.description,
+            'amount': format_currency(expense.amount),
+            'category': expense.category.name
+        })
+
+    return JsonResponse(table_data, safe=False)

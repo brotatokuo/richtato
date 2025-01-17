@@ -106,7 +106,22 @@
             </div>
         {% endif %}
     </div>
+
+    <div class="detailed-table">
+        <div class="table-header">
+            <h2 class="table-title" id="full-table-title-1"> Full Expense Table </h2>
+            <h2 class="table-title" id="full-table-title-2"></h2>
+        </div>
+    
+        <table class="styled-table" id="fullTableExpense">
+            <thead></thead>
+            <tbody><!-- Rows will be inserted here dynamically --></tbody>
+        </table>
+    
+        <button class="btn-secondary editButton" id="detailsTableEditButton">Edit</button>
+    </div>
 </div>
+
 
  
 <script src="{% static 'richtato/plotter.js' %}"></script> 
