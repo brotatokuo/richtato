@@ -136,7 +136,6 @@ def get_table_data(request) -> JsonResponse:
                 'amount': format_currency(expense.amount),
                 'category': expense.category.name
             })
-
     return JsonResponse(table_data, safe=False)
     
 def _delete_expense(transaction_id):
@@ -233,8 +232,11 @@ def get_monthly_diff(request):
     return JsonResponse({'labels': month_list, 'datasets': datasets})
 
 def get_full_table_data(request):
+    year = request.GET.get('year')
+    month = request.GET.get('month')
+
     table_data = []
-    expenses = Expense.objects.filter(user=request.user)
+    expenses = Expense.objects.filter(user=request.user, date__year=year, date__month=month)
     for expense in expenses:
         table_data.append({
             'id': expense.id,
@@ -243,5 +245,4 @@ def get_full_table_data(request):
             'amount': format_currency(expense.amount),
             'category': expense.category.name
         })
-
     return JsonResponse(table_data, safe=False)
