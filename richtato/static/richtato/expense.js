@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const tableDataUrl = "get-table-data/";
     const yearFilter = document.getElementById('year-filter');
+    const monthFilter = document.getElementById('full-month-filter');
     const editTableButton = document.getElementById('detailsTableEditButton');
     const groupByFilter = document.getElementById('group-by-filter');
     
@@ -54,16 +55,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.monthlySavingsBarChartChart.plotChart();
     }
+
+    const updateFullTable = () =>{
+        const selectedYear = parseInt(yearFilter.value, 10);
+        const selectedMonth = parseInt(monthFilter.value, 10);
+        console.log('Updating updateFullTable for year:', selectedYear, 'month:', selectedMonth);
+        const fullTableDataUrl = `/expense/get-full-table-data?year=${selectedYear}&month=${selectedMonth}`;
+        console.log('Table data URL:', fullTableDataUrl);
+        window.tableManager = new TableManager(
+            'fullTableExpense',             // tableID
+            fullTableDataUrl,               // tableUrl
+            editTableButton,                // editButton
+            'update/',                      // saveTableEndpoint (URL for saving changes)
+            null,                           // no chart instance
+        );
+        window.tableManager.loadTableData();
+    }
+    
+
     const updateAllCharts = () => {
         updateChart();
         updatemonthlySavingsBarChartChart();
+        updateFullTable();
     };
 
     // Trigger both chart updates on year filter change
     yearFilter.addEventListener('change', updateAllCharts);
-
-    // Trigger both chart updates on group by filter change
     groupByFilter.addEventListener('change', updateAllCharts);
+    monthFilter.addEventListener('change', () => {
+        console.log('Month filter changed');
+        updateFullTable();
+    });
 
     // Initial update when the page loads
     updateAllCharts();
@@ -74,10 +96,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const description = descriptionInput.value;
         guessCategoryFromDescription(description);
     });
+
+    
 });
 
 function guessCategoryFromDescription(description) {
-    console.log('Guessing category for:', description);
+    console.log('Guessing category for:', description); 
     // Encode the description before sending it
     const url = `/expense/guess-category/?description=${encodeURIComponent(description)}`;
 
