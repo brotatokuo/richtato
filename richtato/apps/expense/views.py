@@ -9,10 +9,12 @@ from django.urls import reverse
 
 from apps.expense.models import Expense
 from apps.income.models import Income
-from apps.richtato_user.models import CardAccount, Category, User
+from apps.richtato_user.models import CardAccount, Category
 from utilities.google_gemini.ai import AI
 from django.db.models import Sum
 from utilities.tools import month_mapping, format_currency, format_date, color_picker
+from graph.chart_theme import ChartTheme
+
 
 pst = pytz.timezone('US/Pacific')
 
@@ -101,7 +103,8 @@ def get_plot_data(request) -> JsonResponse:
         item_key = 'category'
     else:
         return JsonResponse({'error': 'Invalid group_by value'}, status=400)
-
+    
+    color_theme = ChartTheme().get_theme('neon')
     for index, item in enumerate(group_items):
         annual_total = []
 
@@ -109,12 +112,13 @@ def get_plot_data(request) -> JsonResponse:
             monthly_total = all_expenses.filter(**{item_key: item, 'date__month': month}).aggregate(Sum('amount'))['amount__sum']
             annual_total.append(float(monthly_total or 0))
 
-        background_color, border_color = color_picker(index)
+        # background_color, border_color = color_picker(index)
+        color = color_theme[index]        
         datasets.append({
             'label': item.name,
             'data': annual_total,
-            'backgroundColor': background_color,
-            'borderColor': border_color,
+            'backgroundColor': color,
+            'borderColor': color,
             'borderWidth': 1
         })
 
