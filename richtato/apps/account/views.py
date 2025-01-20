@@ -1,25 +1,17 @@
 import json
-import pandas as pd
-from typing import Any
 from datetime import datetime
 
-from django.db.models import F, CharField
+from apps.account.models import Account, AccountTransaction
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import HttpResponse, render
-from django.http import JsonResponse
+from django.db.models import Sum
 from django.db.models.functions import (
-    Cast,
-    TruncYear,
-    TruncMonth,
-    TruncDate,
     ExtractYear,
 )
+from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
-from django.db.models import Sum
 
-from apps.account.models import Account, AccountTransaction
-from utilities.tools import color_picker, month_mapping, format_currency, format_date
+from utilities.tools import color_picker, format_currency, format_date, month_mapping
 
 
 @login_required
