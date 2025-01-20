@@ -21,10 +21,8 @@ from django.urls import path, include
 urlpatterns = [
     # Admin Panel URL
     path("admin/", admin.site.urls),
-
     # Core user management (login, register, etc.)
     path("", include("apps.richtato_user.urls")),
-
     # Feature-specific URLs
     path("account/", include("apps.account.urls")),
     path("budget/", include("apps.budget.urls")),

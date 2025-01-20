@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "top-level-project"
+version = "0.1.0"
+description = "Top-level Richtato project"
+authors = [
+    { name = "brotatokuo", email = "kuoalan9@example.com" }
+]
+
+[tool.poetry]
+packages = [
+    { include = "richtato" }
+]
+
+[tool.poetry.dependencies]
+python = "3.11.10"
+utilities = { path = "utilities", develop = true }
+google_drive = { path = "google_drive", develop = true }
+google_gemini = { path = "google_gemini", develop = true }
+graph = { path = "graph", develop = true }

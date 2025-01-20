@@ -17,18 +17,26 @@ class DataImporter:
         """
         self.user = user
         self.path = path
-    
+
     def __str__(self):
         return f"Data Importer for {self.user} at {self.path}"
 
     def generate_csv_templates(self):
         self._generate_csv_template("Card.csv", ["name"])
-        self._generate_csv_template("Category.csv", ["name", "keywords", "budget", "type", "color"])
-        self._generate_csv_template("Expense.csv", ["description", "date", "amount", "account_name", "category_name"])
-        self._generate_csv_template("Income.csv", ["description", "date", "amount", "account_name"])
+        self._generate_csv_template(
+            "Category.csv", ["name", "keywords", "budget", "type", "color"]
+        )
+        self._generate_csv_template(
+            "Expense.csv",
+            ["description", "date", "amount", "account_name", "category_name"],
+        )
+        self._generate_csv_template(
+            "Income.csv", ["description", "date", "amount", "account_name"]
+        )
         self._generate_csv_template("Account.csv", ["type", "name"])
-        self._generate_csv_template("AccountTransactions.csv", ["amount", "date", "account_name"])
-
+        self._generate_csv_template(
+            "AccountTransactions.csv", ["amount", "date", "account_name"]
+        )
 
     def _generate_csv_template(self, name, necessary_columns):
         """
@@ -51,17 +59,17 @@ class DataImporter:
         # print(colorama.Fore.GREEN + "Accounts Transactions imported successfully"+ colorama.Style.RESET_ALL)
 
         self.import_incomes_from_csv()
-        print(colorama.Fore.GREEN + "Incomes imported successfully"+ colorama.Style.RESET_ALL)
-        
+        print(
+            colorama.Fore.GREEN
+            + "Incomes imported successfully"
+            + colorama.Style.RESET_ALL
+        )
 
     def import_cards_from_csv(self):
         cards_df = pd.read_csv(os.path.join(self.path, "Card.csv"))
         print(cards_df.head())
         for index, row in cards_df.iterrows():
-            card = CardAccount(
-                user=self.user,
-                name=row["name"]
-            )
+            card = CardAccount(user=self.user, name=row["name"])
             card.save()
 
     def import_categories_from_csv(self):
@@ -69,14 +77,17 @@ class DataImporter:
         print(categories_df.head())
         for index, row in categories_df.iterrows():
             category_type = row["type"].lower().replace(" ", "").strip()
-            assert category_type in ["essential", "nonessential"], "Category type must be either essential or nonessential"
+            assert category_type in [
+                "essential",
+                "nonessential",
+            ], "Category type must be either essential or nonessential"
             category = Category(
-            user=self.user,
-            name=row["name"],
-            keywords=row["keywords"],
-            budget=row["budget"],
-            type=category_type,
-            color=row["color"]
+                user=self.user,
+                name=row["name"],
+                keywords=row["keywords"],
+                budget=row["budget"],
+                type=category_type,
+                color=row["color"],
             )
             category.save()
 
@@ -93,11 +104,15 @@ class DataImporter:
                     date=row["date"],
                     amount=row["amount"],
                     account_name=account,
-                    category=category
+                    category=category,
                 )
                 expense.save()
             except Exception as e:
-                print(colorama.Fore.RED + f"Error importing {row}" + colorama.Style.RESET_ALL)
+                print(
+                    colorama.Fore.RED
+                    + f"Error importing {row}"
+                    + colorama.Style.RESET_ALL
+                )
                 print(e)
                 print(f"Error importing {row}")
 
@@ -111,19 +126,18 @@ class DataImporter:
                 name=row["name"],
             )
             account.save()
-    
+
     def import_account_transactions_from_csv(self):
-        transactions_df = pd.read_csv(os.path.join(self.path, "AccountTransactions.csv"))
+        transactions_df = pd.read_csv(
+            os.path.join(self.path, "AccountTransactions.csv")
+        )
         print(transactions_df.head())
         for index, row in transactions_df.iterrows():
             account = Account.objects.get(user=self.user, name=row["account_name"])
             transaction = AccountTransaction(
-                account=account,
-                amount=row["amount"],
-                date=row["date"]
+                account=account, amount=row["amount"], date=row["date"]
             )
             transaction.save()
-
 
     def import_incomes_from_csv(self):
         incomes_df = pd.read_csv(os.path.join(self.path, "Income.csv"))
@@ -135,6 +149,6 @@ class DataImporter:
                 description=row["description"],
                 date=row["date"],
                 amount=row["amount"],
-                account_name=account
+                account_name=account,
             )
             income.save()

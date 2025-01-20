@@ -12,7 +12,11 @@ from django.urls import reverse
 from apps.account.models import Account, AccountTransaction
 from apps.richtato_user.models import CardAccount, Category
 from apps.settings.models import DataImporter
-from utilities.google_drive.client import ImporterClient, ExporterClient, GoogleExporterClient
+from utilities.google_drive.client import (
+    ImporterClient,
+    ExporterClient,
+    GoogleExporterClient,
+)
 from utilities.tools import format_currency, format_date
 
 
@@ -31,6 +35,7 @@ def main(request):
         },
     )
 
+
 # region Card Accounts
 @login_required
 def get_cards(request):
@@ -46,12 +51,15 @@ def get_cards(request):
         json_data.append({"Id": card_id, "Card": card_name})
     return JsonResponse(json_data, safe=False)
 
+
 @login_required
 def add_card(request):
     if request.method == "POST":
         account_name = request.POST.get("account-name").strip()
 
-        all_accounts_names = CardAccount.objects.filter(user=request.user).values_list('name', flat=True)
+        all_accounts_names = CardAccount.objects.filter(user=request.user).values_list(
+            "name", flat=True
+        )
         if account_name in all_accounts_names:
             return render(
                 request,
@@ -69,6 +77,7 @@ def add_card(request):
 
         return HttpResponseRedirect(reverse("settings"))
     return HttpResponse("Add account error")
+
 
 @login_required
 def update_cards(request):
@@ -97,6 +106,7 @@ def update_cards(request):
 
     return JsonResponse({"success": False, "error": "Invalid request"})
 
+
 # endregion
 
 # region Account
@@ -112,25 +122,32 @@ def get_accounts(request):
                 "Name": account.name,
                 "Type": account.type,
                 "Balance": format_currency(account.latest_balance),
-                "Date":format_date(account.latest_balance_date) if account.latest_balance_date else None,
+                "Date": format_date(account.latest_balance_date)
+                if account.latest_balance_date
+                else None,
             }
         )
     return JsonResponse(json_data, safe=False)
 
+
 @login_required
 def add_account(request):
-    if request.method=="POST":
+    if request.method == "POST":
         all_accounts_names = [account.name for account in request.user.account.all()]
 
-        account_type = request.POST.get('account-type')
-        account_name = request.POST.get('account-name')
-        balance_date = request.POST.get('balance-date')
-        balance = request.POST.get('balance-input')
+        account_type = request.POST.get("account-type")
+        account_name = request.POST.get("account-name")
+        balance_date = request.POST.get("balance-date")
+        balance = request.POST.get("balance-input")
 
         if account_name in all_accounts_names:
-            return render(request, "settings.html",{
-                "error_account_message": "Account name already exists. Please choose a different name.",
-            })
+            return render(
+                request,
+                "settings.html",
+                {
+                    "error_account_message": "Account name already exists. Please choose a different name.",
+                },
+            )
 
         account = Account(
             user=request.user,
@@ -147,9 +164,10 @@ def add_account(request):
             date=balance_date,
         )
         account_history.save()
-        
+
         return HttpResponseRedirect(reverse("settings"))
     return HttpResponse("Add account error")
+
 
 @login_required
 def update_accounts(request):
@@ -177,6 +195,8 @@ def update_accounts(request):
             return JsonResponse({"success": False, "error": str(e)})
 
     return JsonResponse({"success": False, "error": "Invalid request"})
+
+
 # endregion
 
 # region Categories
@@ -210,6 +230,7 @@ def get_categories(request):
 
     return JsonResponse(json_data, safe=False)
 
+
 @login_required
 def add_category(request):
     if request.method == "POST":
@@ -232,6 +253,7 @@ def add_category(request):
         return main(request)
     return HttpResponse("Add category error")
 
+
 @login_required
 def update_categories(request):
     if request.method == "POST":
@@ -244,14 +266,16 @@ def update_categories(request):
                 category_name = category.get("name").strip()
                 category_keywords = category.get("keywords").lower()
                 category_budget_str = category.get("budget")
-                category_budget = decimal.Decimal(category_budget_str.replace("$", "").replace(",", "").strip())
+                category_budget = decimal.Decimal(
+                    category_budget_str.replace("$", "").replace(",", "").strip()
+                )
                 category_type = category.get("type")
                 category_color = category.get("color")
 
                 if delete_bool:
                     Category.objects.get(id=category_id).delete()
                     continue
-                
+
                 try:
                     Category.objects.update_or_create(
                         user=request.user,
@@ -268,14 +292,14 @@ def update_categories(request):
                 except Exception as e:
                     print(colorama.Fore.RED + "Error updating category:", e)
 
-            
-
             return JsonResponse({"success": True})
 
         except Exception as e:
             return JsonResponse({"success": False, "error": str(e)})
 
     return JsonResponse({"success": False, "error": "Invalid request"})
+
+
 # endregion
 
 # region Import
@@ -285,9 +309,12 @@ def generate_csv_templates(request):
         path = request.POST.get("path")
         request.user.import_path = path
         request.user.save()
-        DataImporter(user=request.user, path=request.user.import_path).generate_csv_templates()
+        DataImporter(
+            user=request.user, path=request.user.import_path
+        ).generate_csv_templates()
         return HttpResponseRedirect(reverse("settings"))
     return HttpResponseRedirect(reverse("settings"))
+
 
 @login_required
 def import_csv(request):
@@ -301,6 +328,7 @@ def import_csv(request):
         importer.import_from_csv()
         return HttpResponseRedirect(reverse("settings"))
     return HttpResponseRedirect(reverse("settings"))
+
 
 @login_required
 def generate_google_sheets_templates(request):
@@ -320,6 +348,7 @@ def import_google_sheets_data(request):
         importer.import_data()
         return HttpResponseRedirect(reverse("settings"))
     return HttpResponseRedirect(reverse("settings"))
+
 
 @login_required
 def export_google_sheets_data(request):

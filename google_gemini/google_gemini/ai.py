@@ -29,7 +29,9 @@ class AI:
         """
         Given an input text and a list of categories, use AI to determine the best category match for the input text.
         """
-        category_list = Category.objects.filter(user=user).values_list("name", flat=True)
+        category_list = Category.objects.filter(user=user).values_list(
+            "name", flat=True
+        )
         category_string = ", ".join(category_list)
         prompt = f"""
             Given the following categories: {category_string}

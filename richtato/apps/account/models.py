@@ -5,7 +5,12 @@ from apps.richtato_user.models import User
 
 # Create your models here.
 class Account(models.Model):
-    ACCOUNT_TYPES =[("checking", "Checking"), ("savings", "Savings"), ("retirement", "Retirement"), ("investment", "Investment")]
+    ACCOUNT_TYPES = [
+        ("checking", "Checking"),
+        ("savings", "Savings"),
+        ("retirement", "Retirement"),
+        ("investment", "Investment"),
+    ]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="account")
     type = models.CharField(choices=ACCOUNT_TYPES, max_length=50)
     name = models.CharField(max_length=100)
@@ -27,13 +32,15 @@ class AccountTransaction(models.Model):
         return f"{self.account} Amount: {self.amount} Date: {self.date}"
 
     def save(self, *args, **kwargs):
-        if isinstance(self.date,str):
+        if isinstance(self.date, str):
             transaction_date = datetime.strptime(self.date, "%Y-%m-%d").date()
         else:
             transaction_date = self.date
-        
-        if isinstance(self.account.latest_balance_date,str):
-            latest_balance_date = datetime.strptime(self.account.latest_balance_date, "%Y-%m-%d").date()
+
+        if isinstance(self.account.latest_balance_date, str):
+            latest_balance_date = datetime.strptime(
+                self.account.latest_balance_date, "%Y-%m-%d"
+            ).date()
         else:
             latest_balance_date = self.account.latest_balance_date
 

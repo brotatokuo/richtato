@@ -31,23 +31,28 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    username = models.CharField(max_length=150, unique=True)  # Primary and unique login field
+    username = models.CharField(
+        max_length=150, unique=True
+    )  # Primary and unique login field
     date_joined = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     import_path = models.CharField(max_length=100, default="", blank=True, null=True)
     objects = UserManager()
-    google_sheets_link = models.CharField(max_length=100, default="", blank=True, null=True)
+    google_sheets_link = models.CharField(
+        max_length=100, default="", blank=True, null=True
+    )
 
     USERNAME_FIELD = "username"  # Only username is used for login
     REQUIRED_FIELDS = []  # No additional required fields for creating a superuser
 
     def __str__(self):
         return self.username
-    
+
     def networth(self):
         return sum(account.latest_balance for account in self.account.all())
+
 
 class CardAccount(models.Model):
     user = models.ForeignKey(
@@ -58,17 +63,18 @@ class CardAccount(models.Model):
     def __str__(self):
         return f"[{self.user}] {self.name}"
 
+
 class Category(models.Model):
     CATEGORY_TYPES = [
-        ('essential', "Essential"),
-        ('nonessential', "Non Essential"),
+        ("essential", "Essential"),
+        ("nonessential", "Non Essential"),
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="category")
     name = models.CharField(max_length=100)
     keywords = models.TextField()
     budget = models.DecimalField(max_digits=10, decimal_places=2)
-    type = models.CharField(max_length=50, choices=CATEGORY_TYPES, default='essential')
+    type = models.CharField(max_length=50, choices=CATEGORY_TYPES, default="essential")
     color = models.CharField(max_length=7, default="#000000")
 
     def __str__(self):
