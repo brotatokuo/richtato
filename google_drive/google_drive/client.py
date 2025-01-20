@@ -1,17 +1,17 @@
+import os
+import re
+from datetime import datetime
+
+import colorama
 import gspread
 import pandas as pd
-import os
-import colorama
-import re
-from django.http import FileResponse, Http404
-from gspread_dataframe import set_with_dataframe
-from apps.richtato_user.models import User, CardAccount, Category
+from apps.account.models import Account, AccountTransaction
 from apps.expense.models import Expense
 from apps.income.models import Income
-from apps.account.models import Account, AccountTransaction
-
+from apps.richtato_user.models import CardAccount, Category, User
+from django.http import FileResponse, Http404
 from google.oauth2.service_account import Credentials
-from datetime import datetime
+from gspread_dataframe import set_with_dataframe
 
 
 class GoogleSheetsClient:
@@ -234,7 +234,7 @@ class ImporterClient(GoogleSheetsClient):
                     )
                     expense.save()
 
-                except Exception as e:
+                except Exception:
                     print(
                         colorama.Fore.RED
                         + f"Error importing {row}"
