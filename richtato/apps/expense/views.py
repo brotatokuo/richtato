@@ -87,7 +87,7 @@ def update(request):
         data = json.loads(request.body.decode("utf-8"))
 
         for transaction_data in data:
-            account_name = transaction_data.get("filter")
+            account_name = transaction_data.get("card")
             delete_bool = transaction_data.get("delete")
             transaction_id = transaction_data.get("id")
             description = transaction_data.get("description")
@@ -150,7 +150,7 @@ def get_plot_data(request) -> JsonResponse:
     else:
         return JsonResponse({"error": "Invalid group_by value"}, status=400)
 
-    color_theme = ChartTheme().get_theme("neon")
+    color_theme = ChartTheme().get_theme("default")
     for index, item in enumerate(group_items):
         annual_total = []
 
@@ -178,6 +178,7 @@ def get_plot_data(request) -> JsonResponse:
 def get_table_data(request) -> JsonResponse:
     year = request.GET.get("year", None)
     month = month_mapping(request.GET.get("month", None))
+    print("Month:", month)
     account = request.GET.get("label", None)
 
     table_data = []
@@ -193,11 +194,13 @@ def get_table_data(request) -> JsonResponse:
                 {
                     "id": expense.id,
                     "date": format_date(expense.date),
+                    "card": expense.account_name.name,
                     "description": expense.description,
                     "amount": format_currency(expense.amount),
                     "category": expense.category.name,
                 }
             )
+    print(table_data)
     return JsonResponse(table_data, safe=False)
 
 

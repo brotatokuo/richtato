@@ -2,48 +2,29 @@ class ChartTheme:
     def __init__(self) -> None:
         self.themes = {
             "default": [
-                "#FF6F61",
-                "#6B5B95",
-                "#88B04B",
-                "#F7CAC9",
-                "#92A8D1",
-                "#955251",
-                "#B565A7",
-                "#009B77",
-                "#DD4124",
-                "#45B8AC",
-                "#D65076",
-                "#EFC050",
-                "#5B5EA6",
-                "#9B2335",
-                "#DFCFBE",
-                "#BC243C",
-                "#C3447A",
-                "#7FCDCD",
-                "#92A8D1",
-                "#B565A7",
-            ],
-            "neon": [
-                "#FF5733",
-                "#33FF57",
-                "#3357FF",
-                "#FF33D1",
-                "#33FFF6",
-                "#FF33A6",
-                "#33FFD1",
-                "#FF8C33",
-                "#FF5733",
-                "#FF33C8",
-                "#57FF33",
-                "#A633FF",
-                "#FF3380",
-                "#FFB833",
-                "#33C2FF",
-                "#FF3368",
-                "#33FFCC",
-                "#FFA633",
-                "#33FF99",
-                "#FF3366",
+                "#98CC2C",  # Green
+                "#FF6384",  # Red
+                "#36A2EB",  # Blue
+                "#FF9F40",  # Orange
+                "#9966FF",  # Purple
+                "#FFCE56",  # Yellow
+                "#4BC0C0",  # Teal
+                "#FF63B1",  # Pink
+                "#00FFFF",  # Cyan
+                "#3636EB",  # Dark Blue
+                "#FFD700",  # Gold
+                "#DC143C",  # Crimson
+                "#008000",  # Dark Green
+                "#7B68EE",  # Medium Slate Blue
+                "#4682B4",  # Steel Blue
+                "#FF8C00",  # Dark Orange
+                "#800080",  # Purple
+                "#000080",  # Navy
+                "#F08080",  # Light Coral
+                "#7CFC00",  # Lawn Green
+                "#B0E0E6",  # Powder Blue
+                "#FF1493",  # Deep Pink
+                "#FF69B4",  # Hot Pink
             ],
             "pastel": [
                 "#A1D9FF",
