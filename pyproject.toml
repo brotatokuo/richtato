@@ -3,21 +3,29 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "top-level-project"
+name = "richtato"
 version = "0.1.0"
-description = "Top-level Richtato project"
+description = "Richtato project"
 authors = [
     { name = "brotatokuo", email = "kuoalan9@example.com" }
 ]
 
-[tool.poetry]
-packages = [
-    { include = "richtato" }
+dependencies = [
+    "Django==4.2.18",
+    "pandas",
+    "google-generativeai==0.8.3",
+    "fuzzywuzzy==0.18.0",
+    "colorama",
+    "psycopg2-binary==2.9.10",
+    "google-api-python-client==2.159.0",
+    "google-auth-httplib2==0.2.0",
+    "google-auth-oauthlib==1.2.1",
+    "gspread==6.1.4",
+    "gspread-formatting==1.2.0",
+    "gspread-dataframe==4.0.0",
+    "openpyxl",
+    "python-Levenshtein==0.26.1",
 ]
 
-[tool.poetry.dependencies]
-python = "3.11.10"
-utilities = { path = "utilities", develop = true }
-google_drive = { path = "google_drive", develop = true }
-google_gemini = { path = "google_gemini", develop = true }
-graph = { path = "graph", develop = true }
+[tool.setuptools.packages]
+find = { where = ["richtato"] }
