@@ -1,23 +1,18 @@
-import json
-import colorama
 import decimal
+import json
 from datetime import datetime
 
+import colorama
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import HttpResponseRedirect
-from django.shortcuts import render
+from django.shortcuts import HttpResponseRedirect, render
 from django.urls import reverse
 
-from apps.account.models import Account, AccountTransaction
-from apps.richtato_user.models import CardAccount, Category
-from apps.settings.models import DataImporter
-from utilities.google_drive.client import (
-    ImporterClient,
-    ExporterClient,
-    GoogleExporterClient,
-)
-from utilities.tools import format_currency, format_date
+from richtato.apps.account.models import Account, AccountTransaction
+from richtato.apps.richtato_user.models import CardAccount, Category
+from richtato.apps.settings.models import DataImporter
+from richtato.google_drive.client import GoogleExporterClient, ImporterClient
+from richtato.utilities.tools import format_currency, format_date
 
 
 @login_required
@@ -109,13 +104,13 @@ def update_cards(request):
 
 # endregion
 
+
 # region Account
 @login_required
 def get_accounts(request):
     accounts = Account.objects.filter(user=request.user)
     json_data = []
     for account in accounts:
-
         json_data.append(
             {
                 "Id": account.id,
@@ -198,6 +193,7 @@ def update_accounts(request):
 
 
 # endregion
+
 
 # region Categories
 @login_required
@@ -301,6 +297,7 @@ def update_categories(request):
 
 
 # endregion
+
 
 # region Import
 @login_required
