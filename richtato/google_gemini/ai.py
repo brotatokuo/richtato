@@ -1,9 +1,11 @@
+import os
+
 import google.generativeai as genai
 from fuzzywuzzy import fuzz
 
 from richtato.apps.richtato_user.models import Category, User
 
-API_KEY = "AIzaSyDCFP4GULu6gl7jJY07KblHX1gjCD9vOkk"
+API_KEY = os.environ.get("GEMINI_API_KEY")
 model = genai.GenerativeModel("gemini-1.5-flash-8b")
 
 

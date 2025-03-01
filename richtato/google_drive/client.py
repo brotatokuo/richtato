@@ -25,7 +25,7 @@ class GoogleSheetsClient:
         scopes = ["https://www.googleapis.com/auth/spreadsheets"]
         parent_path = os.path.dirname(os.path.abspath(__file__))
         creds = Credentials.from_service_account_file(
-            f"{parent_path}/credentials/credentials.json", scopes=scopes
+            ".sheets_creds.json", scopes=scopes
         )
 
         self.client = gspread.authorize(creds)
