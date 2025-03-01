@@ -1,0 +1,48 @@
+{% extends "layout.html" %} {% load static %} {% load humanize %} {%block body%}
+
+<div class="page-container">
+  {% if years %}
+  <div class="chart-container">
+    <div class="chart-title-container">
+      <h1 class="chart-title">Budget</h1>
+      <div class="dropdown-filter">
+        <select id="year-filter" name="year-filter">
+          {% for year in years %}
+          <option value="{{ year }}">{{ year }}</option>
+          {% endfor %}
+        </select>
+
+        <select id="month-filter" name="month-filter">
+          {% for month in months %}
+          <option value="{{ month }}">{{ month }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <canvas class="categoryChart" id="budgetBarChart"></canvas>
+  </div>
+  {% endif %}
+
+  <div class="detailed-table" style="display: none">
+    <div class="table-header">
+      <h2 class="table-title" id="detailed-table-title-1"></h2>
+      <h2 class="table-title" id="detailed-table-title-2"></h2>
+    </div>
+
+    <table class="styled-table" id="detailsTableBudget">
+      <thead></thead>
+      <tbody>
+        <!-- Rows will be inserted here dynamically -->
+      </tbody>
+    </table>
+
+    <button class="btn-secondary editButton" id="detailsTableEditButton">
+      Edit
+    </button>
+  </div>
+</div>
+
+<script src="{% static 'richtato/plotter.js' %}"></script>
+<script src="{% static 'richtato/budget.js' %}"></script>
+
+{% endblock %}

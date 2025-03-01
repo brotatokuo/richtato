@@ -1,0 +1,103 @@
+{% extends "layout.html" %} {% load static %} {% load humanize %} {%block body%}
+
+<div class="page-container">
+  <div class="chart-form-container">
+    {% if years %}
+    <div class="chart-container">
+      <div class="chart-title-container">
+        <div class="dropdown-filter">
+          <label for="year-filter"></label>
+          <select id="year-filter" name="year-filter">
+            {% for year in years %}
+            <option value="{{ year }}">{{ year }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <h1 class="chart-title">Networth: {{ networth }}</h1>
+      </div>
+      <div class="chart-title-container">
+        <h4>Group By</h4>
+        <div class="dropdown-filter">
+          <select id="group-by-filter" name="group-by-filter">
+            <option value="name">Name</option>
+            <option value="type">Type</option>
+          </select>
+        </div>
+      </div>
+      <canvas class="chart" id="accountBarChart"></canvas>
+    </div>
+    {% endif %}
+
+    <div class="form-container">
+      <h2 class="subtitle">Update Balance</h2>
+      <form method="post" action="add-entry/">
+        {% csrf_token %}
+
+        <!-- Account field -->
+        <div class="form-group">
+          <label for="account">Account:</label>
+          <select
+            class="form-control"
+            id="account-id"
+            name="account-id"
+            required
+          >
+            {% for id, name in account_options %}
+            <option value="{{id}}">{{ name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Amount field -->
+        <div class="form-group">
+          <label for="amount">Amount:</label>
+          <input
+            class="form-control"
+            type="text"
+            id="balance-input"
+            name="balance-input"
+            required
+          />
+        </div>
+
+        <!-- Date field -->
+        <div class="form-group">
+          <label for="date">Date:</label>
+          <input
+            class="form-control"
+            type="date"
+            id="balance-date"
+            name="balance-date"
+            value="{{ today_date }}"
+            required
+          />
+        </div>
+
+        <button type="submit" class="btn-secondary">Update</button>
+      </form>
+    </div>
+
+    <div class="detailed-table" style="display: none">
+      <div class="table-header">
+        <h2 class="table-title" id="detailed-table-title-1"></h2>
+        <h2 class="table-title" id="detailed-table-title-2"></h2>
+      </div>
+
+      <table class="styled-table" id="detailsTableAccount">
+        <thead></thead>
+        <tbody>
+          <!-- Rows will be inserted here dynamically -->
+        </tbody>
+      </table>
+
+      <button class="btn-secondary editButton" id="detailsTableEditButton">
+        Edit
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'richtato/plotter.js' %}"></script>
+<script src="{% static 'richtato/account.js' %}"></script>
+
+{% endblock %}

@@ -1,0 +1,254 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <!-- Appzi: Capture Insightful Feedback -->
+  <script async src="https://w.appzi.io/w.js?token=JCm1L"></script>
+  <!-- End Appzi -->
+  <script src="{% static 'richtato/script.js' %}"></script>
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="icon"
+      href="{% static 'media/richtato.ico' %}"
+      type="image/x-icon"
+    />
+    <link rel="stylesheet" href="{% static 'core.css' %}" />
+    <title>Richtato</title>
+    <style>
+      .bar {
+        display: none;
+      }
+
+      nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+        background-color: #000;
+        color: white;
+        padding: 10px 10px;
+        height: 60px;
+      }
+
+      nav .menu {
+        display: flex;
+        gap: 15px;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      nav .logo a {
+        color: white;
+        text-decoration: none;
+        font-size: 1.5rem;
+      }
+
+      nav .menu li {
+        width: 100%;
+        margin: 0 10px;
+        text-align: center;
+        vertical-align: middle;
+      }
+
+      nav .menu li a {
+        height: 60px;
+        color: white;
+        text-decoration: none;
+      }
+      .navbar-logo {
+        height: 40px;
+        margin-right: 10px;
+      }
+
+      .navbar-brand {
+        color: #fff;
+        text-decoration: none;
+        font-size: 1.5em;
+        display: flex;
+        align-items: center;
+      }
+
+      nav .button {
+        padding: 8px 16px;
+        border-radius: 20px;
+        text-decoration: none;
+        text-align: center;
+        font-size: 1em;
+        margin-top: 10px;
+        display: inline-block;
+        white-space: nowrap; /* Ensure text stays in one line */
+        vertical-align: middle; /* Align the text vertically */
+      }
+
+      nav .login {
+        color: #98cc2c;
+        border: 2px solid #98cc2c;
+        background-color: transparent;
+      }
+
+      nav .login:hover {
+        margin-right: 10px;
+        background-color: #98cc2c;
+        color: #000;
+      }
+
+      nav .signup {
+        background-color: #98cc2c;
+        color: #000;
+        border: 1px solid #98cc2c;
+      }
+
+      nav .signup:hover {
+        color: gold !important;
+        background-color: black;
+      }
+
+      .navbar-left,
+      .navbar-right {
+        display: flex;
+        align-items: center;
+      }
+
+      .navbar-left {
+        flex-grow: 1; /* Use the available space */
+      }
+
+      nav .username {
+        color: gold;
+        border: 2px solid gold;
+        background-color: transparent;
+        padding: 8px 16px;
+        border-radius: 20px;
+        text-decoration: none;
+        font-size: 1em;
+      }
+
+      nav .username:hover {
+        background-color: gold;
+        color: black;
+      }
+
+      @media screen and (max-width: 768px) {
+        nav .menu {
+          display: none;
+          flex-direction: column;
+          position: absolute;
+          top: 60px;
+          right: 0px;
+          left: 0px;
+          background-color: #000;
+          z-index: 1;
+        }
+
+        nav .menu li {
+          width: 90%;
+          margin: 10px;
+          height: 20px;
+          vertical-align: middle;
+        }
+
+        nav .menu li a {
+          padding: 10px;
+          color: white;
+          display: block;
+        }
+
+        nav .menu-toggle {
+          display: flex;
+          flex-direction: column;
+          cursor: pointer;
+          gap: 4px;
+        }
+
+        nav .menu-toggle span {
+          display: block;
+          width: 30px;
+          height: 3px;
+          background-color: white;
+          margin: 3px 0;
+        }
+
+        nav .menu-toggle.active span:nth-of-type(2) {
+          transform: rotate(45deg);
+          top: 6x;
+        }
+
+        nav .menu-toggle.active span:nth-of-type(3) {
+          transform: rotate(-45deg);
+          top: 6px;
+        }
+
+        nav .menu-toggle.active span:nth-last-of-type(2),
+        nav .menu-toggle.active span:nth-last-of-type(3) {
+          position: absolute;
+        }
+
+        nav .menu-toggle.active span:nth-of-type(1) {
+          opacity: 0;
+        }
+
+        nav .menu-toggle.active + .menu {
+          display: flex;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <nav>
+        <div class="logo">
+          <a href="{% url 'index' %}" class="navbar-left">
+            <img
+              src="{% static 'media/richtato.png' %}"
+              alt="Logo"
+              class="navbar-logo"
+            />
+            Richtato
+          </a>
+        </div>
+        <div class="menu-toggle">
+          <input type="checkbox" class="bar" />
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+
+        <ul class="menu">
+          {% if user.is_authenticated %}
+          <li class="button"><a href="{% url 'budget' %}">Budget</a></li>
+          <li class="button"><a href="{% url 'expense' %}">Expense</a></li>
+          <li class="button"><a href="{% url 'income' %}">Income</a></li>
+          <li class="button"><a href="{% url 'account' %}">Accounts</a></li>
+          <li class="button"><a href="{% url 'settings' %}">Settings</a></li>
+          <li class="button username">
+            <a href="{% url 'index' %}" id="username">{{ user.username }}</a>
+          </li>
+          <li class="button login"><a href="{% url 'logout' %}">Log out</a></li>
+          {% else %}
+          <li class="button login"><a href="{% url 'login' %}">Log in</a></li>
+          <li class="button signup">
+            <a href="{% url 'register' %}">Sign up</a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </header>
+
+    <main>{% block body %} {% endblock %}</main>
+  </body>
+
+  <script>
+    const menuToggle = document.querySelector(".menu-toggle");
+    const menu = document.querySelector(".menu");
+
+    menuToggle.addEventListener("click", () => {
+      menuToggle.classList.toggle("active");
+      menu.classList.toggle("active");
+    });
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</html>

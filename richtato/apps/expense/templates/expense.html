@@ -1,0 +1,155 @@
+{% extends "layout.html" %} {% load static %} {% block body %}
+<div class="page-container">
+  <div class="chart-form-container">
+    {% if years %}
+    <div class="chart-container">
+      <div class="chart-title-container">
+        <h1 class="chart-title">Expense</h1>
+        <div class="dropdown-filter">
+          <label for="year-filter"></label>
+          <select id="year-filter" name="year-filter">
+            {% for year in years %}
+            <option value="{{ year }}">{{ year }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="chart-title-container">
+        <h1 class="chart-title">Group By</h1>
+        <div class="dropdown-filter">
+          <select id="group-by-filter" name="group-by-filter">
+            <option value="card">Card</option>
+            <option value="category">Category</option>
+          </select>
+        </div>
+      </div>
+      <canvas class="chart" id="expenseBarChart"></canvas>
+    </div>
+    {% endif %}
+
+    <div class="form-container">
+      <h2 class="form-subtitle">Add Expense</h2>
+      <form method="post" action="add-entry/">
+        {% csrf_token %}
+
+        <!-- Account field -->
+        <div class="form-group">
+          <label for="account">Card:</label>
+          <select class="form-control" id="account" name="account" required>
+            {% for account in transaction_accounts %}
+            <option value="{{ account }}">{{ account }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Description field -->
+        <div class="form-group">
+          <label for="description">Description:</label>
+          <input
+            class="form-control"
+            type="text"
+            id="description"
+            name="description"
+            required
+          />
+        </div>
+
+        <!-- Amount field -->
+        <div class="form-group">
+          <label for="amount">Amount:</label>
+          <input
+            class="form-control"
+            id="balance-input"
+            type="text"
+            id="amount"
+            name="amount"
+            required
+          />
+        </div>
+
+        <!-- Date field -->
+        <div class="form-group">
+          <label for="date">Date:</label>
+          <input
+            class="form-control"
+            type="date"
+            id="balance-date"
+            name="balance-date"
+            value="{{ today_date }}"
+            required
+          />
+        </div>
+
+        <!-- Category field -->
+        <div class="form-group">
+          <label for="category">Category:</label>
+          <select class="form-control" id="category" name="category" required>
+            {% for category in category_list %}
+            <option value="{{ category }}">{{ category }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Submit button -->
+        <button type="submit" class="btn-secondary">Add Entry</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="detailed-table" style="display: none">
+    <div class="chart-title-container">
+
+      <div class="dropdown-filter">
+        <select class="dropdown-filter" id="detailed-table-title-1">
+          <option value="Jan">Jan</option>
+          <option value="Feb">Feb</option>
+          <option value="Mar">Mar</option>
+          <option value="Apr">Apr</option>
+          <option value="May">May</option>
+          <option value="Jun">Jun</option>
+          <option value="Jul">Jul</option>
+          <option value="Aug">Aug</option>
+          <option value="Sep">Sep</option>
+          <option value="Oct">Oct</option>
+          <option value="Nov">Nov</option>
+          <option value="Dec">Dec</option>
+        </select>
+      </div>
+
+      <div class="dropdown-filter">
+        <select class="dropdown-filter" id="detailed-table-title-2">
+          {% for account in transaction_accounts %}
+          <option value="{{ account }}">{{ account }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <table class="styled-table" id="detailsTableExpense">
+      <thead></thead>
+      <tbody>
+        <!-- Rows will be inserted here dynamically -->
+      </tbody>
+    </table>
+
+    <button class="btn-secondary editButton" id="detailsTableEditButton">
+      Edit
+    </button>
+  </div>
+
+  <div class="chart-form-container">
+    {% if years %}
+    <div class="chart-container">
+      <div class="chart-title-container">
+        <h1 class="chart-title">Monthly Savings</h1>
+      </div>
+      <canvas class="chart" id="monthlySavingsBarChart"></canvas>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script src="{% static 'richtato/plotter.js' %}"></script>
+<script src="{% static 'richtato/expense.js' %}"></script>
+
+{% endblock %}
