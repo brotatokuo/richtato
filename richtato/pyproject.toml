@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "richtato"
+version = "0.1.0"
+description = "Richtato Apps"
+authors = [
+    { name = "brotatokuo", email = "kuoalan9@example.com" }
+]
+dependencies = [
+    "Django>=4.0,<5.0",
+    "pandas"
+]

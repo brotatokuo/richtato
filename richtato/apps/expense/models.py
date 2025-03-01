@@ -1,19 +1,24 @@
 from django.db import models
-from apps.richtato_user.models import CardAccount, Category, User
+
+from richtato.apps.richtato_user.models import CardAccount, Category, User
 
 
 # Create your models here.
 class Expense(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="transaction")
-    account_name = models.ForeignKey(CardAccount, on_delete=models.CASCADE, related_name="transactions")
-    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="transactions")
+    account_name = models.ForeignKey(
+        CardAccount, on_delete=models.CASCADE, related_name="transactions"
+    )
+    category = models.ForeignKey(
+        Category, on_delete=models.CASCADE, related_name="transactions"
+    )
     description = models.CharField(max_length=100)
     date = models.DateField(null=True, blank=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):
         return f"{self.date} [{self.account_name}] (${self.amount}) {self.description}"
-    
+
     @classmethod
     def existing_years_for_user(cls, user):
         # Query all expenses for the given user where the date is not null
@@ -23,4 +28,3 @@ class Expense(models.Model):
 
         # Return the dictionary where keys are years and values are lists of months
         return sorted(years)
-

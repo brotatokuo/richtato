@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('settingsAccountEditButton').onclick = function() {
         accountsTable.toggleEditMode();
     };
-    
+
     // Categories Table
     const categoriesTable = new TableManager(
         'settings-categories-table',
@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function () {
     importData.onclick = function() {
         alert('Are you sure you want to import data from Google Sheets?');
     };
-    
+
     toggleEditButton('settings-card-table', 'settingsCardEditButton');
     toggleEditButton('settings-accounts-table', 'settingsAccountEditButton');
     toggleEditButton('settings-categories-table', 'settingsCategoryEditButton');

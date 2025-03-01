@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tableDataUrl = "get-table-data/";
     const yearFilter = document.getElementById('year-filter');
     const editTableButton = document.getElementById('detailsTableEditButton');
-    
+
     const updateChart = () => {
         const selectedYear = yearFilter.value;
         const plotDataUrl = `/account/get-plot-data/${selectedYear}/`;

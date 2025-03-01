@@ -33,30 +33,31 @@ def get_local_ip():
     try:
         # Create a connection to a public server (Google DNS, but no data is sent)
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(('8.8.8.8', 80))
+        s.connect(("8.8.8.8", 80))
         local_ip = s.getsockname()[0]
         s.close()
     except Exception:
         # Fallback if the connection fails
-        local_ip = '127.0.0.1'
+        local_ip = "127.0.0.1"
 
     return local_ip
+
 
 local_ip = get_local_ip()
 print("Local IP:", local_ip)
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.0.0.94', local_ip]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "10.0.0.94", local_ip]
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'apps.richtato_user',
-    'apps.account',
-    'apps.budget',
-    'apps.income',
-    'apps.expense',
-    'apps.settings',
+    "apps.richtato_user",
+    "apps.account",
+    "apps.budget",
+    "apps.income",
+    "apps.expense",
+    "apps.settings",
     "django.contrib.humanize",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -98,9 +99,9 @@ WSGI_APPLICATION = "richtato.wsgi.application"
 
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',  # The path to your SQLite database file
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",  # The path to your SQLite database file
     }
 }
 
@@ -160,7 +161,7 @@ USE_TZ = True
 STATIC_URL = "/static/"
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
+    os.path.join(BASE_DIR, "static"),
 ]
 
 # Default primary key field type

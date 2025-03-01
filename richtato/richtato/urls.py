@@ -16,15 +16,13 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
 
 urlpatterns = [
     # Admin Panel URL
     path("admin/", admin.site.urls),
-
     # Core user management (login, register, etc.)
     path("", include("apps.richtato_user.urls")),
-
     # Feature-specific URLs
     path("account/", include("apps.account.urls")),
     path("budget/", include("apps.budget.urls")),

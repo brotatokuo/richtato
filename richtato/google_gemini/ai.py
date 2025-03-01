@@ -1,6 +1,7 @@
 import google.generativeai as genai
 from fuzzywuzzy import fuzz
-from apps.richtato_user.models import User, Category
+
+from richtato.apps.richtato_user.models import Category, User
 
 API_KEY = "AIzaSyDCFP4GULu6gl7jJY07KblHX1gjCD9vOkk"
 model = genai.GenerativeModel("gemini-1.5-flash-8b")
@@ -17,7 +18,7 @@ class AI:
         Given a transaction description, use AI to simplify the description into a more concise form.
         """
         prompt = f"""
-        Simplify this transcation description: "{input}", into a more concise description. 
+        Simplify this transcation description: "{input}", into a more concise description.
         """
         result = model.generate_content([prompt])
         best_match = result.text.strip()
@@ -29,7 +30,9 @@ class AI:
         """
         Given an input text and a list of categories, use AI to determine the best category match for the input text.
         """
-        category_list = Category.objects.filter(user=user).values_list("name", flat=True)
+        category_list = Category.objects.filter(user=user).values_list(
+            "name", flat=True
+        )
         category_string = ", ".join(category_list)
         prompt = f"""
             Given the following categories: {category_string}

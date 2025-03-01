@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     balanceInput.addEventListener('blur', () => {
         let balance = balanceInput.value;
-        
+
         if (balance){
             newBalance = computeBalance(balance);
 
@@ -71,7 +71,7 @@ function computeBalance(balance){
             return;  // Stop further processing if the formula is invalid
         }
     }
-    
+
 
     // Convert to a float for regular numbers or evaluated formulas
     balance = parseFloat(balance).toFixed(2);

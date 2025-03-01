@@ -1,25 +1,28 @@
 # views/auth_views.py
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
 from django.contrib.auth import authenticate, login, logout
-from django.http import HttpResponseRedirect
-from django.urls import reverse
-from django.shortcuts import render
-from django.views import View
+from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
-from apps.richtato_user.models import User
+from django.http import HttpResponseRedirect, JsonResponse
+from django.shortcuts import render
+from django.urls import reverse
+from django.views import View
+
+from richtato.apps.richtato_user.models import User
+
 
 @login_required
 def get_user_id(request):
     return JsonResponse({"userID": request.user.id})
 
+
 class IndexView(View):
     def get(self, request):
-        return render(request, 'index.html')
+        return render(request, "index.html")
+
 
 class LoginView(View):
     def get(self, request):
-        return render(request, 'login.html', {"username": '', "message": None})
+        return render(request, "login.html", {"username": "", "message": None})
 
     def post(self, request):
         username = request.POST["username"]
@@ -30,15 +33,18 @@ class LoginView(View):
             login(request, user)
             return HttpResponseRedirect(reverse("index"))
         else:
-            return render(request, "login.html", {
-                "username": username,
-                "message": "Invalid username and/or password."
-            })
+            return render(
+                request,
+                "login.html",
+                {"username": username, "message": "Invalid username and/or password."},
+            )
+
 
 class LogoutView(View):
     def get(self, request):
         logout(request)
         return HttpResponseRedirect(reverse("index"))
+
 
 class RegisterView(View):
     def get(self, request):
@@ -50,21 +56,18 @@ class RegisterView(View):
         confirmation = request.POST["password2"]
 
         if password != confirmation:
-            return render(request, "register.html", {
-                "message": "Passwords must match."
-            })
+            return render(
+                request, "register.html", {"message": "Passwords must match."}
+            )
 
         try:
-            user = User.objects.create_user(
-                username=username,
-                password=password
-            )
+            user = User.objects.create_user(username=username, password=password)
             user.save()
 
         except IntegrityError:
-            return render(request, "register.html", {
-                "message": "Username already taken."
-            })
+            return render(
+                request, "register.html", {"message": "Username already taken."}
+            )
 
         login(request, user)
         return HttpResponseRedirect(reverse("index"))
