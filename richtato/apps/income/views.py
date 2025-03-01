@@ -1,15 +1,14 @@
 import json
 from datetime import datetime
 
+from apps.account.models import Account
+from apps.income.models import Income
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
-
-from richtato.apps.account.models import Account
-from richtato.apps.income.models import Income
-from richtato.utilities.tools import (
+from utilities.tools import (
     color_picker,
     format_currency,
     format_date,

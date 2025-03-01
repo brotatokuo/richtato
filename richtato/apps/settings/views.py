@@ -3,16 +3,16 @@ import json
 from datetime import datetime
 
 import colorama
+from apps.account.models import Account, AccountTransaction
+from apps.richtato_user.models import CardAccount, Category
+from apps.settings.models import DataImporter
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import HttpResponseRedirect, render
 from django.urls import reverse
+from utilities.tools import format_currency, format_date
 
-from richtato.apps.account.models import Account, AccountTransaction
-from richtato.apps.richtato_user.models import CardAccount, Category
-from richtato.apps.settings.models import DataImporter
-from richtato.google_drive.client import GoogleExporterClient, ImporterClient
-from richtato.utilities.tools import format_currency, format_date
+from google_drive.client import GoogleExporterClient, ImporterClient
 
 
 @login_required

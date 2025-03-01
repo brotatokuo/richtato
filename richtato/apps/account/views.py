@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 
+from apps.account.models import Account, AccountTransaction
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.db.models.functions import ExtractYear
@@ -8,8 +9,7 @@ from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
 
-from richtato.apps.account.models import Account, AccountTransaction
-from richtato.utilities.tools import (
+from utilities.tools import (
     color_picker,
     format_currency,
     format_date,

@@ -5,14 +5,13 @@ from datetime import datetime
 import colorama
 import gspread
 import pandas as pd
+from apps.account.models import Account, AccountTransaction
+from apps.expense.models import Expense
+from apps.income.models import Income
+from apps.richtato_user.models import CardAccount, Category, User
 from django.http import FileResponse, Http404
 from google.oauth2.service_account import Credentials
 from gspread_dataframe import set_with_dataframe
-
-from richtato.apps.account.models import Account, AccountTransaction
-from richtato.apps.expense.models import Expense
-from richtato.apps.income.models import Income
-from richtato.apps.richtato_user.models import CardAccount, Category, User
 
 
 class GoogleSheetsClient:

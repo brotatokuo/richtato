@@ -2,11 +2,10 @@ import os
 
 import colorama
 import pandas as pd
-
-from richtato.apps.account.models import Account, AccountTransaction
-from richtato.apps.expense.models import Category, Expense
-from richtato.apps.income.models import Income
-from richtato.apps.richtato_user.models import CardAccount, Category
+from apps.account.models import Account, AccountTransaction
+from apps.expense.models import Category, Expense
+from apps.income.models import Income
+from apps.richtato_user.models import CardAccount, Category
 
 
 # Create your models here.

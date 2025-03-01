@@ -1,14 +1,14 @@
 import calendar
 
 import pandas as pd
+from apps.expense.models import Expense
+from apps.richtato_user.models import Category
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
-from richtato.apps.expense.models import Expense
-from richtato.apps.richtato_user.models import Category
-from richtato.utilities.tools import format_currency, month_mapping
+from utilities.tools import format_currency, month_mapping
 
 
 @login_required

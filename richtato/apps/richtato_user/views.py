@@ -1,4 +1,5 @@
 # views/auth_views.py
+from apps.richtato_user.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
@@ -6,8 +7,6 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
-
-from richtato.apps.richtato_user.models import User
 
 
 @login_required

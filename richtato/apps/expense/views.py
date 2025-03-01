@@ -2,23 +2,23 @@ import json
 from datetime import datetime
 
 import pytz
+from apps.expense.models import Expense
+from apps.income.models import Income
+from apps.richtato_user.models import CardAccount, Category
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
 from graph.chart_theme import ChartTheme
-
-from richtato.apps.expense.models import Expense
-from richtato.apps.income.models import Income
-from richtato.apps.richtato_user.models import CardAccount, Category
-from richtato.google_gemini.ai import AI
-from richtato.utilities.tools import (
+from utilities.tools import (
     color_picker,
     format_currency,
     format_date,
     month_mapping,
 )
+
+from google_gemini.ai import AI
 
 pst = pytz.timezone("US/Pacific")
 
