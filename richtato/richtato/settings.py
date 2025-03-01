@@ -27,8 +27,11 @@ SECRET_KEY = "django-insecure-jhuu7vjafr)5v-h6pojy=@glgi&z#32y*!jxa4_#*bq6w%r2q=
 DEBUG = True
 
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "richtato.onrender.com"]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://richtato.onrender.com",
+]
 
 # Application definition
 
