@@ -27,7 +27,7 @@ SECRET_KEY = "django-insecure-jhuu7vjafr)5v-h6pojy=@glgi&z#32y*!jxa4_#*bq6w%r2q=
 DEBUG = True
 
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "richtato.onrender.com"]
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -86,20 +86,6 @@ DATABASES = {
     }
 }
 
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'postgres',          # Matches POSTGRES_DB
-#         'USER': 'brotato',              # Matches POSTGRES_USER
-#         'PASSWORD': 'Tawse7dives_a',      # Matches POSTGRES_PASSWORD
-#         'HOST': 'kuo.ctyack00qpp0.us-west-2.rds.amazonaws.com',         # The name of your Docker service
-#         'PORT': '5432',                # The default PostgreSQL port
-#         'OPTIONS': {
-#             'options': '-c search_path=richtato'
-#         },
-#     }
-# }
 
 # pg_dump -h kuo.ctyack00qpp0.us-west-2.rds.amazonaws.com -U brotato -d postgres -F c -b -v -f sql.dump
 
