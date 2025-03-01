@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const yearFilter = document.getElementById('year-filter');
     const monthFilter = document.getElementById('month-filter');
     const editTableButton = document.getElementById('detailsTableEditButton');
-    
+
     const updateChart = () => {
         const selectedYear = yearFilter.value;
         const selectedMonth = document.getElementById('month-filter').value;
