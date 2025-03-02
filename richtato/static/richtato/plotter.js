@@ -214,15 +214,23 @@ class TableManager {
     fetch(this.tableUrl)
       .then((response) => response.json())
       .then((data) => {
-        console.log("Fetched table data:", data);
-        this.modifyTableData(data);
-        this.showTable();
+        if (data && data.length > 0) {
+          console.log("Fetched table data:", data);
+          this.modifyTableData(data);
+          this.showTable();
+        }
+        else
+        {
+          console.log("No data found", this.tableID);
+          table.style.display = "none";
+          this.editButton.style.display = "none";
+        }
       })
       .catch((error) => console.error("Error fetching table data:", error));
   }
 
   modifyTableData(data) {
-    if (data) {
+    if (data && data.length > 0) {
       const tableHead = this.table.querySelector("thead");
       const tableBody = this.table.querySelector("tbody");
 
@@ -287,6 +295,13 @@ class TableManager {
     }
   }
 
+  showTable() {
+    const detailedTable = document.querySelector(".detailed-table");
+    if (detailedTable) {
+      detailedTable.style.display = "block";
+    }
+  }
+
   updateSortArrows(headerRow, sortedIndex, direction) {
     // Get all headers (th elements) in the header row
     const headers = headerRow.querySelectorAll("th");
@@ -337,13 +352,6 @@ class TableManager {
     const tableHead = this.table.querySelector("thead");
     const headerRow = tableHead.querySelector("tr");
     this.updateSortArrows(headerRow, columnIndex, direction);
-  }
-
-  showTable() {
-    const detailedTable = document.querySelector(".detailed-table");
-    if (detailedTable) {
-      detailedTable.style.display = "block";
-    }
   }
 
   toggleEditMode() {

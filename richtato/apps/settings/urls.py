@@ -30,20 +30,4 @@ urlpatterns = [
         name=f"{page_name}_generate_csv_templates",
     ),
     path("import-csv/", views.import_csv, name=f"{page_name}_import_csv"),
-    # Google Sheets
-    path(
-        "generate-google-sheets-templates/",
-        views.generate_google_sheets_templates,
-        name=f"{page_name}_generate_google_sheets_templates",
-    ),
-    path(
-        "import-google-sheets-data",
-        views.import_google_sheets_data,
-        name=f"{page_name}_import_google_sheets_data",
-    ),
-    path(
-        "export-google-sheets-data",
-        views.export_google_sheets_data,
-        name=f"{page_name}_export_google_sheets_data",
-    ),
 ]

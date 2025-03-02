@@ -12,8 +12,6 @@ from django.shortcuts import HttpResponseRedirect, render
 from django.urls import reverse
 from utilities.tools import format_currency, format_date
 
-from google_drive.client import GoogleExporterClient, ImporterClient
-
 
 @login_required
 def main(request):
@@ -324,38 +322,4 @@ def import_csv(request):
         print("Importing from CSV")
         importer.import_from_csv()
         return HttpResponseRedirect(reverse("settings"))
-    return HttpResponseRedirect(reverse("settings"))
-
-
-@login_required
-def generate_google_sheets_templates(request):
-    if request.method == "POST":
-        google_sheets_link = request.POST.get("googleSheetsLink")
-        request.user.google_sheets_link = google_sheets_link
-        request.user.save()
-        importer = ImporterClient(request.user)
-        importer.generate_templates()
-    return HttpResponseRedirect(reverse("settings"))
-
-
-@login_required
-def import_google_sheets_data(request):
-    if request.method == "POST":
-        importer = ImporterClient(request.user)
-        importer.import_data()
-        return HttpResponseRedirect(reverse("settings"))
-    return HttpResponseRedirect(reverse("settings"))
-
-
-@login_required
-def export_google_sheets_data(request):
-    if request.method == "POST":
-        try:
-            GoogleExporterClient(request.user).export_data()
-            return HttpResponseRedirect(reverse("settings"))
-        except Exception as e:
-            print(f"Error exporting data: {e}")
-            return HttpResponseRedirect(reverse("settings"))
-
-    # If it's not a POST request, redirect back to settings
     return HttpResponseRedirect(reverse("settings"))
