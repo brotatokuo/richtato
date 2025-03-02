@@ -194,6 +194,8 @@ input[type="password"] {
 }
 
 .styled-table {
+  width: 100%;
+  min-width: 90vw;
   border-collapse: collapse;
   margin: 25px 0;
   font-size: 18px;
