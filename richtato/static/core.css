@@ -11,6 +11,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   padding: 2%;
   margin: 0 auto;
   height: 100vh;
@@ -190,21 +191,23 @@ input[type="password"] {
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  width: 100%; /* Ensure it scales to full width of the parent container */
+  max-width: 1200px; /* Limit maximum width on larger screens */
   margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .styled-table {
   width: 100%;
-  min-width: 90vw;
+  min-width: 90vw; /* Ensure the table adapts to the viewport width */
+  max-width: 1200px; /* Limit the max-width on larger screens */
   border-collapse: collapse;
   margin: 25px 0;
   font-size: 18px;
-  min-width: 700px;
-  justify-content: center;
-  align-items: center;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-  border: 1px solid #dddddd;
-  /* Adds border around the table */
+  border: 1px solid #dddddd; /* Border around the table */
+  overflow-x: auto; /* Add horizontal scroll for smaller screens */
 }
 
 .styled-table th,
@@ -273,11 +276,10 @@ input[type="password"] {
 /* Chart and form container layout */
 .chart-form-container {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 20px;
   width: 100%;
+  max-width: 1200px;
   padding: 20px;
   box-sizing: border-box;
 }
@@ -324,6 +326,7 @@ input[type="password"] {
   max-width: 500px;
   margin-top: 5%;
   padding: 20px;
+  justify-content: center;
   border: 1px solid #ddd;
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);

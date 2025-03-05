@@ -4,27 +4,22 @@
   <div class="chart-form-container">
     {% if years %}
     <div class="chart-container">
-      <div class="chart-title-container">
-        <div class="dropdown-filter">
-          <label for="year-filter"></label>
-          <select id="year-filter" name="year-filter">
-            {% for year in years %}
-            <option value="{{ year }}">{{ year }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <h1 class="chart-title">Networth: {{ networth }}</h1>
-      </div>
-      <div class="chart-title-container">
-        <h4>Group By</h4>
-        <div class="dropdown-filter">
-          <select id="group-by-filter" name="group-by-filter">
-            <option value="name">Name</option>
-            <option value="type">Type</option>
-          </select>
-        </div>
-      </div>
-      <canvas class="chart" id="accountBarChart"></canvas>
+      <label for="year-filter">Year</label>
+      <select id="year-filter" name="year-filter">
+        {% for year in years %}
+        <option value="{{ year }}">{{ year }}</option>
+        {% endfor %}
+      </select>
+
+      <h1 class="chart-title">Networth: {{ networth }}</h1>
+
+      <label for="group-by-filter">Group By</label>
+      <select id="group-by-filter" name="group-by-filter">
+        <option value="name">Name</option>
+        <option value="type">Type</option>
+      </select>
+
+      <canvas id="accountBarChart"></canvas>
     </div>
     {% endif %}
 
@@ -32,10 +27,8 @@
       <h2 class="subtitle">Update Balance</h2>
       <form method="post" action="add-entry/">
         {% csrf_token %}
-
-        <!-- Account field -->
         <div class="form-group">
-          <label for="account">Account:</label>
+          <label for="account-id">Account</label>
           <select
             class="form-control"
             id="account-id"
@@ -47,10 +40,8 @@
             {% endfor %}
           </select>
         </div>
-
-        <!-- Amount field -->
         <div class="form-group">
-          <label for="amount">Amount:</label>
+          <label for="balance-input">Amount</label>
           <input
             class="form-control"
             type="text"
@@ -59,10 +50,8 @@
             required
           />
         </div>
-
-        <!-- Date field -->
         <div class="form-group">
-          <label for="date">Date:</label>
+          <label for="balance-date">Date</label>
           <input
             class="form-control"
             type="date"
@@ -72,27 +61,20 @@
             required
           />
         </div>
-
         <button type="submit" class="btn-secondary">Update</button>
       </form>
     </div>
 
     <div class="detailed-table" style="display: none">
-      <div class="table-header">
-        <h2 class="table-title" id="detailed-table-title-1"></h2>
-        <h2 class="table-title" id="detailed-table-title-2"></h2>
-      </div>
-
+      <h2 class="table-header" id="detailed-table-title-1"></h2>
+      <h2 class="table-header" id="detailed-table-title-2"></h2>
       <table class="styled-table" id="detailsTableAccount">
         <thead></thead>
         <tbody>
           <!-- Rows will be inserted here dynamically -->
         </tbody>
       </table>
-
-      <button class="btn-secondary editButton" id="detailsTableEditButton">
-        Edit
-      </button>
+      <button class="editButton" id="detailsTableEditButton">Edit</button>
     </div>
   </div>
 </div>
