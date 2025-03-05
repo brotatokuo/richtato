@@ -88,6 +88,11 @@ load_dotenv()
 
 # Replace the DATABASES section of your settings.py with this
 tmpPostgres = urlparse(os.getenv("DATABASE_URL"))
+db_name = tmpPostgres.path.replace("/", "")
+print(f"db_name: {db_name}")
+print(f"user: {tmpPostgres.username}")
+print(f"password: {tmpPostgres.password}")
+print(f"host: {tmpPostgres.hostname}")
 
 DATABASES = {
     "default": {
