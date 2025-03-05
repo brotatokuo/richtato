@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 
 import pytz
-from apps.expense.models import Expense
+from apps.expense.models import Expense, ExpenseTransactions
 from apps.income.models import Income
 from apps.richtato_user.models import CardAccount, Category
 from django.contrib.auth.decorators import login_required
@@ -61,20 +61,12 @@ def add_entry(request):
         amount = request.POST.get("amount")
         date = request.POST.get("balance-date")
         category = request.POST.get("category")
-
-        category = Category.objects.get(user=request.user, name=category)
         account = request.POST.get("account")
-        account_name = CardAccount.objects.get(user=request.user, name=account)
 
-        transaction = Expense(
-            user=request.user,
-            account_name=account_name,
-            description=description,
-            category=category,
-            date=date,
-            amount=amount,
+        ExpenseTransactions.add_entry(
+            request.user, account, description, category, date, amount
         )
-        transaction.save()
+
         return HttpResponseRedirect(reverse("expense"))
     return HttpResponse("Data Entry Error")
 

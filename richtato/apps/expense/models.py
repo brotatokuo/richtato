@@ -1,6 +1,5 @@
-from django.db import models
-
 from apps.richtato_user.models import CardAccount, Category, User
+from django.db import models
 
 
 # Create your models here.
@@ -28,3 +27,26 @@ class Expense(models.Model):
 
         # Return the dictionary where keys are years and values are lists of months
         return sorted(years)
+
+
+class ExpenseTransactions:
+    @staticmethod
+    def add_entry(
+        user: User,
+        account: str,
+        description: str,
+        category: str,
+        date: str,
+        amount: str,
+    ):
+        category_obj = Category.objects.get(user=user, name=category)
+        account_name = CardAccount.objects.get(user=user, name=account)
+        transaction = Expense(
+            user=user,
+            account_name=account_name,
+            description=description,
+            category=category_obj,
+            date=date,
+            amount=amount,
+        )
+        transaction.save()
