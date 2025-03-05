@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime
 
 from apps.account.models import Account
@@ -36,6 +37,7 @@ def main(request):
             "entries": entries,
             "accounts": account_name_list,
             "today_date": datetime.today().strftime("%Y-%m-%d"),
+            "deploy_stage": os.getenv("DEPLOY_STAGE"),
         },
     )
 

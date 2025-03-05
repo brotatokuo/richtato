@@ -376,21 +376,3 @@ def simplify_description(description):
         description = AI.description_simplifier(description)
     print(f"Simplified description: {description}")
     return description
-
-
-def test_category_search(request):
-    categories = Category.objects.filter(user=request.user)
-    print(categories)
-
-    # description = 'WHOLEFDS ANN ARBOR'
-    description_words = ["wholefds", "crb", "ann", "arbor", "mi"]
-
-    # Try to find a category for any word in the description
-    for word in description_words:
-        # Check if any category matches the current word
-        category = categories.filter(keywords__icontains=word.lower()).first()
-        if category:
-            return HttpResponse(
-                f"Category found: {category.name}"
-            )  # Return as soon as a match is found
-    return HttpResponse("Category not found")

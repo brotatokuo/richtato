@@ -206,7 +206,11 @@
               alt="Logo"
               class="navbar-logo"
             />
-            Richtato
+            {% if deploy_stage %}
+                Richtato {{ deploy_stage }}
+            {% else %}
+                Richtato
+            {% endif %}
           </a>
         </div>
         <div class="menu-toggle">

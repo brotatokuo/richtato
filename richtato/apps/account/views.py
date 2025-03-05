@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime
 
 from apps.account.models import Account, AccountTransaction
@@ -8,7 +9,6 @@ from django.db.models.functions import ExtractYear
 from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
-
 from utilities.tools import (
     color_picker,
     format_currency,
@@ -37,6 +37,7 @@ def main(request):
             "account_options": account_options,
             "years": unique_years,
             "today_date": datetime.today().strftime("%Y-%m-%d"),
+            "deploy_stage": os.getenv("DEPLOY_STAGE"),
         },
     )
 

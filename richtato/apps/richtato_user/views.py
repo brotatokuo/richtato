@@ -1,4 +1,6 @@
 # views/auth_views.py
+import os
+
 from apps.richtato_user.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -16,12 +18,22 @@ def get_user_id(request):
 
 class IndexView(View):
     def get(self, request):
-        return render(request, "index.html")
+        return render(
+            request, "index.html", {"deploy_stage": os.getenv("DEPLOY_STAGE")}
+        )
 
 
 class LoginView(View):
     def get(self, request):
-        return render(request, "login.html", {"username": "", "message": None})
+        return render(
+            request,
+            "login.html",
+            {
+                "username": "",
+                "message": None,
+                "deploy_stage": os.getenv("DEPLOY_STAGE"),
+            },
+        )
 
     def post(self, request):
         username = request.POST["username"]
@@ -35,7 +47,11 @@ class LoginView(View):
             return render(
                 request,
                 "login.html",
-                {"username": username, "message": "Invalid username and/or password."},
+                {
+                    "username": username,
+                    "message": "Invalid username and/or password.",
+                    "deploy_stage": os.getenv("DEPLOY_STAGE"),
+                },
             )
 
 
@@ -47,7 +63,9 @@ class LogoutView(View):
 
 class RegisterView(View):
     def get(self, request):
-        return render(request, "register.html")
+        return render(
+            request, "register.html", {"deploy_stage": os.getenv("DEPLOY_STAGE")}
+        )
 
     def post(self, request):
         username = request.POST["username"]
@@ -56,7 +74,12 @@ class RegisterView(View):
 
         if password != confirmation:
             return render(
-                request, "register.html", {"message": "Passwords must match."}
+                request,
+                "register.html",
+                {
+                    "message": "Passwords must match.",
+                    "deploy_stage": os.getenv("DEPLOY_STAGE"),
+                },
             )
 
         try:

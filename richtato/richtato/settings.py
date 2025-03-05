@@ -60,6 +60,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.settings.self_ping_middleware.SelfPingMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -84,26 +85,35 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "richtato.wsgi.application"
 
-load_dotenv()
 
-# Replace the DATABASES section of your settings.py with this
-tmpPostgres = urlparse(os.getenv("DATABASE_URL"))
-db_name = tmpPostgres.path.replace("/", "")
-print(f"db_name: {db_name}")
-print(f"user: {tmpPostgres.username}")
-print(f"password: {tmpPostgres.password}")
-print(f"host: {tmpPostgres.hostname}")
+if "prod" == os.getenv("DEPLOY_STAGE"):
+    load_dotenv()
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": tmpPostgres.path.replace("/", ""),
-        "USER": tmpPostgres.username,
-        "PASSWORD": tmpPostgres.password,
-        "HOST": tmpPostgres.hostname,
-        "PORT": 5432,
+    # Replace the DATABASES section of your settings.py with this
+    tmpPostgres = urlparse(os.getenv("DATABASE_URL"))
+    db_name = tmpPostgres.path.replace("/", "")
+    print(f"db_name: {db_name}")
+    print(f"user: {tmpPostgres.username}")
+    print(f"password: {tmpPostgres.password}")
+    print(f"host: {tmpPostgres.hostname}")
+
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": tmpPostgres.path.replace("/", ""),
+            "USER": tmpPostgres.username,
+            "PASSWORD": tmpPostgres.password,
+            "HOST": tmpPostgres.hostname,
+            "PORT": 5432,
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",  # The path to your SQLite database file
+        }
+    }
 
 
 # Password validation

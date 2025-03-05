@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 
 import colorama
+import os
 from apps.account.models import Account, AccountTransaction
 from apps.richtato_user.models import CardAccount, Category
 from apps.settings.models import DataImporter
@@ -25,6 +26,7 @@ def main(request):
             "today_date": datetime.today().strftime("%Y-%m-%d"),
             "category_types": Category.CATEGORY_TYPES,
             "google_sheets_link": request.user.google_sheets_link,
+            "deploy_stage": os.getenv("DEPLOY_STAGE"),
         },
     )
 

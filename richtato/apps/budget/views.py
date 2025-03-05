@@ -1,4 +1,5 @@
 import calendar
+import os
 
 import pandas as pd
 from apps.expense.models import Expense
@@ -7,7 +8,6 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
-
 from utilities.tools import format_currency, month_mapping
 
 
@@ -35,7 +35,12 @@ def main(request) -> HttpResponse:
     return render(
         request,
         "budget.html",
-        {"years": years_list, "months": months_list, "categories": category_list},
+        {
+            "years": years_list,
+            "months": months_list,
+            "categories": category_list,
+            "deploy_stage": os.getenv("DEPLOY_STAGE"),
+        },
     )
 
 

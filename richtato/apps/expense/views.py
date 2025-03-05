@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime
 
 import pytz
@@ -10,6 +11,7 @@ from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
+from google_gemini.ai import AI
 from graph.chart_theme import ChartTheme
 from utilities.tools import (
     color_picker,
@@ -17,8 +19,6 @@ from utilities.tools import (
     format_date,
     month_mapping,
 )
-
-from google_gemini.ai import AI
 
 pst = pytz.timezone("US/Pacific")
 
@@ -49,6 +49,7 @@ def main(request):
             "transaction_accounts": transaction_accounts,
             "category_list": category_list,
             "today_date": datetime.now(pst).strftime("%Y-%m-%d"),
+            "deploy_stage": os.getenv("DEPLOY_STAGE"),
         },
     )
 
