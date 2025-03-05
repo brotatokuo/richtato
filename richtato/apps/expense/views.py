@@ -80,32 +80,29 @@ def update(request):
         data = json.loads(request.body.decode("utf-8"))
 
         for transaction_data in data:
-            account_name = transaction_data.get("card")
             delete_bool = transaction_data.get("delete")
             transaction_id = transaction_data.get("id")
-            description = transaction_data.get("description")
-            date = transaction_data.get("date")
-            amount = float(
-                transaction_data.get("amount", "").replace("$", "").replace(",", "")
-            )
-            category_name = transaction_data.get("category", None)
-
             if delete_bool:
-                _delete_expense(transaction_id)
+                ExpenseTransactions.delete_expense(transaction_id)
                 continue
+            else:
+                account_name = transaction_data.get("card")
+                description = transaction_data.get("description")
+                date = transaction_data.get("date")
+                amount = float(
+                    transaction_data.get("amount", "").replace("$", "").replace(",", "")
+                )
+                category_name = transaction_data.get("category", None)
 
-            category = _get_category(request.user, category_name, transaction_id)
-            account = _get_account(request.user, account_name)
-
-            _update_or_create_expense(
-                transaction_id,
-                request.user,
-                date,
-                description,
-                amount,
-                category,
-                account,
-            )
+                ExpenseTransactions.update(
+                    transaction_id,
+                    request.user,
+                    date,
+                    description,
+                    amount,
+                    category_name,
+                    account_name,
+                )
 
         return JsonResponse({"success": True})
 
@@ -195,46 +192,6 @@ def get_table_data(request) -> JsonResponse:
             )
     print(table_data)
     return JsonResponse(table_data, safe=False)
-
-
-def _delete_expense(transaction_id):
-    try:
-        Expense.objects.get(id=transaction_id).delete()
-    except Expense.DoesNotExist:
-        raise ValueError(f"Transaction with ID '{transaction_id}' does not exist.")
-
-
-def _get_category(user, category_name, transaction_id):
-    if category_name:
-        try:
-            return Category.objects.get(user=user, name=category_name)
-        except Category.DoesNotExist:
-            raise ValueError(f"Category '{category_name}' does not exist for the user.")
-    else:
-        return Expense.objects.get(id=transaction_id).category
-
-
-def _get_account(user, account_name):
-    try:
-        return CardAccount.objects.get(user=user, name=account_name)
-    except CardAccount.DoesNotExist:
-        raise ValueError(f"Account '{account_name}' does not exist for the user.")
-
-
-def _update_or_create_expense(
-    transaction_id, user, date, description, amount, category, account
-):
-    Expense.objects.update_or_create(
-        user=user,
-        id=transaction_id,
-        defaults={
-            "date": date,
-            "description": description,
-            "amount": amount,
-            "category": category,
-            "account_name": account,
-        },
-    )
 
 
 def guess_category(request):
