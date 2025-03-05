@@ -84,15 +84,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "richtato.wsgi.application"
 
-
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.sqlite3",
-#         "NAME": BASE_DIR / "db.sqlite3",  # The path to your SQLite database file
-#     }
-# }
-
-
 load_dotenv()
 
 # Replace the DATABASES section of your settings.py with this
@@ -108,8 +99,6 @@ DATABASES = {
         "PORT": 5432,
     }
 }
-
-# pg_dump -h kuo.ctyack00qpp0.us-west-2.rds.amazonaws.com -U brotato -d postgres -F c -b -v -f sql.dump
 
 
 # Password validation
