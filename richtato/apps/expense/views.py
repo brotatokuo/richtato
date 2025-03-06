@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 
 import pytz
-from apps.expense.models import Expense, ExpenseTransactions
+from apps.expense.models import Expense, ExpenseDB
 from apps.income.models import Income
 from apps.richtato_user.models import CardAccount, Category
 from django.contrib.auth.decorators import login_required
@@ -15,7 +15,7 @@ from google_gemini.ai import AI
 from graph.chart_theme import ChartTheme
 from utilities.tools import (
     color_picker,
-    format_currency,
+    convert_currency_to_str_float,
     format_date,
     month_mapping,
 )
@@ -63,9 +63,7 @@ def add_entry(request):
         category = request.POST.get("category")
         account = request.POST.get("account")
 
-        ExpenseTransactions.add_entry(
-            request.user, account, description, category, date, amount
-        )
+        ExpenseDB(request.user).add(account, description, category, date, amount)
 
         return HttpResponseRedirect(reverse("expense"))
     return HttpResponse("Data Entry Error")
@@ -83,20 +81,19 @@ def update(request):
             delete_bool = transaction_data.get("delete")
             transaction_id = transaction_data.get("id")
             if delete_bool:
-                ExpenseTransactions.delete_expense(transaction_id)
+                ExpenseDB(request.user).delete(transaction_id)
                 continue
             else:
                 account_name = transaction_data.get("card")
                 description = transaction_data.get("description")
                 date = transaction_data.get("date")
-                amount = float(
+                amount = (
                     transaction_data.get("amount", "").replace("$", "").replace(",", "")
                 )
                 category_name = transaction_data.get("category", None)
 
-                ExpenseTransactions.update(
+                ExpenseDB(request.user).update(
                     transaction_id,
-                    request.user,
                     date,
                     description,
                     amount,
@@ -186,7 +183,7 @@ def get_table_data(request) -> JsonResponse:
                     "date": format_date(expense.date),
                     "card": expense.account_name.name,
                     "description": expense.description,
-                    "amount": format_currency(expense.amount),
+                    "amount": convert_currency_to_str_float(expense.amount),
                     "category": expense.category.name,
                 }
             )
@@ -295,7 +292,7 @@ def get_full_table_data(request):
                 "id": expense.id,
                 "date": format_date(expense.date),
                 "description": expense.description,
-                "amount": format_currency(expense.amount),
+                "amount": convert_currency_to_str_float(expense.amount),
                 "category": expense.category.name,
             }
         )

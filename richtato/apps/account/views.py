@@ -11,7 +11,7 @@ from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
 from utilities.tools import (
     color_picker,
-    format_currency,
+    convert_currency_to_str_float,
     format_date,
     month_mapping,
 )
@@ -33,7 +33,7 @@ def main(request):
         request,
         "account.html",
         {
-            "networth": format_currency(request.user.networth()),
+            "networth": convert_currency_to_str_float(request.user.networth()),
             "account_options": account_options,
             "years": unique_years,
             "today_date": datetime.today().strftime("%Y-%m-%d"),
@@ -107,7 +107,6 @@ def get_table_data(request):
     year = request.GET.get("year", None)
     month = month_mapping(request.GET.get("month", None))
     account_name = request.GET.get("label", None)
-    print(year, month, account_name)
     table_data = []
     if year and month and account_name:
         account = Account.objects.get(name=account_name)
@@ -120,7 +119,7 @@ def get_table_data(request):
                 {
                     "id": entry.id,
                     "date": format_date(entry.date),
-                    "amount": format_currency(entry.amount),
+                    "amount": convert_currency_to_str_float(entry.amount),
                 }
             )
 

@@ -1,17 +1,16 @@
-import decimal
 import json
+import os
 from datetime import datetime
 
-import colorama
-import os
 from apps.account.models import Account, AccountTransaction
-from apps.richtato_user.models import CardAccount, Category
+from apps.richtato_user.models import CardAccount, CardAccountDB, Category, CategoryDB
 from apps.settings.models import DataImporter
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import HttpResponseRedirect, render
 from django.urls import reverse
-from utilities.tools import format_currency, format_date
+from loguru import logger
+from utilities.tools import convert_currency_to_str_float, format_date
 
 
 @login_required
@@ -50,26 +49,8 @@ def get_cards(request):
 @login_required
 def add_card(request):
     if request.method == "POST":
-        account_name = request.POST.get("account-name").strip()
-
-        all_accounts_names = CardAccount.objects.filter(user=request.user).values_list(
-            "name", flat=True
-        )
-        if account_name in all_accounts_names:
-            return render(
-                request,
-                "settings.html",
-                {
-                    "error_card_message": "Card Name already exists. Please choose a different name.",
-                },
-            )
-
-        card_account = CardAccount(
-            user=request.user,
-            name=account_name,
-        )
-        card_account.save()
-
+        account_name = request.POST.get("account-name")
+        CardAccountDB(request.user).add(account_name)
         return HttpResponseRedirect(reverse("settings"))
     return HttpResponse("Add account error")
 
@@ -87,12 +68,10 @@ def update_cards(request):
                 card_name = card.get("card").strip()
 
                 if delete_bool:
-                    CardAccount.objects.get(id=card_id).delete()
+                    CardAccountDB(request.user).delete(card_id=card_id)
                     continue
-
-                CardAccount.objects.update_or_create(
-                    user=request.user, id=card_id, defaults={"name": card_name}
-                )
+                else:
+                    CardAccountDB(request.user).update(card_id, card_name)
 
             return JsonResponse({"success": True})
 
@@ -100,9 +79,6 @@ def update_cards(request):
             return JsonResponse({"success": False, "error": str(e)})
 
     return JsonResponse({"success": False, "error": "Invalid request"})
-
-
-# endregion
 
 
 # region Account
@@ -116,7 +92,7 @@ def get_accounts(request):
                 "Id": account.id,
                 "Name": account.name,
                 "Type": account.type,
-                "Balance": format_currency(account.latest_balance),
+                "Balance": convert_currency_to_str_float(account.latest_balance),
                 "Date": format_date(account.latest_balance_date)
                 if account.latest_balance_date
                 else None,
@@ -172,13 +148,12 @@ def update_accounts(request):
             for account in data:
                 delete_bool = account.get("delete")
                 card_id = account.get("id")
-                name = account.get("name").strip()
-                account_type = account.get("type")
-
                 if delete_bool:
                     Account.objects.get(id=card_id).delete()
                     continue
 
+                name = account.get("name")
+                account_type = account.get("type")
                 account = Account.objects.get(id=card_id)
                 account.name = name
                 account.type = account_type
@@ -218,7 +193,7 @@ def get_categories(request):
                 "Id": category_id,
                 "Type": category_type,
                 "Name": category_name,
-                "Budget": format_currency(category_budget),
+                "Budget": convert_currency_to_str_float(category_budget),
                 "Keywords": category_keywords,
                 "Color": color,
             }
@@ -234,20 +209,8 @@ def add_category(request):
         keywords = request.POST.get("category-keywords").lower()
         budget = request.POST.get("category-budget")
         category_type = request.POST.get("category-type")
-
-        if Category.objects.filter(user=request.user, name=category_name).exists():
-            return HttpResponse("Category already exists, edit the existing category")
-        category = Category(
-            user=request.user,
-            name=category_name,
-            keywords=keywords,
-            budget=budget,
-            type=category_type,
-        )
-        category.save()
-
-        return main(request)
-    return HttpResponse("Add category error")
+        CategoryDB(request.user).add(category_name, keywords, budget, category_type)
+    return main(request)
 
 
 @login_required
@@ -258,35 +221,27 @@ def update_categories(request):
             print("Data:", data)
             for category in data:
                 delete_bool = category.get("delete")
-                category_id = category.get("id")
                 category_name = category.get("name").strip()
+                if delete_bool:
+                    CategoryDB(request.user).delete(category_name)
+                    continue
+
                 category_keywords = category.get("keywords").lower()
-                category_budget_str = category.get("budget")
-                category_budget = decimal.Decimal(
-                    category_budget_str.replace("$", "").replace(",", "").strip()
-                )
+                category_budget = category.get("budget")
                 category_type = category.get("type")
                 category_color = category.get("color")
 
-                if delete_bool:
-                    Category.objects.get(id=category_id).delete()
-                    continue
-
                 try:
-                    Category.objects.update_or_create(
-                        user=request.user,
-                        id=category_id,
-                        defaults={
-                            "name": category_name,
-                            "keywords": category_keywords,
-                            "budget": category_budget,
-                            "type": category_type,
-                            "color": category_color,
-                        },
+                    CategoryDB(request.user).update(
+                        category_name,
+                        category_keywords,
+                        category_budget,
+                        category_type,
+                        category_color,
                     )
-                    print(colorama.Fore.GREEN + "Categories updated successfully")
+                    logger.debug("Categories updated successfully")
                 except Exception as e:
-                    print(colorama.Fore.RED + "Error updating category:", e)
+                    logger.error("Error updating category:", e)
 
             return JsonResponse({"success": True})
 

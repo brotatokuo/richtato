@@ -60,9 +60,16 @@ def month_mapping(month):
     return month
 
 
-def format_currency(value):
+def convert_currency_to_str_float(value):
     return "${:,.2f}".format(value)
 
 
 def format_date(value):
     return value.strftime("%Y-%m-%d")
+
+
+def convert_currency_to_float(currency_str: str | float) -> float:
+    if isinstance(currency_str, float):
+        return currency_str
+    else:
+        return float(currency_str.replace("$", "").replace(",", ""))

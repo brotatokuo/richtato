@@ -1,8 +1,7 @@
 from datetime import datetime
 
-from django.db import models
-
 from apps.richtato_user.models import User
+from django.db import models
 
 
 # Create your models here.

@@ -1,7 +1,8 @@
-from django.db import models
-
 from apps.account.models import Account
 from apps.richtato_user.models import User
+from django.db import models
+from loguru import logger
+from utilities.tools import convert_currency_to_float
 
 
 class Income(models.Model):
@@ -15,3 +16,50 @@ class Income(models.Model):
 
     def __str__(self):
         return f"{self.date} [{self.account_name}] (${self.amount}) {self.description}"
+
+
+class IncomeDB:
+    def __init__(self, user: User):
+        self.user = user
+
+    def add(self, account: str, description: str, date: str, amount: str) -> None:
+        logger.info("Adding income transaction")
+        logger.debug(f"Account: {account}")
+        logger.debug(f"Description: {description}")
+        logger.debug(f"Date: {date}")
+        logger.debug(f"Amount: {amount}")
+        account_name = Account.objects.get(user=self.user, name=account)
+        transaction = Income(
+            user=self.user,
+            account_name=account_name,
+            description=description,
+            date=date,
+            amount=convert_currency_to_float(amount),
+        )
+        transaction.save()
+
+    def delete(self, transaction_id: int) -> None:
+        try:
+            Income.objects.get(id=transaction_id).delete()
+        except Income.DoesNotExist:
+            pass
+
+    def update(
+        self,
+        transaction_id: int,
+        date: str,
+        description: str,
+        amount: str,
+    ) -> None:
+        try:
+            Income.objects.update_or_create(
+                user=self.user,
+                id=transaction_id,
+                defaults={
+                    "date": date,
+                    "description": description,
+                    "amount": convert_currency_to_float(amount),
+                },
+            )
+        except Income.DoesNotExist:
+            pass

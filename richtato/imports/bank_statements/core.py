@@ -56,7 +56,7 @@ class BankImporter(ABC):
         """
         Formats the amount column
         """
-        self.df["amount"] = self.df["amount"].apply(self._format_currency)
+        self.df["amount"] = self.df["amount"].apply(self._convert_currency_to_str_float)
 
     @staticmethod
     def _format_description(value: str):
@@ -66,7 +66,7 @@ class BankImporter(ABC):
         return value[0:30].title()
 
     @staticmethod
-    def _format_currency(value: float):
+    def _convert_currency_to_str_float(value: float):
         return "${:,.2f}".format(value)
 
     @staticmethod

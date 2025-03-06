@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
-from utilities.tools import format_currency, month_mapping
+from utilities.tools import convert_currency_to_str_float, month_mapping
 
 
 @login_required
@@ -109,7 +109,7 @@ def get_table_data(request):
                 "id": expense.id,
                 "date": expense.date,
                 "description": expense.description,
-                "amount": format_currency(expense.amount),
+                "amount": convert_currency_to_str_float(expense.amount),
             }
         )
 

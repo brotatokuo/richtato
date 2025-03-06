@@ -4,6 +4,7 @@ from django.contrib.auth.models import (
     PermissionsMixin,
 )
 from django.db import models
+from utilities.tools import convert_currency_to_float
 
 
 # Custom user manager
@@ -63,6 +64,25 @@ class CardAccount(models.Model):
         return f"[{self.user}] {self.name}"
 
 
+class CardAccountDB:
+    def __init__(self, user: User) -> None:
+        self.user = user
+
+    def add(self, card_name: str) -> None:
+        if CardAccount.objects.filter(user=self.user, name=card_name).exists():
+            return
+        card = CardAccount(user=self.user, name=card_name.strip())
+        card.save()
+
+    def delete(self, card_id: int) -> None:
+        CardAccount.objects.get(id=card_id).delete()
+
+    def update(self, card_id: int, card_name: str) -> None:
+        CardAccount.objects.update_or_create(
+            user=self.user, id=card_id, defaults={"name": card_name}
+        )
+
+
 class Category(models.Model):
     CATEGORY_TYPES = [
         ("essential", "Essential"),
@@ -78,3 +98,44 @@ class Category(models.Model):
 
     def __str__(self):
         return f"[{self.user}] {self.name}: {self.keywords}"
+
+
+class CategoryDB:
+    def __init__(self, user):
+        self.user = user
+
+    def add(
+        self, category_name: str, keywords: list[str], budget: str, category_type: str
+    ) -> None:
+        if Category.objects.filter(user=self.user, name=category_name).exists():
+            return
+        category = Category(
+            user=self.user,
+            name=category_name.strip(),
+            keywords=keywords,
+            budget=convert_currency_to_float(budget),
+            type=category_type,
+        )
+        category.save()
+
+    def delete(self, category_name: str) -> None:
+        Category.objects.filter(user=self.user, name=category_name).delete()
+
+    def update(
+        self,
+        category_name: str,
+        category_keywords: list[str],
+        category_budget: str,
+        category_type: str,
+        category_color: str,
+    ) -> None:
+        Category.objects.update_or_create(
+            user=self.user,
+            defaults={
+                "name": category_name,
+                "keywords": category_keywords,
+                "budget": category_budget,
+                "type": category_type,
+                "color": category_color,
+            },
+        )

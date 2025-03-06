@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 
 from apps.account.models import Account
-from apps.income.models import Income
+from apps.income.models import Income, IncomeDB
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.http import JsonResponse
@@ -11,7 +11,7 @@ from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
 from utilities.tools import (
     color_picker,
-    format_currency,
+    convert_currency_to_str_float,
     format_date,
     month_mapping,
 )
@@ -51,16 +51,7 @@ def add_entry(request):
         date = request.POST.get("balance-date")
         account = request.POST.get("account")
 
-        account_name = Account.objects.get(user=request.user, name=account)
-        # Create and save the transaction
-        transaction = Income(
-            user=request.user,
-            account_name=account_name,
-            description=description,
-            date=date,
-            amount=amount,
-        )
-        transaction.save()
+        IncomeDB(request.user).add(account, description, date, amount)
         return HttpResponseRedirect(reverse("income"))
     return HttpResponse("Data Entry Error")
 
@@ -74,23 +65,16 @@ def update(request):
             for transaction_data in data:
                 delete_bool = transaction_data.get("delete")
                 transaction_id = transaction_data.get("id")
-                account_name = transaction_data.get("name")
-                date = transaction_data.get("date")
-                amount = transaction_data.get("amount")
-                amount = float(amount.replace("$", "").replace(",", ""))
-
                 if delete_bool:
-                    Income.objects.get(id=transaction_id).delete()
+                    IncomeDB(request.user).delete(transaction_id)
                     continue
-
-                Income.objects.update_or_create(
-                    user=request.user,
-                    id=transaction_id,
-                    defaults={
-                        "date": date,
-                        "amount": amount,
-                    },
-                )
+                else:
+                    date = transaction_data.get("date")
+                    amount = transaction_data.get("amount")
+                    description = transaction_data.get("description")
+                    IncomeDB(request.user).update(
+                        transaction_id, date, description, amount
+                    )
 
             return JsonResponse({"success": True})
 
@@ -146,7 +130,7 @@ def get_plot_data(request):
             annual_total.append(float(monthly_total or 0))
 
         background_color, border_color = color_picker(index)
-        if type(item) == str:
+        if isinstance(item, str):
             label = item
         else:
             label = item.name
@@ -183,7 +167,7 @@ def get_table_data(request):
                     "id": income.id,
                     "date": format_date(income.date),
                     "description": income.description,
-                    "amount": format_currency(income.amount),
+                    "amount": convert_currency_to_str_float(income.amount),
                 }
             )
 
