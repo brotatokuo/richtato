@@ -41,6 +41,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     import_path = models.CharField(max_length=100, default="", blank=True, null=True)
     objects = UserManager()
 
+    USERNAME_FIELD = "username"
+    REQUIRED_FIELDS = []
+
     def __str__(self):
         return self.username
 

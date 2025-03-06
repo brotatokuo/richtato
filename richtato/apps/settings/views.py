@@ -24,7 +24,6 @@ def main(request):
             "category_list": category_list,
             "today_date": datetime.today().strftime("%Y-%m-%d"),
             "category_types": Category.CATEGORY_TYPES,
-            "google_sheets_link": request.user.google_sheets_link,
             "deploy_stage": os.getenv("DEPLOY_STAGE"),
         },
     )
