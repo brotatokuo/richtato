@@ -40,12 +40,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_superuser = models.BooleanField(default=False)
     import_path = models.CharField(max_length=100, default="", blank=True, null=True)
     objects = UserManager()
-    google_sheets_link = models.CharField(
-        max_length=100, default="", blank=True, null=True
-    )
-
-    USERNAME_FIELD = "username"  # Only username is used for login
-    REQUIRED_FIELDS = []  # No additional required fields for creating a superuser
 
     def __str__(self):
         return self.username
@@ -67,6 +61,11 @@ class CardAccount(models.Model):
 class CardAccountDB:
     def __init__(self, user: User) -> None:
         self.user = user
+
+    @classmethod
+    def from_username(cls, username: str):
+        user = User.objects.get(username=username)
+        return cls(user)
 
     def add(self, card_name: str) -> None:
         if CardAccount.objects.filter(user=self.user, name=card_name).exists():
@@ -103,6 +102,11 @@ class Category(models.Model):
 class CategoryDB:
     def __init__(self, user):
         self.user = user
+
+    @classmethod
+    def from_username(cls, username: str):
+        user = User.objects.get(username=username)
+        return cls(user)
 
     def add(
         self, category_name: str, keywords: list[str], budget: str, category_type: str
