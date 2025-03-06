@@ -206,7 +206,7 @@
               alt="Logo"
               class="navbar-logo"
             />
-            {% if deploy_stage %}
+            {% if deploy_stage == "dev" %}
                 Richtato {{ deploy_stage }}
             {% else %}
                 Richtato
