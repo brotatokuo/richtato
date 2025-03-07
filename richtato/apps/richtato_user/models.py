@@ -4,6 +4,8 @@ from django.contrib.auth.models import (
     PermissionsMixin,
 )
 from django.db import models
+from loguru import logger
+from utilities.db_model import DB
 from utilities.tools import convert_currency_to_float
 
 
@@ -61,7 +63,7 @@ class CardAccount(models.Model):
         return f"[{self.user}] {self.name}"
 
 
-class CardAccountDB:
+class CardAccountDB(DB):
     def __init__(self, user: User) -> None:
         self.user = user
 
@@ -70,11 +72,60 @@ class CardAccountDB:
         user = User.objects.get(username=username)
         return cls(user)
 
-    def add(self, card_name: str) -> None:
-        if CardAccount.objects.filter(user=self.user, name=card_name).exists():
-            return
-        card = CardAccount(user=self.user, name=card_name.strip())
-        card.save()
+    # @staticmethod
+    # async def add_async(data_list: list[dict]) -> None:
+    #     for data in data_list:
+    #         user = await sync_to_async(User.objects.get)(id=data["user_id"])
+    #         card_account_db = CardAccountDB(user)
+    #         for key, value in data.items():
+    #             if key != "user_id":
+    #                 await sync_to_async(card_account_db.add)(key, value)
+
+    # def add(self, card_attribute: str, card_value: str) -> None:
+    #     if not hasattr(CardAccount, card_attribute):
+    #         logger.error(
+    #             f"Error: {card_attribute} does not exist on CardAccount model."
+    #         )
+    #         return
+    #     if CardAccount.objects.filter(
+    #         user=self.user, **{card_attribute: card_value}
+    #     ).exists():
+    #         logger.warning(f"{card_attribute} = {card_value} already exists.")
+    #         return
+    #     card_account = CardAccount(
+    #         user=self.user, **{card_attribute: card_value.strip()}
+    #     )
+    #     card_account.save()
+    #     print(f"Saved card account with {card_attribute} = {card_value}")
+    def add(self, **kwargs) -> None:
+        """
+        Dynamically adds attributes and values to the CardAccount model.
+
+        Args:
+            **kwargs: Arbitrary keyword arguments representing attributes and values
+                      to be added to the CardAccount model.
+        """
+        # Iterate through each key-value pair in kwargs
+        for card_attribute, card_value in kwargs.items():
+            # Check if the CardAccount model has the card_attribute
+            if not hasattr(CardAccount, card_attribute):
+                logger.error(
+                    f"Error: {card_attribute} does not exist on CardAccount model."
+                )
+                return
+
+            # Check if the record already exists for the given attribute and value
+            if CardAccount.objects.filter(
+                user=self.user, **{card_attribute: card_value}
+            ).exists():
+                logger.warning(f"{card_attribute} = {card_value} already exists.")
+                return
+
+            card_account = CardAccount(
+                user=self.user, **{card_attribute: card_value.strip()}
+            )
+            card_account.save()
+            logger.info(f"Saved card account with {card_attribute} = {card_value}")
 
     def delete(self, card_id: int) -> None:
         CardAccount.objects.get(id=card_id).delete()
@@ -112,18 +163,49 @@ class CategoryDB:
         return cls(user)
 
     def add(
-        self, category_name: str, keywords: list[str], budget: str, category_type: str
+        self,
+        category_name: str,
+        keywords: list[str],
+        budget: str,
+        category_type: str,
+        **extra_fields,
     ) -> None:
+        """
+        Add a new category with dynamic input options.
+
+        Args:
+            category_name (str): Name of the category.
+            keywords (list[str]): List of keywords for the category.
+            budget (str): Budget for the category.
+            category_type (str): Type of the category.
+            **extra_fields: Additional dynamic fields for Category model.
+
+        Returns:
+            None
+        """
         if Category.objects.filter(user=self.user, name=category_name).exists():
             return
+
+        dynamic_fields = {}
+        for field, value in extra_fields.items():
+            if hasattr(Category, field):
+                dynamic_fields[field] = value
+            else:
+                logger.warning(f"Warning: {field} is not a valid field for Category.")
+
         category = Category(
             user=self.user,
             name=category_name.strip(),
             keywords=keywords,
             budget=convert_currency_to_float(budget),
             type=category_type,
+            **dynamic_fields,
         )
+
         category.save()
+        print(
+            f"Saved category with name = {category_name}, and dynamic fields: {dynamic_fields}"
+        )
 
     def delete(self, category_name: str) -> None:
         Category.objects.filter(user=self.user, name=category_name).delete()

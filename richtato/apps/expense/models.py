@@ -1,5 +1,6 @@
 from apps.richtato_user.models import CardAccount, Category, User
 from django.db import models
+from utilities.db_model import DB
 from utilities.tools import convert_currency_to_float
 
 
@@ -30,7 +31,7 @@ class Expense(models.Model):
         return sorted(years)
 
 
-class ExpenseDB:
+class ExpenseDB(DB):
     def __init__(self, user: User):
         self.user = user
 
