@@ -113,7 +113,7 @@ def get_table_data(request):
         account = Account.objects.get(name=account_name)
         account_histories = AccountTransaction.objects.filter(
             account=account, date__year=year, date__month=month
-        )
+        ).order_by("date")
 
         for entry in account_histories:
             table_data.append(

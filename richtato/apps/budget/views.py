@@ -102,7 +102,7 @@ def get_table_data(request):
     table_data = []
     expenses = Expense.objects.filter(
         user=request.user, date__year=year, date__month=month, category__name=category
-    )
+    ).order_by("date")
     for expense in expenses:
         table_data.append(
             {

@@ -176,7 +176,7 @@ def get_table_data(request):
             date__year=year,
             date__month=month,
             account_name__name=account,
-        )
+        ).order_by("date")
         for income in incomes:
             table_data.append(
                 {
