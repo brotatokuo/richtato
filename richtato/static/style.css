@@ -325,6 +325,7 @@ div.loader h1 span {
   display: flex;
   align-items: center;
   gap: var(--fourth-padding);
+  margin-left: auto;
 }
 .header .profile .bell {
   position: relative;

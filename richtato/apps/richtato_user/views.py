@@ -16,6 +16,10 @@ def get_user_id(request):
     return JsonResponse({"userID": request.user.id})
 
 
+def welcome(request):
+    return render(request, "welcome.html")
+
+
 class IndexView(View):
     def get(self, request):
         return render(
