@@ -14,7 +14,9 @@ import os
 from pathlib import Path
 from urllib.parse import urlparse
 
+from colorama import Fore
 from dotenv import load_dotenv
+from loguru import logger
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -83,37 +85,78 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "richtato.wsgi.application"
+
+def log_deploy_stage_message(
+    deploy_stage: str, color: str, icon: str, message: str, emoji: str
+) -> None:
+    logger.info(
+        f"{color}{'=' * 20} {emoji} DEPLOY_STAGE: {deploy_stage.upper()} {emoji} {'=' * 20}{Fore.RESET}\n"
+        f"{color}{message}{Fore.RESET}"
+    )
 
 
-if "prod" == os.getenv("DEPLOY_STAGE"):
-    load_dotenv()
+# Function to print deploy stage in a more friendly and clear way
+def print_deploy_stage(deploy_stage: str) -> None:
+    match deploy_stage:
+        case "LOCAL":
+            log_deploy_stage_message(
+                deploy_stage,
+                Fore.CYAN,
+                "🌟🚀",
+                f">>> The current environment is {deploy_stage.upper()}! All systems go! 💻",
+                "🚀",
+            )
 
-    # Replace the DATABASES section of your settings.py with this
-    tmpPostgres = urlparse(os.getenv("DATABASE_URL"))
-    db_name = tmpPostgres.path.replace("/", "")
-    print(f"db_name: {db_name}")
-    print(f"user: {tmpPostgres.username}")
-    print(f"password: {tmpPostgres.password}")
-    print(f"host: {tmpPostgres.hostname}")
+        case "DEV":
+            log_deploy_stage_message(
+                deploy_stage,
+                Fore.GREEN,
+                "🌱🎉",
+                ">>> You're in development mode! Feel free to experiment! 🌟",
+                "🎉",
+            )
 
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": tmpPostgres.path.replace("/", ""),
-            "USER": tmpPostgres.username,
-            "PASSWORD": tmpPostgres.password,
-            "HOST": tmpPostgres.hostname,
-            "PORT": 5432,
-        }
-    }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",  # The path to your SQLite database file
-        }
-    }
+        case "PROD":
+            logger.warning(
+                f"{Fore.RED}{'=' * 20} 🚨🚨 WARNING: DEPLOY_STAGE is {deploy_stage.upper()} 🚨🚨 {'=' * 20}\n"
+                f"{Fore.RED}>>> You are running in PRODUCTION! <<<{Fore.RESET}"
+            )
+
+
+# Load environment variables and set DEPLOY_STAGE
+def configure_database_for_stage(deploy_stage: str) -> dict:
+    match deploy_stage:
+        case "LOCAL":
+            return {
+                "default": {
+                    "ENGINE": "django.db.backends.sqlite3",
+                    "NAME": BASE_DIR / "db.sqlite3",
+                }
+            }
+        case "PROD" | "DEV":
+            PG_DB_URL = f"{deploy_stage}_DATABASE_URL"
+            db_url = os.getenv(PG_DB_URL)
+            tmpPostgres = urlparse(db_url)
+            db_name = tmpPostgres.path.lstrip("/")
+            return {
+                "default": {
+                    "ENGINE": "django.db.backends.postgresql",
+                    "NAME": db_name,
+                    "USER": tmpPostgres.username,
+                    "PASSWORD": tmpPostgres.password,
+                    "HOST": tmpPostgres.hostname,
+                    "PORT": tmpPostgres.port or 5432,
+                }
+            }
+        case _:
+            raise ValueError(f"Invalid DEPLOY_STAGE: {deploy_stage}")
+
+
+load_dotenv()
+DEPLOY_STAGE = os.getenv("DEPLOY_STAGE") or "DEV".upper()
+DATABASES = configure_database_for_stage(DEPLOY_STAGE)
+print_deploy_stage(DEPLOY_STAGE)
+os.environ["DEPLOY_STAGE"] = DEPLOY_STAGE
 
 
 # Password validation
@@ -160,4 +203,5 @@ STATICFILES_DIRS = [
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

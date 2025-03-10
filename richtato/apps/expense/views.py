@@ -189,7 +189,7 @@ def get_table_data(request) -> JsonResponse:
             date__year=year,
             date__month=month,
             account_name__name=account,
-        )
+        ).order_by("date")
         for expense in expenses:
             table_data.append(
                 {
@@ -201,7 +201,6 @@ def get_table_data(request) -> JsonResponse:
                     "category": expense.category.name,
                 }
             )
-    print(table_data)
     return JsonResponse(table_data, safe=False)
 
 
