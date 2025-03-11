@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 from colorama import Fore
 from dotenv import load_dotenv
 from loguru import logger
-
+DEPLOY_STAGE = os.getenv("DEPLOY_STAGE") or "DEV".upper()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -62,10 +62,13 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "apps.settings.self_ping_middleware.SelfPingMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+if DEPLOY_STAGE == "PROD":
+    MIDDLEWARE.insert(5, "apps.settings.self_ping_middleware.SelfPingMiddleware")
+
 
 ROOT_URLCONF = "richtato.urls"
 
@@ -153,7 +156,6 @@ def configure_database_for_stage(deploy_stage: str) -> dict:
 
 
 load_dotenv()
-DEPLOY_STAGE = os.getenv("DEPLOY_STAGE") or "DEV".upper()
 DATABASES = configure_database_for_stage(DEPLOY_STAGE)
 print_deploy_stage(DEPLOY_STAGE)
 os.environ["DEPLOY_STAGE"] = DEPLOY_STAGE

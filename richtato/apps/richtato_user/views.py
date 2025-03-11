@@ -19,6 +19,17 @@ def get_user_id(request):
 def welcome(request):
     return render(request, "welcome.html")
 
+def friends(request):
+    return render(request, "friends.html")
+
+def files(request):
+    return render(request, "files.html")
+
+def goals(request):
+    return render(request, "goals.html")
+
+def profile(request):
+    return render(request, "profile.html")
 
 class IndexView(View):
     def get(self, request):
