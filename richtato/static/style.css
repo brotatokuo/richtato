@@ -570,7 +570,7 @@ main .main-content .title::after {
 }
 
 .main-content-boxes .box:nth-child(2) form button,
-.main-content-boxes .box a {
+.main-content-boxes .box button {
   margin-top: var(--third-margin);
   border: 1px solid var(--eee-color);
   background-color: var(--blue-color);
@@ -1694,6 +1694,11 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
 .main-content .profile-box .profile-info p {
   color: var(--third-color);
   margin-bottom: var(--fourth-margin);
+}
+
+#user-profile-avatar{
+  width: 50px;
+  height: 50px;
 }
 
 .main-content .progress {

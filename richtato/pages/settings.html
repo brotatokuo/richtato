@@ -20,22 +20,29 @@
           <label for="full-name">Full Name</label>
           <div class="email">
             <input type="text" placeholder="Potato Kuo" id="full-name" />
-            <a href="/#">Edit</a>
+            <button>Edit</button>
           </div>
 
           <label for="username">Username</label>
           <div class="email">
             <input type="text" placeholder="admin" id="user-name" />
-            <a href="/#">Edit</a>
+            <button>Edit</button>
           </div>
 
           <label for="Email">Email</label>
           <div class="email">
-            <input type="email" disabled id="Email" value="richtato@gmail.com" />
-            <a href="/#">Edit</a>
+            <input type="text" id="email" value="richtato@gmail.com" />
+            <button>Edit</button>
           </div>
 
           <label for="avatar">Avatar</label>
+          <div class="email">
+            <div class="profile">
+              <img src="{% static 'images/avatar.png' %}" id="user-profile-avatar" class="avatar" alt="User Avatar" />
+              <button class="edit-button" id="edit-avatar-button">Edit</button>
+              <input type="file" id="file-input" class="file-input" accept="image/*" />
+            </div>
+          </div>
         </form>
       </div>
     </div>
@@ -52,7 +59,7 @@
             <p style="font-weight: normal">Password</p>
             <span>Last Change On 25/10/2021</span>
           </div>
-          <a href="/#">Change</a>
+          <button>Change</button>
         </div>
 
         <div class="person-security-info">
@@ -68,7 +75,7 @@
             <p style="font-weight: normal">Devices</p>
             <span>Check The Login Devices List</span>
           </div>
-          <a href="/#">Devices</a>
+          <button>Devices</button>
         </div>
       </div>
     </div>
@@ -110,7 +117,7 @@
       <h2>Richtato Control</h2>
       <label for="theme">Theme</label>
     </div>
-    
+
     <!-- <div class="box">
       <div class="box-section1">
         <div class="box-title">
