@@ -17,6 +17,7 @@ from urllib.parse import urlparse
 from colorama import Fore
 from dotenv import load_dotenv
 from loguru import logger
+
 DEPLOY_STAGE = os.getenv("DEPLOY_STAGE") or "DEV".upper()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -139,6 +140,9 @@ def configure_database_for_stage(deploy_stage: str) -> dict:
         case "PROD" | "DEV":
             PG_DB_URL = f"{deploy_stage}_DATABASE_URL"
             db_url = os.getenv(PG_DB_URL)
+            assert (
+                db_url
+            ), f"Missing {PG_DB_URL} environment variable for {deploy_stage}"
             tmpPostgres = urlparse(db_url)
             db_name = tmpPostgres.path.lstrip("/")
             return {

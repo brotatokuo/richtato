@@ -1,9 +1,7 @@
 import decimal
 import json
-from datetime import datetime
 
 import colorama
-import os
 from apps.account.models import Account, AccountTransaction
 from apps.richtato_user.models import CardAccount, Category
 from apps.settings.models import DataImporter
@@ -14,19 +12,18 @@ from django.urls import reverse
 from utilities.tools import format_currency, format_date
 
 
-@login_required
 def main(request):
-    category_list = list(Category.objects.filter(user=request.user))
+    # category_list = list(Category.objects.filter(user=request.user))
     return render(
         request,
         "settings.html",
-        {
-            "account_types": Account.ACCOUNT_TYPES,
-            "category_list": category_list,
-            "today_date": datetime.today().strftime("%Y-%m-%d"),
-            "category_types": Category.CATEGORY_TYPES,
-            "deploy_stage": os.getenv("DEPLOY_STAGE"),
-        },
+        # {
+        #     "account_types": Account.ACCOUNT_TYPES,
+        #     "category_list": category_list,
+        #     "today_date": datetime.today().strftime("%Y-%m-%d"),
+        #     "category_types": Category.CATEGORY_TYPES,
+        #     "deploy_stage": os.getenv("DEPLOY_STAGE"),
+        # },
     )
 
 

@@ -1,106 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    {% load static %}
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="{% static 'all.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'style.css' %}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;500&amp;display=swap"
+      rel="stylesheet"
+    />
+    <title>{% block title %}My Website{% endblock %}</title>
+  </head>
 
-<head>
-  {% load static %}
-  <meta charset="UTF-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="{% static 'all.min.css' %}" />
-  <link rel="stylesheet" href="{% static 'style.css' %}" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;500&amp;display=swap" rel="stylesheet" />
-  <title>{% block title %}My Website{% endblock %}</title>
-</head>
+  <body>
+    <div class="loader">
+      <h1>Loading<span>....</span></h1>
+    </div>
+    <div class="page-content index-page">
+      <div class="sidebar">
+        <div class="brand">
+          <i class="fa-solid fa-xmark xmark"></i>
+          <img
+            src="{% static 'media/richtato.ico' %}"
+            alt="Richtato Logo"
+            class="brand-logo"
+          />
+          <h3 class="brand-name">Richtato{% suffix %}</h3>
+        </div>
+        <ul>
+          <li>
+            <a href="{% url 'index' %}" class="sidebar-link">
+              <i class="fa-regular fa-chart-bar fa-fw"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
 
-<body>
-  <div class="loader">
-    <h1>Loading<span>....</span></h1>
-  </div>
-  <div class="page-content index-page">
-    <div class="sidebar">
-      <div class="brand">
-        <i class="fa-solid fa-xmark xmark"></i>
-        <img src="{% static 'media/richtato.ico' %}" alt="Richtato Logo" class="brand-logo">
-        <h3 class="brand-name">Richtato</h3>
-      </div>
-      <ul>
-        <li>
-          <a href="{% url 'index' %}" class="sidebar-link">
-            <i class="fa-regular fa-chart-bar fa-fw"></i>
-            <span>Dashboard</span>
-          </a>
-        </li>
+          <li>
+            <a href="{% url 'settings' %}" class="sidebar-link">
+              <i class="fa-solid fa-gear fa-fw"></i>
+              <span>Settings</span>
+            </a>
+          </li>
 
-        <li>
-          <a href="{% url 'settings' %}" class="sidebar-link">
-            <i class="fa-solid fa-gear fa-fw"></i>
-            <span>Settings</span>
-          </a>
-        </li>
+          <li>
+            <a href="{% url 'profile' %}" class="sidebar-link">
+              <i class="fa-regular fa-user fa-fw"></i><span>Profile</span>
+            </a>
+          </li>
 
-        <li>
-          <a href="{% url 'profile' %}" class="sidebar-link">
-            <i class="fa-regular fa-user fa-fw"></i><span>Profile</span>
-          </a>
-        </li>
+          <li>
+            <a href="{% url 'goals' %}" class="sidebar-link">
+              <i class="fa-solid fa-bullseye fa-fw"></i><span>Goals</span>
+            </a>
+          </li>
 
-        <li>
-          <a href="{% url 'goals' %}" class="sidebar-link">
-            <i class="fa-solid fa-diagram-project fa-fw"></i><span>Goals</span>
-          </a>
-        </li>
+          <li>
+            <a href="{% url 'friends' %}" class="sidebar-link">
+              <i class="fa-regular fa-circle-user fa-fw"></i
+              ><span>Friends</span>
+            </a>
+          </li>
 
-        <li>
-          <a href="{% url 'friends' %}" class="sidebar-link">
-            <i class="fa-regular fa-circle-user fa-fw"></i><span>Friends</span>
-          </a>
-        </li>
+          <li>
+            <a href="{% url 'files' %}" class="sidebar-link">
+              <i class="fa-regular fa-file fa-fw"></i> <span>Files</span>
+            </a>
+          </li>
 
-        <li>
-          <a href="{% url 'files' %}" class="sidebar-link">
-            <i class="fa-regular fa-file fa-fw"></i> <span>Files</span>
-          </a>
-        </li>
-
-        <!-- <li>
+          <!-- <li>
           <a href="" class="sidebar-link">
             <i class="fa-solid fa-table fa-fw"></i><span>Spreadsheet</span>
           </a>
         </li> -->
 
-        <!-- <li>
+          <!-- <li>
           <a href="" class="sidebar-link">
             <i class="fa-regular fa-credit-card fa-fw"></i><span>Expenses</span>
           </a>
         </li> -->
-      </ul>
-    </div>
-    <main>
-      <div class="header">
-        <!-- <i class="fa-solid fa-bars bar-item"></i>
+        </ul>
+      </div>
+      <main>
+        <div class="header">
+          <!-- <i class="fa-solid fa-bars bar-item"></i>
           <div class="search">
             <input type="search" placeholder="Type A Keyword" />
           </div> -->
 
-        <div class="profile">
-          <span class="bell"><i class="fa-regular fa-bell fa-lg"></i></span>
-          <a href="{% url 'profile' %}">
-            <img src="{% static 'images/avatar.png' %}" alt="No Image" />
-          </a>
+          <div class="profile">
+            <span class="bell"><i class="fa-regular fa-bell fa-lg"></i></span>
+            <a href="{% url 'profile' %}">
+              <img src="{% static 'images/avatar.png' %}" alt="No Image" />
+            </a>
+          </div>
         </div>
-      </div>
-      {% block content %}
-      <!-- Content to be filled by child templates -->
-      {% endblock %}
-    </main>
-  </div>
+        {% block content %}
+        <!-- Content to be filled by child templates -->
+        {% endblock %}
+      </main>
+    </div>
 
-  <!-- Appzi: Capture Insightful Feedback -->
-  <script async src="https://w.appzi.io/w.js?token=JCm1L"></script>
-  <!-- End Appzi -->
-  <script src="{% static 'js/script.js' %}"></script>
-</body>
-
+    <!-- Appzi: Capture Insightful Feedback -->
+    <script async src="https://w.appzi.io/w.js?token=JCm1L"></script>
+    <!-- End Appzi -->
+    <script src="{% static 'js/script.js' %}"></script>
+  </body>
 </html>

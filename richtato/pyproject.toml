@@ -25,8 +25,8 @@ dependencies = [
     "gspread-dataframe==4.0.0",
     "openpyxl==3.1.5",
     "python-Levenshtein==0.26.1",
-    "python-dotenv==1.0.1"
-    "loguru=="0.7.3",
+    "python-dotenv==1.0.1",
+    "loguru==0.7.3",
 ]
 
 [tool.setuptools.packages]

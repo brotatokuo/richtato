@@ -5,7 +5,7 @@ import pandas as pd
 from apps.account.models import Account, AccountTransaction
 from apps.expense.models import Category, Expense
 from apps.income.models import Income
-from apps.richtato_user.models import CardAccount, Category
+from apps.richtato_user.models import CardAccount
 
 
 # Create your models here.

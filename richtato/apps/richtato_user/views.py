@@ -19,23 +19,32 @@ def get_user_id(request):
 def welcome(request):
     return render(request, "welcome.html")
 
+
 def friends(request):
     return render(request, "friends.html")
+
 
 def files(request):
     return render(request, "files.html")
 
+
 def goals(request):
     return render(request, "goals.html")
+
 
 def profile(request):
     return render(request, "profile.html")
 
+
 class IndexView(View):
     def get(self, request):
-        return render(
-            request, "index.html", {"deploy_stage": os.getenv("DEPLOY_STAGE")}
-        )
+        deploy_stage = os.getenv("DEPLOY_STAGE")
+        if deploy_stage and deploy_stage.upper() == "PROD":
+            suffix = ""
+        else:
+            suffix = deploy_stage
+
+        return render(request, "index.html", {"suffix": suffix})
 
 
 class LoginView(View):
