@@ -5,50 +5,57 @@ from apps.richtato_user.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
-from django.http import HttpResponseRedirect, JsonResponse
+from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
+from loguru import logger
 
 
-@login_required
-def get_user_id(request):
-    return JsonResponse({"userID": request.user.id})
+def index(request: HttpRequest) -> HttpResponseRedirect:
+    if request.user.is_authenticated:
+        logger.debug(f"User {request.user} is authenticated.")
+        return HttpResponseRedirect(reverse("dashboard"))
+    else:
+        return HttpResponseRedirect(reverse("welcome"))
 
 
-def welcome(request):
+def dashboard(request: HttpRequest):
+    deploy_stage = os.getenv("DEPLOY_STAGE")
+    if deploy_stage and deploy_stage.upper() == "PROD":
+        suffix = ""
+    else:
+        suffix = deploy_stage
+    return render(request, "dashboard.html", {"suffix": suffix})
+
+
+def welcome(request: HttpRequest):
     return render(request, "welcome.html")
 
 
-def friends(request):
+@login_required
+def get_user_id(request: HttpRequest):
+    return JsonResponse({"userID": request.user.pk})
+
+
+def friends(request: HttpRequest):
     return render(request, "friends.html")
 
 
-def files(request):
+def files(request: HttpRequest):
     return render(request, "files.html")
 
 
-def goals(request):
+def goals(request: HttpRequest):
     return render(request, "goals.html")
 
 
-def profile(request):
+def profile(request: HttpRequest):
     return render(request, "profile.html")
 
 
-class IndexView(View):
-    def get(self, request):
-        deploy_stage = os.getenv("DEPLOY_STAGE")
-        if deploy_stage and deploy_stage.upper() == "PROD":
-            suffix = ""
-        else:
-            suffix = deploy_stage
-
-        return render(request, "index.html", {"suffix": suffix})
-
-
 class LoginView(View):
-    def get(self, request):
+    def get(self, request: HttpRequest):
         return render(
             request,
             "login.html",
@@ -59,9 +66,9 @@ class LoginView(View):
             },
         )
 
-    def post(self, request):
-        username = request.POST["username"]
-        password = request.POST["password"]
+    def post(self, request: HttpRequest):
+        username = request.POST.get("username")
+        password = request.POST.get("password")
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
@@ -80,21 +87,21 @@ class LoginView(View):
 
 
 class LogoutView(View):
-    def get(self, request):
+    def get(self, request: HttpRequest):
         logout(request)
         return HttpResponseRedirect(reverse("index"))
 
 
 class RegisterView(View):
-    def get(self, request):
+    def get(self, request: HttpRequest):
         return render(
             request, "register.html", {"deploy_stage": os.getenv("DEPLOY_STAGE")}
         )
 
-    def post(self, request):
-        username = request.POST["username"]
-        password = request.POST["password"]
-        confirmation = request.POST["password2"]
+    def post(self, request: HttpRequest):
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+        confirmation = request.POST.get("password2")
 
         if password != confirmation:
             return render(

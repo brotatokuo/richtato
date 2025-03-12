@@ -12,47 +12,30 @@
     <div class="box">
       <div class="box-section1">
         <div class="box-title">
-          <h2>Site Control</h2>
-          <p>Control The Website If There Is Maintenance</p>
-        </div>
-      </div>
-      <div class="settings-box-section2">
-        <div class="settings-box-website-control">
-          <div class="settings-box-title">
-            <p>Website Control</p>
-            <p>Open/Close Website And Type The Reason</p>
-          </div>
-          <span class="toggle"></span>
-        </div>
-        <form>
-          <textarea name="" placeholder="Close Message Content"></textarea>
-        </form>
-      </div>
-    </div>
-
-    <div class="box">
-      <div class="box-section1">
-        <div class="box-title">
           <h2>General Info</h2>
-          <p>General Information About Your Account</p>
         </div>
       </div>
       <div class="general-info-section2">
         <form>
-          <label for="first-name">First Name</label>
-          <input type="text" placeholder="First Name" id="first-name" />
-          <label for="last-name">Last Name</label>
-          <input type="text" placeholder="Last Name" id="last-name" />
+          <label for="full-name">Full Name</label>
+          <div class="email">
+            <input type="text" placeholder="Potato Kuo" id="full-name" />
+            <a href="/#">Edit</a>
+          </div>
+
+          <label for="username">Username</label>
+          <div class="email">
+            <input type="text" placeholder="admin" id="user-name" />
+            <a href="/#">Edit</a>
+          </div>
+
           <label for="Email">Email</label>
           <div class="email">
-            <input
-              type="email"
-              disabled
-              id="Email"
-              value="zana.suleiman.44@gmail.com"
-            />
-            <a href="/#">Change</a>
+            <input type="email" disabled id="Email" value="richtato@gmail.com" />
+            <a href="/#">Edit</a>
           </div>
+
+          <label for="avatar">Avatar</label>
         </form>
       </div>
     </div>
@@ -61,7 +44,6 @@
       <div class="box-section1">
         <div class="box-title">
           <h2>Security Info</h2>
-          <p>Security Information About Your Account</p>
         </div>
       </div>
       <div class="security-info-section2">
@@ -90,8 +72,46 @@
         </div>
       </div>
     </div>
+    <div class="box">
+      <div class="box-section1 settings-section1">
+        <div class="box-title">
+          <h2>Dashboard Control</h2>
+        </div>
+      </div>
+      <div class="widgets-control-section2">
+        <form>
+          <ul>
+            <li>
+              <input type="checkbox" id="one" />
+              <label for="one">Expense</label>
+            </li>
+            <li>
+              <input type="checkbox" id="two" checked />
+              <label for="two">Budget</label>
+            </li>
+            <li>
+              <input type="checkbox" id="three" />
+              <label for="three">Savings Goals</label>
+            </li>
+            <li>
+              <input type="checkbox" id="four" checked />
+              <label for="four">Accounts</label>
+            </li>
+            <li>
+              <input type="checkbox" id="five" />
+              <label for="five">Assets Breakdown</label>
+            </li>
+          </ul>
+        </form>
+      </div>
+    </div>
 
     <div class="box">
+      <h2>Richtato Control</h2>
+      <label for="theme">Theme</label>
+    </div>
+    
+    <!-- <div class="box">
       <div class="box-section1">
         <div class="box-title">
           <h2>Social Info</h2>
@@ -118,46 +138,30 @@
           </div>
         </form>
       </div>
-    </div>
-    <div class="box">
-      <div class="box-section1 settings-section1">
+    </div> -->
+
+    <!-- <div class="box">
+      <div class="box-section1">
         <div class="box-title">
-          <h2>Widgets Control</h2>
-          <p>Show/Hide Widgets</p>
+          <h2>Site Control</h2>
+          <p>Control The Website If There Is Maintenance</p>
         </div>
       </div>
-      <div class="widgets-control-section2">
+      <div class="settings-box-section2">
+        <div class="settings-box-website-control">
+          <div class="settings-box-title">
+            <p>Website Control</p>
+            <p>Open/Close Website And Type The Reason</p>
+          </div>
+          <span class="toggle"></span>
+        </div>
         <form>
-          <ul>
-            <li>
-              <input type="checkbox" id="one" />
-              <label for="one">Quick Draft</label>
-            </li>
-            <li>
-              <input type="checkbox" id="two" checked />
-              <label for="two">Yearly Targets</label>
-            </li>
-            <li>
-              <input type="checkbox" id="three" />
-              <label for="three">Tickets Statistics</label>
-            </li>
-            <li>
-              <input type="checkbox" id="four" checked />
-              <label for="four">Latest News</label>
-            </li>
-            <li>
-              <input type="checkbox" id="five" />
-              <label for="five">Latest Tasks</label>
-            </li>
-            <li>
-              <input type="checkbox" id="six" checked />
-              <label for="six">Top Search Items</label>
-            </li>
-          </ul>
+          <textarea name="" placeholder="Close Message Content"></textarea>
         </form>
       </div>
-    </div>
-    <div class="box">
+    </div> -->
+
+    <!-- <div class="box">
       <div class="box-section1 settings-section1">
         <div class="box-title">
           <h2>Backup Manager</h2>
@@ -205,7 +209,7 @@
           </label>
         </div>
       </div>
-    </div>
+    </div> -->
   </div>
 </div>
 {% endblock %}
