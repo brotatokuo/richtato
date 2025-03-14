@@ -1,0 +1,64 @@
+{% extends 'base.html' %} {% load static %}
+<!-- prettier-ignore-start -->
+{% block title %} Settings {% endblock %}
+<!-- prettier-ignore-start -->
+{% block content %}
+<div class="main-content">
+  <div class="title">
+    <h1>Temp input</h1>
+  </div>
+
+  <div class="main-content-boxes">
+    <div class="box">
+      <div class="box-section1">
+        <div class="box-title">
+          <h2>Expense</h2>
+        </div>
+      </div>
+      <div class="general-info-section2">
+        <form method="post" action="add-entry/">
+          {% csrf_token %}
+
+          <div class="form-group">
+            <label for="account">Card:</label>
+            <select class="form-control" id="account" name="account" required>
+              {% for account in transaction_accounts %}
+              <option value="{{ account }}">{{ account }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="description">Description:</label>
+            <input class="form-control" type="text" id="description" name="description" required />
+          </div>
+
+          <div class="form-group">
+            <label for="amount">Amount:</label>
+            <input class="form-control" id="balance-input" type="text" id="amount" name="amount" required />
+          </div>
+
+          <div class="form-group">
+            <label for="date">Date:</label>
+            <input class="form-control" type="date" id="balance-date" name="balance-date" value="{{ today_date }}"
+              required />
+          </div>
+
+          <div class="form-group">
+            <label for="category">Category:</label>
+            <select class="form-control" id="category" name="category" required>
+              {% for category in category_list %}
+              <option value="{{ category }}">{{ category }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <button type="submit" class="btn-secondary">Add Entry</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'richtato/expense.js' %}"></script>
+{% endblock %}

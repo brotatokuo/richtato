@@ -1,5 +1,7 @@
 import decimal
 import json
+import os
+from datetime import datetime
 
 import colorama
 from apps.account.models import Account, AccountTransaction
@@ -13,17 +15,17 @@ from utilities.tools import format_currency, format_date
 
 
 def main(request):
-    # category_list = list(Category.objects.filter(user=request.user))
+    category_list = list(Category.objects.filter(user=request.user))
     return render(
         request,
-        "settings.html",
-        # {
-        #     "account_types": Account.ACCOUNT_TYPES,
-        #     "category_list": category_list,
-        #     "today_date": datetime.today().strftime("%Y-%m-%d"),
-        #     "category_types": Category.CATEGORY_TYPES,
-        #     "deploy_stage": os.getenv("DEPLOY_STAGE"),
-        # },
+        "old_settings.html",
+        {
+            "account_types": Account.ACCOUNT_TYPES,
+            "category_list": category_list,
+            "today_date": datetime.today().strftime("%Y-%m-%d"),
+            "category_types": Category.CATEGORY_TYPES,
+            "deploy_stage": os.getenv("DEPLOY_STAGE"),
+        },
     )
 
 

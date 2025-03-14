@@ -1,0 +1,222 @@
+{% extends 'base.html' %} {% load static %}
+<!-- prettier-ignore-start -->
+{% block title %} Settings {% endblock %}
+<!-- prettier-ignore-start -->
+{% block content %}
+<div class="main-content">
+  <div class="title">
+    <h1>User Settings</h1>
+  </div>
+
+  <div class="main-content-boxes">
+    <div class="box">
+      <div class="box-section1">
+        <div class="box-title">
+          <h2>General Info</h2>
+        </div>
+      </div>
+      <div class="general-info-section2">
+        <form>
+          <label for="full-name">Full Name</label>
+          <div class="email">
+            <input type="text" placeholder="Potato Kuo" id="full-name" />
+            <button>Edit</button>
+          </div>
+
+          <label for="username">Username</label>
+          <div class="email">
+            <input type="text" placeholder="admin" id="user-name" />
+            <button>Edit</button>
+          </div>
+
+          <label for="Email">Email</label>
+          <div class="email">
+            <input type="text" id="email" value="richtato@gmail.com" />
+            <button>Edit</button>
+          </div>
+
+          <label for="avatar">Avatar</label>
+          <div class="email">
+            <div class="profile">
+              <img src="{% static 'images/avatar.png' %}" id="user-profile-avatar" class="avatar" alt="User Avatar" />
+              <button class="edit-button" id="edit-avatar-button">Edit</button>
+              <input type="file" id="file-input" class="file-input" accept="image/*" />
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="box">
+      <div class="box-section1">
+        <div class="box-title">
+          <h2>Security Info</h2>
+        </div>
+      </div>
+      <div class="security-info-section2">
+        <div class="person-security-info">
+          <div class="person-info">
+            <p style="font-weight: normal">Password</p>
+            <span>Last Change On 25/10/2021</span>
+          </div>
+          <button>Change</button>
+        </div>
+
+        <div class="person-security-info">
+          <div class="person-info">
+            <p style="font-weight: normal">Two-Factor Authentication</p>
+            <span>Enable/Disable The Feature</span>
+          </div>
+          <span class="toggle toggle1"></span>
+        </div>
+
+        <div class="person-security-info">
+          <div class="person-info">
+            <p style="font-weight: normal">Devices</p>
+            <span>Check The Login Devices List</span>
+          </div>
+          <button>Devices</button>
+        </div>
+      </div>
+    </div>
+    <div class="box">
+      <div class="box-section1 settings-section1">
+        <div class="box-title">
+          <h2>Dashboard Control</h2>
+        </div>
+      </div>
+      <div class="widgets-control-section2">
+        <form>
+          <ul>
+            <li>
+              <input type="checkbox" id="one" />
+              <label for="one">Expense</label>
+            </li>
+            <li>
+              <input type="checkbox" id="two" checked />
+              <label for="two">Budget</label>
+            </li>
+            <li>
+              <input type="checkbox" id="three" />
+              <label for="three">Savings Goals</label>
+            </li>
+            <li>
+              <input type="checkbox" id="four" checked />
+              <label for="four">Accounts</label>
+            </li>
+            <li>
+              <input type="checkbox" id="five" />
+              <label for="five">Assets Breakdown</label>
+            </li>
+          </ul>
+        </form>
+      </div>
+    </div>
+
+    <div class="box">
+      <h2>Richtato Control</h2>
+      <label for="theme">Theme</label>
+    </div>
+
+    <!-- <div class="box">
+      <div class="box-section1">
+        <div class="box-title">
+          <h2>Social Info</h2>
+          <p>Social Media Information</p>
+        </div>
+      </div>
+      <div class="social-info-section2">
+        <form>
+          <div class="social-info-icon">
+            <i class="fa-brands fa-twitter"></i>
+            <input type="text" placeholder="Twitter Username" />
+          </div>
+          <div class="social-info-icon">
+            <i class="fa-brands fa-facebook-f"></i>
+            <input type="text" placeholder="Facebook Username" />
+          </div>
+          <div class="social-info-icon">
+            <i class="fa-brands fa-linkedin"></i>
+            <input type="text" placeholder="Linkedin Username" />
+          </div>
+          <div class="social-info-icon">
+            <i class="fa-brands fa-youtube"></i>
+            <input type="text" placeholder="Youtube Username" />
+          </div>
+        </form>
+      </div>
+    </div> -->
+
+    <!-- <div class="box">
+      <div class="box-section1">
+        <div class="box-title">
+          <h2>Site Control</h2>
+          <p>Control The Website If There Is Maintenance</p>
+        </div>
+      </div>
+      <div class="settings-box-section2">
+        <div class="settings-box-website-control">
+          <div class="settings-box-title">
+            <p>Website Control</p>
+            <p>Open/Close Website And Type The Reason</p>
+          </div>
+          <span class="toggle"></span>
+        </div>
+        <form>
+          <textarea name="" placeholder="Close Message Content"></textarea>
+        </form>
+      </div>
+    </div> -->
+
+    <!-- <div class="box">
+      <div class="box-section1 settings-section1">
+        <div class="box-title">
+          <h2>Backup Manager</h2>
+          <p>Control Backup Time And Location</p>
+        </div>
+      </div>
+      <div class="backup-mangager-section2">
+        <form>
+          <ul>
+            <li>
+              <input type="radio" id="radio-one" name="time" />
+              <label for="radio-one">Daily</label>
+            </li>
+            <li>
+              <input type="radio" id="radio-two" name="time" checked />
+              <label for="radio-two">Weekly</label>
+            </li>
+            <li>
+              <input type="radio" id="radio-three" name="time" />
+              <label for="radio-three">Monthly</label>
+            </li>
+          </ul>
+        </form>
+      </div>
+      <div class="backup-manager-section3">
+        <input type="radio" name="box-radio" id="box-radio-1" />
+        <div>
+          <label for="box-radio-1">
+            <i class="fa-solid fa-server"></i>
+            Megaman
+          </label>
+        </div>
+        <input type="radio" name="box-radio" id="box-radio-2" />
+        <div>
+          <label for="box-radio-2">
+            <i class="fa-solid fa-server"></i>
+            Zero
+          </label>
+        </div>
+        <input type="radio" name="box-radio" id="box-radio-3" checked />
+        <div>
+          <label for="box-radio-3">
+            <i class="fa-solid fa-server"></i>
+            Sigma
+          </label>
+        </div>
+      </div>
+    </div> -->
+  </div>
+</div>
+{% endblock %}

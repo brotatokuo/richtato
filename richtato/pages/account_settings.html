@@ -5,44 +5,46 @@
 {% block content %}
 <div class="main-content">
   <div class="title">
-    <h1>Settings</h1>
+    <h1>Account Settings</h1>
   </div>
 
   <div class="main-content-boxes">
     <div class="box">
       <div class="box-section1">
         <div class="box-title">
-          <h2>General Info</h2>
+          <h2>Card Accounts</h2>
         </div>
       </div>
       <div class="general-info-section2">
-        <form>
-          <label for="full-name">Full Name</label>
-          <div class="email">
-            <input type="text" placeholder="Potato Kuo" id="full-name" />
-            <button>Edit</button>
+        <table class="styled-table" id="settings-card-table">
+          <thead>
+            <tr>
+              <th style="display: none">Delete</th>
+              <th style="display: none">Card ID</th>
+              <th>Card Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Rows will be populated here by JavaScript -->
+          </tbody>
+        </table>
+
+        <button class="btn-secondary editButton" id="settingsCardEditButton">
+          Edit
+        </button>
+
+        <form class="settings-add-form" , method="post" action="{% url 'settings_add_card'%}">
+          {% csrf_token %}
+          <div class="form-group">
+            <label for="account-name">Card Name</label>
+            <input class="form-control" id="account-name" name="account-name" type="string" required />
           </div>
 
-          <label for="username">Username</label>
-          <div class="email">
-            <input type="text" placeholder="admin" id="user-name" />
-            <button>Edit</button>
-          </div>
+          {% if error_card_message %}
+          <div class="wrong-password">{{error_card_message}}</div>
+          {% endif %}
 
-          <label for="Email">Email</label>
-          <div class="email">
-            <input type="text" id="email" value="richtato@gmail.com" />
-            <button>Edit</button>
-          </div>
-
-          <label for="avatar">Avatar</label>
-          <div class="email">
-            <div class="profile">
-              <img src="{% static 'images/avatar.png' %}" id="user-profile-avatar" class="avatar" alt="User Avatar" />
-              <button class="edit-button" id="edit-avatar-button">Edit</button>
-              <input type="file" id="file-input" class="file-input" accept="image/*" />
-            </div>
-          </div>
+          <input class="btn-secondary" id="submit-balance" type="submit" value="Add" />
         </form>
       </div>
     </div>
