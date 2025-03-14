@@ -13,12 +13,7 @@ from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
 from google_gemini.ai import AI
 from graph.chart_theme import ChartTheme
-from utilities.tools import (
-    color_picker,
-    format_currency,
-    format_date,
-    month_mapping,
-)
+from utilities.tools import color_picker, format_currency, format_date, month_mapping
 
 pst = pytz.timezone("US/Pacific")
 
