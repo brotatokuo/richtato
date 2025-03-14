@@ -187,9 +187,62 @@ div.loader h1 span {
   -moz-transition: transform 0.45s;
   -ms-transition: transform 0.45s;
   -o-transition: transform 0.45s;
+  transform: translateX(0);
+  z-index: 1000;
 }
 
+.navbar {
+  display: none;
+}
+/* Hidden sidebar when collapsed */
+.sidebar.collapsed {
+  transform: translateX(-250px);
+}
+
+/* Hamburger menu button */
+.hamburger-menu {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--primary-color);
+  cursor: pointer;
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1100;
+}
+
+/* On small screens, hide the sidebar initially */
 @media (max-width: 767px) {
+  .navbar {
+    display: block;
+    position: relative;
+    top: 20px;
+    left: 20px;
+    z-index: 1100;
+  }
+
+  .sidebar {
+    transform: translateX(-250px);
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 250px;
+    z-index: 1000;
+  }
+
+  .sidebar.collapsed {
+    transform: translateX(-250px);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+}
+
+
+/* @media (max-width: 767px) {
   .sidebar {
     z-index: 1000;
     transform: translateX(-220px);
@@ -198,7 +251,7 @@ div.loader h1 span {
     -ms-transform: translateX(-220px);
     -o-transform: translateX(-220px);
   }
-}
+} */
 
 @media (min-width: 768px) {
   .sidebar .xmark {
@@ -1668,7 +1721,7 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
   margin-bottom: var(--fourth-margin);
 }
 
-#user-profile-avatar{
+#user-profile-avatar {
   width: 50px;
   height: 50px;
 }

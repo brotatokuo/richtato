@@ -93,6 +93,14 @@ getSidebarLink.forEach((item) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  const sidebar = document.querySelector('.sidebar');
+  const toggleButton = document.querySelector('.hamburger-menu');
+
+  toggleButton.addEventListener('click', () => {
+    console.log('Toggle hamburger');
+    sidebar.classList.toggle('collapsed');
+  });
+
   const currencyInputs = document.getElementsByClassName('currency-input');
   console.log('Currency inputs:', currencyInputs);
   Array.from(currencyInputs).forEach(currencyInput => {
