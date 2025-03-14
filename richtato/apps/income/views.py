@@ -48,7 +48,7 @@ def add_entry(request):
         # Get the form data
         description = request.POST.get("description")
         amount = request.POST.get("amount")
-        date = request.POST.get("balance-date")
+        date = request.POST.get("date")
         account = request.POST.get("account")
 
         account_name = Account.objects.get(user=request.user, name=account)

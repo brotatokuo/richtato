@@ -4,6 +4,7 @@ from datetime import datetime
 
 import pytz
 from apps.expense.models import Expense
+from apps.account.models import Account
 from apps.richtato_user.models import CardAccount, Category, User
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -60,13 +61,13 @@ def profile(request: HttpRequest):
 
 
 def input(request: HttpRequest):
-    spending_dates = (
-        Expense.objects.filter(user=request.user)
-        .exclude(date__isnull=True)
-        .values_list("date", flat=True)
-        .distinct()
-    )
-    years_list = sorted(set(date.year for date in spending_dates), reverse=True)
+    # spending_dates = (
+    #     Expense.objects.filter(user=request.user)
+    #     .exclude(date__isnull=True)
+    #     .values_list("date", flat=True)
+    #     .distinct()
+    # )
+    # years_list = sorted(set(date.year for date in spending_dates), reverse=True)
     transaction_accounts = (
         CardAccount.objects.filter(user=request.user)
         .values_list("name", flat=True)
@@ -76,14 +77,17 @@ def input(request: HttpRequest):
         Category.objects.filter(user=request.user).values_list("name", flat=True)
     )
 
+    account_names = list(Account.objects.filter(user=request.user))
+
+
     return render(
         request,
         "input.html",
         {
-            "years": years_list,
             "transaction_accounts": transaction_accounts,
             "category_list": category_list,
             "today_date": datetime.now(pst).strftime("%Y-%m-%d"),
+            "bank_accounts": account_names,
             "deploy_stage": os.getenv("DEPLOY_STAGE"),
         },
     )

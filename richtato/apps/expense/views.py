@@ -54,7 +54,7 @@ def add_entry(request):
     if request.method == "POST":
         description = request.POST.get("description")
         amount = request.POST.get("amount")
-        date = request.POST.get("balance-date")
+        date = request.POST.get("date")
         category = request.POST.get("category")
 
         category = Category.objects.get(user=request.user, name=category)

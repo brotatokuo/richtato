@@ -91,3 +91,51 @@ getSidebarLink.forEach((item) => {
     item.classList.add("active");
   }
 });
+
+document.addEventListener('DOMContentLoaded', () => {
+  const currencyInputs = document.getElementsByClassName('currency-input');
+  console.log('Currency inputs:', currencyInputs);
+  Array.from(currencyInputs).forEach(currencyInput => {
+
+    currencyInput.addEventListener('input', () => {
+      const value = currencyInput.value;
+      const validCharacters = /^[0-9+\-*/().=]*$/;
+      if (!validCharacters.test(value)) {
+        currencyInput.value = value.replace(/[^0-9+\-*/().=]/g, '');
+      }
+    });
+
+    currencyInput.addEventListener('blur', () => {
+      let balance = currencyInput.value;
+
+      if (balance) {
+        let newBalance = computeBalance(balance);
+
+        if (newBalance) {
+          currencyInput.value = newBalance;
+          console.log('New balance:', newBalance);
+        }
+      }
+    });
+  });
+});
+
+function computeBalance(balance) {
+  if (balance.startsWith('=')) {
+    try {
+      // Evaluate the formula (strip the leading '=')
+      balance = eval(balance.slice(1));  // Caution: Use math.js for safety in production
+      console.log('Evaluated formula:', balance);
+    } catch (error) {
+      console.error('Invalid formula:', error);
+      return;  // Stop further processing if the formula is invalid
+    }
+  }
+  else {
+    // Convert to a float for regular numbers or evaluated formulas
+    balance = eval(balance);;
+  }
+  // Convert to a float for regular numbers or evaluated formulas
+  balance = parseFloat(balance).toFixed(2);
+  return balance;
+} 
