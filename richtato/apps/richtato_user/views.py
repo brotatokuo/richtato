@@ -59,7 +59,7 @@ def profile(request: HttpRequest):
     return render(request, "profile.html")
 
 
-def temp_input(request: HttpRequest):
+def input(request: HttpRequest):
     spending_dates = (
         Expense.objects.filter(user=request.user)
         .exclude(date__isnull=True)
@@ -78,7 +78,7 @@ def temp_input(request: HttpRequest):
 
     return render(
         request,
-        "temp_input.html",
+        "input.html",
         {
             "years": years_list,
             "transaction_accounts": transaction_accounts,
