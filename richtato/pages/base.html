@@ -30,13 +30,6 @@
         </li>
 
         <li>
-          <a href="{% url 'user_settings' %}" class="sidebar-link">
-            <i class="fa-solid fa-gear fa-fw"></i>
-            <span>User Settings</span>
-          </a>
-        </li>
-
-        <li>
           <a href="{% url 'profile' %}" class="sidebar-link">
             <i class="fa-regular fa-user fa-fw"></i><span>Profile</span>
           </a>
@@ -69,34 +62,22 @@
         <li>
           <a href="{% url 'account_settings' %}" class="sidebar-link">
             <i class="fa-solid fa-gear fa-fw"></i>
-            <span>Settings</span>
+            <span>Account Settings</span>
           </a>
         </li>
 
-        <!-- <li>
-          <a href="" class="sidebar-link">
-            <i class="fa-solid fa-table fa-fw"></i><span>Spreadsheet</span>
+        <li>
+          <a href="{% url 'user_settings' %}" class="sidebar-link">
+            <i class="fa-solid fa-sliders fa-fw"></i>
+            <span>User Settings</span>
           </a>
-        </li> -->
-
-        <!-- <li>
-          <a href="" class="sidebar-link">
-            <i class="fa-regular fa-credit-card fa-fw"></i><span>Expenses</span>
-          </a>
-        </li> -->
+        </li>
       </ul>
     </div>
     <main>
       <div class="header">
         <i class="fa-solid fa-bars bar-item"></i>
-        <!-- <button class="hamburger-menu" id="toggleSidebar">
-          <i class="fa-solid fa-bars"></i>
-        </button> -->
         <div class="brand">
-          <!-- Remove -->
-          <i class="fa-solid fa-xmark xmark" style="display: none;"></i>
-          <!-- Remove -->
-
           <a href="{% url 'index' %}" class="brand-link">
             <img src="{% static 'media/richtato.ico' %}" alt="Richtato Logo" class="brand-logo" />
             <h3 class="brand-name">Richtato</h3>
