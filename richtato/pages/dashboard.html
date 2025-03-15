@@ -12,34 +12,29 @@
       <div class="box-section1">
         <div class="box-title">
           <h2>Welcome</h2>
-          <p>Zana</p>
+          <p>Thanks for choosing Richtato</p>
         </div>
         <div class="box-image">
           <img src="{% static 'images/welcome.png' %}" alt="No image" />
         </div>
-        <img
-          src="{% static 'images/avatar.png' %}"
-          alt="No image"
-          class="avatar"
-        />
+        <img src="{% static 'images/avatar.png' %}" alt="No image" class="avatar" />
       </div>
       <div class="box-section2">
         <ul>
           <li>
-            <span>Zana Suleiman</span>
-            <p>Developer</p>
+            <span>Richtato User</span>
+            <p>{{ user_tier }}</p>
           </li>
           <li>
             <span>80</span>
-            <p>Projects</p>
+            <p>Goals</p>
           </li>
           <li>
             <span>$8500</span>
-            <p>Earned</p>
+            <p>Networth</p>
           </li>
         </ul>
       </div>
-      <a href="">Profile </a>
     </div>
 
     <div class="box">
@@ -148,48 +143,6 @@
     <div class="box">
       <div class="box-section1">
         <div class="box-title">
-          <h2>Latest News</h2>
-        </div>
-      </div>
-      <div class="latest-news-section2">
-        <img src="{% static 'images/news-01.png' %}" alt="" />
-        <div class="latest-news-section2-info">
-          <h4>Created SASS Section</h4>
-          <p>New SASS Examples & Tutorials</p>
-        </div>
-        <span>3 Days Ago</span>
-      </div>
-
-      <div class="latest-news-section2">
-        <img src="{% static 'images/news-02.png' %}" alt="" />
-        <div class="latest-news-section2-info">
-          <h4>Changed The Design</h4>
-          <p>A Brand New Website Design</p>
-        </div>
-        <span>5 Days Ago</span>
-      </div>
-
-      <div class="latest-news-section2">
-        <img src="{% static 'images/news-03.png' %}" alt="" />
-        <div class="latest-news-section2-info">
-          <h4>Team Increased</h4>
-          <p>3 Developers Joined The Team</p>
-        </div>
-        <span>7 Days Ago</span>
-      </div>
-
-      <div class="latest-news-section2">
-        <img src="{% static 'images/news-04.png' %}" alt="" />
-        <div class="latest-news-section2-info">
-          <h4>Added Payment Gateway</h4>
-          <p>Many New Payment Gateways Added</p>
-        </div>
-        <span>9 Days Ago</span>
-      </div>
-    </div>
-    <div class="box">
-      <div class="box-section1">
-        <div class="box-title">
           <h2>Latest Tasks</h2>
         </div>
       </div>
@@ -228,66 +181,20 @@
     <div class="box">
       <div class="box-section1">
         <div class="box-title">
-          <h2>Top Search Items</h2>
-        </div>
-      </div>
-      <div class="top-search-items">
-        <div class="top-search-items-info">
-          <p>Keyword</p>
-          <p>Search Count</p>
-        </div>
-
-        <div class="top-search-items-info">
-          <h4>Programming</h4>
-          <span>220</span>
-        </div>
-        <div class="top-search-items-info">
-          <h4>JavaScript</h4>
-          <span>180</span>
-        </div>
-        <div class="top-search-items-info">
-          <h4>PHP</h4>
-          <span>160</span>
-        </div>
-        <div class="top-search-items-info">
-          <h4>Code</h4>
-          <span>145</span>
-        </div>
-        <div class="top-search-items-info">
-          <h4>Design</h4>
-          <span>110</span>
-        </div>
-        <div class="top-search-items-info">
-          <h4>Logic</h4>
-          <span>95</span>
-        </div>
-      </div>
-    </div>
-    <div class="box">
-      <div class="box-section1">
-        <div class="box-title">
           <h2>Latest Uploads</h2>
         </div>
       </div>
       <div class="latest-news-section2 latest-uploads">
-        <img
-          src="{% static 'images/pdf.svg' %}"
-          alt=""
-          class="latest-uploads-image"
-        />
+        <img src="{% static 'images/pdf.svg' %}" alt="" class="latest-uploads-image" />
         <div class="latest-news-section2-info latest-uploads-info">
           <h4>my-file.pdf</h4>
-          <p>Zana</p>
+          <p>Richtato</p>
         </div>
         <span>2.9MB</span>
       </div>
 
       <div class="latest-news-section2 latest-uploads">
-        <img
-          src="{% static 'images/avi.svg' %}"
-          alt=""
-          class="latest-uploads-image"
-        />
+        <img src="{% static 'images/avi.svg' %}" alt="" class="latest-uploads-image" />
         <div class="latest-news-section2-info latest-uploads-info">
           <h4>My-Video-File.avi</h4>
           <p>Admin</p>
@@ -296,11 +203,7 @@
       </div>
 
       <div class="latest-news-section2 latest-uploads">
-        <img
-          src="{% static 'images/psd.svg' %}"
-          alt=""
-          class="latest-uploads-image"
-        />
+        <img src="{% static 'images/psd.svg' %}" alt="" class="latest-uploads-image" />
         <div class="latest-news-section2-info latest-uploads-info">
           <h4>My-Psd-File.psd</h4>
           <p>Ahmad</p>
@@ -309,11 +212,7 @@
       </div>
 
       <div class="latest-news-section2 latest-uploads">
-        <img
-          src="{% static 'images/zip.svg' %}"
-          alt=""
-          class="latest-uploads-image"
-        />
+        <img src="{% static 'images/zip.svg' %}" alt="" class="latest-uploads-image" />
         <div class="latest-news-section2-info latest-uploads-info">
           <h4>My-Zip-File.zip</h4>
           <p>User</p>
@@ -322,11 +221,7 @@
       </div>
 
       <div class="latest-news-section2 latest-uploads">
-        <img
-          src="{% static 'images/dll.svg' %}"
-          alt=""
-          class="latest-uploads-image"
-        />
+        <img src="{% static 'images/dll.svg' %}" alt="" class="latest-uploads-image" />
         <div class="latest-news-section2-info latest-uploads-info">
           <h4>My-DLL-File.dll</h4>
           <p>Admin</p>
@@ -335,11 +230,7 @@
       </div>
 
       <div class="latest-news-section2 latest-uploads">
-        <img
-          src="{% static 'images/eps.svg' %}"
-          alt=""
-          class="latest-uploads-image"
-        />
+        <img src="{% static 'images/eps.svg' %}" alt="" class="latest-uploads-image" />
         <div class="latest-news-section2-info latest-uploads-info">
           <h4>My-Eps-File.eps</h4>
           <p>Designer</p>
@@ -391,83 +282,6 @@
         </div>
       </div>
     </div>
-    <div class="box">
-      <div class="box-section1">
-        <div class="box-title">
-          <h2>Latest Post</h2>
-        </div>
-      </div>
-      <div class="latest-post-section2">
-        <div class="latest-post-person-info">
-          <img src="{% static 'images/avatar.png' %}" alt="" />
-          <ul>
-            <li><h4>Zana Suleiman</h4></li>
-            <li><p>About 3 Hours Ago</p></li>
-          </ul>
-        </div>
-        <div class="post">
-          <p>
-            You Can Fool All Of The People Some Of The Time, And Some Of The
-            People All Of The Time, But You Can't Fool All Of The People All Of
-            The Time.
-          </p>
-        </div>
-        <div class="latest-post-likes-comments">
-          <ul>
-            <li><i class="fa-regular fa-heart heart"></i><span>1.8K</span></li>
-            <li><i class="fa-regular fa-comments"></i><span>500</span></li>
-          </ul>
-        </div>
-      </div>
-    </div>
-    <div class="box">
-      <div class="box-section1">
-        <div class="box-title">
-          <h2>Social Media Stats</h2>
-        </div>
-      </div>
-      <div class="social-media-stats">
-        <div class="media">
-          <div class="media-icon twitter">
-            <i class="fa-brands fa-twitter fa-2x"></i>
-          </div>
-          <ul>
-            <li class="twitter">90K Followers</li>
-            <li><a href="/#">Follow</a></li>
-          </ul>
-        </div>
-
-        <div class="media">
-          <div class="media-icon facebook">
-            <i class="fa-brands fa-facebook-f fa-2x"></i>
-          </div>
-          <ul>
-            <li class="facebook">2M Like</li>
-            <li><a href="/#">Like</a></li>
-          </ul>
-        </div>
-
-        <div class="media">
-          <div class="media-icon youtube">
-            <i class="fa-brands fa-youtube fa-2x"></i>
-          </div>
-          <ul>
-            <li class="youtube">1M Subs</li>
-            <li><a href="/#">Subscribe</a></li>
-          </ul>
-        </div>
-
-        <div class="media">
-          <div class="media-icon linkedin">
-            <i class="fa-brands fa-linkedin fa-2x"></i>
-          </div>
-          <ul>
-            <li class="linkedin">70K Followers</li>
-            <li><a href="/#">Follow</a></li>
-          </ul>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 <div class="projects-box">
@@ -503,9 +317,9 @@
           <td><a href="/#" class="pending">Pending</a></td>
         </tr>
         <tr>
-          <td>Zana Shop</td>
+          <td>Richtato Shop</td>
           <td>12 Oct 2021</td>
-          <td>Zana Company</td>
+          <td>Richtato Company</td>
           <td>$1500</td>
           <td>
             <img src="{% static 'images/team-01.png' %}" alt="" />

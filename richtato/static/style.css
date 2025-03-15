@@ -216,56 +216,44 @@ div.loader h1 span {
   font-size: 1.5rem;
   color: var(--primary-color);
   cursor: pointer;
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  z-index: 1100;
+  padding-right: 10px;
+  display: none;
 }
 
-/* On small screens, hide the sidebar initially */
 @media (max-width: 767px) {
-  .navbar {
-    display: block;
-    position: relative;
-    top: 20px;
-    left: 20px;
-    z-index: 1100;
-  }
-
+  /* Sidebar Styles for Small Screens */
   .sidebar {
-    transform: translateX(-250px);
-    position: fixed;
-    top: 0;
-    left: 0;
+    transform: translateX(-250px);  /* Hidden by default */
     height: 100%;
     width: 250px;
     z-index: 1000;
+    top: 0;
+    left: 0;
+    background-color: var(--white-color);
+    transition: transform 0.3s ease-in-out;
   }
 
+  /* Sidebar Collapsed (Hidden State) */
   .sidebar.collapsed {
-    transform: translateX(-250px);
+    transform: translateX(-250px);  /* Keep it hidden */
   }
 
+  /* Sidebar Open (Visible State) */
   .sidebar.open {
-    transform: translateX(0);
-  }
-
-  .hamburger-menu.hidden {
-    display: none;
+    transform: translateX(0);  /* Slide into view */
   }
 }
 
-
-/* @media (max-width: 767px) {
-  .sidebar {
-    z-index: 1000;
-    transform: translateX(-220px);
-    -webkit-transform: translateX(-220px);
-    -moz-transform: translateX(-220px);
-    -ms-transform: translateX(-220px);
-    -o-transform: translateX(-220px);
+@media (min-width: 768px) {
+  .header .bar-item {
+    display: none;
   }
-} */
+}
+.header .bar-item {
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding-right: 15px;
+}
 
 @media (min-width: 768px) {
   .sidebar .xmark {
@@ -360,14 +348,6 @@ div.loader h1 span {
   align-items: center;
   background-color: var(--white-color);
   padding: var(--third-padding);
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  /* Ensure the header spans the full width of the page */
-  z-index: 1000;
-  /* Ensure the header stays above other elements */
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .header .brand {

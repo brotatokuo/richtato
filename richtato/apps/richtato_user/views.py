@@ -27,7 +27,7 @@ def index(request: HttpRequest) -> HttpResponseRedirect:
 
 
 def dashboard(request: HttpRequest):
-    return render(request, "dashboard.html")
+    return render(request, "dashboard.html", {"user_tier": "Alpha User"})
 
 
 def welcome(request: HttpRequest):
