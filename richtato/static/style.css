@@ -194,10 +194,6 @@ div.loader h1 span {
 .navbar {
   display: none;
 }
-/* Hidden sidebar when collapsed */
-.sidebar.collapsed {
-  transform: translateX(-250px);
-}
 
 /* Hamburger menu button */
 .hamburger-menu {
@@ -238,6 +234,10 @@ div.loader h1 span {
 
   .sidebar.open {
     transform: translateX(0);
+  }
+
+  .hamburger-menu.hidden {
+    display: none;
   }
 }
 
