@@ -27,12 +27,7 @@ def index(request: HttpRequest) -> HttpResponseRedirect:
 
 
 def dashboard(request: HttpRequest):
-    deploy_stage = os.getenv("DEPLOY_STAGE")
-    if deploy_stage and deploy_stage.upper() == "PROD":
-        suffix = ""
-    else:
-        suffix = deploy_stage
-    return render(request, "dashboard.html", {"suffix": suffix})
+    return render(request, "dashboard.html")
 
 
 def welcome(request: HttpRequest):

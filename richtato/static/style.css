@@ -259,6 +259,13 @@ div.loader h1 span {
   }
 }
 
+.brand-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+}
+
 .brand-logo {
   width: 30px;
   height: auto;
