@@ -101,26 +101,6 @@ getSidebarLink.forEach((item) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-  const sidebar = document.querySelector('.sidebar');
-  const toggleButton = document.querySelector('.hamburger-menu');
-
-  toggleButton.addEventListener('click', () => {
-    const toggleIcon = toggleButton.querySelector('i'); // Icon inside the hamburger menu
-
-    // Toggle sidebar open/collapsed
-    sidebar.classList.toggle('collapsed');
-    sidebar.classList.toggle('open');
-
-    // Toggle icon between hamburger and close icon
-    if (sidebar.classList.contains('open')) {
-      toggleIcon.classList.remove('fa-bars'); // Remove hamburger icon
-      toggleIcon.classList.add('fa-xmark'); // Add close icon
-    } else {
-      toggleIcon.classList.remove('fa-xmark'); // Remove close icon
-      toggleIcon.classList.add('fa-bars'); // Add hamburger icon
-    }
-  });
-
   const currencyInputs = document.getElementsByClassName('currency-input');
   console.log('Currency inputs:', currencyInputs);
   Array.from(currencyInputs).forEach(currencyInput => {
