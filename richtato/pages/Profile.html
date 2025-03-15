@@ -12,66 +12,24 @@
     <div class="profile-info">
       <img src="{% static 'images/avatar.png' %}" alt="" />
       <h3>Richtato User</h3>
-      <div class="progress">
-        <span></span>
-      </div>
     </div>
     <div class="profile-info-section2">
       <div class="row">
         <div class="general-information">
-          <h4>General-Information</h4>
+          <h4>User-Information</h4>
           <div>
             <h5>Full Name:&nbsp;</h5>
-            <span>Zana Anwar Suleiman</span>
+            <span>{{ full_name }}</span>
           </div>
-          <div class="toggle"></div>
           <span></span>
         </div>
         <div>
-          <h5>Gender:&nbsp;</h5>
-          <span>Male</span>
+          <h5>Username:&nbsp;</h5>
+          <span>{{ username }}</span>
         </div>
         <div>
-          <h5>Country:&nbsp;</h5>
-          <span>Syria</span>
-        </div>
-      </div>
-      <div class="row">
-        <div class="general-information">
-          <h4>Personal Information</h4>
-          <div>
-            <h5>Email:&nbsp;</h5>
-            <span>zana.suleiman.44@gmail.com</span>
-          </div>
-          <div class="toggle left"></div>
-          <span></span>
-        </div>
-        <div>
-          <h5>Phone:&nbsp;</h5>
-          <span>0934588449</span>
-        </div>
-        <div>
-          <h5>Date Of Birth:&nbsp;</h5>
-          <span>20/04/1996</span>
-        </div>
-      </div>
-      <div class="row">
-        <div class="general-information">
-          <h4>Job Information</h4>
-          <div>
-            <h5>Title:&nbsp;</h5>
-            <span>Full Stack Developer</span>
-          </div>
-          <div class="toggle"></div>
-          <span></span>
-        </div>
-        <div>
-          <h5>Programming Language:&nbsp;</h5>
-          <span>JavaScript</span>
-        </div>
-        <div>
-          <h5>Years Of Experience:&nbsp;</h5>
-          <span>3+</span>
+          <h5>User #:&nbsp;</h5>
+          <span>{{ user_number }}</span>
         </div>
       </div>
       <div class="row">
@@ -85,8 +43,8 @@
           <span></span>
         </div>
         <div>
-          <h5>Email&nbsp;</h5>
-          <span>email@example.com</span>
+          <h5>Email:&nbsp;</h5>
+          <span>email@richtato.com</span>
         </div>
         <div>
           <h5>Subscription:&nbsp;</h5>
