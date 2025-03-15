@@ -25,7 +25,7 @@ a {
   --third-color: #888;
   --blue-color: #0075ff;
   --orange-color: #f59e0b;
-  --green-color: #22c55e;
+  --green-color: #98cc2c;
   --eee-color: #eee;
   --ccc-color: #ccc;
   --main-margin: 30px;
@@ -218,6 +218,7 @@ div.loader h1 span {
   .sidebar.collapsed {
     transform: translateX(-250px);
   }
+
   .sidebar.open {
     transform: translateX(0);
   }
@@ -760,6 +761,24 @@ main .main-content .title::after {
   -moz-border-radius: var(--first-radius);
   -ms-border-radius: var(--first-radius);
   -o-border-radius: var(--first-radius);
+}
+
+.green-ombre {
+  background: linear-gradient(to right, var(--green-color), #00ca43);
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.main-content-boxes .box .fourth-box-section2 .small-box h3 {
+  width: 100%;
+  text-align: left;
+  padding-left: 10px;
+}
+
+.main-content-boxes .box .fourth-box-section2 .small-box span {
+  width: 100%;
+  text-align: left;
+  padding-left: 10px;
 }
 
 .main-content-boxes .box .fourth-box-section2 .small-box i {
