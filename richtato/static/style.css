@@ -216,6 +216,10 @@ div.loader h1 span {
   width: 200px;
 }
 
+a i {
+  margin-right: 8px; /* Adjust the value as needed */
+}
+
 .dropdown ul {
   padding: 0;
 }
