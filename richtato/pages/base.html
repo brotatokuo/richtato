@@ -80,13 +80,12 @@
         <i class="fa-solid fa-bars bar-item"></i>
         <div class="brand">
           <a href="{% url 'index' %}" class="brand-link">
-            <img src="{% static 'media/richtato.ico' %}" alt="Richtato Logo" class="brand-logo" />
+            <img src="{% static 'images/richtato.ico' %}" alt="Richtato Logo" class="brand-logo" />
             <h3 class="brand-name">Richtato</h3>
           </a>
         </div>
         <div class="profile">
-          <a href="{% url 'profile' %}">
-            <img src="{% static 'images/avatar.png' %}" alt="No Image" />
+            <img src="{% static 'images/avatar.png' %}" id=navbar-profile alt="No Image" />
           </a>
         </div>
       </div>
@@ -99,7 +98,7 @@
   <!-- Appzi: Capture Insightful Feedback -->
   <script async src="https://w.appzi.io/w.js?token=JCm1L"></script>
   <!-- End Appzi -->
-  <script src="{% static 'js/script.js' %}"></script>
+  <script src="{% static 'js/base.js' %}"></script>
 </body>
 
 </html>
