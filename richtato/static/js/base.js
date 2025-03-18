@@ -6,6 +6,7 @@ let getLoader = document.querySelector(".loader");
 let getToggle = document.querySelectorAll(".toggle");
 let getHeart = document.querySelector(".heart");
 let getSidebarLink = document.querySelectorAll(".sidebar-link");
+let navbarProfile = document.querySelector("#navbar-profile");
 let activePage = window.location.pathname;
 let getSideBarStatus = false;
 
@@ -29,6 +30,10 @@ getXmark.onclick = () => {
     getSideBar.classList.remove("sidebar-active");
   }
 };
+navbarProfile.onclick = () => {
+  profileDropdown.classList.toggle("hidden");
+  console.log("Profile dropdown clicked");
+}
 window.addEventListener("resize", (e) => {
   if (getSideBarStatus === true) {
     if (e.target.innerWidth > 768) {
@@ -99,4 +104,3 @@ getSidebarLink.forEach((item) => {
     item.classList.add("active");
   }
 });
-
