@@ -2694,3 +2694,41 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
 .main-content .plans-boxes .plan-box ul li:last-child p {
   color: var(--third-color);
 }
+
+canvas {
+  width: 95%;
+  height: auto;
+}
+
+.styled-table {
+  border-collapse: collapse;
+  margin: 25px 0;
+  font-size: 18px;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+  border: 1px solid #dddddd;
+  width: 90%;
+  margin: 0 auto;
+  /* Adds border around the table */
+}
+
+.styled-table th,
+.styled-table td {
+  padding: 12px 15px;
+  /* Increases spacing between columns */
+  border: 1px solid #dddddd;
+  /* Adds lines between rows and columns */
+  text-align: left;
+  /* Ensures text is aligned to the left */
+}
+
+.styled-table thead tr {
+  background-color: black;
+  color: #ffffff;
+  text-align: left;
+}
+
+.styled-table tbody tr:hover {
+  background-color: #98cc2c;
+}

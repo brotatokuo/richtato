@@ -70,7 +70,7 @@ def add_entry(request):
             amount=amount,
         )
         transaction.save()
-        return HttpResponseRedirect(reverse("expense"))
+        return HttpResponseRedirect(reverse("input"))
     return HttpResponse("Data Entry Error")
 
 
@@ -170,6 +170,23 @@ def get_plot_data(request) -> JsonResponse:
 
     return JsonResponse({"labels": month_list, "datasets": datasets})
 
+def get_recent_entries(request):
+    """
+    Get the most recent expenses for the user.
+    """
+    recent_expenses = Expense.objects.filter(user=request.user).order_by("-date")[:5]
+    recent_expenses_data = [
+        {
+            "id": expense.id,
+            "date": format_date(expense.date),
+            "card": expense.account_name.name,
+            "description": expense.description,
+            "amount": format_currency(expense.amount),
+            "category": expense.category.name,
+        }
+        for expense in recent_expenses
+    ]
+    return JsonResponse(recent_expenses_data, safe=False)
 
 def get_table_data(request) -> JsonResponse:
     year = request.GET.get("year", None)

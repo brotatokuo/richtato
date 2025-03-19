@@ -61,7 +61,7 @@ def add_entry(request):
             amount=amount,
         )
         transaction.save()
-        return HttpResponseRedirect(reverse("income"))
+        return HttpResponseRedirect(reverse("input"))
     return HttpResponse("Data Entry Error")
 
 
@@ -162,6 +162,20 @@ def get_plot_data(request):
 
     return JsonResponse({"labels": month_list, "datasets": datasets})
 
+def get_recent_entries(request):
+    entries = Income.objects.filter(user=request.user).order_by("-date")[:5]
+    recent_entries = []
+    for entry in entries:
+        recent_entries.append(
+            {
+                "id": entry.id,
+                "date": format_date(entry.date),
+                "account": entry.account_name.name,
+                "description": entry.description,
+                "amount": format_currency(entry.amount),
+            }
+        )
+    return JsonResponse(recent_entries, safe=False)
 
 @login_required
 def get_table_data(request):

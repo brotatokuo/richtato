@@ -104,3 +104,8 @@ getSidebarLink.forEach((item) => {
     item.classList.add("active");
   }
 });
+
+function getCSRFToken() {
+  const cookieValue = document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)')?.pop();
+  return cookieValue || '';
+}
