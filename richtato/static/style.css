@@ -217,7 +217,8 @@ div.loader h1 span {
 }
 
 a i {
-  margin-right: 8px; /* Adjust the value as needed */
+  margin-right: 8px;
+  /* Adjust the value as needed */
 }
 
 .dropdown ul {
@@ -2700,10 +2701,13 @@ canvas {
   height: auto;
 }
 
+.table-responsive {
+  overflow-x: auto;
+}
+
 .styled-table {
   border-collapse: collapse;
   margin: 25px 0;
-  font-size: 18px;
   justify-content: center;
   align-items: center;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
@@ -2731,4 +2735,11 @@ canvas {
 
 .styled-table tbody tr:hover {
   background-color: #98cc2c;
+}
+
+@media (max-width: 767px) {
+  .styled-table {
+    font-size: 11px;
+    margin: 10px auto;
+  }
 }
