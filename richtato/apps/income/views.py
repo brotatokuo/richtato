@@ -2,19 +2,16 @@ import json
 import os
 from datetime import datetime
 
+import pytz
 from apps.account.models import Account
 from apps.income.models import Income
+from dateutil.relativedelta import relativedelta
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
-from utilities.tools import (
-    color_picker,
-    format_currency,
-    format_date,
-    month_mapping,
-)
+from utilities.tools import color_picker, format_currency, format_date, month_mapping
 
 
 @login_required
@@ -162,6 +159,7 @@ def get_plot_data(request):
 
     return JsonResponse({"labels": month_list, "datasets": datasets})
 
+
 def get_recent_entries(request):
     entries = Income.objects.filter(user=request.user).order_by("-date")[:5]
     recent_entries = []
@@ -176,6 +174,7 @@ def get_recent_entries(request):
             }
         )
     return JsonResponse(recent_entries, safe=False)
+
 
 @login_required
 def get_table_data(request):
@@ -202,3 +201,40 @@ def get_table_data(request):
             )
 
     return JsonResponse(table_data, safe=False)
+
+
+def get_line_graph_data(request):
+    pst = pytz.timezone("US/Pacific")
+    today = datetime.now(pst)
+    start_date = today - relativedelta(months=5)
+    start_date = start_date.replace(day=1)
+
+    incomes = Income.objects.filter(
+        user=request.user,
+        date__gte=start_date,
+    ).order_by("date")
+
+    line_graph_data = {}
+    for income in incomes:
+        month_year = income.date.strftime("%b %Y")
+        if month_year not in line_graph_data:
+            line_graph_data[month_year] = 0
+        line_graph_data[month_year] += income.amount
+
+    labels = list(line_graph_data.keys())
+    data = list(line_graph_data.values())
+
+    chart_data = {
+        "labels": labels,
+        "datasets": [
+            {
+                "label": "Income By Month",
+                "data": data,
+                "borderColor": "rgba(152, 204, 44, 1)",
+                "fill": False,
+                "tension": 0.4,
+            }
+        ],
+    }
+
+    return JsonResponse(chart_data)

@@ -6,6 +6,7 @@ import pytz
 from apps.expense.models import Expense
 from apps.income.models import Income
 from apps.richtato_user.models import CardAccount, Category
+from dateutil.relativedelta import relativedelta
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.http import JsonResponse
@@ -170,6 +171,7 @@ def get_plot_data(request) -> JsonResponse:
 
     return JsonResponse({"labels": month_list, "datasets": datasets})
 
+
 def get_recent_entries(request):
     """
     Get the most recent expenses for the user.
@@ -187,6 +189,44 @@ def get_recent_entries(request):
         for expense in recent_expenses
     ]
     return JsonResponse(recent_expenses_data, safe=False)
+
+
+def get_line_graph_data(request):
+    pst = pytz.timezone("US/Pacific")
+    today = datetime.now(pst)
+    start_date = today - relativedelta(months=5)
+    start_date = start_date.replace(day=1)
+
+    expenses = Expense.objects.filter(
+        user=request.user,
+        date__gte=start_date,
+    ).order_by("date")
+
+    line_graph_data = {}
+    for expense in expenses:
+        month_year = expense.date.strftime("%b %Y")
+        if month_year not in line_graph_data:
+            line_graph_data[month_year] = 0
+        line_graph_data[month_year] += expense.amount
+
+    labels = list(line_graph_data.keys())
+    data = list(line_graph_data.values())
+
+    chart_data = {
+        "labels": labels,
+        "datasets": [
+            {
+                "label": "Expenses By Month",
+                "data": data,
+                "borderColor": "rgba(232, 82, 63, 1)",
+                "fill": False,
+                "tension": 0.4,
+            }
+        ],
+    }
+
+    return JsonResponse(chart_data)
+
 
 def get_table_data(request) -> JsonResponse:
     year = request.GET.get("year", None)

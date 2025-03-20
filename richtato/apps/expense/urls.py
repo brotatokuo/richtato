@@ -19,4 +19,5 @@ urlpatterns = [
     path(
         "get-monthly-diff/", views.get_monthly_diff, name=f"{page_name}_get_monthly_dff"
     ),
+    path("get_line_graph_data/", views.get_line_graph_data, name=f"{page_name}_get_line_graph_data"),
 ]
