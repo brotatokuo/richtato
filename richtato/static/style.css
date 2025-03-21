@@ -2697,8 +2697,8 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
 }
 
 canvas {
-  width: 95%;
-  height: auto;
+  width: 95% !important;
+  height: auto !important;
 }
 
 .table-responsive {
