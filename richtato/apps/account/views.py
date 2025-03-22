@@ -37,7 +37,6 @@ def main(request):
             "account_options": account_options,
             "years": unique_years,
             "today_date": datetime.today().strftime("%Y-%m-%d"),
-            "deploy_stage": os.getenv("DEPLOY_STAGE"),
         },
     )
 

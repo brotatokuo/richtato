@@ -12,23 +12,19 @@
       <div class="fourth-box-section2">
         <div class="small-box green-ombre">
           <h3>Networth</h3>
-          <span class="currency">$2,500</span>
-          <i class="fa-regular fa-rectangle-list fa-2x mb-10"></i>
-          <p>+ 10%</p>
+          <span class="currency">{{ networth }}</span>
         </div>
 
         <div class="small-box">
           <h3>Expenses</h3>
-          <span class="currency">500</span>
-          <i class="fa-solid fa-spinner fa-2x mb-10"></i>
-          <p>+ 10%</p>
+          <span class="currency">{{ expense_sum }}</span>
+          <canvas class="mini-line-chart" id="expense-overview-line-chart"></canvas>
         </div>
 
         <div class="small-box">
           <h3>Income</h3>
-          <span class="currency">1900</span>
-          <i class="fa-regular fa-circle-check fa-2x mb-10"></i>
-          <p>+ 10%</p>
+          <span class="currency">{{ income_sum }}</span>
+          <canvas class="mini-line-chart" id="income-overview-line-chart"></canvas>
         </div>
 
         <div class="small-box">
@@ -40,7 +36,7 @@
       </div>
     </div>
 
-    <div class="box">
+    <!-- <div class="box">
       <div class="box-section1">
         <div class="box-title">
           <h2>Quick Draft</h2>
@@ -52,7 +48,7 @@
         <textarea placeholder="Your Thoughts"></textarea>
         <button type="submit">save</button>
       </form>
-    </div>
+    </div> -->
 
     <div class="box">
       <div class="box-section1">
@@ -381,5 +377,5 @@
     </table>
   </div>
 </div>
-
+<script src="{% static 'js/dashboard.js' %}"></script>
 {% endblock %}

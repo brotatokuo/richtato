@@ -1,10 +1,8 @@
 import decimal
 import json
-import os
 from datetime import datetime
 
 import colorama
-from loguru import logger
 from apps.account.models import Account, AccountTransaction
 from apps.richtato_user.models import CardAccount, Category
 from apps.settings.models import DataImporter
@@ -25,7 +23,6 @@ def main(request):
             "category_list": category_list,
             "today_date": datetime.today().strftime("%Y-%m-%d"),
             "category_types": Category.CATEGORY_TYPES,
-            "deploy_stage": os.getenv("DEPLOY_STAGE"),
         },
     )
 
@@ -43,7 +40,7 @@ def get_cards(request):
         card_id = card["id"]
         card_name = card["name"]
         json_data.append({"Id": card_id, "Card": card_name})
-    
+
     return JsonResponse(json_data, safe=False)
 
 

@@ -3,30 +3,44 @@ import os
 from datetime import datetime
 
 import pytz
-from apps.expense.models import Expense
 from apps.account.models import Account
+from apps.expense.views import get_last_30_days_expense_sum
+from apps.income.views import get_last_30_days_income_sum
 from apps.richtato_user.models import CardAccount, Category, User
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
-from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
 from loguru import logger
+from utilities.tools import format_currency
 
 pst = pytz.timezone("US/Pacific")
 
 
-def index(request: HttpRequest) -> HttpResponseRedirect:
+def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
     if request.user.is_authenticated:
         logger.debug(f"User {request.user} is authenticated.")
-        return HttpResponseRedirect(reverse("dashboard"))
+        networth = request.user.networth()
+        expense_sum = get_last_30_days_expense_sum(request.user)
+        income_sum = get_last_30_days_income_sum(request.user)
+
+        return render(
+            request,
+            "dashboard.html",
+            {
+                "networth": format_currency(networth),
+                "expense_sum": format_currency(expense_sum),
+                "income_sum": format_currency(income_sum),
+            },
+        )
     else:
         return HttpResponseRedirect(reverse("welcome"))
 
 
-def dashboard(request: HttpRequest):
+def dashboard(request: HttpRequest) -> HttpResponse:
     return render(request, "dashboard.html", {"user_tier": "Alpha User"})
 
 
@@ -56,13 +70,6 @@ def profile(request: HttpRequest):
 
 
 def input(request: HttpRequest):
-    # spending_dates = (
-    #     Expense.objects.filter(user=request.user)
-    #     .exclude(date__isnull=True)
-    #     .values_list("date", flat=True)
-    #     .distinct()
-    # )
-    # years_list = sorted(set(date.year for date in spending_dates), reverse=True)
     transaction_accounts = (
         CardAccount.objects.filter(user=request.user)
         .values_list("name", flat=True)
@@ -74,7 +81,6 @@ def input(request: HttpRequest):
 
     account_names = list(Account.objects.filter(user=request.user))
 
-
     return render(
         request,
         "input.html",
@@ -83,7 +89,6 @@ def input(request: HttpRequest):
             "category_list": category_list,
             "today_date": datetime.now(pst).strftime("%Y-%m-%d"),
             "bank_accounts": account_names,
-            "deploy_stage": os.getenv("DEPLOY_STAGE"),
         },
     )
 
@@ -104,7 +109,6 @@ class LoginView(View):
             {
                 "username": "",
                 "message": None,
-                "deploy_stage": os.getenv("DEPLOY_STAGE"),
             },
         )
 
@@ -123,7 +127,6 @@ class LoginView(View):
                 {
                     "username": username,
                     "message": "Invalid username and/or password.",
-                    "deploy_stage": os.getenv("DEPLOY_STAGE"),
                 },
             )
 
@@ -151,7 +154,6 @@ class RegisterView(View):
                 "register.html",
                 {
                     "message": "Passwords must match.",
-                    "deploy_stage": os.getenv("DEPLOY_STAGE"),
                 },
             )
 

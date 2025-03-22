@@ -1,11 +1,10 @@
 import json
-import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytz
 from apps.expense.models import Expense
 from apps.income.models import Income
-from apps.richtato_user.models import CardAccount, Category
+from apps.richtato_user.models import CardAccount, Category, User
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
@@ -45,7 +44,6 @@ def main(request):
             "transaction_accounts": transaction_accounts,
             "category_list": category_list,
             "today_date": datetime.now(pst).strftime("%Y-%m-%d"),
-            "deploy_stage": os.getenv("DEPLOY_STAGE"),
         },
     )
 
@@ -225,6 +223,55 @@ def get_line_graph_data(request):
         ],
     }
 
+    return JsonResponse(chart_data)
+
+
+def get_last_30_days_expense_sum(user: User) -> float:
+    today = datetime.now(pst).date()
+    thirty_days_ago = today - relativedelta(days=30)
+    total_expenses = Expense.objects.filter(
+        user=user, date__gte=thirty_days_ago
+    ).aggregate(total_amount=Sum("amount"))
+    total_sum = total_expenses["total_amount"] or 0  # Use 0 if there's no result
+    return total_sum
+
+
+def get_last_30_days(request):
+    """
+    Get the cumulative expenses for the last 30 days.
+    """
+    today = datetime.now(pst).date()
+    thirty_days_ago = today - relativedelta(days=30)
+    daily_expenses = {today - timedelta(days=i): 0 for i in range(30)}
+    expenses = (
+        Expense.objects.filter(user=request.user, date__gte=thirty_days_ago)
+        .values("date")
+        .annotate(total_amount=Sum("amount"))
+    )
+
+    # Populate daily expenses with actual expense values
+    for expense in expenses:
+        expense_date = expense["date"]
+        daily_expenses[expense_date] = expense["total_amount"]
+
+    # Generate cumulative sum for each day
+    cumulative_expenses = []
+    running_total = 0
+
+    for date, expense in sorted(daily_expenses.items()):
+        running_total += expense
+        cumulative_expenses.append(running_total)
+    labels = list(range(1, len(cumulative_expenses) + 1))
+    chart_data = {
+        "labels": labels,
+        "datasets": [
+            {
+                "label": "Expenses By Day",
+                "data": cumulative_expenses,
+                "borderColor": "rgba(232, 82, 63, 1)",
+            }
+        ],
+    }
     return JsonResponse(chart_data)
 
 

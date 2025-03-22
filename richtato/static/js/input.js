@@ -32,11 +32,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const expenseLineChart = document
     .getElementById("expenseLineChart")
     .getContext("2d");
-  plotExpenseLineChart(expenseLineChart, "/expense/get_line_graph_data/");
+  plotLineChart(expenseLineChart, "/expense/get_line_graph_data/");
   const incomeLineChart = document
     .getElementById("incomeLineChart")
     .getContext("2d");
-  plotExpenseLineChart(incomeLineChart, "/income/get_line_graph_data/");
+  plotLineChart(incomeLineChart, "/income/get_line_graph_data/");
 
   const expenseTable = new Table(
     "expenseTable",
@@ -55,7 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
   );
 });
 
-async function plotExpenseLineChart(ctx, endpointUrl) {
+async function plotLineChart(ctx, endpointUrl) {
   try {
     const response = await fetch(endpointUrl);
     if (!response.ok) {

@@ -39,7 +39,6 @@ def main(request) -> HttpResponse:
             "years": years_list,
             "months": months_list,
             "categories": category_list,
-            "deploy_stage": os.getenv("DEPLOY_STAGE"),
         },
     )
 

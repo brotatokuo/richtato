@@ -886,6 +886,8 @@ main .main-content .title::after {
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  padding-top: 5px;
+  justify-content: flex-start;
   gap: var(--fourth-padding);
   border: 1px solid var(--third-color);
   border-radius: var(--first-radius);
@@ -3056,9 +3058,9 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
   color: var(--third-color);
 }
 
-canvas {
-  width: 95% !important;
-  height: auto !important;
+.line-chart {
+  width: 95%;
+  height: auto;
 }
 
 .table-responsive {
@@ -3080,11 +3082,8 @@ canvas {
 .styled-table th,
 .styled-table td {
   padding: 12px 15px;
-  /* Increases spacing between columns */
   border: 1px solid #dddddd;
-  /* Adds lines between rows and columns */
   text-align: left;
-  /* Ensures text is aligned to the left */
 }
 
 .styled-table thead tr {
@@ -3127,4 +3126,14 @@ canvas {
   /* Reset browser-specific styling */
   -webkit-appearance: none;
   /* Reset browser-specific styling for WebKit browsers */
+}
+
+.mini-line-chart {
+  position: absolute;
+  padding-bottom: 10px;
+  padding-top: 10px;
+  width: 100%;
+  height: 100%;
+  z-index: 1000;
+  opacity: 0.2;
 }
