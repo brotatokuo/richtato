@@ -4,6 +4,7 @@ from datetime import datetime
 
 import pytz
 from apps.account.models import Account
+from apps.budget.views import get_budget_rankings
 from apps.expense.views import get_last_30_days_expense_sum
 from apps.income.views import get_last_30_days_income_sum
 from apps.richtato_user.models import CardAccount, Category, User
@@ -20,22 +21,52 @@ from utilities.tools import format_currency
 pst = pytz.timezone("US/Pacific")
 
 
+def calculate_budget_diff(budget, spent):
+    diff = budget - spent
+    if diff > 0:
+        return f"{format_currency(diff)} left"
+    else:
+        return f"+{format_currency(-diff)} over"
+
+
+def prepare_category_data(budget_rankings):
+    category_data = []
+    for ranking in budget_rankings:
+        spent = ranking["expense_this_month"]
+        diff = calculate_budget_diff(ranking["budget"], spent)
+
+        category_info = {
+            "name": ranking["category_name"],
+            "budget": format_currency(ranking["budget"]),
+            "spent": format_currency(spent),
+            "diff": diff,
+        }
+        category_data.append(category_info)
+    return category_data
+
+
+# Main view function
 def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
     if request.user.is_authenticated:
         logger.debug(f"User {request.user} is authenticated.")
+
         networth = request.user.networth()
         expense_sum = get_last_30_days_expense_sum(request.user)
         income_sum = get_last_30_days_income_sum(request.user)
+        budget_rankings = get_budget_rankings(request.user)
 
-        return render(
-            request,
-            "dashboard.html",
-            {
-                "networth": format_currency(networth),
-                "expense_sum": format_currency(expense_sum),
-                "income_sum": format_currency(income_sum),
-            },
-        )
+
+        category_data = prepare_category_data(budget_rankings)
+        context = {
+            "networth": format_currency(networth),
+            "expense_sum": format_currency(expense_sum),
+            "income_sum": format_currency(income_sum),
+            "categories": category_data,  # List of category data
+        }
+
+        # Render the response with the context
+        return render(request, "dashboard.html", context)
+
     else:
         return HttpResponseRedirect(reverse("welcome"))
 

@@ -58,54 +58,25 @@
         </div>
       </div>
       <div class="third-box-section2">
+        {% for category in categories %}
         <div class="third-box-section2-details">
           <div class="icon">
-            <i class="fa-solid fa-dollar-sign fa-lg"></i>
+            <i class="fa-solid fa-code fa-lg"></i> <!-- You can change the icon dynamically if needed -->
           </div>
           <div class="third-box-info">
             <ul>
-              <li>Dining Out</li>
-              <li>$200.00</li>
-              <li>+$100.00 over</li>
+              <li>{{ category.name }}</li>
+              <li>{{ category.budget }}</li>
+              <li>{{ category.diff }}</li>
             </ul>
             <div class="percentage-bar">
-              <div class="percentage" id="percentage-1"></div>
+              <div class="percentage" id="percentage-{{ forloop.counter }}"></div>
             </div>
           </div>
         </div>
-
-        <div class="third-box-section2-details">
-          <div class="icon">
-            <i class="fa-solid fa-code fa-lg"></i>
-          </div>
-          <div class="third-box-info">
-            <ul>
-              <li>Travel</li>
-              <li>$300.00</li>
-              <li>+$500.00 over</li>
-            </ul>
-            <div class="percentage-bar">
-              <div class="percentage" id="percentage-2"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="third-box-section2-details">
-          <div class="icon">
-            <i class="fa-solid fa-user fa-lg"></i>
-          </div>
-          <div class="third-box-info">
-            <ul>
-              <li>Groceries</li>
-              <li>$100.00</li>
-              <li>$50.00 left</li>
-            </ul>
-            <div class="percentage-bar">
-              <div class="percentage" id="percentage-3"></div>
-            </div>
-          </div>
-        </div>
+        {% endfor %}
       </div>
+
     </div>
 
     <div class="box">
