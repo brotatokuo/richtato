@@ -10,15 +10,15 @@
   <div class="main-content-boxes">
     <div class="box">
       <div class="fourth-box-section2">
-        <div class="small-box green-ombre">
+
+        <div class="small-box">
           <h3>Networth</h3>
           <span class="currency">{{ networth }}</span>
         </div>
 
         <div class="small-box">
-          <h3>Expenses</h3>
-          <span class="currency">{{ expense_sum }}</span>
-          <canvas class="mini-line-chart" id="expense-overview-line-chart"></canvas>
+          <h3>Savings Rate</h3>
+          <span>{{ savings_rate }}</span>
         </div>
 
         <div class="small-box">
@@ -28,10 +28,9 @@
         </div>
 
         <div class="small-box">
-          <h3>Savings</h3>
-          <span class="currency">100</span>
-          <i class="fa-regular fa-rectangle-xmark fa-2x mb-10"></i>
-          <p>+ 10%</p>
+          <h3>Expenses</h3>
+          <span class="currency">{{ expense_sum }}</span>
+          <canvas class="mini-line-chart" id="expense-overview-line-chart"></canvas>
         </div>
       </div>
     </div>

@@ -61,6 +61,7 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
             "networth": format_currency(networth),
             "expense_sum": format_currency(expense_sum),
             "income_sum": format_currency(income_sum),
+            "savings_rate": f"{round((income_sum - expense_sum) / income_sum * 100)}%",
             "categories": category_data,  # List of category data
         }
 
