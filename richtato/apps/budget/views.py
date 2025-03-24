@@ -3,12 +3,14 @@ from datetime import datetime
 
 import pytz
 from apps.expense.models import Expense
-from apps.richtato_user.models import Category, User
+from decimal import Decimal 
+from apps.richtato_user.models import Category
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum, DecimalField
+from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
+from utilities.tools import format_currency
 
 
 @login_required
@@ -207,35 +209,58 @@ def main(request) -> HttpResponse:
 #     return df_filtered
 
 
-def get_budget_rankings(user: User):
+def calculate_budget_diff(diff: float):
+    if diff <= 0:
+        return f"{format_currency(abs(diff))} left"
+    else:
+        return f"{format_currency(abs(diff))} over"
+
+
+def get_budget_rankings(request):
+    user = request.user
     pst = pytz.timezone("US/Pacific")
     today = datetime.now(pst)
+
+    # Get budgets and expenses in one go
     budget_list = Category.objects.filter(user=user).values("name", "budget")
     budget_expenses = []
 
     for budget in budget_list:
-        expense_this_month = (
-            Expense.objects.filter(
-                user=user,
-                category__name=budget["name"],
-                date__year=today.year,
-                date__month=today.month,
-            )
-            .aggregate(
-                total_amount=Coalesce(Sum("amount"), 0, output_field=DecimalField())
-            )  # Specify output_field as DecimalField
+        total_expense = Expense.objects.filter(
+            user=user,
+            category__name=budget["name"],
+            date__year=today.year,
+            date__month=today.month,
+        ).aggregate(total_amount=Coalesce(Sum("amount"), Decimal(0)))["total_amount"]
+
+        percent_budget = (
+            round(total_expense / budget["budget"] * 100) if budget["budget"] else 0
         )
-        total_expense = expense_this_month.get("total_amount", 0)
         budget_expenses.append(
             {
                 "category_name": budget["name"],
                 "budget": budget["budget"],
-                "expense_this_month": total_expense,
+                "expense": total_expense,
+                "difference": total_expense - budget["budget"],
+                "percent_budget": percent_budget,
             }
         )
 
-    sorted_budget = sorted(
-        budget_expenses, key=lambda x: x["expense_this_month"], reverse=True
+    # Sort and get top 3 budget categories by percent spent
+    budget_rankings = sorted(
+        budget_expenses, key=lambda x: x["percent_budget"], reverse=True
     )[:3]
 
-    return sorted_budget
+    # Prepare the category data for the response
+    category_data = [
+        {
+            "name": ranking["category_name"],
+            "budget": format_currency(ranking["budget"]),
+            "spent": format_currency(ranking["expense"]),
+            "percent": ranking["percent_budget"],
+            "message": f"{calculate_budget_diff(ranking['difference'])} ({ranking['percent_budget']}%)",
+        }
+        for ranking in budget_rankings
+    ]
+
+    return JsonResponse({"category_rankings": category_data})

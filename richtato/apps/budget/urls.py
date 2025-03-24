@@ -1,4 +1,5 @@
 from django.urls import path
+
 from . import views
 
 page_name = "budget"
@@ -10,5 +11,7 @@ urlpatterns = [
     #     name=f"{page_name}_get_plot_data",
     # ),
     # path("get-table-data/", views.get_table_data, name=f"{page_name}_get_table_data"),
-    path("get-budget-rankings/", views.get_budget_rankings, name=f"{page_name}_get_budget_rankings"),
+    path(
+        "get-budget-rankings/", views.get_budget_rankings, name=f"{page_name}_get_budget_rankings"
+    ),
 ]
