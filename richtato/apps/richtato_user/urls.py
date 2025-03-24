@@ -1,6 +1,7 @@
 from apps.expense import views as expense
 from apps.income import views as income
-from django.urls import path
+from django.conf import settings
+from django.urls import include, path
 
 from . import views
 
@@ -22,3 +23,10 @@ urlpatterns = [
     path("user_settings/", views.user_settings, name="user_settings"),
     path("account_settings/", views.account_settings, name="account_settings"),
 ]
+
+if settings.DEBUG:
+    import debug_toolbar
+
+    urlpatterns = [
+        path("__debug__/", include(debug_toolbar.urls)),
+    ] + urlpatterns
