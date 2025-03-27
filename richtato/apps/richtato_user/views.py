@@ -4,7 +4,6 @@ from datetime import datetime
 
 import pytz
 from apps.account.models import Account
-from apps.budget.views import get_budget_rankings
 from apps.expense.views import get_last_30_days_expense_sum
 from apps.income.views import get_last_30_days_income_sum
 from apps.richtato_user.models import CardAccount, Category, User
@@ -21,8 +20,6 @@ from utilities.tools import format_currency
 pst = pytz.timezone("US/Pacific")
 
 
-
-
 # Main view function
 def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
     if request.user.is_authenticated:
@@ -31,12 +28,14 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
         networth = request.user.networth()
         expense_sum = get_last_30_days_expense_sum(request.user)
         income_sum = get_last_30_days_income_sum(request.user)
-
+        savings_rate = (
+            round((income_sum - expense_sum) / income_sum * 100) if income_sum else 0
+        )
         context = {
             "networth": format_currency(networth),
             "expense_sum": format_currency(expense_sum),
             "income_sum": format_currency(income_sum),
-            "savings_rate": f"{round((income_sum - expense_sum) / income_sum * 100)}%",
+            "savings_rate": f"{savings_rate}%",
         }
 
         # Render the response with the context
