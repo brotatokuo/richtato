@@ -2715,7 +2715,7 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
 
 .files-main-content {
   display: flex;
-  flex-direction: row-reverse;
+  flex-direction: column;
   gap: var(--third-padding);
 }
 
@@ -2727,7 +2727,7 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
 
 .files-main-content .files-statistics {
   min-width: 250px;
-  min-height: 420px;
+  min-height: 20px;
   max-height: 420px;
   padding: var(--secondary-padding);
   background-color: var(--white-color);
@@ -2751,6 +2751,7 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin: 10px;
   padding: var(--fourth-padding);
   border: 1px solid var(--eee-color);
   border-radius: var(--secondary-radius);
@@ -2793,7 +2794,7 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
   color: var(--orange-color);
 }
 
-.files-main-content .files-statistics a {
+.blue-primary-button {
   background-color: var(--blue-color);
   color: var(--white-color);
   font-size: 0.8rem;
