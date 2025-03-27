@@ -420,6 +420,7 @@ main {
 }
 
 main .main-content {
+  height: 100%;
   padding: var(--third-padding);
 }
 

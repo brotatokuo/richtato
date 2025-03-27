@@ -3,237 +3,58 @@
 {% block title %} Dashboard {%endblock %}
 <!-- prettier-ignore-start -->
 {% block content %}
+<style>
+  body {
+    font-family: Arial, sans-serif;
+  }
+
+  .drop-zone {
+    width: 100%;
+    height: 400%;
+    padding: 50px;
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+    text-align: center;
+    margin: 20px auto;
+    transition: background-color 0.3s;
+  }
+
+  .drop-zone.dragging {
+    background-color: #98cc2c;
+  }
+
+  .file-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .file-list li {
+    margin: 5px 0;
+  }
+
+  .file-box-card-body img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 5px;
+  }
+</style>
+
 <div class="main-content">
   <div class="title">
-    <h1>Files</h1>
+    <h1>Upload Statements</h1>
   </div>
-  <div class="files-main-content">
-    <div class="files-statistics">
-      <h2>Files Statistics</h2>
-      <div class="box">
-        <div class="file-info">
-          <i class="fa-regular fa-file-pdf"></i>
-          <div>
-            <p>PDF Files</p>
-            <span>130</span>
-          </div>
-        </div>
-        <span>6.5GB</span>
-      </div>
-      <div class="box">
-        <div class="file-info">
-          <i class="fa-regular fa-images"></i>
-          <div>
-            <p>Images</p>
-            <span>115 Files</span>
-          </div>
-        </div>
-        <span>3.5GB</span>
-      </div>
-      <div class="box">
-        <div class="file-info">
-          <i class="fa-regular fa-file-word"></i>
-          <div>
-            <p>Word Files</p>
-            <span>110 Files</span>
-          </div>
-        </div>
-        <span>3.2GB</span>
-      </div>
-      <div class="box">
-        <div class="file-info">
-          <i class="fa-solid fa-file-csv"></i>
-          <div>
-            <p>CSV Files</p>
-            <span>99 Files</span>
-          </div>
-        </div>
-        <span>2.9GB</span>
-      </div>
-      <a href="/#"><i class="fa-solid fa-angles-up"></i>Upload</a>
-    </div>
-    <div class="files-boxes">
-      <div class="file-box">
-        <i class="fa-solid fa-download"></i>
-        <div class="file-box-card-body">
-          <img src="../images/pdf.svg" alt="" />
-          <p>my-file.pdf</p>
-          <span>Zana</span>
-        </div>
-        <div class="file-box-card-footer">
-          <span>20/06/2020</span>
-          <span>5.5MB</span>
-        </div>
-      </div>
-      <div class="file-box">
-        <i class="fa-solid fa-download"></i>
-        <div class="file-box-card-body">
-          <img src="../images/avi.svg" alt="" />
-          <p>my-file.avi</p>
-          <span>Admin</span>
-        </div>
-        <div class="file-box-card-footer">
-          <span>16/05/2021</span>
-          <span>12.5MB</span>
-        </div>
-      </div>
-      <div class="file-box">
-        <i class="fa-solid fa-download"></i>
-        <div class="file-box-card-body">
-          <img src="../images/eps.svg" alt="" />
-          <p>my-file.eps</p>
-          <span>Uploader</span>
-        </div>
-        <div class="file-box-card-footer">
-          <span>16/05/2021</span>
-          <span>2.7MB</span>
-        </div>
-      </div>
-      <div class="file-box">
-        <i class="fa-solid fa-download"></i>
-        <div class="file-box-card-body">
-          <img src="../images/psd.svg" alt="" />
-          <p>my-file.psd</p>
-          <span>Ahmad</span>
-        </div>
-        <div class="file-box-card-footer">
-          <span>16/05/2021</span>
-          <span>15.1MB</span>
-        </div>
-      </div>
-      <div class="file-box">
-        <i class="fa-solid fa-download"></i>
-        <div class="file-box-card-body">
-          <img src="../images/dll.svg" alt="" />
-          <p>my-file.dll</p>
-          <span>Coder</span>
-        </div>
-        <div class="file-box-card-footer">
-          <span>16/05/2021</span>
-          <span>2.2MB</span>
-        </div>
-      </div>
-      <div class="file-box">
-        <i class="fa-solid fa-download"></i>
-        <div class="file-box-card-body">
-          <img src="../images/png.svg" alt="" />
-          <p>my-file.png</p>
-          <span>Designer</span>
-        </div>
-        <div class="file-box-card-footer">
-          <span>16/05/2021</span>
-          <span>2.2MB</span>
-        </div>
-      </div>
-      <div class="file-box">
-        <i class="fa-solid fa-download"></i>
-        <div class="file-box-card-body">
-          <img src="../images/dll.svg" alt="" />
-          <p>my-file.dll</p>
-          <span>Coder</span>
-        </div>
-        <div class="file-box-card-footer">
-          <span>16/05/2021</span>
-          <span>2.2MB</span>
-        </div>
-      </div>
-      <div class="file-box">
-        <i class="fa-solid fa-download"></i>
-        <div class="file-box-card-body">
-          <img src="../images/png.svg" alt="" />
-          <p>my-file.png</p>
-          <span>Designer</span>
-        </div>
-        <div class="file-box-card-footer">
-          <span>16/05/2021</span>
-          <span>2.2MB</span>
-        </div>
-      </div>
-      <div class="file-box">
-        <i class="fa-solid fa-download"></i>
-        <div class="file-box-card-body">
-          <img src="../images/psd.svg" alt="" />
-          <p>my-file.psd</p>
-          <span>Ahmad</span>
-        </div>
-        <div class="file-box-card-footer">
-          <span>16/05/2021</span>
-          <span>15.1MB</span>
-        </div>
-      </div>
-      <div class="file-box">
-        <i class="fa-solid fa-download"></i>
-        <div class="file-box-card-body">
-          <img src="../images/pdf.svg" alt="" />
-          <p>my-file.pdf</p>
-          <span>Zana</span>
-        </div>
-        <div class="file-box-card-footer">
-          <span>20/06/2020</span>
-          <span>5.5MB</span>
-        </div>
-      </div>
-      <div class="file-box">
-        <i class="fa-solid fa-download"></i>
-        <div class="file-box-card-body">
-          <img src="../images/avi.svg" alt="" />
-          <p>my-file.avi</p>
-          <span>Admin</span>
-        </div>
-        <div class="file-box-card-footer">
-          <span>16/05/2021</span>
-          <span>12.5MB</span>
-        </div>
-      </div>
-      <div class="file-box">
-        <i class="fa-solid fa-download"></i>
-        <div class="file-box-card-body">
-          <img src="../images/eps.svg" alt="" />
-          <p>my-file.eps</p>
-          <span>Uploader</span>
-        </div>
-        <div class="file-box-card-footer">
-          <span>16/05/2021</span>
-          <span>2.7MB</span>
-        </div>
-      </div>
-      <div class="file-box">
-        <i class="fa-solid fa-download"></i>
-        <div class="file-box-card-body">
-          <img src="../images/psd.svg" alt="" />
-          <p>my-file.psd</p>
-          <span>Ahmad</span>
-        </div>
-        <div class="file-box-card-footer">
-          <span>16/05/2021</span>
-          <span>15.1MB</span>
-        </div>
-      </div>
-      <div class="file-box">
-        <i class="fa-solid fa-download"></i>
-        <div class="file-box-card-body">
-          <img src="../images/dll.svg" alt="" />
-          <p>my-file.dll</p>
-          <span>Coder</span>
-        </div>
-        <div class="file-box-card-footer">
-          <span>16/05/2021</span>
-          <span>2.2MB</span>
-        </div>
-      </div>
-      <div class="file-box">
-        <i class="fa-solid fa-download"></i>
-        <div class="file-box-card-body">
-          <img src="../images/png.svg" alt="" />
-          <p>my-file.png</p>
-          <span>Designer</span>
-        </div>
-        <div class="file-box-card-footer">
-          <span>16/05/2021</span>
-          <span>2.2MB</span>
-        </div>
-      </div>
-    </div>
+
+  <div class="files-boxes" id="files-boxes">
+    <!-- Files will be loaded here by JS -->
   </div>
+
+  <div class="drop-zone" id="drop-zone">
+    <p>Drag & drop your files here or <strong>click to upload</strong></p>
+    <input type="file" id="file-input" multiple style="display: none;">
+    <ul id="file-list" class="file-list"></ul>
+  </div>
+  
 </div>
+<script src="{% static 'js/files.js' %}"></script>
 {% endblock %}
