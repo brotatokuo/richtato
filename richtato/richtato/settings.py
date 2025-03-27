@@ -30,7 +30,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-jhuu7vjafr)5v-h6pojy=@glgi&z#32y*!jxa4_#*bq6w%r2q="
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "richtato.onrender.com", "richtato-dev.onrender.com"]
