@@ -309,8 +309,7 @@ def _get_table_data(user: User, page: int = 1, page_size: int = 15) -> list:
     # Fetch only the required slice of data for the current page
     expenses = Expense.objects.filter(
         user=user,
-    ).order_by("date")[offset:offset + page_size]
-    
+    ).order_by("-date")[offset:offset + page_size]
 
     for expense in expenses:
         table_data.append(
