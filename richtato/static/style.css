@@ -454,6 +454,10 @@ main .main-content .title::after {
   gap: var(--secondary-padding);
 }
 
+.main-content-boxes.wide {
+  grid-template-columns: repeat(1, minmax(600px, 1fr));
+}
+
 @media (max-width: 1180px) {
   .main-content-boxes {
     grid-template-columns: 1fr;
