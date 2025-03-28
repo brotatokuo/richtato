@@ -23,7 +23,9 @@ urlpatterns = [
     path("user_settings/", views.user_settings, name="user_settings"),
     path("account_settings/", views.account_settings, name="account_settings"),
     path("table/", views.table, name="table"),
-    path("get-table-data/", views.get_table_data, name="get_table_data"),
+    path("get-table-data/", views.get_table_data, name="get_table_data"),\
+    path("timeseries-plots/", views.timeseries_plots, name="timeseries_plots"),
+    path("get-timeseries-data/", views.get_timeseries_data, name="get_timeseries_data"),
 ]
 
 if settings.DEBUG:

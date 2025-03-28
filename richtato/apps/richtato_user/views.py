@@ -4,9 +4,13 @@ from datetime import datetime
 
 import pytz
 from apps.account.models import Account
-from apps.expense.views import get_last_30_days_expense_sum, _get_table_data as _get_table_data_expense
+from apps.expense.models import Expense
+from apps.expense.views import _get_table_data as _get_table_data_expense
+from apps.expense.views import get_last_30_days_expense_sum
+from apps.income.models import Income
 from apps.income.views import get_last_30_days_income_sum
 from apps.richtato_user.models import CardAccount, Category, User
+from apps.richtato_user.utils import _get_line_graph_data
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
@@ -124,6 +128,54 @@ def get_table_data(request: HttpRequest):
         return JsonResponse({"error": "Invalid table option."}, status=400)
 
 
+def timeseries_plots(request: HttpRequest):
+    return render(request, "timeseries_plots.html")
+
+
+def get_timeseries_data(request: HttpRequest) -> JsonResponse:
+    expense_data = _get_line_graph_data(
+        request.user, 5, Expense, "Expenses", "rgba(232, 82, 63, 1)"
+    )
+    income_data = _get_line_graph_data(
+        request.user, 5, Income, "Income", "rgba(63, 82, 232, 1)"
+    )
+    all_labels = sorted(set(expense_data["labels"]) | set(income_data["labels"]))
+
+    expense_dict = dict(
+        zip(expense_data["labels"], expense_data["datasets"][0]["data"])
+    )
+    income_dict = dict(zip(income_data["labels"], income_data["datasets"][0]["data"]))
+
+    aggregated_expenses = []
+    aggregated_incomes = []
+
+    for label in all_labels:
+        aggregated_expenses.append(expense_dict.get(label, 0))
+        aggregated_incomes.append(income_dict.get(label, 0))
+
+    chart_data = {
+        "labels": all_labels,
+        "datasets": [
+            {
+                "label": "Expenses",
+                "data": aggregated_expenses,
+                "borderColor": "rgba(232, 82, 63, 1)",
+                "fill": True,
+                "tension": 0.4,
+            },
+            {
+                "label": "Income",
+                "data": aggregated_incomes,
+                "borderColor": "rgba(152, 204, 44, 1)",
+                "fill": True,
+                "tension": 0.4,
+            },
+        ],
+    }
+
+    return JsonResponse(chart_data)
+
+
 class LoginView(View):
     def get(self, request: HttpRequest):
         return render(
@@ -190,4 +242,5 @@ class RegisterView(View):
             )
 
         login(request, user)
+        return HttpResponseRedirect(reverse("index"))
         return HttpResponseRedirect(reverse("index"))

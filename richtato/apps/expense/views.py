@@ -5,6 +5,7 @@ import pytz
 from apps.expense.models import Expense
 from apps.income.models import Income
 from apps.richtato_user.models import CardAccount, Category, User
+from apps.richtato_user.utils import _get_line_graph_data
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
@@ -190,39 +191,9 @@ def get_recent_entries(request):
 
 
 def get_line_graph_data(request):
-    pst = pytz.timezone("US/Pacific")
-    today = datetime.now(pst)
-    start_date = today - relativedelta(months=5)
-    start_date = start_date.replace(day=1)
-
-    expenses = Expense.objects.filter(
-        user=request.user,
-        date__gte=start_date,
-    ).order_by("date")
-
-    line_graph_data = {}
-    for expense in expenses:
-        month_year = expense.date.strftime("%b %Y")
-        if month_year not in line_graph_data:
-            line_graph_data[month_year] = 0
-        line_graph_data[month_year] += expense.amount
-
-    labels = list(line_graph_data.keys())
-    data = list(line_graph_data.values())
-
-    chart_data = {
-        "labels": labels,
-        "datasets": [
-            {
-                "label": "Expenses By Month",
-                "data": data,
-                "borderColor": "rgba(232, 82, 63, 1)",
-                "fill": False,
-                "tension": 0.4,
-            }
-        ],
-    }
-
+    chart_data = _get_line_graph_data(
+        request.user, 5, Expense, "Expenses", "rgba(232, 82, 63, 1)"
+    )
     return JsonResponse(chart_data)
 
 
@@ -302,6 +273,7 @@ def get_table_data(request) -> JsonResponse:
             )
     return JsonResponse(table_data, safe=False)
 
+
 def _get_table_data(user: User, page: int = 1, page_size: int = 15) -> list:
     table_data = []
     offset = (page - 1) * page_size
@@ -309,7 +281,7 @@ def _get_table_data(user: User, page: int = 1, page_size: int = 15) -> list:
     # Fetch only the required slice of data for the current page
     expenses = Expense.objects.filter(
         user=user,
-    ).order_by("-date")[offset:offset + page_size]
+    ).order_by("-date")[offset : offset + page_size]
 
     for expense in expenses:
         table_data.append(
@@ -324,6 +296,7 @@ def _get_table_data(user: User, page: int = 1, page_size: int = 15) -> list:
         )
 
     return table_data
+
 
 def _delete_expense(transaction_id):
     try:

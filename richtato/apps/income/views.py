@@ -5,6 +5,7 @@ import pytz
 from apps.account.models import Account
 from apps.income.models import Income
 from apps.richtato_user.models import User
+from apps.richtato_user.utils import _get_line_graph_data
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
@@ -205,39 +206,9 @@ def get_table_data(request):
 
 
 def get_line_graph_data(request):
-    pst = pytz.timezone("US/Pacific")
-    today = datetime.now(pst)
-    start_date = today - relativedelta(months=5)
-    start_date = start_date.replace(day=1)
-
-    incomes = Income.objects.filter(
-        user=request.user,
-        date__gte=start_date,
-    ).order_by("date")
-
-    line_graph_data = {}
-    for income in incomes:
-        month_year = income.date.strftime("%b %Y")
-        if month_year not in line_graph_data:
-            line_graph_data[month_year] = 0
-        line_graph_data[month_year] += income.amount
-
-    labels = list(line_graph_data.keys())
-    data = list(line_graph_data.values())
-
-    chart_data = {
-        "labels": labels,
-        "datasets": [
-            {
-                "label": "Income By Month",
-                "data": data,
-                "borderColor": "rgba(152, 204, 44, 1)",
-                "fill": False,
-                "tension": 0.4,
-            }
-        ],
-    }
-
+    chart_data = _get_line_graph_data(
+        request.user, 5, Income, "Income", "rgba(152, 204, 44, 1)"
+    )
     return JsonResponse(chart_data)
 
 
