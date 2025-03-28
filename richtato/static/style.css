@@ -455,7 +455,12 @@ main .main-content .title::after {
 }
 
 .main-content-boxes.wide {
-  grid-template-columns: repeat(1, minmax(300, 1fr));
+  grid-template-columns: repeat(1, minmax(300px, 1fr));
+  height:100%;
+}
+
+#lineChart{
+  min-height: 500px;
 }
 
 @media (max-width: 1180px) {
