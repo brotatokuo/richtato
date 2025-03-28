@@ -302,6 +302,29 @@ def get_table_data(request) -> JsonResponse:
             )
     return JsonResponse(table_data, safe=False)
 
+def _get_table_data(user: User, page: int = 1, page_size: int = 15) -> list:
+    table_data = []
+    offset = (page - 1) * page_size
+
+    # Fetch only the required slice of data for the current page
+    expenses = Expense.objects.filter(
+        user=user,
+    ).order_by("date")[offset:offset + page_size]
+    
+
+    for expense in expenses:
+        table_data.append(
+            {
+                "id": expense.id,
+                "date": format_date(expense.date),
+                "card": expense.account_name.name,
+                "description": expense.description,
+                "amount": format_currency(expense.amount),
+                "category": expense.category.name,
+            }
+        )
+
+    return table_data
 
 def _delete_expense(transaction_id):
     try:

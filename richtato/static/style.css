@@ -3154,3 +3154,7 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
   border-radius: 25px;
   transition: width 0.5s ease;
 }
+
+#tableOption{
+  margin-bottom: 3%;
+}

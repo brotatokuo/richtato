@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pytz
 from apps.account.models import Account
-from apps.expense.views import get_last_30_days_expense_sum
+from apps.expense.views import get_last_30_days_expense_sum, _get_table_data as _get_table_data_expense
 from apps.income.views import get_last_30_days_income_sum
 from apps.richtato_user.models import CardAccount, Category, User
 from django.contrib.auth import authenticate, login, logout
@@ -104,6 +104,24 @@ def user_settings(request: HttpRequest):
 
 def account_settings(request: HttpRequest):
     return render(request, "account_settings.html")
+
+
+def table(request: HttpRequest):
+    return render(request, "table.html")
+
+
+def get_table_data(request: HttpRequest):
+    table_option = request.GET.get("option")
+    page_number = int(request.GET.get("page_number", 1))
+    if table_option == "expense":
+        logger.debug("Getting table data for expense.")
+        table_data = _get_table_data_expense(request.user, page_number)
+        return JsonResponse(table_data, safe=False)
+    elif table_option == "income":
+        logger.debug("Getting table data for income.")
+    else:
+        logger.error(f"Invalid table option: {table_option}")
+        return JsonResponse({"error": "Invalid table option."}, status=400)
 
 
 class LoginView(View):

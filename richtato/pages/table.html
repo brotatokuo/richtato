@@ -1,0 +1,42 @@
+{% extends 'base.html' %} {% load static %}
+<!-- prettier-ignore-start -->
+{% block title %} Dashboard {%endblock %}
+<!-- prettier-ignore-start -->
+{% block content %}
+<script src="https://cdn.tailwindcss.com"></script>
+
+<div class="main-content">
+    <div class="title">
+        <h1>Table Data</h1>
+    </div>
+    <div class="main-content-boxes">
+        <div class="box">
+            <select id="tableOption" class="w-full p-2 border rounded">
+                <option value="expense">Expense</option>
+                <option value="income">Income</option>
+            </select>
+
+            <div class="table-responsive">
+                <table class="styled-table" id="fullTable">
+                  <thead></thead>
+                  <tbody>
+                    <!-- Rows will be inserted here dynamically -->
+                  </tbody>
+                </table>
+
+                <button class="btn-secondary editButton" id="editTable" style="display: none !important;">
+                    Edit
+                </button>
+
+                <div class="pagination-buttons">
+                    <button class="btn-secondary" id="prevPage">Previous Page</button>
+                    <button class="btn-secondary" id="nextPage">Next Page</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+<script src="{% static 'js/table.js' %}"></script>
+{% endblock %}
