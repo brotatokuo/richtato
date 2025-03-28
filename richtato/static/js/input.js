@@ -80,16 +80,31 @@ async function plotLineChart(ctx, endpointUrl) {
         ],
       },
       options: {
+        responsive: true,
+        maintainAspectRatio: false,
         scales: {
+          x: {
+            beginAtZero: true,
+          },
           y: {
             beginAtZero: true,
+            ticks: {
+              callback: function (value, index, values) {
+                const roundedValue = Math.round(value);
+                return new Intl.NumberFormat('en-US', {
+                  style: 'currency',
+                  currency: 'USD',
+                  maximumFractionDigits: 0 // Ensure no decimal places are shown
+                }).format(roundedValue);
+              }
+            }
           },
         },
         plugins: {
           legend: {
             display: false, // Set to true if you want to display the legend
           },
-        },
+        }
       },
     });
   } catch (error) {
