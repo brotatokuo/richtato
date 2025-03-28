@@ -159,14 +159,14 @@ def get_timeseries_data(request: HttpRequest) -> JsonResponse:
             {
                 "label": "Expenses",
                 "data": aggregated_expenses,
-                "borderColor": "rgba(232, 82, 63, 1)",
+                "borderColor": "rgba(232, 82, 63, 0.3)",
                 "fill": True,
                 "tension": 0.4,
             },
             {
                 "label": "Income",
                 "data": aggregated_incomes,
-                "borderColor": "rgba(152, 204, 44, 1)",
+                "borderColor": "rgba(152, 204, 44, 0.3)",
                 "fill": True,
                 "tension": 0.4,
             },
