@@ -2599,6 +2599,7 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
   -ms-border-radius: var(--first-radius);
   -o-border-radius: var(--first-radius);
   display: flex;
+  display:none;
   flex-direction: column;
   justify-content: space-between;
 }
@@ -2739,7 +2740,7 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
   -o-border-radius: var(--first-radius);
 }
 
-.files-main-content .files-boxes .file-box:hover .file-box-card-body img {
+/* .files-main-content .files-boxes .file-box:hover .file-box-card-body img {
   transform: rotate(5deg);
   -webkit-transform: rotate(5deg);
   -moz-transform: rotate(5deg);
@@ -2750,7 +2751,7 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
   -moz-transition: 0.5s;
   -ms-transition: 0.5s;
   -o-transition: 0.5s;
-}
+} */
 
 .files-main-content .files-boxes .file-box > i {
   color: var(--third-color);

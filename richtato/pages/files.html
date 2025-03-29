@@ -25,6 +25,7 @@
     object-fit: cover;
     margin: 50px;
   }
+
   .drop-zone h2 {
     margin: 0;
     font-size: 24px;
@@ -57,26 +58,14 @@
     <h1>Upload Statements</h1>
   </div>
   <div class="files-main-content">
-    <div class="files-statistics">
-      <h2>Files Statistics</h2>
-      <div class="box">
-        <div class="file-info">
-          <i class="fa-regular fa-file-pdf"></i>
-          <div>
-            <p>PDF Files</p>
-            <span>130</span>
-          </div>
-        </div>
-        <span>6.5GB</span>
+    <div class="files-statistics" id="files-statistics">
+      <div class="files-boxes" id="files-boxes">
+        <!-- Files will be loaded here by JS -->
       </div>
-      <a href="/#" class="blue-primary-button"
-        ><i class="fa-solid fa-angles-up"></i>Upload</a
-      >
+      <a href="/#" class="blue-primary-button"><i class="fa-solid fa-angles-up"></i>Upload</a>
     </div>
 
-    <div class="files-boxes" id="files-boxes">
-      <!-- Files will be loaded here by JS -->
-    </div>
+
 
     <div class="drop-zone" id="drop-zone">
       <h2>Drag & Drop to Upload Statements</h2>
