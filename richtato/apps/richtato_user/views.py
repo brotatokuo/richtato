@@ -143,7 +143,7 @@ def get_timeseries_data(request: HttpRequest) -> JsonResponse:
     logger.debug(f"Expense data: {expense_data}")
     income_data = _get_line_graph_data(request.user, month_range, Income)
     logger.debug(f"Income data: {income_data}")
-
+    
     chart_data = {
         "labels": expense_data["labels"],
         "datasets": [

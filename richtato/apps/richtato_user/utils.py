@@ -10,30 +10,35 @@ def _get_line_graph_data(user: User, months: int, model) -> dict:
     pst = pytz.timezone("US/Pacific")
     today = datetime.now(pst)
 
-    # Calculate the start date for the last 'months' months
+    # Calculate the start date for the last 'months' months (inclusive of this month)
     start_date = today - relativedelta(months=months)
     start_date = start_date.replace(day=1)  # Make sure it's the first day of the month
 
-    # Query the model (either Income or Expense)
+    # Generate a list of months in the date range (from start_date to today)
+    months_range = []
+    current_month = start_date
+    while current_month <= today:
+        months_range.append(current_month.strftime("%b %Y"))
+        current_month += relativedelta(months=1)
+
+    # Query the model (either Income or Expense) for items in the given range
     items = model.objects.filter(
         user=user,
         date__gte=start_date,  # Filter for items from the start_date onwards
     ).order_by("date")  # Order by date in chronological order
 
-    line_graph_data = {}
+    # Initialize a dictionary to store the amounts for each month
+    line_graph_data = {month: 0 for month in months_range}  # Start with all months having 0
+
+    # Populate the data with the actual amounts from the database
     for item in items:
         # Use the month and year as the key (e.g., "Jan 2025")
         month_year = item.date.strftime("%b %Y")
-        if month_year not in line_graph_data:
-            line_graph_data[month_year] = 0
-        line_graph_data[month_year] += item.amount
+        if month_year in line_graph_data:
+            line_graph_data[month_year] += item.amount
 
-    # Sort by year first and then month
-    sorted_labels = sorted(
-        line_graph_data.keys(), key=lambda x: datetime.strptime(x, "%b %Y")
-    )  # Sorting by datetime
-
-    # Now, we can create the 'data' list based on the sorted labels
+    # Prepare the final chart data
+    sorted_labels = list(months_range)  # Ensure the order is correct
     sorted_data = [line_graph_data[label] for label in sorted_labels]
 
     chart_data = {
