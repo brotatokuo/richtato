@@ -33,11 +33,16 @@ SECRET_KEY = "django-insecure-jhuu7vjafr)5v-h6pojy=@glgi&z#32y*!jxa4_#*bq6w%r2q=
 DEBUG = True
 
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "richtato.onrender.com", "richtato-dev.onrender.com"]
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "richtato.onrender.com",
+    "richtato-dev.onrender.com",
+]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://richtato.onrender.com",
-    "https://richtato-dev.onrender.com"
+    "https://richtato-dev.onrender.com",
 ]
 
 # Application definition
@@ -144,9 +149,9 @@ def configure_database_for_stage(deploy_stage: str) -> dict:
         case "PROD" | "DEV":
             PG_DB_URL = f"{deploy_stage}_DATABASE_URL"
             db_url = os.getenv(PG_DB_URL)
-            assert (
-                db_url
-            ), f"Missing {PG_DB_URL} environment variable for {deploy_stage}"
+            assert db_url, (
+                f"Missing {PG_DB_URL} environment variable for {deploy_stage}"
+            )
             tmpPostgres = urlparse(db_url)
             db_name = tmpPostgres.path.lstrip("/")
             return {
