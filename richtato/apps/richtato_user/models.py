@@ -5,6 +5,14 @@ from django.contrib.auth.models import (
 )
 from django.db import models
 
+supported_creditcard_statements = [
+    ("american_express", "American Express"),
+    ("bank_of_america", "Bank of America"),
+    ("bilt", "BILT"),
+    ("chase", "Chase"),
+    ("citibank", "Citibank"),
+]
+
 
 # Custom user manager
 class UserManager(BaseUserManager):
@@ -53,6 +61,9 @@ class CardAccount(models.Model):
         User, on_delete=models.CASCADE, related_name="card_account"
     )
     name = models.CharField(max_length=100)
+    credit_card_type = models.CharField(
+        choices=supported_creditcard_statements, max_length=50, null=True, blank=True
+    )
 
     def __str__(self):
         return f"[{self.user}] {self.name}"
@@ -72,4 +83,5 @@ class Category(models.Model):
     color = models.CharField(max_length=7, default="#000000")
 
     def __str__(self):
+        return f"[{self.user}] {self.name}: {self.keywords}"
         return f"[{self.user}] {self.name}: {self.keywords}"

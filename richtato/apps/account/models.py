@@ -1,22 +1,35 @@
 from datetime import datetime
-
-from django.db import models
+from decimal import Decimal
 
 from apps.richtato_user.models import User
+from django.db import models
+
+supported_banks = [
+    ("bank_of_america", "Bank of America"),
+    ("chase", "Chase"),
+    ("citibank", "Citibank"),
+    ("marcus", "Marcus by Goldman Sachs"),
+]
 
 
 # Create your models here.
 class Account(models.Model):
-    ACCOUNT_TYPES = [
+    account_types = [
         ("checking", "Checking"),
         ("savings", "Savings"),
         ("retirement", "Retirement"),
         ("investment", "Investment"),
     ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="account")
-    type = models.CharField(choices=ACCOUNT_TYPES, max_length=50)
+    type = models.CharField(choices=account_types, max_length=50)
+    bank_name = models.CharField(
+        choices=account_types, max_length=50, null=True, blank=True
+    )
     name = models.CharField(max_length=100)
-    latest_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    latest_balance = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal("0")
+    )
     latest_balance_date = models.DateField(null=True, blank=True)
 
     def __str__(self):

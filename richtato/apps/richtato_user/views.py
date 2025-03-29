@@ -10,7 +10,12 @@ from apps.expense.views import get_last_30_days_expense_sum
 from apps.income.models import Income
 from apps.income.views import _get_table_data as _get_table_data_income
 from apps.income.views import get_last_30_days_income_sum
-from apps.richtato_user.models import CardAccount, Category, User
+from apps.richtato_user.models import (
+    CardAccount,
+    Category,
+    User,
+    supported_creditcard_statements,
+)
 from apps.richtato_user.utils import _get_line_graph_data
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -143,7 +148,7 @@ def get_timeseries_data(request: HttpRequest) -> JsonResponse:
     logger.debug(f"Expense data: {expense_data}")
     income_data = _get_line_graph_data(request.user, month_range, Income)
     logger.debug(f"Income data: {income_data}")
-    
+
     chart_data = {
         "labels": expense_data["labels"],
         "datasets": [
@@ -166,6 +171,15 @@ def get_timeseries_data(request: HttpRequest) -> JsonResponse:
     logger.debug(f"Chart data: {chart_data}")
 
     return JsonResponse(chart_data)
+
+
+def get_card_types(request: HttpRequest) -> JsonResponse:
+    l = [
+        {"value": card_type, "label": card_label}
+        for card_type, card_label in supported_creditcard_statements
+    ]
+
+    return JsonResponse(l, safe=False)
 
 
 class LoginView(View):
@@ -232,6 +246,10 @@ class RegisterView(View):
             return render(
                 request, "register.html", {"message": "Username already taken."}
             )
+
+        login(request, user)
+        return HttpResponseRedirect(reverse("index"))
+        return HttpResponseRedirect(reverse("index"))
 
         login(request, user)
         return HttpResponseRedirect(reverse("index"))

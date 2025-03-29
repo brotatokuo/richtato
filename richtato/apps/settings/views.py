@@ -19,7 +19,7 @@ def main(request):
         request,
         "old_settings.html",
         {
-            "account_types": Account.ACCOUNT_TYPES,
+            "account_types": Account.account_types,
             "category_list": category_list,
             "today_date": datetime.today().strftime("%Y-%m-%d"),
             "category_types": Category.CATEGORY_TYPES,

@@ -27,11 +27,54 @@ fileInput.addEventListener('change', () => {
     handleFiles(files);
 });
 
+let uploadedFiles = [];
+async function getCardTypes() {
+    try {
+        const response = await fetch('/get-card-types');
+        if (!response.ok) {
+            throw new Error('Failed to fetch card types');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching card types:', error);
+        return [];
+    }
+}
+
+let cardTypes = [];
+
+// Fetch the card types and store them in cardTypes array
+(async () => {
+    cardTypes = await getCardTypes();
+})();
 
 function handleFiles(files) {
     const filesBoxes = document.getElementById('files-boxes');
 
     Array.from(files).forEach(file => {
+        // Check file type (Excel or CSV)
+        const fileType = file.type;
+        const validTypes = [
+            'application/vnd.ms-excel',                    // .xls
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+            'text/csv'                                      // .csv
+        ];
+
+        // If the file is not a valid type, ignore it
+        if (!validTypes.includes(fileType)) {
+            alert(`${file.name} is not a valid Excel or CSV file.`);
+            return;  // Skip to the next file
+        }
+
+        // Check for duplicate file (based on name and size)
+        if (uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
+            alert(`${file.name} has already been uploaded.`);
+            return;  // Skip this file if it's a duplicate
+        }
+
+        // Add the file to the list of uploaded files
+        uploadedFiles.push({ name: file.name, size: file.size });
+
         // Create the file-box div
         const fileBox = document.createElement('div');
         fileBox.classList.add('file-box');
@@ -47,9 +90,10 @@ function handleFiles(files) {
         removeButton.style.fontSize = '16px';
         removeButton.style.cursor = 'pointer';
 
-        // Attach event listener to remove the file box
+        // Attach event listener to remove the file box and file from uploadedFiles
         removeButton.addEventListener('click', () => {
             fileBox.remove();
+            uploadedFiles = uploadedFiles.filter(f => f.name !== file.name || f.size !== file.size);
         });
 
         const icon = document.createElement('i');
@@ -60,22 +104,27 @@ function handleFiles(files) {
         cardBody.classList.add('file-box-card-body');
 
         const img = document.createElement('img');
-        img.src = '../static/images/png.svg';
+        if (file.name.endsWith('.xls') || file.name.endsWith('.xlsx')) {
+            img.src = '../static/images/excel.svg';
+        } else {
+            img.src = '../static/images/csv.svg';
+        }
         img.alt = file.name;
 
         const fileName = document.createElement('p');
         fileName.textContent = file.name;
 
         const dropdown = document.createElement('select');
-        const options = ['Designer', 'Developer', 'Manager', 'Tester']; // Example options
-        options.forEach(optionText => {
+
+        // Populate the dropdown using cardTypes (with value and label)
+        cardTypes.forEach(cardType => {
             const option = document.createElement('option');
-            option.value = optionText;
-            option.textContent = optionText;
+            option.value = cardType.value;
+            option.textContent = cardType.label;
             dropdown.appendChild(option);
         });
 
-        // Append img, fileName, and designer to cardBody
+        // Append img, fileName, and dropdown to cardBody
         cardBody.appendChild(img);
         cardBody.appendChild(fileName);
         cardBody.appendChild(dropdown);
@@ -83,7 +132,6 @@ function handleFiles(files) {
         // Create the file-box card footer
         const cardFooter = document.createElement('div');
         cardFooter.classList.add('file-box-card-footer');
-
 
         // Append the icon, cardBody, and cardFooter to the fileBox
         fileBox.appendChild(icon);
