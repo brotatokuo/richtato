@@ -116,7 +116,8 @@ def table(request: HttpRequest):
 
 def get_table_data(request: HttpRequest):
     table_option = request.GET.get("option")
-    page_number = int(request.GET.get("page_number", 1))
+    page_number = int(request.GET.get("page", 1))
+    logger.debug(f"Table option: {table_option}, Page number: {page_number}")
     if table_option == "expense":
         logger.debug("Getting table data for expense.")
         table_data = _get_table_data_expense(request.user, page_number)

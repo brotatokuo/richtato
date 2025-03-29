@@ -249,7 +249,6 @@ def get_last_30_days(request):
 def get_table_data(request) -> JsonResponse:
     year = request.GET.get("year", None)
     month = month_mapping(request.GET.get("month", None))
-    print("Month:", month)
     account = request.GET.get("label", None)
 
     table_data = []
