@@ -3021,3 +3021,8 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
 #tableOption{
   margin-bottom: 3%;
 }
+
+.dropdown-container label {
+  margin-bottom: 10px;
+  display: inline-block;
+}

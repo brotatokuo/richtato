@@ -1,11 +1,30 @@
-document.addEventListener("DOMContentLoaded", () => {
+let chartInstance = null;
+
+document.addEventListener("DOMContentLoaded", async () => {
     const lineChart = document
         .getElementById("lineChart")
         .getContext("2d");
-    plotLineChart(lineChart, "/get-timeseries-data/");
+
+    chartInstance = await plotLineChart(lineChart);
+    
+    monthsDropdown.addEventListener("change", async () => {
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+        
+        const lineChart = document
+            .getElementById("lineChart")
+            .getContext("2d");
+        
+        chartInstance = await plotLineChart(lineChart);
+    });
 });
 
-async function plotLineChart(ctx, endpointUrl) {
+async function plotLineChart(ctx) {
+    const monthsDropdown = document.getElementById("monthsDropdown");
+    const selectedRange = monthsDropdown.value;
+    const endpointUrl = `/get-timeseries-data/?month_range=${encodeURIComponent(selectedRange)}`;
+    console.log("Selected month range:", selectedRange);
     try {
         const response = await fetch(endpointUrl);
         if (!response.ok) {
@@ -51,16 +70,16 @@ async function plotLineChart(ctx, endpointUrl) {
                 },
                 plugins: {
                     legend: {
-                        onClick: function(e, legendItem, legend) {
+                        onClick: function (e, legendItem, legend) {
                             const index = legendItem.datasetIndex;
                             const ci = legend.chart;
-                            
+
                             // Check if only this dataset is currently visible
                             const isOnlyVisibleDataset = ci.data.datasets.every((dataset, i) => {
                                 if (i === index) return !ci.getDatasetMeta(i).hidden;
                                 return ci.getDatasetMeta(i).hidden;
                             });
-                            
+
                             if (isOnlyVisibleDataset) {
                                 // If clicked dataset is the only one visible, show all datasets
                                 ci.data.datasets.forEach((dataset, i) => {
@@ -74,7 +93,7 @@ async function plotLineChart(ctx, endpointUrl) {
                                     meta.hidden = (i !== index);
                                 });
                             }
-                            
+
                             // Ensure animations are preserved
                             ci.update('show');
                         }
@@ -82,6 +101,7 @@ async function plotLineChart(ctx, endpointUrl) {
                 }
             },
         });
+        return myLineChart;
     } catch (error) {
         console.error("Error fetching or plotting data:", error);
     }

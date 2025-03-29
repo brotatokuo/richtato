@@ -138,9 +138,10 @@ def timeseries_plots(request: HttpRequest):
 
 
 def get_timeseries_data(request: HttpRequest) -> JsonResponse:
-    expense_data = _get_line_graph_data(request.user, 5, Expense)
+    month_range = int(request.GET.get("month_range", 5))
+    expense_data = _get_line_graph_data(request.user, month_range, Expense)
     logger.debug(f"Expense data: {expense_data}")
-    income_data = _get_line_graph_data(request.user, 5, Income)
+    income_data = _get_line_graph_data(request.user, month_range, Income)
     logger.debug(f"Income data: {income_data}")
 
     chart_data = {
