@@ -281,7 +281,7 @@ def _get_table_data(user: User, page: int = 1, page_size: int = 15) -> list:
     expenses = Expense.objects.filter(
         user=user,
     ).order_by("-date")[offset : offset + page_size]
-
+    
     for expense in expenses:
         table_data.append(
             {

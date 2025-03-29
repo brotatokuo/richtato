@@ -1,17 +1,24 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const tableOption = document.getElementById("tableOption").value;
+    const tableDropdown = document.getElementById("tableOption");
+    let tableOption = tableDropdown.value;
     let pageNumber = 1;
 
-    setupPageNavigation();
-
-
-    const fullTable = new Table(
+    let fullTable = new Table(
         "fullTable",
         `/get-table-data/?option=${encodeURIComponent(tableOption)}&page=${pageNumber}`,
         document.getElementById("editTable"),
         "",
         null
     );
+
+    setupPageNavigation();
+
+    tableDropdown.addEventListener("change", () => {
+        tableOption = tableDropdown.value; // Get the updated option value
+        pageNumber = 1; // Reset to first page on option change
+        fullTable.tableUrl = `/get-table-data/?option=${encodeURIComponent(tableOption)}&page=${pageNumber}`;
+        fullTable.loadTableData();
+    });
 
     function setupPageNavigation() {
         const prevPage = document.getElementById("prevPage");
@@ -28,13 +35,11 @@ document.addEventListener("DOMContentLoaded", () => {
             pageNumber++;
             updateTablePage();
         });
-
     }
 
     function updateTablePage() {
-        // fullTable.update(pageNumber);
-        console.log(pageNumber);
         fullTable.tableUrl = `/get-table-data/?option=${encodeURIComponent(tableOption)}&page=${pageNumber}`;
-        fullTable.loadTableData()
+        fullTable.loadTableData();
+        console.log(`Updated to page number: ${pageNumber}`);
     }
 });

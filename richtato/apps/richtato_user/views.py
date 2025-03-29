@@ -6,6 +6,7 @@ import pytz
 from apps.account.models import Account
 from apps.expense.models import Expense
 from apps.expense.views import _get_table_data as _get_table_data_expense
+from apps.income.views import _get_table_data as _get_table_data_income
 from apps.expense.views import get_last_30_days_expense_sum
 from apps.income.models import Income
 from apps.income.views import get_last_30_days_income_sum
@@ -124,6 +125,9 @@ def get_table_data(request: HttpRequest):
         return JsonResponse(table_data, safe=False)
     elif table_option == "income":
         logger.debug("Getting table data for income.")
+        table_data = _get_table_data_income(request.user, page_number)
+        logger.debug(f"Table data: {table_data}")
+        return JsonResponse(table_data, safe=False)
     else:
         logger.error(f"Invalid table option: {table_option}")
         return JsonResponse({"error": "Invalid table option."}, status=400)

@@ -205,6 +205,28 @@ def get_table_data(request):
     return JsonResponse(table_data, safe=False)
 
 
+def _get_table_data(user: User, page: int = 1, page_size: int = 15) -> list:
+    table_data = []
+    offset = (page - 1) * page_size
+
+    # Fetch only the required slice of data for the current page
+    incomes = Income.objects.filter(
+        user=user,
+    ).order_by("-date")[offset : offset + page_size]
+    
+    for income in incomes:
+        table_data.append(
+            {
+                "id": income.id,
+                "date": format_date(income.date),
+                "description": income.description,
+                "amount": format_currency(income.amount),
+            }
+        )
+
+    return table_data
+
+
 def get_line_graph_data(request):
     chart_data = _get_line_graph_data(
         request.user, 5, Income, "Income", "rgba(152, 204, 44, 1)"
