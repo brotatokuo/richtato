@@ -13,7 +13,7 @@ async function plotLineChart(ctx, endpointUrl) {
         }
         const chartData = await response.json();
         const dataset = chartData.datasets[0];
-        console.log("Fetched chart data:", chartData); // Log the fetched data for debugging
+        console.log("Fetched chart data:", chartData);
         const myLineChart = new Chart(ctx, {
             type: "line",
             data: {
