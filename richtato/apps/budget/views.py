@@ -1,9 +1,9 @@
 import calendar
 from datetime import datetime
+from decimal import Decimal
 
 import pytz
 from apps.expense.models import Expense
-from decimal import Decimal 
 from apps.richtato_user.models import Category
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
@@ -217,6 +217,7 @@ def calculate_budget_diff(diff: float):
 
 
 def get_budget_rankings(request):
+    count = request.GET.get("count", None)
     user = request.user
     pst = pytz.timezone("US/Pacific")
     today = datetime.now(pst)
@@ -249,7 +250,10 @@ def get_budget_rankings(request):
     # Sort and get top 3 budget categories by percent spent
     budget_rankings = sorted(
         budget_expenses, key=lambda x: x["percent_budget"], reverse=True
-    )[:3]
+    )
+
+    if count:
+        budget_rankings = budget_rankings[: int(count)]
 
     # Prepare the category data for the response
     category_data = [
