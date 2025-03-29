@@ -51,8 +51,34 @@ async function plotLineChart(ctx, endpointUrl) {
                 },
                 plugins: {
                     legend: {
-                        display: true, // Set to true if you want to display the legend
-                    },
+                        onClick: function(e, legendItem, legend) {
+                            const index = legendItem.datasetIndex;
+                            const ci = legend.chart;
+                            
+                            // Check if only this dataset is currently visible
+                            const isOnlyVisibleDataset = ci.data.datasets.every((dataset, i) => {
+                                if (i === index) return !ci.getDatasetMeta(i).hidden;
+                                return ci.getDatasetMeta(i).hidden;
+                            });
+                            
+                            if (isOnlyVisibleDataset) {
+                                // If clicked dataset is the only one visible, show all datasets
+                                ci.data.datasets.forEach((dataset, i) => {
+                                    const meta = ci.getDatasetMeta(i);
+                                    meta.hidden = false;
+                                });
+                            } else {
+                                // Otherwise, hide all and show only the clicked one
+                                ci.data.datasets.forEach((dataset, i) => {
+                                    const meta = ci.getDatasetMeta(i);
+                                    meta.hidden = (i !== index);
+                                });
+                            }
+                            
+                            // Ensure animations are preserved
+                            ci.update('show');
+                        }
+                    }
                 }
             },
         });

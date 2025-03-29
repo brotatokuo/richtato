@@ -93,6 +93,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "richtato.context_processors.user_info",
+                "richtato.context_processors.date",
             ],
         },
     },

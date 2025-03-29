@@ -6,9 +6,9 @@ import pytz
 from apps.account.models import Account
 from apps.expense.models import Expense
 from apps.expense.views import _get_table_data as _get_table_data_expense
-from apps.income.views import _get_table_data as _get_table_data_income
 from apps.expense.views import get_last_30_days_expense_sum
 from apps.income.models import Income
+from apps.income.views import _get_table_data as _get_table_data_income
 from apps.income.views import get_last_30_days_income_sum
 from apps.richtato_user.models import CardAccount, Category, User
 from apps.richtato_user.utils import _get_line_graph_data
@@ -138,45 +138,31 @@ def timeseries_plots(request: HttpRequest):
 
 
 def get_timeseries_data(request: HttpRequest) -> JsonResponse:
-    expense_data = _get_line_graph_data(
-        request.user, 5, Expense, "Expenses", "rgba(232, 82, 63, 1)"
-    )
-    income_data = _get_line_graph_data(
-        request.user, 5, Income, "Income", "rgba(63, 82, 232, 1)"
-    )
-    all_labels = sorted(set(expense_data["labels"]) | set(income_data["labels"]))
-
-    expense_dict = dict(
-        zip(expense_data["labels"], expense_data["datasets"][0]["data"])
-    )
-    income_dict = dict(zip(income_data["labels"], income_data["datasets"][0]["data"]))
-
-    aggregated_expenses = []
-    aggregated_incomes = []
-
-    for label in all_labels:
-        aggregated_expenses.append(expense_dict.get(label, 0))
-        aggregated_incomes.append(income_dict.get(label, 0))
+    expense_data = _get_line_graph_data(request.user, 5, Expense)
+    logger.debug(f"Expense data: {expense_data}")
+    income_data = _get_line_graph_data(request.user, 5, Income)
+    logger.debug(f"Income data: {income_data}")
 
     chart_data = {
-        "labels": all_labels,
+        "labels": expense_data["labels"],
         "datasets": [
             {
                 "label": "Expenses",
-                "data": aggregated_expenses,
+                "data": expense_data["values"],
                 "borderColor": "rgba(232, 82, 63, 0.5)",
                 "fill": True,
                 "tension": 0.4,
             },
             {
                 "label": "Income",
-                "data": aggregated_incomes,
+                "data": income_data["values"],
                 "borderColor": "rgba(152, 204, 44, 0.5)",
                 "fill": True,
                 "tension": 0.4,
             },
         ],
     }
+    logger.debug(f"Chart data: {chart_data}")
 
     return JsonResponse(chart_data)
 
