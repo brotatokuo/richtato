@@ -33,6 +33,11 @@ body {
   text-align: center;
 }
 
+.login-footer a {
+  color:#007bff;
+  text-decoration: none;
+}
+
 .settings-form {
   width: 100%;
   max-width: 1000px;
@@ -107,8 +112,8 @@ input[type="password"] {
   padding: 10px;
   font-size: 14px;
   border: 1px solid #ddd;
-  background-color: black;
-  color: white;
+  background-color: white;
+  color: black;
   border-radius: 4px;
   box-sizing: border-box;
   appearance: none;
