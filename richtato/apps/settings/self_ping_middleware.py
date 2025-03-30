@@ -16,6 +16,7 @@ class SelfPingMiddleware:
         while self.keep_running:
             try:
                 response = requests.get("http://richtato.onrender.com")
+                response = requests.get("http://richtato-dev.onrender.com")
                 print(f"Pinged self. Status code: {response.status_code}")
             except requests.RequestException as e:
                 print(f"Failed to ping self: {e}")
@@ -31,4 +32,5 @@ class SelfPingMiddleware:
         """Stop the background thread."""
         self.keep_running = False
         if self.thread.is_alive():
+            self.thread.join()
             self.thread.join()

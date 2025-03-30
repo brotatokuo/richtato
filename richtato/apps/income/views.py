@@ -12,6 +12,7 @@ from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
+from loguru import logger
 from utilities.tools import color_picker, format_currency, format_date, month_mapping
 
 pst = pytz.timezone("US/Pacific")
@@ -145,7 +146,7 @@ def get_plot_data(request):
             annual_total.append(float(monthly_total or 0))
 
         background_color, border_color = color_picker(index)
-        if type(item) == str:
+        if isinstance(item, str):
             label = item
         else:
             label = item.name
@@ -213,7 +214,7 @@ def _get_table_data(user: User, page: int = 1, page_size: int = 15) -> list:
     incomes = Income.objects.filter(
         user=user,
     ).order_by("-date")[offset : offset + page_size]
-    
+
     for income in incomes:
         table_data.append(
             {
@@ -228,9 +229,8 @@ def _get_table_data(user: User, page: int = 1, page_size: int = 15) -> list:
 
 
 def get_line_graph_data(request):
-    chart_data = _get_line_graph_data(
-        request.user, 5, Income, "Income", "rgba(152, 204, 44, 1)"
-    )
+    chart_data = _get_line_graph_data(request.user, 5, Income)
+    logger.debug("Income chart data:", chart_data)
     return JsonResponse(chart_data)
 
 

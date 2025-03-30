@@ -2926,6 +2926,7 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
 .line-chart {
   width: 95%;
   height: 95%;
+  max-height: 70vh;
   max-width: none;
 }
 

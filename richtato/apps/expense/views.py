@@ -12,6 +12,7 @@ from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
+from loguru import logger
 from google_gemini.ai import AI
 from graph.chart_theme import ChartTheme
 from utilities.tools import color_picker, format_currency, format_date, month_mapping
@@ -191,9 +192,8 @@ def get_recent_entries(request):
 
 
 def get_line_graph_data(request):
-    chart_data = _get_line_graph_data(
-        request.user, 5, Expense, "Expenses", "rgba(232, 82, 63, 1)"
-    )
+    chart_data = _get_line_graph_data(request.user, 5, Expense)
+    logger.debug("Expense chart data:", chart_data)
     return JsonResponse(chart_data)
 
 
@@ -281,7 +281,7 @@ def _get_table_data(user: User, page: int = 1, page_size: int = 15) -> list:
     expenses = Expense.objects.filter(
         user=user,
     ).order_by("-date")[offset : offset + page_size]
-    
+
     for expense in expenses:
         table_data.append(
             {
