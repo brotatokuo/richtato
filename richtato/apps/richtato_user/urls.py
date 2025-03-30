@@ -28,12 +28,3 @@ urlpatterns = [
     path("get-timeseries-data/", views.get_timeseries_data, name="get_timeseries_data"),
     path("get-card-types/", views.get_card_types, name="get_card_types"),
 ]
-
-# if settings.DEBUG:
-#     import debug_toolbar
-
-#     urlpatterns = [
-#         path("__debug__/", include(debug_toolbar.urls)),
-#     ] + urlpatterns
-#     ] + urlpatterns
-#     ] + urlpatterns

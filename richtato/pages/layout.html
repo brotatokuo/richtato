@@ -217,11 +217,11 @@
 
         <ul class="menu">
           {% if user.is_authenticated %}
-          <li class="button"><a href="{% url 'budget' %}">Budget</a></li>
+          <!-- <li class="button"><a href="{% url 'budget' %}">Budget</a></li>
           <li class="button"><a href="{% url 'expense' %}">Expense</a></li>
           <li class="button"><a href="{% url 'income' %}">Income</a></li>
           <li class="button"><a href="{% url 'account' %}">Accounts</a></li>
-          <li class="button"><a href="{% url 'settings' %}">Settings</a></li>
+          <li class="button"><a href="{% url 'settings' %}">Settings</a></li> -->
           <li class="button username">
             <a href="{% url 'index' %}" id="username">{{ user.username }}</a>
           </li>
