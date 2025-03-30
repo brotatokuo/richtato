@@ -2,18 +2,19 @@ import json
 from datetime import datetime, timedelta
 
 import pytz
-from apps.account.models import Account
-from apps.income.models import Income
-from apps.richtato_user.models import User
-from apps.richtato_user.utils import _get_line_graph_data
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
-from loguru import logger
-from utilities.tools import color_picker, format_currency, format_date, month_mapping
+from richtato.utilities.tools import (color_picker, format_currency, format_date,
+                             month_mapping)
+
+from richtato.apps.account.models import Account
+from richtato.apps.income.models import Income
+from richtato.apps.richtato_user.models import User
+from richtato.apps.richtato_user.utils import _get_line_graph_data
 
 pst = pytz.timezone("US/Pacific")
 

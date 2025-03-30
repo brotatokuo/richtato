@@ -1,15 +1,15 @@
 import json
-import os
 from datetime import datetime
 
-from apps.account.models import Account, AccountTransaction
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.db.models.functions import ExtractYear
 from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
-from utilities.tools import (
+
+from richtato.apps.account.models import Account, AccountTransaction
+from richtato.utilities.tools import (
     color_picker,
     format_currency,
     format_date,
@@ -197,4 +197,13 @@ def update_accounts(request):
         except Exception as e:
             return JsonResponse({"success": False, "error": str(e)})
 
+    return JsonResponse({"success": False, "error": "Invalid request"})
+
+    return JsonResponse({"success": False, "error": "Invalid request"})
+    return JsonResponse({"success": False, "error": "Invalid request"})
+    return JsonResponse({"success": False, "error": "Invalid request"})
+
+    return JsonResponse({"success": False, "error": "Invalid request"})
+
+    return JsonResponse({"success": False, "error": "Invalid request"})
     return JsonResponse({"success": False, "error": "Invalid request"})

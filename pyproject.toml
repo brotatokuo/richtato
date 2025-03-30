@@ -29,5 +29,7 @@ dependencies = [
     "loguru==0.7.3",
 ]
 
-[tool.setuptools.packages]
-find = { where = ["richtato"] }
+
+[tool.setuptools.packages.find]
+where = ["."]  # Look in the root directory
+include = ["richtato*"]  # Include richtato and all its subpackages

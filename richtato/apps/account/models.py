@@ -1,8 +1,9 @@
 from datetime import datetime
 from decimal import Decimal
 
-from apps.richtato_user.models import User
 from django.db import models
+
+from richtato.apps.richtato_user.models import User
 
 supported_banks = [
     ("bank_of_america", "Bank of America"),
@@ -73,4 +74,6 @@ class AccountTransaction(models.Model):
 
         else:
             # Save normally if the date isn't later
+            super().save(*args, **kwargs)
+            super().save(*args, **kwargs)
             super().save(*args, **kwargs)

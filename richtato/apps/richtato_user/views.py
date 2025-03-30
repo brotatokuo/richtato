@@ -3,20 +3,6 @@ import os
 from datetime import datetime
 
 import pytz
-from apps.account.models import Account
-from apps.expense.models import Expense
-from apps.expense.views import _get_table_data as _get_table_data_expense
-from apps.expense.views import get_last_30_days_expense_sum
-from apps.income.models import Income
-from apps.income.views import _get_table_data as _get_table_data_income
-from apps.income.views import get_last_30_days_income_sum
-from apps.richtato_user.models import (
-    CardAccount,
-    Category,
-    User,
-    supported_creditcard_statements,
-)
-from apps.richtato_user.utils import _get_line_graph_data
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
@@ -25,7 +11,22 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
 from loguru import logger
-from utilities.tools import format_currency
+
+from richtato.apps.account.models import Account
+from richtato.apps.expense.models import Expense
+from richtato.apps.expense.views import _get_table_data as _get_table_data_expense
+from richtato.apps.expense.views import get_last_30_days_expense_sum
+from richtato.apps.income.models import Income
+from richtato.apps.income.views import _get_table_data as _get_table_data_income
+from richtato.apps.income.views import get_last_30_days_income_sum
+from richtato.apps.richtato_user.models import (
+    CardAccount,
+    Category,
+    User,
+    supported_creditcard_statements,
+)
+from richtato.apps.richtato_user.utils import _get_line_graph_data
+from richtato.utilities.tools import format_currency
 
 pst = pytz.timezone("US/Pacific")
 
@@ -252,5 +253,6 @@ class RegisterView(View):
         return HttpResponseRedirect(reverse("index"))
 
         login(request, user)
+        return HttpResponseRedirect(reverse("index"))
         return HttpResponseRedirect(reverse("index"))
         return HttpResponseRedirect(reverse("index"))

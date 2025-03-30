@@ -1,6 +1,6 @@
 import pandas as pd
 
-from statement_imports.cards.card_canonicalizer import CardCanonicalizer
+from richtato.statement_imports.cards.card_canonicalizer import CardCanonicalizer
 
 
 class BankOfAmericaCards(CardCanonicalizer):

@@ -3,14 +3,15 @@ from datetime import datetime
 from decimal import Decimal
 
 import pytz
-from apps.expense.models import Expense
-from apps.richtato_user.models import Category
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
-from utilities.tools import format_currency
+
+from richtato.apps.expense.models import Expense
+from richtato.apps.richtato_user.models import Category
+from richtato.utilities.tools import format_currency
 
 
 @login_required
@@ -103,4 +104,6 @@ def get_budget_rankings(request):
         for ranking in budget_rankings
     ]
 
+    return JsonResponse({"category_rankings": category_data})
+    return JsonResponse({"category_rankings": category_data})
     return JsonResponse({"category_rankings": category_data})

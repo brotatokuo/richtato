@@ -1,6 +1,7 @@
-from apps.expense import views as expense
-from apps.income import views as income
 from django.urls import path
+
+from richtato.apps.expense import views as expense
+from richtato.apps.income import views as income
 
 from . import views
 
@@ -33,4 +34,6 @@ urlpatterns = [
 
 #     urlpatterns = [
 #         path("__debug__/", include(debug_toolbar.urls)),
+#     ] + urlpatterns
+#     ] + urlpatterns
 #     ] + urlpatterns

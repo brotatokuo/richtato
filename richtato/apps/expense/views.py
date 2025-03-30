@@ -2,10 +2,6 @@ import json
 from datetime import datetime, timedelta
 
 import pytz
-from apps.expense.models import Expense
-from apps.income.models import Income
-from apps.richtato_user.models import CardAccount, Category, User
-from apps.richtato_user.utils import _get_line_graph_data
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
@@ -13,8 +9,13 @@ from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
 from google_gemini.ai import AI
-from graph.chart_theme import ChartTheme
-from utilities.tools import color_picker, format_currency, format_date, month_mapping
+from richtato.utilities.tools import (color_picker, format_currency, format_date,
+                             month_mapping)
+
+from richtato.apps.expense.models import Expense
+from richtato.apps.income.models import Income
+from richtato.apps.richtato_user.models import CardAccount, Category, User
+from richtato.apps.richtato_user.utils import _get_line_graph_data
 
 pst = pytz.timezone("US/Pacific")
 
@@ -115,60 +116,6 @@ def update(request):
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)})
 
-
-def get_plot_data(request) -> JsonResponse:
-    year = request.GET.get("year")
-    group_by = request.GET.get("group_by")
-
-    month_list = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-    ]
-    datasets = []
-    all_expenses = Expense.objects.filter(user=request.user, date__year=year)
-
-    if group_by == "card":
-        group_items = CardAccount.objects.filter(user=request.user)
-        item_key = "account_name"
-    elif group_by == "category":
-        group_items = Category.objects.filter(user=request.user)
-        item_key = "category"
-    else:
-        return JsonResponse({"error": "Invalid group_by value"}, status=400)
-
-    color_theme = ChartTheme().get_theme("default")
-    for index, item in enumerate(group_items):
-        annual_total = []
-
-        for month in range(1, 13):
-            monthly_total = all_expenses.filter(
-                **{item_key: item, "date__month": month}
-            ).aggregate(Sum("amount"))["amount__sum"]
-            annual_total.append(float(monthly_total or 0))
-
-        # background_color, border_color = color_picker(index)
-        color = color_theme[index]
-        datasets.append(
-            {
-                "label": item.name,
-                "data": annual_total,
-                "backgroundColor": color,
-                "borderColor": color,
-                "borderWidth": 1,
-            }
-        )
-
-    return JsonResponse({"labels": month_list, "datasets": datasets})
 
 
 def get_recent_entries(request):

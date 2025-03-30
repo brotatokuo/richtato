@@ -1,7 +1,7 @@
 from django.db import models
 
-from apps.account.models import Account
-from apps.richtato_user.models import User
+from richtato.apps.account.models import Account
+from richtato.apps.richtato_user.models import User
 
 
 class Income(models.Model):

@@ -1,8 +1,9 @@
 import os
 
 import google.generativeai as genai
-from apps.richtato_user.models import Category, User
 from fuzzywuzzy import fuzz
+
+from richtato.apps.richtato_user.models import Category, User
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
 model = genai.GenerativeModel("gemini-1.5-flash-8b")
@@ -51,4 +52,6 @@ class AI:
         print(
             f'\033[96mInput: "{input}" | AI Response: "{model_response}" | Best Match: "{best_match}"\033[0m'
         )
+        return best_match
+        return best_match
         return best_match

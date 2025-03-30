@@ -1,9 +1,10 @@
 from datetime import datetime
 
 import pytz
-from apps.richtato_user.models import User
 from dateutil.relativedelta import relativedelta
 from loguru import logger
+
+from richtato.apps.richtato_user.models import User
 
 
 def _get_line_graph_data(user: User, months: int, model) -> dict:
@@ -26,7 +27,9 @@ def _get_line_graph_data(user: User, months: int, model) -> dict:
         date__gte=start_date,
     ).order_by("date")
 
-    logger.debug(f"Model {model.__name__}, User {user}, Start date {start_date}, Items: {items}")
+    logger.debug(
+        f"Model {model.__name__}, User {user}, Start date {start_date}, Items: {items}"
+    )
 
     line_graph_data = {month: 0 for month in months_range}
     logger.debug(f"Initial line graph data: {line_graph_data}")
@@ -47,4 +50,6 @@ def _get_line_graph_data(user: User, months: int, model) -> dict:
 
     logger.debug(f"Final chart data: {chart_data}")
 
+    return chart_data
+    return chart_data
     return chart_data
