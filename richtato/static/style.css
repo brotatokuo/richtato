@@ -179,6 +179,7 @@ div.loader h1 span {
   background-color: var(--white-color);
   padding: var(--third-padding);
   display: flex;
+  width: 200px;
   flex-direction: column;
   box-shadow: 0 0 10px 0px #ddd;
   position: relative;
@@ -361,8 +362,9 @@ a i {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: var(--white-color);
+  background-color: var(--main-color);
   padding: var(--third-padding);
+  min-height: 65px;
 }
 
 .header .brand {
@@ -3027,4 +3029,71 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
 .dropdown-container label {
   margin-bottom: 10px;
   display: inline-block;
+}
+
+.home-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: var(--main-color);
+  margin: 0;
+}
+
+.home-container {
+  text-align: center;
+  max-width: 600px;
+  padding-left: 20px;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: none;
+  background: none; /* Ensure no background color difference */
+}
+
+.typewriter {
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.typewriter-text {
+  font-size: medium;
+  letter-spacing: 10px;
+  border-right: 5px solid;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  animation:
+      typing 2s steps(25),
+      cursor .4s step-end infinite alternate;
+}
+
+/* The typewriter cursor effect */
+@keyframes cursor {
+  50% { border-color: transparent; }
+}
+
+@keyframes typing {
+  from { width: 0 }
+}
+
+.gif-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px; /* Add margin if needed */
+}
+
+.growth-gif {
+  transform: scale(2); /* Stretch the GIF to twice its size */
+  transform-origin: center; /* Ensure the GIF scales from its center */
+}
+
+@media (max-width: 768px) {
+  .growth-gif {
+      max-width: 100%; /* Adjust for smaller screens */
+      height: auto; /* Maintain aspect ratio */
+  }
+}
+
+.page-content.sidebar-hidden {
+  grid-template-columns: 1fr;
 }

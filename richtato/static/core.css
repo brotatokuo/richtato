@@ -3,8 +3,8 @@ body {
   height: 100%;
   margin: 0;
   font-family: Arial, sans-serif;
-  background-color: #121212;
-  color: white;
+  background-color: white;
+  color: black;
 }
 
 .page-container {
@@ -20,8 +20,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  /* Maintain minimum height of 100vh */
+  height:100%;
 }
 
 .login-header {
@@ -320,14 +319,13 @@ input[type="password"] {
 /* Form container styling */
 .form-container {
   flex: 0 0 auto;
-  width: 20%;
-  max-width: 500px;
-  margin-top: 5%;
+  width: 40%;
+  max-width: 400px;
   padding: 20px;
   border: 1px solid #ddd;
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  align-self: flex-start;
+  transform: translateY(-65px);
 }
 
 /* Form subtitle styling */
