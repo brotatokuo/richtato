@@ -230,9 +230,18 @@ def _get_table_data(user: User, page: int = 1, page_size: int = 15) -> list:
 
 def get_line_graph_data(request):
     chart_data = _get_line_graph_data(request.user, 5, Income)
-    logger.debug("Income chart data:", chart_data)
-    return JsonResponse(chart_data)
-
+    months = chart_data["labels"]
+    values = chart_data["values"]
+    datasets = [
+        {
+            "label": "Income",
+            "data": values,
+            "backgroundColor": "rgba(152, 204, 44, 0.2)",
+            "borderColor": "rgba(152, 204, 44, 1)",
+            "borderWidth": 1,
+        }
+    ]
+    return JsonResponse({"labels": months, "datasets": datasets})
 
 def get_last_30_days_income_sum(user: User) -> float:
     today = datetime.now(pst).date()

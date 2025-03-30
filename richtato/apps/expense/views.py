@@ -12,7 +12,6 @@ from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
-from loguru import logger
 from google_gemini.ai import AI
 from graph.chart_theme import ChartTheme
 from utilities.tools import color_picker, format_currency, format_date, month_mapping
@@ -193,8 +192,18 @@ def get_recent_entries(request):
 
 def get_line_graph_data(request):
     chart_data = _get_line_graph_data(request.user, 5, Expense)
-    logger.debug("Expense chart data:", chart_data)
-    return JsonResponse(chart_data)
+    months = chart_data["labels"]
+    values = chart_data["values"]
+    datasets = [
+        {
+            "label": "Income",
+            "data": values,
+            "backgroundColor": "rgba(232, 82, 63, 0.2)",
+            "borderColor": "rgba(232, 82, 63, 1)",
+            "borderWidth": 1,
+        }
+    ]
+    return JsonResponse({"labels": months, "datasets": datasets})
 
 
 def get_last_30_days_expense_sum(user: User) -> float:
