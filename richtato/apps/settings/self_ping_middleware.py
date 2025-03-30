@@ -15,9 +15,14 @@ class SelfPingMiddleware:
     def ping_self_periodically(self):
         while self.keep_running:
             try:
-                response = requests.get("http://richtato.onrender.com")
-                response = requests.get("http://richtato-dev.onrender.com")
-                print(f"Pinged self. Status code: {response.status_code}")
+                prod = "http://richtato.onrender.com"
+                response = requests.get(prod)
+                print(f"Pinged {prod} Status code: {response.status_code}")
+
+                dev = "http://richtato-dev.onrender.com"
+                response = requests.get(dev)
+                print(f"Pinged {dev} Status code: {response.status_code}")
+
             except requests.RequestException as e:
                 print(f"Failed to ping self: {e}")
 
