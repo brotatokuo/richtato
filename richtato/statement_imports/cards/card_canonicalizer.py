@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 import pandas as pd
+from loguru import logger
 
 
 class CardCanonicalizer(ABC):
@@ -19,7 +20,7 @@ class CardCanonicalizer(ABC):
         self.df = df
         self.formatted_df = pd.DataFrame()
         self.output_columns = ["Card", "Date", "Description", "Amount", "Category"]
-        self.check_input_format()
+        # self.check_input_format()
 
     @classmethod
     @abstractmethod
@@ -52,6 +53,8 @@ class CardCanonicalizer(ABC):
         self.formatted_df["Card"] = self.card_name
         self._convert_date()
         self._convert_amount()
+        self.formatted_df.sort_values("Date", inplace=True)
+        self.formatted_df.reset_index(drop=True, inplace=True)
         return self.formatted_df
 
     def check_input_format(self):
@@ -59,6 +62,7 @@ class CardCanonicalizer(ABC):
         Checks if the input DataFrame has the required format.
         """
         if self.df.columns.tolist() != self.input_columns:
+            logger.error("\n" + self.df.head().to_string())
             raise ValueError(
                 f"Input DataFrame is not the expected format. Expected columns: {self.input_columns}"
             )
@@ -75,6 +79,5 @@ class CardCanonicalizer(ABC):
         """
         Converts the amount in the DataFrame to float.
         """
-        self.formatted_df["Amount"] = abs(
-            self.formatted_df["Amount"].astype(float).round(2)
-        )
+        self.formatted_df["Amount"] = self.formatted_df["Amount"].astype(float).round(2)
+        self.formatted_df["Amount"] = self.formatted_df["Amount"].astype(float).round(2)

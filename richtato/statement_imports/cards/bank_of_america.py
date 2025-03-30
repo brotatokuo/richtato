@@ -27,7 +27,9 @@ class BankOfAmericaCards(CardCanonicalizer):
         """
         Canonicalizes the given Bank of America card data.
         """
-        pass
+        self.format_date()
+        self.format_description()
+        self.format_amount()
 
     def format_date(self) -> None:
         self.formatted_df["Date"] = self.df["Posted Date"]
@@ -36,4 +38,4 @@ class BankOfAmericaCards(CardCanonicalizer):
         self.formatted_df["Description"] = self.df["Payee"]
 
     def format_amount(self) -> None:
-        self.formatted_df["Amount"] = self.df["Amount"]
+        self.formatted_df["Amount"] = -1 * self.df["Amount"].astype(float)
