@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", (event) => {
+  const userAuthenticated = "{{ user.is_authenticated|yesno:'true,false' }}";
+  console.log("user auth: ", userAuthenticated);
+
   var gif = document.getElementById("growth-gif");
   if (gif) {
     setTimeout(function () {
@@ -15,6 +18,8 @@ document.addEventListener("DOMContentLoaded", (event) => {
     sidebar.style.display = "none";
     pageContent.classList.add("sidebar-hidden");
   }
-  hideSidebar();
 
+  hideSidebar();
+  const hamburger = document.querySelector("#hamburger");
+  hamburger.style.display = "none";
 });

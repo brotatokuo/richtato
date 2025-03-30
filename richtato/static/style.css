@@ -3035,7 +3035,7 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  height: 100%;
   background-color: var(--main-color);
   margin: 0;
 }
