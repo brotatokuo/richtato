@@ -53,15 +53,11 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
         return render(request, "dashboard.html", context)
 
     else:
-        return HttpResponseRedirect(reverse("welcome"))
+        return render(request, "welcome.html")
 
 
 def dashboard(request: HttpRequest) -> HttpResponse:
     return render(request, "dashboard.html", {"user_tier": "Alpha User"})
-
-
-def welcome(request: HttpRequest):
-    return render(request, "welcome.html")
 
 
 @login_required
