@@ -51,5 +51,3 @@ def _get_line_graph_data(user: User, months: int, model) -> dict:
     logger.debug(f"Final chart data: {chart_data}")
 
     return chart_data
-    return chart_data
-    return chart_data

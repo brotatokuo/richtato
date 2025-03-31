@@ -38,6 +38,7 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
+    id = models.AutoField(primary_key=True)
     username = models.CharField(max_length=150, unique=True)
     date_joined = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
@@ -52,11 +53,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.username
 
-    def networth(self):
-        return sum(account.latest_balance for account in self.account.all())
+    # def networth(self):
+    #     return sum(account.latest_balance for account in self.account.all())
 
 
 class CardAccount(models.Model):
+    id = models.AutoField(primary_key=True)
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="card_account"
     )
@@ -74,7 +76,7 @@ class Category(models.Model):
         ("essential", "Essential"),
         ("nonessential", "Non Essential"),
     ]
-
+    id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="category")
     name = models.CharField(max_length=100)
     keywords = models.TextField()

@@ -9,13 +9,11 @@ from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
 from google_gemini.ai import AI
-from richtato.utilities.tools import (color_picker, format_currency, format_date,
-                             month_mapping)
 
 from richtato.apps.expense.models import Expense
-from richtato.apps.income.models import Income
 from richtato.apps.richtato_user.models import CardAccount, Category, User
 from richtato.apps.richtato_user.utils import _get_line_graph_data
+from richtato.utilities.tools import format_currency, format_date
 
 pst = pytz.timezone("US/Pacific")
 
@@ -117,7 +115,6 @@ def update(request):
         return JsonResponse({"success": False, "error": str(e)})
 
 
-
 def get_recent_entries(request):
     """
     Get the most recent expenses for the user.
@@ -202,31 +199,31 @@ def get_last_30_days(request):
     return JsonResponse(chart_data)
 
 
-def get_table_data(request) -> JsonResponse:
-    year = request.GET.get("year", None)
-    month = month_mapping(request.GET.get("month", None))
-    account = request.GET.get("label", None)
+# def get_table_data(request) -> JsonResponse:
+#     year = request.GET.get("year", None)
+#     month = month_mapping(request.GET.get("month", None))
+#     account = request.GET.get("label", None)
 
-    table_data = []
-    if year and month and account:
-        expenses = Expense.objects.filter(
-            user=request.user,
-            date__year=year,
-            date__month=month,
-            account_name__name=account,
-        ).order_by("date")
-        for expense in expenses:
-            table_data.append(
-                {
-                    "id": expense.id,
-                    "date": format_date(expense.date),
-                    "card": expense.account_name.name,
-                    "description": expense.description,
-                    "amount": format_currency(expense.amount),
-                    "category": expense.category.name,
-                }
-            )
-    return JsonResponse(table_data, safe=False)
+#     table_data = []
+#     if year and month and account:
+#         expenses = Expense.objects.filter(
+#             user=request.user,
+#             date__year=year,
+#             date__month=month,
+#             account_name__name=account,
+#         ).order_by("date")
+#         for expense in expenses:
+#             table_data.append(
+#                 {
+#                     "id": expense.id,
+#                     "date": format_date(expense.date),
+#                     "card": expense.account_name.name,
+#                     "description": expense.description,
+#                     "amount": format_currency(expense.amount),
+#                     "category": expense.category.name,
+#                 }
+#             )
+#     return JsonResponse(table_data, safe=False)
 
 
 def _get_table_data(user: User, page: int = 1, page_size: int = 15) -> list:
@@ -317,67 +314,67 @@ def guess_category(request):
         return JsonResponse({"category": ""})
 
 
-def get_monthly_diff(request):
-    """
-    Get the monthly diff between income and expenses.
-    """
-    year = request.GET.get("year") or 2024
+# def get_monthly_diff(request):
+#     """
+#     Get the monthly diff between income and expenses.
+#     """
+#     year = request.GET.get("year") or 2024
 
-    month_list = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-    ]
-    datasets = []
-    all_expenses = Expense.objects.filter(user=request.user, date__year=year)
-    all_incomes = Income.objects.filter(user=request.user, date__year=year)
+#     month_list = [
+#         "Jan",
+#         "Feb",
+#         "Mar",
+#         "Apr",
+#         "May",
+#         "Jun",
+#         "Jul",
+#         "Aug",
+#         "Sep",
+#         "Oct",
+#         "Nov",
+#         "Dec",
+#     ]
+#     datasets = []
+#     all_expenses = Expense.objects.filter(user=request.user, date__year=year)
+#     all_incomes = Income.objects.filter(user=request.user, date__year=year)
 
-    monthly_diffs = []
+#     monthly_diffs = []
 
-    for month in range(1, 13):
-        # Filter expenses and incomes for the specific month and calculate totals
-        monthly_expense = (
-            all_expenses.filter(date__month=month).aggregate(Sum("amount"))[
-                "amount__sum"
-            ]
-            or 0
-        )
-        monthly_income = (
-            all_incomes.filter(date__month=month).aggregate(Sum("amount"))[
-                "amount__sum"
-            ]
-            or 0
-        )
-        monthly_diff = round(float(monthly_income) - float(monthly_expense))
+#     for month in range(1, 13):
+#         # Filter expenses and incomes for the specific month and calculate totals
+#         monthly_expense = (
+#             all_expenses.filter(date__month=month).aggregate(Sum("amount"))[
+#                 "amount__sum"
+#             ]
+#             or 0
+#         )
+#         monthly_income = (
+#             all_incomes.filter(date__month=month).aggregate(Sum("amount"))[
+#                 "amount__sum"
+#             ]
+#             or 0
+#         )
+#         monthly_diff = round(float(monthly_income) - float(monthly_expense))
 
-        # Append the difference to the monthly_diffs list
-        monthly_diffs.append(monthly_diff)
+#         # Append the difference to the monthly_diffs list
+#         monthly_diffs.append(monthly_diff)
 
-    # Create the dataset for the chart
-    background_color, border_color = color_picker(
-        0
-    )  # Assuming this function returns the correct colors
-    datasets.append(
-        {
-            "label": "Monthly Diff",
-            "data": monthly_diffs,
-            "backgroundColor": background_color,
-            "borderColor": border_color,
-            "borderWidth": 1,
-        }
-    )
+#     # Create the dataset for the chart
+#     background_color, border_color = color_picker(
+#         0
+#     )  # Assuming this function returns the correct colors
+#     datasets.append(
+#         {
+#             "label": "Monthly Diff",
+#             "data": monthly_diffs,
+#             "backgroundColor": background_color,
+#             "borderColor": border_color,
+#             "borderWidth": 1,
+#         }
+#     )
 
-    # Return the JSON response
-    return JsonResponse({"labels": month_list, "datasets": datasets})
+#     # Return the JSON response
+#     return JsonResponse({"labels": month_list, "datasets": datasets})
 
 
 def get_full_table_data(request):

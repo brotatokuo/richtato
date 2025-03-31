@@ -5,12 +5,13 @@ from richtato.apps.richtato_user.models import User
 
 
 class Income(models.Model):
+    id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="earning")
     account_name = models.ForeignKey(
         Account, on_delete=models.CASCADE, related_name="earning"
     )
     description = models.CharField(max_length=100)
-    date = models.DateField(null=True, blank=True)
+    date = models.DateField()
     amount = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):

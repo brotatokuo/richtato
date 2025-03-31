@@ -11,8 +11,8 @@ urlpatterns = [
         name=f"{page_name}_get_recent_entries",
     ),
     path("update/", views.update, name=f"{page_name}_update"),
-    path("get-plot-data/", views.get_plot_data, name=f"{page_name}_get_plot_data"),
-    path("get-table-data/", views.get_table_data, name=f"{page_name}_get_table_data"),
+    # path("get-plot-data/", views.get_plot_data, name=f"{page_name}_get_plot_data"),
+    # path("get-table-data/", views.get_table_data, name=f"{page_name}_get_table_data"),
     path(
         "get_line_graph_data/",
         views.get_line_graph_data,

@@ -21,7 +21,7 @@ class Account(models.Model):
         ("retirement", "Retirement"),
         ("investment", "Investment"),
     ]
-
+    id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="account")
     type = models.CharField(choices=account_types, max_length=50)
     bank_name = models.CharField(
@@ -38,6 +38,7 @@ class Account(models.Model):
 
 
 class AccountTransaction(models.Model):
+    id = models.AutoField(primary_key=True)
     account = models.ForeignKey(
         Account, on_delete=models.CASCADE, related_name="history"
     )

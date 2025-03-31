@@ -12,16 +12,16 @@ urlpatterns = [
         views.get_recent_entries,
         name=f"{page_name}_get_recent_entries",
     ),
-    path("get-table-data/", views.get_table_data, name=f"{page_name}_get_table_data"),
+    # path("get-table-data/", views.get_table_data, name=f"{page_name}_get_table_data"),
     path(
         "get-full-table-data/",
         views.get_full_table_data,
         name=f"{page_name}_get_full_table_data",
     ),
     path("guess-category/", views.guess_category, name=f"{page_name}_guess_category"),
-    path(
-        "get-monthly-diff/", views.get_monthly_diff, name=f"{page_name}_get_monthly_dff"
-    ),
+    # path(
+    #     "get-monthly-diff/", views.get_monthly_diff, name=f"{page_name}_get_monthly_dff"
+    # ),
     path(
         "get_line_graph_data/",
         views.get_line_graph_data,

@@ -2,19 +2,13 @@ import json
 from datetime import datetime
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
 from django.db.models.functions import ExtractYear
 from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
 
 from richtato.apps.account.models import Account, AccountTransaction
-from richtato.utilities.tools import (
-    color_picker,
-    format_currency,
-    format_date,
-    month_mapping,
-)
+from richtato.utilities.tools import format_currency
 
 
 @login_required
@@ -58,72 +52,72 @@ def add_entry(request):
     return HttpResponse("Add account history error")
 
 
-def get_plot_data(request, year) -> JsonResponse:
-    month_list = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-    ]
+# def get_plot_data(request, year) -> JsonResponse:
+#     month_list = [
+#         "Jan",
+#         "Feb",
+#         "Mar",
+#         "Apr",
+#         "May",
+#         "Jun",
+#         "Jul",
+#         "Aug",
+#         "Sep",
+#         "Oct",
+#         "Nov",
+#         "Dec",
+#     ]
 
-    accounts = Account.objects.filter(user=request.user)
-    all_accounts_transactions = AccountTransaction.objects.annotate(
-        year=ExtractYear("date")
-    ).filter(year=year, account__in=accounts)
+#     accounts = Account.objects.filter(user=request.user)
+#     all_accounts_transactions = AccountTransaction.objects.annotate(
+#         year=ExtractYear("date")
+#     ).filter(year=year, account__in=accounts)
 
-    datasets = []
-    for index, account in enumerate(accounts):
-        annual_total = []
-        for month in range(1, 13):
-            monthly_total = all_accounts_transactions.filter(
-                account=account, date__month=month
-            ).aggregate(Sum("amount"))["amount__sum"]
-            monthly_total = float(monthly_total or 0)
+#     datasets = []
+#     for index, account in enumerate(accounts):
+#         annual_total = []
+#         for month in range(1, 13):
+#             monthly_total = all_accounts_transactions.filter(
+#                 account=account, date__month=month
+#             ).aggregate(Sum("amount"))["amount__sum"]
+#             monthly_total = float(monthly_total or 0)
 
-            annual_total.append(monthly_total)
+#             annual_total.append(monthly_total)
 
-        background_color, border_color = color_picker(index)
-        dataset = {
-            "label": account.name,
-            "data": annual_total,
-            "backgroundColor": background_color,
-            "borderColor": border_color,
-            "borderWidth": 1,
-        }
-        datasets.append(dataset)
-    return JsonResponse({"labels": month_list, "datasets": datasets})
+#         background_color, border_color = color_picker(index)
+#         dataset = {
+#             "label": account.name,
+#             "data": annual_total,
+#             "backgroundColor": background_color,
+#             "borderColor": border_color,
+#             "borderWidth": 1,
+#         }
+#         datasets.append(dataset)
+#     return JsonResponse({"labels": month_list, "datasets": datasets})
 
 
-def get_table_data(request):
-    year = request.GET.get("year", None)
-    month = month_mapping(request.GET.get("month", None))
-    account_name = request.GET.get("label", None)
-    print(year, month, account_name)
-    table_data = []
-    if year and month and account_name:
-        account = Account.objects.get(name=account_name)
-        account_histories = AccountTransaction.objects.filter(
-            account=account, date__year=year, date__month=month
-        ).order_by("date")
+# def get_table_data(request):
+#     year = request.GET.get("year", None)
+#     month = month_mapping(request.GET.get("month", None))
+#     account_name = request.GET.get("label", None)
+#     print(year, month, account_name)
+#     table_data = []
+#     if year and month and account_name:
+#         account = Account.objects.get(name=account_name)
+#         account_histories = AccountTransaction.objects.filter(
+#             account=account, date__year=year, date__month=month
+#         ).order_by("date")
 
-        for entry in account_histories:
-            table_data.append(
-                {
-                    "id": entry.id,
-                    "date": format_date(entry.date),
-                    "amount": format_currency(entry.amount),
-                }
-            )
+#         for entry in account_histories:
+#             table_data.append(
+#                 {
+#                     "id": entry.id,
+#                     "date": format_date(entry.date),
+#                     "amount": format_currency(entry.amount),
+#                 }
+#             )
 
-    return JsonResponse(table_data, safe=False)
+#     return JsonResponse(table_data, safe=False)
 
 
 def update(request):
