@@ -115,3 +115,45 @@ function updateIconForCategory(categoryName, iconElement) {
     iconElement.className = 'fa-solid fa-question fa-lg'; // Default icon for unknown category
   }
 }
+
+function togglePasswordVisibility(id, button) {
+  console.log("togglePasswordVisibility called with id:", id);
+  var passwordInput = document.getElementById(id);
+  if (passwordInput.type === "password") {
+    passwordInput.type = "text";
+    button.textContent = "Hide";
+  } else {
+    passwordInput.type = "password";
+    button.textContent = "Show";
+  }
+}
+
+function getCSRFToken() {
+  const cookieValue = document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)')?.pop();
+  return cookieValue || '';
+}
+
+function getUserID() {
+  return fetch('/get-user-id')
+    .then(response => response.json())
+    .then(data => data.userID);
+}
+
+function computeBalance(balance) {
+  // Check if it's a formula starting with '='
+  if (balance.startsWith('=')) {
+    try {
+      // Evaluate the formula (strip the leading '=')
+      balance = eval(balance.slice(1));  // Caution: Use math.js for safety in production
+      console.log('Evaluated formula:', balance);
+    } catch (error) {
+      console.error('Invalid formula:', error);
+      return;  // Stop further processing if the formula is invalid
+    }
+  }
+
+
+  // Convert to a float for regular numbers or evaluated formulas
+  balance = parseFloat(balance).toFixed(2);
+  return balance;
+}

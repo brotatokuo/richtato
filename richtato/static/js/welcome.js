@@ -22,4 +22,22 @@ document.addEventListener("DOMContentLoaded", (event) => {
   hideSidebar();
   const hamburger = document.querySelector("#hamburger");
   hamburger.style.display = "none";
+
+  const loginButton = document.querySelector("#login-button");
+  if (loginButton) {
+    loginButton.addEventListener("keypress", (event) => {
+      if (event.key === "Enter") {
+        loginButton.click();
+      }
+    });
+  }
+
+  const registerButton = document.querySelector("#register-button");
+  if (registerButton) {
+    registerButton.addEventListener("keypress", (event) => {
+      if (event.key === "Enter") {
+        registerButton.click();
+      }
+    });
+  }
 });

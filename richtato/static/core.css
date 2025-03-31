@@ -94,8 +94,6 @@ h2 {
   padding: 10px;
   font-size: 14px;
   border: 1px solid #ddd;
-  background-color: black;
-  color: white;
   border-radius: 4px;
   box-sizing: border-box;
   appearance: none;
@@ -195,40 +193,6 @@ input[type="password"] {
   justify-content: center;
   align-items: center;
   margin: 0 auto;
-}
-
-.styled-table {
-  width: 100%;
-  min-width: 90vw;
-  border-collapse: collapse;
-  margin: 25px 0;
-  font-size: 18px;
-  min-width: 700px;
-  justify-content: center;
-  align-items: center;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-  border: 1px solid #dddddd;
-  /* Adds border around the table */
-}
-
-.styled-table th,
-.styled-table td {
-  padding: 12px 15px;
-  /* Increases spacing between columns */
-  border: 1px solid #dddddd;
-  /* Adds lines between rows and columns */
-  text-align: left;
-  /* Ensures text is aligned to the left */
-}
-
-.styled-table thead tr {
-  background-color: black;
-  color: #ffffff;
-  text-align: left;
-}
-
-.styled-table tbody tr:hover {
-  background-color: #98cc2c;
 }
 
 .dropdown-filter {

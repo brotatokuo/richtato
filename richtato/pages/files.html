@@ -3,55 +3,6 @@
 {% block title %} Dashboard {%endblock %}
 <!-- prettier-ignore-start -->
 {% block content %}
-<style>
-  body {
-    font-family: Arial, sans-serif;
-  }
-
-  .drop-zone {
-    width: 100%;
-    height: 70vh;
-    padding: 50px;
-    border: 2px dashed #ccc;
-    border-radius: 10px;
-    text-align: center;
-    margin: 20px auto;
-    transition: background-color 0.3s;
-  }
-
-  .drop-zone img {
-    width: 200px;
-    height: 200px;
-    object-fit: cover;
-    margin: 50px;
-  }
-
-  .drop-zone h2 {
-    margin: 0;
-    font-size: 24px;
-    color: #333;
-  }
-
-  .drop-zone.dragging {
-    background-color: #98cc2c;
-  }
-
-  .file-list {
-    list-style: none;
-    padding: 0;
-  }
-
-  .file-list li {
-    margin: 5px 0;
-  }
-
-  .file-box-card-body img {
-    width: 50px;
-    height: 50px;
-    object-fit: cover;
-    border-radius: 5px;
-  }
-</style>
 
 <div class="main-content">
   <div class="title">
@@ -70,8 +21,8 @@
     <div class="drop-zone" id="drop-zone">
       <h2>Drag & Drop to Upload Statements</h2>
       <h2>OR</h2>
-      <div class="upload-icon">
-        <img src="{% static 'images/upload.png' %}" alt="Upload Icon" />
+      <div>
+        <img src="{% static 'images/upload.png' %}" alt="Upload Icon"  class="upload-icon"/>
       </div>
       <input type="file" id="file-input" multiple style="display: none" />
       <button id="file-upload-button" class="blue-primary-button">
