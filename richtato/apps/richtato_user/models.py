@@ -53,8 +53,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.username
 
-    # def networth(self):
-    #     return sum(account.latest_balance for account in self.account.all())
+    def networth(self):
+        return sum(account.latest_balance for account in self.account.all())
 
 
 class CardAccount(models.Model):
