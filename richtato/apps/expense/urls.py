@@ -32,4 +32,7 @@ urlpatterns = [
         views.get_last_30_days,
         name=f"{page_name}_get_last_30_days",
     ),
+
+    path('upload-card-statements/',
+         views.upload_card_statements, name=f"{page_name}_upload_card_statements"),
 ]

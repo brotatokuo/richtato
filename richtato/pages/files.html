@@ -13,7 +13,7 @@
       <div class="files-boxes" id="files-boxes">
         <!-- Files will be loaded here by JS -->
       </div>
-      <a href="/#" class="primary-button"><i class="fa-solid fa-angles-up"></i>Upload</a>
+      <button id="file-upload-button" class="primary-button"><i class="fa-solid fa-angles-up"></i>Upload</button>
     </div>
 
 
@@ -25,7 +25,7 @@
         <img src="{% static 'images/upload.png' %}" alt="Upload Icon"  class="upload-icon"/>
       </div>
       <input type="file" id="file-input" multiple style="display: none" />
-      <button id="file-upload-button" class="btn-secondary">
+      <button id="select-files-button" class="btn-secondary">
         Select Files
       </button>
     </div>

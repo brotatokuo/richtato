@@ -9,6 +9,7 @@ from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
 from google_gemini.ai import AI
+from loguru import logger
 
 from richtato.apps.expense.models import Expense
 from richtato.apps.richtato_user.models import CardAccount, Category, User
@@ -396,3 +397,37 @@ def get_full_table_data(request):
             }
         )
     return JsonResponse(table_data, safe=False)
+
+
+def upload_card_statements(request):
+    if request.method == "POST":
+        logger.debug("Uploading card statements")
+
+        files = request.FILES.getlist("files")
+        card_accounts = request.POST.getlist("card_accounts")
+
+        if not files:
+            logger.warning("No files received in the request.")
+            return JsonResponse({"error": "No files received"}, status=400)
+
+        if len(files) != len(card_accounts):
+            logger.warning(
+                f"Mismatch between files ({len(files)}) and card accounts ({len(card_accounts)})"
+            )
+            return JsonResponse(
+                {"error": "Mismatch between files and card accounts"}, status=400
+            )
+
+        logger.debug(f"Files uploaded: {[file.name for file in files]}")
+        logger.debug(f"Card accounts selected: {card_accounts}")
+
+        # Process each file
+        # for file in files:
+        #     # Example: Save files to a specific location
+        #     with open(f"uploads/{file.name}", "wb") as destination:
+        #         for chunk in file.chunks():
+        #             destination.write(chunk)
+
+        return JsonResponse({"message": "Files uploaded successfully"}, status=200)
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
