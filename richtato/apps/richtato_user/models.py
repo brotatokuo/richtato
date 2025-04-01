@@ -103,7 +103,7 @@ class Category(models.Model):
 
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="category")
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, choices=supported_categories)
     keywords = models.TextField()
     budget = models.DecimalField(max_digits=10, decimal_places=2)
     type = models.CharField(max_length=50, choices=CATEGORY_TYPES, default="essential")

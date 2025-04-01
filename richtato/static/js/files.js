@@ -140,13 +140,13 @@ class File {
         fileSize.classList.add('file-size');
 
         // Create dropdown from this instance
-        const dropdown = this.createDropdown();
+        this.dropdown = this.createDropdown();
 
         // Append elements to the cardBody
         cardBody.appendChild(img);
         cardBody.appendChild(fileName);
         cardBody.appendChild(fileSize);
-        cardBody.appendChild(dropdown);
+        cardBody.appendChild(this.dropdown);
 
         // Append the cardBody to the fileBox
         fileBox.appendChild(cardBody);
@@ -236,14 +236,14 @@ class FileManager {
         this.uploadedFiles.forEach(fileObj => {
             formData.append('files', fileObj.file);
 
-            // Also append the selected card account for each file
-            const cardAccountValue = fileObj.createDropdown().value;
-            formData.append('card_accounts', cardAccountValue);
+            const selectedCardType = fileObj.dropdown.value;
+            const selectedCardName = fileObj.dropdown.options[fileObj.dropdown.selectedIndex].textContent;
 
-            // You might want to add the file name as well for reference
+            formData.append('card_types', selectedCardType);
             formData.append('file_names', fileObj.name);
+            formData.append('card_names', selectedCardName);
 
-            console.log('File name:', fileObj.name, 'Card account:', cardAccountValue);
+            console.log('File name:', fileObj.name, 'Card Type:', selectedCardType, 'Card Name:', selectedCardName);
         });
 
         const csrftoken = getCSRFToken();

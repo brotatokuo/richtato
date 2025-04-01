@@ -11,7 +11,7 @@ class Expense(models.Model):
         CardAccount, on_delete=models.CASCADE, related_name="transactions"
     )
     category = models.ForeignKey(
-        Category, on_delete=models.CASCADE, related_name="transactions"
+        Category, on_delete=models.CASCADE, related_name="transactions", null=True, blank=True
     )
     description = models.CharField(max_length=100)
     date = models.DateField()

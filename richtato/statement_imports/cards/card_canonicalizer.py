@@ -3,7 +3,9 @@ from abc import ABC, abstractmethod
 import pandas as pd
 from loguru import logger
 
+from richtato.apps.richtato_user.models import Category
 from richtato.apps.expense.models import Expense
+from richtato.apps.richtato_user.models import CardAccount
 from richtato.categories.categories_manager import CategoriesManager
 
 
@@ -102,15 +104,18 @@ class CardCanonicalizer(ABC):
         Iterate through card's formatted df and add each to the database.
         """
 
+        card_name = self.formatted_df["Card"].unique().tolist()[0]
         for _, row in self.formatted_df.iterrows():
             description = row["Description"]
-            category = row["Category"]
+            category = row["Category"].lower()
             date = row["Date"]
             amount = row["Amount"]
+            account = CardAccount.objects.get(name=card_name, user=self.user)
+            category = Category.objects.get(name=category)
 
             transaction = Expense(
                 user=self.user,
-                account_name=self.card_name,
+                account_name=account,
                 description=description,
                 category=category,
                 date=date,

@@ -1,4 +1,3 @@
-from richtato.apps.expense.models import Expense
 from richtato.statement_imports.cards.american_express import AmericanExpressCards
 from richtato.statement_imports.cards.bank_of_america import BankOfAmericaCards
 from richtato.statement_imports.cards.citi import CitiCards
@@ -53,6 +52,7 @@ class CardStatement:
         # Use the from_file class method instead of constructor
         canonicalizer_class = cls._canonicalizers[card_type_lower]
         return canonicalizer_class.from_file(user, card_name, file_path)
+
 
 def register_card_canonicalizers():
     """Register all available card canonicalizer classes with the factory."""

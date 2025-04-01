@@ -405,29 +405,31 @@ def upload_card_statements(request):
         logger.debug("Uploading card statements")
 
         files = request.FILES.getlist("files")
-        card_accounts = request.POST.getlist("card_accounts")
+        card_types = request.POST.getlist("card_types")
+        card_names = request.POST.getlist("card_names")
 
         if not files:
             logger.warning("No files received in the request.")
             return JsonResponse({"error": "No files received"}, status=400)
 
-        if len(files) != len(card_accounts):
+        if len(files) != len(card_types):
             logger.warning(
-                f"Mismatch between files ({len(files)}) and card accounts ({len(card_accounts)})"
+                f"Mismatch between files ({len(files)}) and card accounts ({len(card_types)})"
             )
             return JsonResponse(
                 {"error": "Mismatch between files and card accounts"}, status=400
             )
 
         logger.debug(f"Files uploaded: {[file.name for file in files]}")
-        logger.debug(f"Card accounts selected: {card_accounts}")
+        logger.debug(f"Card accounts selected: {card_types}")
+        logger.debug(f"Card names: {card_names}")
 
-        for file, card_account in zip(files, card_accounts):
+        for file, card_type, card_name in zip(files, card_types, card_names):
             card_statement = CardStatement.create_from_file(
-                request.user, card_account, card_account, file.file
+                request.user, card_type, card_name, file.file
             )
-            print(type(card_statement))
             print(card_statement.formatted_df.head())
+            card_statement.process()
 
         return JsonResponse({"message": "Files uploaded successfully"}, status=200)
 
