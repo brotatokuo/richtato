@@ -59,7 +59,8 @@ def register_card_canonicalizers():
 
     CardStatement.register("american_express", AmericanExpressCards)
     CardStatement.register("bank_of_america", BankOfAmericaCards)
-    CardStatement.register("chase", CitiCards)
+    CardStatement.register("citibank", CitiCards)
+    # CardStatement.register("chase", CitiCards)
 
 
 register_card_canonicalizers()

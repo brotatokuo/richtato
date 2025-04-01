@@ -67,6 +67,7 @@ class File {
         this.file_size = file.size;
         this.file = file;
         this.cardTypes = cardTypes;
+        console.log("cardTypes", cardTypes);
         this.onRemoveCallback = onRemoveCallback; // Store the callback for removal
     }
 
@@ -75,7 +76,7 @@ class File {
         const dropdown = document.createElement("select");
         dropdown.classList.add("card-account-dropdown");
 
-        this.cardTypes.forEach(cardType => {
+        this.cardTypes.cards.forEach(cardType => {
             const option = document.createElement("option");
             option.value = cardType.value;
             option.textContent = cardType.label;

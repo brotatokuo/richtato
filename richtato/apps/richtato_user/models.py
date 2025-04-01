@@ -5,7 +5,7 @@ from django.contrib.auth.models import (
 )
 from django.db import models
 
-supported_creditcard_statements = [
+supported_card_statements = [
     ("american_express", "American Express"),
     ("bank_of_america", "Bank of America"),
     ("bilt", "BILT"),
@@ -63,8 +63,8 @@ class CardAccount(models.Model):
         User, on_delete=models.CASCADE, related_name="card_account"
     )
     name = models.CharField(max_length=100)
-    credit_card_type = models.CharField(
-        choices=supported_creditcard_statements, max_length=50, null=True, blank=True
+    card_type = models.CharField(
+        choices=supported_card_statements, max_length=50, null=True, blank=True
     )
 
     def __str__(self):

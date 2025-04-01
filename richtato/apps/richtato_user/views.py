@@ -19,12 +19,7 @@ from richtato.apps.expense.views import get_last_30_days_expense_sum
 from richtato.apps.income.models import Income
 from richtato.apps.income.views import _get_table_data as _get_table_data_income
 from richtato.apps.income.views import get_last_30_days_income_sum
-from richtato.apps.richtato_user.models import (
-    CardAccount,
-    Category,
-    User,
-    supported_creditcard_statements,
-)
+from richtato.apps.richtato_user.models import CardAccount, Category, User
 from richtato.apps.richtato_user.utils import _get_line_graph_data
 from richtato.utilities.tools import format_currency
 
@@ -171,12 +166,19 @@ def get_timeseries_data(request: HttpRequest) -> JsonResponse:
 
 
 def get_card_types(request: HttpRequest) -> JsonResponse:
-    l = [
-        {"value": card_type, "label": card_label}
-        for card_type, card_label in supported_creditcard_statements
-    ]
+    cards = CardAccount.objects.filter(user=request.user).values("name", "card_type")
+    logger.debug(f"Cards: {cards}")
+    cards_dict = {
+        "cards": [
+            {
+                "value": card["card_type"],
+                "label": card["name"],
+            }
+            for card in cards
+        ]
+    }
 
-    return JsonResponse(l, safe=False)
+    return JsonResponse(cards_dict, safe=False)
 
 
 class LoginView(View):

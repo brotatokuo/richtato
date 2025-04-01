@@ -424,7 +424,7 @@ def upload_card_statements(request):
 
         for file, card_account in zip(files, card_accounts):
             card_statement = CardStatement.create_from_file(
-                request.user, card_account, file.name, file.file
+                request.user, card_account, card_account, file.file
             )
             print(type(card_statement))
             print(card_statement.formatted_df.head())
