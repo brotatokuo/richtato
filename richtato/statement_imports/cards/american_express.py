@@ -1,20 +1,21 @@
 import pandas as pd
 
+from richtato.apps.richtato_user.models import User
 from richtato.statement_imports.cards.card_canonicalizer import CardCanonicalizer
 
 
-class AmexCards(CardCanonicalizer):
+class AmericanExpressCards(CardCanonicalizer):
     """
     Class for canonicalizing AMEX card data.
     """
 
     @classmethod
-    def from_file(cls, card_name: str, file_path: str):
+    def from_file(cls, user: User, card_name: str, file_path: str):
         """
         Reads AMEX card data from a file."
         """
-        df = pd.read_excel(file_path, header=6)
-        return cls(card_name, df)
+        df = pd.read_excel(file_path, header=6, engine="openpyxl")
+        return cls(user, card_name, df)
 
     @property
     def input_columns(self):

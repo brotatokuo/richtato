@@ -86,4 +86,3 @@ class Category(models.Model):
 
     def __str__(self):
         return f"[{self.user}] {self.name}: {self.keywords}"
-        return f"[{self.user}] {self.name}: {self.keywords}"

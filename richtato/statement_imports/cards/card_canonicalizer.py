@@ -3,24 +3,27 @@ from abc import ABC, abstractmethod
 import pandas as pd
 from loguru import logger
 
+from richtato.apps.expense.models import Expense
+
 
 class CardCanonicalizer(ABC):
     """
     Abstract class for canonicalizing card data.
     """
 
-    def __init__(self, card_name: str, df: pd.DataFrame):
+    def __init__(self, user, card_name: str, df: pd.DataFrame):
         """
         Initializes the CardCanonicalizer with a DataFrame.
 
         Args:
             df (pd.DataFrame): The DataFrame containing card data.
         """
+        self.user = user
         self.card_name = card_name
         self.df = df
         self.formatted_df = pd.DataFrame()
         self.output_columns = ["Card", "Date", "Description", "Amount", "Category"]
-        # self.check_input_format()
+        self.format()
 
     @classmethod
     @abstractmethod
@@ -53,6 +56,7 @@ class CardCanonicalizer(ABC):
         self.formatted_df["Card"] = self.card_name
         self._convert_date()
         self._convert_amount()
+        self._compute_category()
         self.formatted_df.sort_values("Date", inplace=True)
         self.formatted_df.reset_index(drop=True, inplace=True)
         return self.formatted_df
@@ -81,3 +85,30 @@ class CardCanonicalizer(ABC):
         """
         self.formatted_df["Amount"] = self.formatted_df["Amount"].astype(float).round(2)
         self.formatted_df["Amount"] = self.formatted_df["Amount"].astype(float).round(2)
+
+    def _compute_category(self) -> None:
+        """
+        Computes the category for each transaction in the DataFrame.
+        """
+        raise NotImplementedError("Implement smart categorization first")
+
+    def process(self) -> None:
+        """
+        Iterate through card's formatted df and add each to the database.
+        """
+
+        for _, row in self.formatted_df.iterrows():
+            description = row["Description"]
+            category = row["Category"]
+            date = row["Date"]
+            amount = row["Amount"]
+
+            transaction = Expense(
+                user=self.user,
+                account_name=self.card_name,
+                description=description,
+                category=category,
+                date=date,
+                amount=amount,
+            )
+            transaction.save()

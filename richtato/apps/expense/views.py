@@ -14,6 +14,7 @@ from loguru import logger
 from richtato.apps.expense.models import Expense
 from richtato.apps.richtato_user.models import CardAccount, Category, User
 from richtato.apps.richtato_user.utils import _get_line_graph_data
+from richtato.statement_imports.cards.card_factory import CardStatement
 from richtato.utilities.tools import format_currency, format_date
 
 pst = pytz.timezone("US/Pacific")
@@ -421,12 +422,12 @@ def upload_card_statements(request):
         logger.debug(f"Files uploaded: {[file.name for file in files]}")
         logger.debug(f"Card accounts selected: {card_accounts}")
 
-        # Process each file
-        # for file in files:
-        #     # Example: Save files to a specific location
-        #     with open(f"uploads/{file.name}", "wb") as destination:
-        #         for chunk in file.chunks():
-        #             destination.write(chunk)
+        for file, card_account in zip(files, card_accounts):
+            card_statement = CardStatement.create_from_file(
+                request.user, card_account, file.name, file.file
+            )
+            print(type(card_statement))
+            print(card_statement.formatted_df.head())
 
         return JsonResponse({"message": "Files uploaded successfully"}, status=200)
 

@@ -1,5 +1,6 @@
 import pandas as pd
 
+from richtato.apps.richtato_user.models import User
 from richtato.statement_imports.cards.card_canonicalizer import CardCanonicalizer
 
 
@@ -9,12 +10,12 @@ class BankOfAmericaCards(CardCanonicalizer):
     """
 
     @classmethod
-    def from_file(cls, card_name: str, file_path: str):
+    def from_file(cls, user: User, card_name: str, file_path: str):
         """
         Reads Bank of America card data from a file."
         """
         df = pd.read_csv(file_path, header=0)
-        return cls(card_name, df)
+        return cls(user, card_name, df)
 
     @property
     def input_columns(self):
@@ -38,4 +39,5 @@ class BankOfAmericaCards(CardCanonicalizer):
         self.formatted_df["Description"] = self.df["Payee"]
 
     def format_amount(self) -> None:
+        self.formatted_df["Amount"] = -1 * self.df["Amount"].astype(float)
         self.formatted_df["Amount"] = -1 * self.df["Amount"].astype(float)
