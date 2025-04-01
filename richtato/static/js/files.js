@@ -233,8 +233,6 @@ class FileManager {
 
         // Append each file and its associated card account
         this.uploadedFiles.forEach(fileObj => {
-            // fileObj is an instance of our File class
-            // We need to append the actual file (fileObj.file)
             formData.append('files', fileObj.file);
 
             // Also append the selected card account for each file

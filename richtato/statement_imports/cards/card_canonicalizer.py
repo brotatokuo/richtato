@@ -4,6 +4,7 @@ import pandas as pd
 from loguru import logger
 
 from richtato.apps.expense.models import Expense
+from richtato.categories.categories_manager import CategoriesManager
 
 
 class CardCanonicalizer(ABC):
@@ -90,7 +91,11 @@ class CardCanonicalizer(ABC):
         """
         Computes the category for each transaction in the DataFrame.
         """
-        raise NotImplementedError("Implement smart categorization first")
+        categories_manager = CategoriesManager()
+
+        self.formatted_df["Category"] = self.formatted_df["Description"].apply(
+            categories_manager.search
+        )
 
     def process(self) -> None:
         """

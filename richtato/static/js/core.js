@@ -86,13 +86,10 @@ function updateIconForCategory(categoryName, iconElement) {
     'travel': 'fa-plane',
     'shopping': 'fa-shopping-cart',
     'groceries': 'fa-shopping-basket',
-    'food': 'fa-utensils',
     'entertainment': 'fa-tv',
     'utilities': 'fa-plug',
     'housing': 'fa-home',
-    'insurance': 'fa-shield-alt',
     'medical': 'fa-hospital',
-    'transportation': 'fa-car',
     'education': 'fa-graduation-cap',
     'savings': 'fa-piggy-bank',
     'gifts': 'fa-gift',
@@ -101,12 +98,10 @@ function updateIconForCategory(categoryName, iconElement) {
     'subscriptions': 'fa-file-invoice',
     'charity/donations': 'fa-heart',
     'pet': 'fa-paw',
-    'fun': 'fa-face-smile',
-    'costco': 'fa-warehouse',
+    'wholesale': 'fa-warehouse',
     'car': 'fa-car',
-    'miscellaneous': 'fa-ellipsis',
     'phone': 'fa-phone',
-    'internet': 'fa-wifi',
+    'miscellaneous': 'fa-ellipsis',
   };
 
   if (categoryIcons[categoryName]) {

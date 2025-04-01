@@ -76,13 +76,37 @@ class Category(models.Model):
         ("essential", "Essential"),
         ("nonessential", "Non Essential"),
     ]
+    supported_categories = [
+    ("travel", "Travel"),
+    ("shopping", "Shopping"),
+    ("groceries", "Groceries"),
+    ("entertainment", "Entertainment"),
+    ("utilities", "Utilities"),
+    ("housing", "Housing"),
+    ("medical", "Medical"),
+    ("transportation", "Transportation"),
+    ("education", "Education"),
+    ("savings", "Savings"),
+    ("gifts", "Gifts"),
+    ("dining", "Dining"),
+    ("investments", "Investments"),
+    ("subscriptions", "Subscriptions"),
+    ("charity/donations", "Charity/Donations"),
+    ("pet", "Pet"),
+    ("fun", "Fun"),
+    ("costco", "Costco"),
+    ("car", "Car"),
+    ("miscellaneous", "Miscellaneous"),
+    ("phone", "Phone"),
+    ("internet", "Internet"),
+    ]
+
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="category")
     name = models.CharField(max_length=100)
     keywords = models.TextField()
     budget = models.DecimalField(max_digits=10, decimal_places=2)
     type = models.CharField(max_length=50, choices=CATEGORY_TYPES, default="essential")
-    color = models.CharField(max_length=7, default="#000000")
 
     def __str__(self):
         return f"[{self.user}] {self.name}: {self.keywords}"
