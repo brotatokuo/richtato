@@ -15,7 +15,7 @@ class CardStatement:
     _canonicalizers = {}
 
     @classmethod
-    def register(cls, card_name, canonicalizer_class):
+    def register(cls, card_type, canonicalizer_class):
         """
         Register a canonicalizer class for a specific card type.
 
@@ -23,7 +23,7 @@ class CardStatement:
             card_type (str): Identifier for the card type
             canonicalizer_class (class): The card canonicalizer class to register
         """
-        cls._canonicalizers[card_name.lower()] = canonicalizer_class
+        cls._canonicalizers[card_type.lower()] = canonicalizer_class
 
     @classmethod
     def create_from_file(cls, user, card_type, card_name, file_path):
