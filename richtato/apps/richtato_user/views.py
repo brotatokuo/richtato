@@ -19,7 +19,12 @@ from richtato.apps.expense.views import get_last_30_days_expense_sum
 from richtato.apps.income.models import Income
 from richtato.apps.income.views import _get_table_data as _get_table_data_income
 from richtato.apps.income.views import get_last_30_days_income_sum
-from richtato.apps.richtato_user.models import CardAccount, Category, User
+from richtato.apps.richtato_user.models import (
+    CardAccount,
+    Category,
+    User,
+    supported_card_banks,
+)
 from richtato.apps.richtato_user.utils import _get_line_graph_data
 from richtato.utilities.tools import format_currency
 
@@ -105,7 +110,9 @@ def user_settings(request: HttpRequest):
 
 
 def account_settings(request: HttpRequest):
-    return render(request, "account_settings.html")
+    return render(
+        request, "account_settings.html", {"supported_card_banks": supported_card_banks}
+    )
 
 
 def table(request: HttpRequest):
@@ -247,6 +254,11 @@ class RegisterView(View):
             )
 
         login(request, user)
+        return HttpResponseRedirect(reverse("index"))
+        return HttpResponseRedirect(reverse("index"))
+
+        login(request, user)
+        return HttpResponseRedirect(reverse("index"))
         return HttpResponseRedirect(reverse("index"))
         return HttpResponseRedirect(reverse("index"))
 

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
@@ -6,10 +8,8 @@ from django.contrib.auth.models import (
 from django.db import models
 
 from richtato.categories.categories import BaseCategory
-from decimal import Decimal
 
-
-supported_card_statements = [
+supported_card_banks = [
     ("american_express", "American Express"),
     ("bank_of_america", "Bank of America"),
     ("bilt", "BILT"),
@@ -67,11 +67,15 @@ class CardAccount(models.Model):
         User, on_delete=models.CASCADE, related_name="card_account"
     )
     name = models.CharField(max_length=100)
-    card_type = models.CharField(
-        choices=supported_card_statements, max_length=50)
+    card_bank = models.CharField(choices=supported_card_banks, max_length=50)
 
     def __str__(self):
         return f"[{self.user}] {self.name}"
+
+    @property
+    def card_bank_title(self):
+        """Returns the human-readable bank name."""
+        return dict(supported_card_banks).get(self.card_bank, self.card_bank)
 
 
 class Category(models.Model):
@@ -87,7 +91,9 @@ class Category(models.Model):
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="category")
     name = models.CharField(max_length=100, choices=supported_categories)
-    budget = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal(100.00))
+    budget = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal(100.00)
+    )
     type = models.CharField(max_length=50, choices=CATEGORY_TYPES, default="essential")
 
     def __str__(self):

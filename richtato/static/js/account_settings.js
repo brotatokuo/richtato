@@ -3,6 +3,6 @@ document.addEventListener("DOMContentLoaded", () => {
     "settings-card-table",
     "/settings/get-cards/",
     document.getElementById("settingsCardEditButton"),
-    null
+    saveTableEndpoint,
   );
 });

@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import HttpResponseRedirect, render
 from django.urls import reverse
+from loguru import logger
 
 from richtato.apps.account.models import Account, AccountTransaction
 from richtato.apps.richtato_user.models import CardAccount, Category
@@ -29,18 +30,19 @@ def main(request):
 
 
 # region Card Accounts
-@login_required
 def get_cards(request):
-    card_options = (
-        CardAccount.objects.filter(user=request.user)
-        .values("id", "name")
-        .order_by("name")
-    )
+    card_options = CardAccount.objects.filter(user=request.user).order_by("name")
+
     json_data = []
     for card in card_options:
-        card_id = card["id"]
-        card_name = card["name"]
-        json_data.append({"Id": card_id, "Card": card_name})
+        logger.debug(f"Card: {card}")
+        json_data.append(
+            {
+                "Id": card.id,
+                "Card": card.name,
+                "Bank": card.card_bank_title,
+            }
+        )
 
     return JsonResponse(json_data, safe=False)
 
@@ -83,13 +85,16 @@ def update_cards(request):
                 delete_bool = card.get("delete")
                 card_id = card.get("id")
                 card_name = card.get("card").strip()
+                card_bank = card.get("bank").strip()
 
                 if delete_bool:
                     CardAccount.objects.get(id=card_id).delete()
                     continue
 
                 CardAccount.objects.update_or_create(
-                    user=request.user, id=card_id, defaults={"name": card_name}
+                    user=request.user,
+                    id=card_id,
+                    defaults={"name": card_name, "card_bank": card_bank},
                 )
 
             return JsonResponse({"success": True})

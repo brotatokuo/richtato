@@ -282,7 +282,7 @@ class Table {
     this.updateSortArrows(headerRow, columnIndex, direction);
   }
 
-  toggleEditMode() {
+  async toggleEditMode() {
     if (this.mode === "view") {
       console.log("Mode is view, enabling editing");
       this.enableEditing();
@@ -291,10 +291,10 @@ class Table {
       this.editButton.style.backgroundColor = "gold";
     } else {
       console.log("Mode is edit, saving data");
-      this.saveTable();
+      await this.saveTable();
       this.mode = "view";
       this.editButton.textContent = "Edit";
-      this.editButton.style.backgroundColor = "#0075ff";
+      this.editButton.style.backgroundColor = "#98cc2c";
     }
   }
 
@@ -338,7 +338,7 @@ class Table {
     });
   }
 
-  saveTable() {
+  async saveTable() {
     const rows = this.table.rows;
     const data = [];
 
@@ -390,7 +390,7 @@ class Table {
     console.log("Saving endpoint:", this.saveTableEndpoint);
     console.log("Payload", data);
 
-    fetch(this.saveTableEndpoint, {
+    return fetch(this.saveTableEndpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
