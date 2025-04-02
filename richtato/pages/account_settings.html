@@ -29,9 +29,7 @@
           </tbody>
         </table>
 
-        <button class="btn-secondary editButton" id="settingsCardEditButton">
-          Edit
-        </button>
+        <button id="settingsCardEditButton">Edit</button>
 
         <form class="settings-add-form" , method="post" action="{% url 'settings_add_card'%}">
           {% csrf_token %}
@@ -44,7 +42,7 @@
           <div class="wrong-password">{{error_card_message}}</div>
           {% endif %}
 
-          <input class="btn-secondary" id="submit-balance" type="submit" value="Add" />
+          <button id="submit-balance" type="submit">Add Card</button>
         </form>
       </div>
     </div>

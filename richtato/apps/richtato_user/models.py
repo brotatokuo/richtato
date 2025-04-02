@@ -68,8 +68,7 @@ class CardAccount(models.Model):
     )
     name = models.CharField(max_length=100)
     card_type = models.CharField(
-        choices=supported_card_statements, max_length=50, null=True, blank=True
-    )
+        choices=supported_card_statements, max_length=50)
 
     def __str__(self):
         return f"[{self.user}] {self.name}"

@@ -69,10 +69,6 @@ h2 {
   margin-bottom: 20px;
 }
 
-.settings-add-form {
-  padding-top: 20px;
-}
-
 .form-group {
   position: relative;
   margin-bottom: 15px;
@@ -146,8 +142,8 @@ input[type="password"] {
   display: inline-block;
 }
 
-.btn-secondary {
-  width: 100%;
+/* .btn-secondary {
+  width: 90%;
   padding: 10px;
   background-color: #98cc2c;
   color: black;
@@ -156,8 +152,9 @@ input[type="password"] {
   font-size: 16px;
   cursor: pointer;
   margin-top: 10px;
+  align-items: center;
   display: inline-block;
-}
+} */
 
 .btn-primary:hover {
   background-color: #444;

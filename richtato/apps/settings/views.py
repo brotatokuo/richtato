@@ -56,7 +56,7 @@ def add_card(request):
         if account_name in all_accounts_names:
             return render(
                 request,
-                "settings.html",
+                "account_settings.html",
                 {
                     "error_card_message": "Card Name already exists. Please choose a different name.",
                 },
@@ -68,7 +68,7 @@ def add_card(request):
         )
         card_account.save()
 
-        return HttpResponseRedirect(reverse("settings"))
+        return HttpResponseRedirect(reverse("account_settings"))
     return HttpResponse("Add account error")
 
 
