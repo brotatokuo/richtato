@@ -3,9 +3,8 @@ from abc import ABC, abstractmethod
 import pandas as pd
 from loguru import logger
 
-from richtato.apps.richtato_user.models import Category
 from richtato.apps.expense.models import Expense
-from richtato.apps.richtato_user.models import CardAccount
+from richtato.apps.richtato_user.models import CardAccount, Category
 from richtato.categories.categories_manager import CategoriesManager
 
 
@@ -98,6 +97,7 @@ class CardCanonicalizer(ABC):
         self.formatted_df["Category"] = self.formatted_df["Description"].apply(
             categories_manager.search
         )
+        self.formatted_df["Category"].fillna("Unknown", inplace=True)
 
     def process(self) -> None:
         """
@@ -107,18 +107,28 @@ class CardCanonicalizer(ABC):
         card_name = self.formatted_df["Card"].unique().tolist()[0]
         for _, row in self.formatted_df.iterrows():
             description = row["Description"]
-            category = row["Category"].lower()
+            category_name = row["Category"]
             date = row["Date"]
             amount = row["Amount"]
-            account = CardAccount.objects.get(name=card_name, user=self.user)
-            category = Category.objects.get(name=category)
+            card_account = CardAccount.objects.get(name=card_name, user=self.user)
+            try:
+                category, _ = Category.objects.get_or_create(
+                    name=category_name,
+                    user=self.user,
+                )
 
-            transaction = Expense(
-                user=self.user,
-                account_name=account,
-                description=description,
-                category=category,
-                date=date,
-                amount=amount,
-            )
-            transaction.save()
+                transaction = Expense(
+                    user=self.user,
+                    account_name=card_account,
+                    description=description,
+                    category=category,
+                    date=date,
+                    amount=amount,
+                )
+                transaction.save()
+            except Category.DoesNotExist:
+                available_categories = Category.objects.values_list("name", flat=True)
+                logger.error(
+                    f"Category '{category}' does not exist. Available categories: {list(available_categories)}"
+                )
+                break

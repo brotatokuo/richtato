@@ -5,6 +5,10 @@ from django.contrib.auth.models import (
 )
 from django.db import models
 
+from richtato.categories.categories import BaseCategory
+from decimal import Decimal
+
+
 supported_card_statements = [
     ("american_express", "American Express"),
     ("bank_of_america", "Bank of America"),
@@ -77,36 +81,15 @@ class Category(models.Model):
         ("nonessential", "Non Essential"),
     ]
     supported_categories = [
-    ("travel", "Travel"),
-    ("shopping", "Shopping"),
-    ("groceries", "Groceries"),
-    ("entertainment", "Entertainment"),
-    ("utilities", "Utilities"),
-    ("housing", "Housing"),
-    ("medical", "Medical"),
-    ("transportation", "Transportation"),
-    ("education", "Education"),
-    ("savings", "Savings"),
-    ("gifts", "Gifts"),
-    ("dining", "Dining"),
-    ("investments", "Investments"),
-    ("subscriptions", "Subscriptions"),
-    ("charity/donations", "Charity/Donations"),
-    ("pet", "Pet"),
-    ("fun", "Fun"),
-    ("costco", "Costco"),
-    ("car", "Car"),
-    ("miscellaneous", "Miscellaneous"),
-    ("phone", "Phone"),
-    ("internet", "Internet"),
+        (category.name.lower().replace(" ", "_").replace("/", "_"), category.name)
+        for category in BaseCategory._registered_categories
     ]
 
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="category")
     name = models.CharField(max_length=100, choices=supported_categories)
-    keywords = models.TextField()
-    budget = models.DecimalField(max_digits=10, decimal_places=2)
+    budget = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal(100.00))
     type = models.CharField(max_length=50, choices=CATEGORY_TYPES, default="essential")
 
     def __str__(self):
-        return f"[{self.user}] {self.name}: {self.keywords}"
+        return f"[{self.user}] {self.name} - Budget: {self.budget} ({self.type})"

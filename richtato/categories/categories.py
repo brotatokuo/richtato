@@ -322,7 +322,7 @@ class HousingCategory(BaseCategory):
             "apartment",
             "condo",
             "townhouse",
-            "homeowners"
+            "homeowners",
         ]
 
         return housing
@@ -588,7 +588,7 @@ class WholesaleCategory(BaseCategory):
         return keywords
 
 
-class CarCategory(BaseCategory):
+class CardCategory(BaseCategory):
     @property
     def name(self):
         return "Car"
@@ -652,11 +652,12 @@ class MiscellaneousCategory(BaseCategory):
         keywords = miscellaneous
         return keywords
 
+
 class PaymentsCategory(BaseCategory):
     @property
     def name(self):
         return "Payments"
-    
+
     def generate_keywords(self):
         payments = [
             "mobile payment",
@@ -665,6 +666,15 @@ class PaymentsCategory(BaseCategory):
         ]
 
         return payments
+
+
+class UnknownCategory(BaseCategory):
+    @property
+    def name(self):
+        return "Unknown"
+
+    def generate_keywords(self):
+        return []
 
 
 # region Register Categories
@@ -687,10 +697,11 @@ def register_categories():
     CharityCategory()
     PetCategory()
     WholesaleCategory()
-    CarCategory()
+    CardCategory()
     PhoneCategory()
     MiscellaneousCategory()
     PaymentsCategory()
+    UnknownCategory()
 
 
 register_categories()
