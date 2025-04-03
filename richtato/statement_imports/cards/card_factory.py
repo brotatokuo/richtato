@@ -1,5 +1,6 @@
 from richtato.statement_imports.cards.american_express import AmericanExpressCards
 from richtato.statement_imports.cards.bank_of_america import BankOfAmericaCards
+from richtato.statement_imports.cards.chase import ChaseCards
 from richtato.statement_imports.cards.citi import CitiCards
 
 
@@ -60,7 +61,7 @@ def register_card_canonicalizers():
     CardStatement.register("american_express", AmericanExpressCards)
     CardStatement.register("bank_of_america", BankOfAmericaCards)
     CardStatement.register("citibank", CitiCards)
-    # CardStatement.register("chase", CitiCards)
+    CardStatement.register("chase", ChaseCards)
 
 
 register_card_canonicalizers()
