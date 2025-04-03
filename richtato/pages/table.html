@@ -3,7 +3,6 @@
 {% block title %} Dashboard {%endblock %}
 <!-- prettier-ignore-start -->
 {% block content %}
-<script src="https://cdn.tailwindcss.com"></script>
 
 <div class="main-content">
     <div class="title">
@@ -11,7 +10,7 @@
     </div>
     <div class="main-content-boxes wide">
         <div class="box">
-            <select id="tableOption" class="w-full p-2 border rounded">
+            <select id="tableOption" class="table-option">
                 <option value="expense">Expense</option>
                 <option value="income">Income</option>
             </select>

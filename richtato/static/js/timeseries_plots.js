@@ -6,16 +6,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         .getContext("2d");
 
     chartInstance = await plotLineChart(lineChart);
-    
+
     monthsDropdown.addEventListener("change", async () => {
         if (chartInstance) {
             chartInstance.destroy();
         }
-        
+
         const lineChart = document
             .getElementById("lineChart")
             .getContext("2d");
-        
+
         chartInstance = await plotLineChart(lineChart);
     });
 });
@@ -53,10 +53,17 @@ async function plotLineChart(ctx) {
                 scales: {
                     x: {
                         beginAtZero: true,
+                        ticks: {
+                            color: getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim() || "#fff",
+                        },
+                        grid: {
+                            color: "rgba(255, 255, 255, 0.2)", // Light grid lines for dark mode
+                        }
                     },
                     y: {
                         beginAtZero: true,
                         ticks: {
+                            color: getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim() || "#fff",
                             callback: function (value, index, values) {
                                 const roundedValue = Math.round(value);
                                 return new Intl.NumberFormat('en-US', {
@@ -65,11 +72,18 @@ async function plotLineChart(ctx) {
                                     maximumFractionDigits: 0 // Ensure no decimal places are shown
                                 }).format(roundedValue);
                             }
+                        },
+                        grid: {
+                            color: "rgba(255, 255, 255, 0.2)", // Light grid lines for dark mode
                         }
+
                     },
                 },
                 plugins: {
                     legend: {
+                        labels: {
+                            color: getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim() || "#000",
+                        },
                         onClick: function (e, legendItem, legend) {
                             const index = legendItem.datasetIndex;
                             const ci = legend.chart;
