@@ -1,10 +1,13 @@
-from django.http import HttpRequest
 from datetime import datetime
+
+from django.http import HttpRequest
+
 
 def user_info(request: HttpRequest) -> dict:
     if request.user.is_authenticated:
-        return {"username": request.user.username}
+        return {"username": request.user.username, "user_number": request.user.id}
     return {}
+
 
 def date(request: HttpRequest) -> dict:
     current_date = datetime.now()

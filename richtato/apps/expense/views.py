@@ -143,7 +143,7 @@ def get_line_graph_data(request):
     values = chart_data["values"]
     datasets = [
         {
-            "label": "Income",
+            "label": "Expense",
             "data": values,
             "backgroundColor": "rgba(232, 82, 63, 0.2)",
             "borderColor": "rgba(232, 82, 63, 1)",
