@@ -669,7 +669,7 @@ main .main-content .title::after {
 .main-content-boxes .box .third-box-section2 .third-box-section2-details .icon {
   width: 80px;
   height: 75px;
-  color: var(--green-color);
+  color: var(--blue-color);
   background-color: rgb(0 117 255 / 20%);
   display: flex;
   justify-content: center;
@@ -1367,7 +1367,7 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
   width: 90%
 }
 
-.main-content .box .general-info-section2 button {
+/* .main-content .box .general-info-section2 button {
   width: 90%;
   padding: 10px;
   background-color: #98cc2c;
@@ -1379,6 +1379,49 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
   margin: 10px;
   text-align: center;
   align-self: center;
+} */
+
+.secondary-button{
+  border: none;
+  background-color: var(--green-color);
+  color: var(--black-color);
+  font-size: 0.8rem;
+  padding: calc(var(--fourth-padding) - 2px) var(--fourth-padding);
+  border-radius: var(--secondary-radius);
+  -webkit-border-radius: var(--secondary-radius);
+  -moz-border-radius: var(--secondary-radius);
+  -ms-border-radius: var(--secondary-radius);
+  -o-border-radius: var(--secondary-radius);
+  align-self: center;
+}
+
+
+.primary-button{
+  width: 90%;
+  padding: 10px;
+  background-color: #98cc2c;
+  color: black;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  margin: 10px;
+  text-align: center;
+  align-self: center;
+}
+
+.pagination-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  width: 90%;
+  margin: 0 auto;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .main-content .box .general-info-section2 form label {
@@ -2409,20 +2452,6 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
 .files-main-content .files-statistics .box:nth-of-type(4) .file-info i {
   background-color: rgb(245 158 11 / 20%);
   color: var(--orange-color);
-}
-
-.primary-button {
-  border: none;
-  background-color: var(--green-color);
-  color: var(--black-color);
-  font-size: 0.8rem;
-  padding: calc(var(--fourth-padding) - 2px) var(--fourth-padding);
-  border-radius: var(--secondary-radius);
-  -webkit-border-radius: var(--secondary-radius);
-  -moz-border-radius: var(--secondary-radius);
-  -ms-border-radius: var(--secondary-radius);
-  -o-border-radius: var(--secondary-radius);
-  align-self: center;
 }
 
 .files-main-content .files-statistics a:hover i {
