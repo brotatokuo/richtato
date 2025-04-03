@@ -85,10 +85,17 @@ async function plotLineChart(ctx, endpointUrl) {
         scales: {
           x: {
             beginAtZero: true,
+            ticks: {
+              color: getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim() || "#fff",
+            },
+            grid: {
+              color: "rgba(255, 255, 255, 0.2)", // Light grid lines for dark mode
+            }
           },
           y: {
             beginAtZero: true,
             ticks: {
+              color: getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim() || "#fff",
               callback: function (value, index, values) {
                 const roundedValue = Math.round(value);
                 return new Intl.NumberFormat('en-US', {
@@ -97,6 +104,9 @@ async function plotLineChart(ctx, endpointUrl) {
                   maximumFractionDigits: 0 // Ensure no decimal places are shown
                 }).format(roundedValue);
               }
+            },
+            grid: {
+              color: "rgba(255, 255, 255, 0.2)", // Light grid lines for dark mode
             }
           },
         },

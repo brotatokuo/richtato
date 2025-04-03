@@ -14,6 +14,7 @@ from loguru import logger
 from richtato.apps.expense.models import Expense
 from richtato.apps.richtato_user.models import CardAccount, Category, User
 from richtato.apps.richtato_user.utils import _get_line_graph_data
+from richtato.categories.categories_manager import CategoriesManager
 from richtato.statement_imports.cards.card_factory import CardStatement
 from richtato.utilities.tools import format_currency, format_date
 
@@ -301,19 +302,13 @@ def guess_category(request):
     if not description:
         return JsonResponse({"category": ""})
 
-    # Try to find a category that matches the description
-    user_categories = Category.objects.filter(user=request.user)
-
-    for category in user_categories:
-        if description in category.keywords.lower():
-            return JsonResponse({"category": category.name})
-
-    # Use AI categorization if no match is found
+    category = CategoriesManager().search(description)
+    logger.debug(f"Category found: {category}")
     try:
-        category_str = AI().categorize_transaction(request.user, description)
-        return JsonResponse({"category": category_str})
+        category = category or AI().categorize_transaction(request.user, description)
     except Exception:
-        return JsonResponse({"category": ""})
+        category = ""
+    return JsonResponse({"category": category})
 
 
 # def get_monthly_diff(request):

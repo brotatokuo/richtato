@@ -263,10 +263,6 @@ a i {
   cursor: pointer;
 }
 
-.dropdown ul li:hover {
-  background-color: #f1f1f1;
-}
-
 .hidden {
   display: none;
 }
@@ -1737,7 +1733,8 @@ form {
 .main-content .profile-box {
   width: 100%;
   display: flex;
-  background-color: var(--white-color);
+  background-color: var(--secondary-color);
+  color: var(--text-color);
   border-radius: var(--first-radius);
   -webkit-border-radius: var(--first-radius);
   -moz-border-radius: var(--first-radius);
@@ -1855,12 +1852,6 @@ form {
 .main-content .profile-box .profile-info-section2 .general-information {
   flex-direction: column;
   gap: var(--fourth-padding);
-}
-
-.main-content .profile-box .profile-info-section2 .row .general-information h4,
-.main-content .profile-box .profile-info-section2 .row div h5 {
-  color: var(--third-color);
-  font-weight: 500;
 }
 
 .main-content .profile-box .profile-info-section2 .row div span {
@@ -2818,7 +2809,7 @@ form {
 .percentage-bar {
   width: 100%;
   height: 10px;
-  background-color: #f3f3f3;
+  background-color: var(--third-color);
   /* Background color of the track */
   border-radius: 25px;
   overflow: hidden;

@@ -32,7 +32,7 @@ class AI:
         """
         Given an input text and a list of categories, use AI to determine the best category match for the input text.
         """
-        category_list = Category.objects.filter(user=user).values_list(
+        category_list = Category.objects.filter(user=user).exclude(name="Unknown").values_list(
             "name", flat=True
         )
         category_string = ", ".join(category_list)
