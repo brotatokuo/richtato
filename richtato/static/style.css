@@ -42,9 +42,15 @@ a {
 /* Light Mode */
 @media (prefers-color-scheme: light) {
   :root {
-    --main-color: #f1f5f9;
+    /* --main-color: #f1f5f9;
     --text-color: #000;
-    --title-color: #000;
+    --title-color: #000; */
+    --text-color: #fffffff6;
+    --main-color: #212121;
+    --secondary-color: #303030;
+    --third-color: #111111;
+    --title-color: #b4b4b4;
+
   }
 
 }
@@ -2803,8 +2809,8 @@ form {
   padding-top: 10px;
   width: 100%;
   height: 100%;
-  z-index: 900;
-  opacity: 0.2;
+  z-index: 1;
+  opacity: 0.5;
 }
 
 .percentage-bar {
