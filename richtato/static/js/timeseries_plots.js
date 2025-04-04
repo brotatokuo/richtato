@@ -23,6 +23,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function plotLineChart(ctx) {
     const monthsDropdown = document.getElementById("monthsDropdown");
     const selectedRange = monthsDropdown.value;
+    console.log("Selected month range:", selectedRange);
     const endpointUrl = `/get-timeseries-data/?month_range=${encodeURIComponent(selectedRange)}`;
     console.log("Selected month range:", selectedRange);
     try {
@@ -110,6 +111,17 @@ async function plotLineChart(ctx) {
 
                             // Ensure animations are preserved
                             ci.update('show');
+                        }
+                    },
+                    zoom: {
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            mode: 'x',
                         }
                     }
                 }
