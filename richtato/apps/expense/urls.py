@@ -12,7 +12,6 @@ urlpatterns = [
         views.get_recent_entries,
         name=f"{page_name}_get_recent_entries",
     ),
-    # path("get-table-data/", views.get_table_data, name=f"{page_name}_get_table_data"),
     path(
         "get-full-table-data/",
         views.get_full_table_data,

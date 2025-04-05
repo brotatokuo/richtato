@@ -19,10 +19,6 @@ class SelfPingMiddleware:
                 response = requests.get(prod)
                 print(f"Pinged {prod} Status code: {response.status_code}")
 
-                dev = "http://richtato-dev.onrender.com"
-                response = requests.get(dev)
-                print(f"Pinged {dev} Status code: {response.status_code}")
-
             except requests.RequestException as e:
                 print(f"Failed to ping self: {e}")
 

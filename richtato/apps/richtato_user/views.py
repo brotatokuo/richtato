@@ -14,11 +14,15 @@ from loguru import logger
 
 from richtato.apps.account.models import Account
 from richtato.apps.expense.models import Expense
-from richtato.apps.expense.views import _get_table_data as _get_table_data_expense, _get_data_table_expense
-from richtato.apps.expense.views import get_last_30_days_expense_sum
+from richtato.apps.expense.views import (
+    _get_data_table_expense,
+    get_last_30_days_expense_sum,
+)
 from richtato.apps.income.models import Income
-from richtato.apps.income.views import _get_table_data as _get_table_data_income
-from richtato.apps.income.views import get_last_30_days_income_sum
+from richtato.apps.income.views import (
+    _get_data_table_income,
+    get_last_30_days_income_sum,
+)
 from richtato.apps.richtato_user.models import (
     CardAccount,
     Category,
@@ -29,6 +33,7 @@ from richtato.apps.richtato_user.utils import _get_line_graph_data
 from richtato.utilities.tools import format_currency
 
 pst = pytz.timezone("US/Pacific")
+
 
 # Main view function
 def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
@@ -122,18 +127,14 @@ def get_table_data(request: HttpRequest):
     table_option = request.GET.get("option")
     page_number = int(request.GET.get("page", 1))
     logger.debug(f"Table option: {table_option}, Page number: {page_number}")
-    if table_option == "expense":
-        logger.debug("Getting table data for expense.")
-        if False:
-            table_data = _get_table_data_expense(request.user, page_number)
-        table_data = _get_data_table_expense(request.user)
-        # return JsonResponse(table_data, safe=False)
-        return table_data
-    elif table_option == "income":
-        logger.debug("Getting table data for income.")
-        table_data = _get_table_data_income(request.user, page_number)
-        logger.debug(f"Table data: {table_data}")
-        return JsonResponse(table_data, safe=False)
+    table_data_getters = {
+        "expense": _get_data_table_expense,
+        "income": _get_data_table_income,
+    }
+
+    if table_option in table_data_getters:
+        logger.debug(f"Getting table data for {table_option}.")
+        return table_data_getters[table_option](request.user)
     else:
         logger.error(f"Invalid table option: {table_option}")
         return JsonResponse({"error": "Invalid table option."}, status=400)
@@ -258,14 +259,6 @@ class RegisterView(View):
 
         login(request, user)
         return HttpResponseRedirect(reverse("index"))
-        return HttpResponseRedirect(reverse("index"))
 
         login(request, user)
-        return HttpResponseRedirect(reverse("index"))
-        return HttpResponseRedirect(reverse("index"))
-        return HttpResponseRedirect(reverse("index"))
-
-        login(request, user)
-        return HttpResponseRedirect(reverse("index"))
-        return HttpResponseRedirect(reverse("index"))
         return HttpResponseRedirect(reverse("index"))

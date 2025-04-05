@@ -25,24 +25,12 @@
                         <!-- Rows will be inserted here dynamically -->
                     </tbody>
                 </table>
-
-                <!-- <button class="btn-secondary editButton" id="editTable" style="display: none !important;">
-                    Edit
-                </button>
-
-                <div class="pagination-buttons">
-                    <button class="primary-button" id="prevPage">Previous Page</button>
-                    <button class="primary-button" id="nextPage">Next Page</button>
-                </div> -->
             </div>
         </div>
     </div>
 
 
 </div>
-<!-- <script src="{% static 'js/table.js' %}"></script> -->
-
-<!-- <script type="module" src="{% static 'js/datatable.js' %}"></script> -->
 <script>
     class NewTable {
         constructor(tableId, tableUrl, options = {}) {
@@ -76,11 +64,11 @@
             if (tableElement.DataTable()) {
                 tableElement.DataTable().clear().destroy();
             }
-            
+
             const thead = $(this.tableId).find('thead');
             thead.empty(); // Clear existing header rows
             const headerRow = $('<tr></tr>');
-        
+
             console.log("Columns to be added as headers:", this.columns);
 
             if (this.columns && this.columns.length > 0) {
@@ -124,11 +112,17 @@
     document.addEventListener('DOMContentLoaded', () => {
         const tableDropdown = document.getElementById("tableOption");
         let tableOption = tableDropdown.value;
-        let pageNumber = 1;
-        var tableUrl = `/get-table-data/?option=${encodeURIComponent(tableOption)}&page=${pageNumber}`;
+        var tableUrl = `/get-table-data/?option=${encodeURIComponent(tableOption)}`;
         console.log(tableUrl);
-        const table = new NewTable('#fullTable', tableUrl);
-        table.init();
+        let  fullTable = new NewTable('#fullTable', tableUrl);
+
+        tableDropdown.addEventListener("change", () => {
+            tableOption = tableDropdown.value; // Get the updated option value
+            console.log("Selected option:", tableOption);
+            var tableUrl = `/get-table-data/?option=${encodeURIComponent(tableOption)}`;
+            fullTable = new NewTable('#fullTable', tableUrl);
+        });
+
     });
 </script>
 {% endblock %}

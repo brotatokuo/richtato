@@ -202,33 +202,6 @@ def get_last_30_days(request):
     return JsonResponse(chart_data)
 
 
-# def get_table_data(request) -> JsonResponse:
-#     year = request.GET.get("year", None)
-#     month = month_mapping(request.GET.get("month", None))
-#     account = request.GET.get("label", None)
-
-#     table_data = []
-#     if year and month and account:
-#         expenses = Expense.objects.filter(
-#             user=request.user,
-#             date__year=year,
-#             date__month=month,
-#             account_name__name=account,
-#         ).order_by("date")
-#         for expense in expenses:
-#             table_data.append(
-#                 {
-#                     "id": expense.id,
-#                     "date": format_date(expense.date),
-#                     "card": expense.account_name.name,
-#                     "description": expense.description,
-#                     "amount": format_currency(expense.amount),
-#                     "category": expense.category.name,
-#                 }
-#             )
-#     return JsonResponse(table_data, safe=False)
-
-
 def _get_table_data(user: User, page: int = 1, page_size: int = 15) -> list:
     table_data = []
     offset = (page - 1) * page_size
