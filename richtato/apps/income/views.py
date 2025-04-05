@@ -179,53 +179,35 @@ def get_recent_entries(request):
     return JsonResponse(recent_entries, safe=False)
 
 
-# @login_required
-# def get_table_data(request):
-#     year = request.GET.get("year", None)
-#     month = month_mapping(request.GET.get("month", None))
-#     account = request.GET.get("label", None)
+def _get_data_table_income(user: User) -> JsonResponse:
+    expenses = (
+        Income.objects.filter(user=user)
+        .order_by("-date")
+        .values("id", "date", "description", "amount", "account_name__name")
+    )
 
-#     table_data = []
-#     if year and month and account:
-#         incomes = Income.objects.filter(
-#             user=request.user,
-#             date__year=year,
-#             date__month=month,
-#             account_name__name=account,
-#         ).order_by("date")
-#         for income in incomes:
-#             table_data.append(
-#                 {
-#                     "id": income.id,
-#                     "date": format_date(income.date),
-#                     "description": income.description,
-#                     "amount": format_currency(income.amount),
-#                 }
-#             )
+    # Format the result efficiently
+    data = [
+        {
+            "id": e["id"],
+            "date": format_date(e["date"]),
+            "card": e["account_name__name"],
+            "description": e["description"],
+            "amount": format_currency(e["amount"]),
+        }
+        for e in expenses
+    ]
 
-#     return JsonResponse(table_data, safe=False)
+    columns = [
+        {"title": "ID", "data": "id"},
+        {"title": "Date", "data": "date"},
+        {"title": "Card", "data": "card"},
+        {"title": "Description", "data": "description"},
+        {"title": "Amount", "data": "amount"},
+        {"title": "Category", "data": "category"},
+    ]
 
-
-def _get_table_data(user: User, page: int = 1, page_size: int = 15) -> list:
-    table_data = []
-    offset = (page - 1) * page_size
-
-    # Fetch only the required slice of data for the current page
-    incomes = Income.objects.filter(
-        user=user,
-    ).order_by("-date")[offset : offset + page_size]
-
-    for income in incomes:
-        table_data.append(
-            {
-                "id": income.id,
-                "date": format_date(income.date),
-                "description": income.description,
-                "amount": format_currency(income.amount),
-            }
-        )
-
-    return table_data
+    return JsonResponse({"columns": columns, "data": data})
 
 
 def get_line_graph_data(request):

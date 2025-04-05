@@ -39,7 +39,6 @@ ALLOWED_HOSTS = [
 
 CSRF_TRUSTED_ORIGINS = [
     "https://richtato.onrender.com",
-    "https://richtato-dev.onrender.com",
 ]
 
 # Application definition
