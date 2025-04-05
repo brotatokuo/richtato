@@ -30,7 +30,6 @@ from richtato.utilities.tools import format_currency
 
 pst = pytz.timezone("US/Pacific")
 
-
 # Main view function
 def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
     if request.user.is_authenticated:

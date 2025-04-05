@@ -2960,9 +2960,3 @@ form {
   object-fit: cover;
   border-radius: 5px;
 }
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 20px auto;
-}

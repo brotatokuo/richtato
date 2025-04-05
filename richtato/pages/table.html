@@ -57,6 +57,7 @@
 
         async fetchData() {
             try {
+                console.log("Fetching data from URL:", this.tableUrl);
                 const response = await fetch(this.tableUrl);
                 const data = await response.json();
                 this.data = data.data;
