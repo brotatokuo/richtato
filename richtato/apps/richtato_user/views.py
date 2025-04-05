@@ -14,7 +14,7 @@ from loguru import logger
 
 from richtato.apps.account.models import Account
 from richtato.apps.expense.models import Expense
-from richtato.apps.expense.views import _get_table_data as _get_table_data_expense
+from richtato.apps.expense.views import _get_table_data as _get_table_data_expense, _get_data_table_expense
 from richtato.apps.expense.views import get_last_30_days_expense_sum
 from richtato.apps.income.models import Income
 from richtato.apps.income.views import _get_table_data as _get_table_data_income
@@ -125,8 +125,11 @@ def get_table_data(request: HttpRequest):
     logger.debug(f"Table option: {table_option}, Page number: {page_number}")
     if table_option == "expense":
         logger.debug("Getting table data for expense.")
-        table_data = _get_table_data_expense(request.user, page_number)
-        return JsonResponse(table_data, safe=False)
+        if False:
+            table_data = _get_table_data_expense(request.user, page_number)
+        table_data = _get_data_table_expense(request.user)
+        # return JsonResponse(table_data, safe=False)
+        return table_data
     elif table_option == "income":
         logger.debug("Getting table data for income.")
         table_data = _get_table_data_income(request.user, page_number)

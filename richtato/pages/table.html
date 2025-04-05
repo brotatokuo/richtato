@@ -3,6 +3,9 @@
 {% block title %} Table {%endblock %}
 <!-- prettier-ignore-start -->
 {% block content %}
+<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/2.2.2/css/dataTables.dataTables.min.css">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="//cdn.datatables.net/2.2.2/js/dataTables.min.js"></script>
 
 <div class="main-content">
     <div class="title">
@@ -16,26 +19,115 @@
             </select>
 
             <div class="table-responsive">
-                <table class="styled-table" id="fullTable">
+                <table class="data-table" id="fullTable">
                     <thead></thead>
                     <tbody>
                         <!-- Rows will be inserted here dynamically -->
                     </tbody>
                 </table>
 
-                <button class="btn-secondary editButton" id="editTable" style="display: none !important;">
+                <!-- <button class="btn-secondary editButton" id="editTable" style="display: none !important;">
                     Edit
                 </button>
 
                 <div class="pagination-buttons">
                     <button class="primary-button" id="prevPage">Previous Page</button>
                     <button class="primary-button" id="nextPage">Next Page</button>
-                </div>
+                </div> -->
             </div>
         </div>
     </div>
 
 
 </div>
-<script src="{% static 'js/table.js' %}"></script>
+<!-- <script src="{% static 'js/table.js' %}"></script> -->
+
+<!-- <script type="module" src="{% static 'js/datatable.js' %}"></script> -->
+<script>
+    class NewTable {
+        constructor(tableId, tableUrl, options = {}) {
+            this.tableId = tableId;
+            this.tableUrl = tableUrl;
+            this.data = null;
+            this.columns = null;
+            this.options = options;
+            this.instance = null;
+            this.init();
+        }
+
+        async fetchData() {
+            try {
+                const response = await fetch(this.tableUrl);
+                const data = await response.json();
+                this.data = data.data;
+                this.columns = data.columns;
+                console.log(this.data);
+                console.log(this.columns);
+                this.renderTable();
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        renderTable() {
+            const tableElement = $(this.tableId);
+            // Clear any existing table data (important for re-rendering)
+            if (tableElement.DataTable()) {
+                tableElement.DataTable().clear().destroy();
+            }
+            
+            const thead = $(this.tableId).find('thead');
+            thead.empty(); // Clear existing header rows
+            const headerRow = $('<tr></tr>');
+        
+            console.log("Columns to be added as headers:", this.columns);
+
+            if (this.columns && this.columns.length > 0) {
+                this.columns.forEach(col => {
+                    const th = $('<th></th>').text(col.title);
+                    headerRow.append(th);
+                });
+            } else {
+                console.error("No columns available to render!");
+            }
+
+            thead.append(headerRow);
+
+            // Populate the table body dynamically
+            const tbody = $(this.tableId).find('tbody');
+            console.log("Table Body:", tbody);
+
+            this.data.forEach((row, rowIndex) => {
+                const tr = $('<tr></tr>')
+                this.columns.forEach((col, colIndex) => {
+                    const td = $('<td></td>').text(row[col.data]);
+                    tr.append(td);
+                });
+
+                tbody.append(tr);
+            });
+
+            tableElement.DataTable({
+                paging: true,
+                searching: true,
+                info: false,
+                lengthChange: false
+            });
+        }
+
+        init() {
+            this.fetchData();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const tableDropdown = document.getElementById("tableOption");
+        let tableOption = tableDropdown.value;
+        let pageNumber = 1;
+        var tableUrl = `/get-table-data/?option=${encodeURIComponent(tableOption)}&page=${pageNumber}`;
+        console.log(tableUrl);
+        const table = new NewTable('#fullTable', tableUrl);
+        table.init();
+    });
+</script>
 {% endblock %}
