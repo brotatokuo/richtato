@@ -2,6 +2,7 @@ import os
 
 import google.generativeai as genai
 from fuzzywuzzy import fuzz
+from loguru import logger
 
 from richtato.apps.richtato_user.models import Category, User
 
@@ -32,7 +33,7 @@ class AI:
         """
         Given an input text and a list of categories, use AI to determine the best category match for the input text.
         """
-        category_list = Category.objects.filter(user=user).exclude(name="Unknown").values_list(
+        category_list = Category.objects.exclude(name="Unknown").values_list(
             "name", flat=True
         )
         category_string = ", ".join(category_list)
@@ -49,9 +50,7 @@ class AI:
             return model_response
 
         best_match = max(category_list, key=lambda x: fuzz.ratio(x, model_response))
-        print(
-            f'\033[96mInput: "{input}" | AI Response: "{model_response}" | Best Match: "{best_match}"\033[0m'
+        logger.info(
+            f'Input: "{input}" | AI Response: "{model_response}" | Best Match: "{best_match}"'
         )
-        return best_match
-        return best_match
         return best_match

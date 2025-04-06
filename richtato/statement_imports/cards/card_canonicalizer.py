@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 import pandas as pd
+from google_gemini.ai import AI
 from loguru import logger
 
 from richtato.apps.expense.models import Expense
@@ -101,8 +102,14 @@ class CardCanonicalizer(ABC):
             self.formatted_df["Category"] = self.formatted_df["Description"].apply(
                 categories_manager.search
             )
-        
-        self.formatted_df["Category"].fillna("Unknown", inplace=True)
+        uncategorized_mask = self.formatted_df["Category"].isna()
+        logger.debug(
+            f"Uncategorized transactions: {self.formatted_df[uncategorized_mask].to_string()}"
+        )
+
+        self.formatted_df.loc[uncategorized_mask, "Category"] = self.formatted_df[
+            uncategorized_mask
+        ].apply(lambda row: AI.categorize_transaction(self.user, row["Description"]), axis=1)
 
     def process(self) -> None:
         """
