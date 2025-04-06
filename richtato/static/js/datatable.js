@@ -1,6 +1,3 @@
-import DataTable from 'datatables.net';
-import 'datatables.net-dt/css/jquery.dataTables.min.css';
-
 class NewTable {
     constructor(tableId, tableUrl, options = {}) {
         this.tableId = tableId;
@@ -9,15 +6,16 @@ class NewTable {
         this.columns = null;
         this.options = options;
         this.instance = null;
+        this.init();
     }
 
     async fetchData() {
         try {
+            console.log("Fetching data from URL:", this.tableUrl);
             const response = await fetch(this.tableUrl);
             const data = await response.json();
             this.data = data.data;
             this.columns = data.columns;
-            console.log('Fetched data:', this.data, this.columns);
             this.renderTable();
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -25,11 +23,46 @@ class NewTable {
     }
 
     renderTable() {
-        $(this.tableId).DataTable({
-            data: this.data,
-            columns: this.columns,
+        const tableElement = $(this.tableId);
+        // Clear any existing table data (important for re-rendering)
+        if (tableElement.DataTable()) {
+            tableElement.DataTable().clear().destroy();
+        }
+
+        const thead = $(this.tableId).find('thead');
+        thead.empty(); // Clear existing header rows
+        const headerRow = $('<tr></tr>');
+
+        if (this.columns && this.columns.length > 0) {
+            this.columns.forEach(col => {
+                const th = $('<th></th>').text(col.title);
+                headerRow.append(th);
+            });
+        } else {
+            console.error("No columns available to render!");
+        }
+
+        thead.append(headerRow);
+
+        // Populate the table body dynamically
+        const tbody = $(this.tableId).find('tbody');
+        console.log("Table Body:", tbody);
+
+        this.data.forEach((row, rowIndex) => {
+            const tr = $('<tr></tr>')
+            this.columns.forEach((col, colIndex) => {
+                const td = $('<td></td>').text(row[col.data]);
+                tr.append(td);
+            });
+
+            tbody.append(tr);
+        });
+
+        tableElement.DataTable({
             paging: true,
-            searching: true
+            searching: true,
+            info: false,
+            lengthChange: false
         });
     }
 
@@ -41,12 +74,15 @@ class NewTable {
 document.addEventListener('DOMContentLoaded', () => {
     const tableDropdown = document.getElementById("tableOption");
     let tableOption = tableDropdown.value;
-    let pageNumber = 1;
-    var tableUrl = `/get-table-data/?option=${encodeURIComponent(tableOption)}&page=${pageNumber}`;
+    var tableUrl = `/get-table-data/?option=${encodeURIComponent(tableOption)}`;
     console.log(tableUrl);
-    const table = new NewTable('fullTable', tableUrl, {
-        paging: true,
-        searching: true
+    let fullTable = new NewTable('#fullTable', tableUrl);
+
+    tableDropdown.addEventListener("change", () => {
+        tableOption = tableDropdown.value; // Get the updated option value
+        console.log("Selected option:", tableOption);
+        var tableUrl = `/get-table-data/?option=${encodeURIComponent(tableOption)}`;
+        fullTable = new NewTable('#fullTable', tableUrl);
     });
-    table.init();
+
 });
