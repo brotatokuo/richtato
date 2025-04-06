@@ -1,6 +1,6 @@
 import json
 from datetime import datetime, timedelta
-
+from time import sleep
 import pytz
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.decorators import login_required
@@ -343,14 +343,13 @@ def upload_card_statements(request):
         logger.debug(f"Files uploaded: {[file.name for file in files]}")
         logger.debug(f"Card banks selected: {card_banks}")
         logger.debug(f"Card names: {card_names}")
-
-        for file, card_bank, card_name in zip(files, card_banks, card_names):
-            card_statement = CardStatement.create_from_file(
-                request.user, card_bank, card_name, file.file
-            )
-            print(card_statement.formatted_df.head())
-            card_statement.process()
+        sleep(10)
+        # for file, card_bank, card_name in zip(files, card_banks, card_names):
+        #     card_statement = CardStatement.create_from_file(
+        #         request.user, card_bank, card_name, file.file
+        #     )
+        #     print(card_statement.formatted_df.head())
+        #     card_statement.process()
 
         return JsonResponse({"message": "Files uploaded successfully"}, status=200)
-
     return JsonResponse({"error": "Invalid request"}, status=400)

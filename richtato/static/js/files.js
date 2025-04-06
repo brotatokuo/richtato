@@ -67,8 +67,9 @@ class File {
         this.file_size = file.size;
         this.file = file;
         this.cardBanks = cardBanks;
-        console.log("Card Banks", cardBanks);
-        this.onRemoveCallback = onRemoveCallback; // Store the callback for removal
+        this.onRemoveCallback = onRemoveCallback;
+        this.fileBox = null;
+        this.processingSpinner = null;
     }
 
     // Create a dropdown for selecting the card account
@@ -109,6 +110,7 @@ class File {
         fileBox.id = `file-box-${this.name}`;
         fileBox.classList.add('file-box');
         fileBox.style.position = 'relative';
+        this.fileBox = fileBox;
 
         // Create the remove button (X mark)
         const removeButton = this.createRemoveButton();
@@ -116,6 +118,7 @@ class File {
 
         const cardBody = document.createElement('div');
         cardBody.classList.add('file-box-card-body');
+        this.cardBody = cardBody;
 
         const img = document.createElement('img');
         if (this.name.endsWith('.xls') || this.name.endsWith('.xlsx')) {
@@ -145,6 +148,22 @@ class File {
         fileBox.appendChild(cardBody);
 
         return fileBox;
+    }
+
+    setProcessing() {
+        if (!this.processingSpinner) {
+            this.processingSpinner = document.createElement('p');
+            this.processingSpinner.classList.add('spinner');
+            this.processingSpinner.innerText = 'Processing...';
+            this.cardBody.appendChild(this.processingSpinner);
+        }
+    }
+
+    clearProcessing() {
+        if (this.processingSpinner) {
+            this.processingSpinner.remove();
+            this.processingSpinner = null;
+        }
     }
 }
 
@@ -198,9 +217,7 @@ class FileManager {
         this.updateStatisticsVisibility();
     }
 
-    // Remove a file from the uploadedFiles array and the UI
     removeFile(file) {
-        // Remove the file from the uploadedFiles array
         this.uploadedFiles = this.uploadedFiles.filter(f => f !== file);
 
         // Remove the file box from the UI
@@ -223,46 +240,40 @@ class FileManager {
     }
 
     async uploadFiles() {
-        const formData = new FormData();
-
-        // Append each file and its associated card account
-        this.uploadedFiles.forEach(fileObj => {
-            formData.append('files', fileObj.file);
-
-            const selectedCardBank = fileObj.dropdown.value;
-            const selectedCardName = fileObj.dropdown.options[fileObj.dropdown.selectedIndex].textContent;
-
-            formData.append('card_banks', selectedCardBank);
-            formData.append('file_names', fileObj.name);
-            formData.append('card_names', selectedCardName);
-
-            console.log('File name:', fileObj.name, 'Card Bank:', selectedCardBank, 'Card Name:', selectedCardName);
-        });
-
         const csrftoken = getCSRFToken();
-
-        try {
-            const response = await fetch('/expense/upload-card-statements/', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': csrftoken
-                },
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
-                throw new Error(`Failed to upload files: ${response.status} ${response.statusText}`);
+        for (let fileObj of this.uploadedFiles.slice()) {
+            fileObj.setProcessing();
+    
+            const formData = new FormData();
+            formData.append('files', fileObj.file);
+            formData.append('card_banks', fileObj.dropdown.value);
+            formData.append('file_names', fileObj.name);
+            formData.append('card_names', fileObj.dropdown.options[fileObj.dropdown.selectedIndex].textContent);
+    
+            try {
+                const response = await fetch('/expense/upload-card-statements/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    },
+                    credentials: 'include'
+                });
+    
+                if (!response.ok) {
+                    throw new Error(`Failed to upload ${fileObj.name}: ${response.status}`);
+                }
+    
+                // Remove from UI and memory after successful upload
+                this.removeFile(fileObj);
+    
+            } catch (error) {
+                console.error('Upload failed for file:', fileObj.name, error);
+                fileObj.clearProcessing(); // Let user retry or remove
+                alert(`Failed to upload ${fileObj.name}. Please try again.`);
             }
-
-            const data = await response.json();
-            alert('Files uploaded successfully!');
-            return data;
-        } catch (error) {
-            console.error('Error uploading files:', error);
-            alert('Error uploading files. Please try again.');
-            throw error;
         }
+        alert('All files have been uploaded successfully!');
     }
 }
 

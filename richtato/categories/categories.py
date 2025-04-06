@@ -32,6 +32,7 @@ class TravelCategory(BaseCategory):
 
     def generate_keywords(self):
         air_travel = [
+            "travel",
             "airline",
             "flight",
             "airport",
@@ -110,6 +111,8 @@ class TravelCategory(BaseCategory):
         ]
 
         ground_transport = [
+            "metro",
+            "metra",
             "train",
             "bus",
             "ferry",
@@ -192,6 +195,7 @@ class ShoppingCategory(BaseCategory):
 
     def generate_keywords(self):
         physical_stores = [
+            "shopping",
             "mall",
             "department store",
             "convenience store",
@@ -212,6 +216,7 @@ class OnlineShopping(BaseCategory):
 
     def generate_keywords(self):
         online_stores = [
+            "online shopping",
             ".com",
             "amazon",
             "ebay",
@@ -446,6 +451,7 @@ class DiningCategory(BaseCategory):
 
         other_food = [
             "food",
+            "food & drink",
             "uber eats",
             "doordash",
             "grubhub",
@@ -455,6 +461,7 @@ class DiningCategory(BaseCategory):
         ]
 
         drinks = [
+            "drink",
             "bar",
             "starbucks",
             "dunkin'",

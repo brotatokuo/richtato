@@ -2942,3 +2942,8 @@ form {
   font-size: 16px;
   cursor: pointer;
 }
+
+.spinner {
+  font-style: italic;
+  color: var(--green-color);
+}
