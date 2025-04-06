@@ -50,12 +50,13 @@ def get_cards(request):
 @login_required
 def add_card(request):
     if request.method == "POST":
-        account_name = request.POST.get("account-name").strip()
+        card_name = request.POST.get("card-name").strip()
+        card_bank = request.POST.get("card-bank").strip()
 
         all_accounts_names = CardAccount.objects.filter(user=request.user).values_list(
             "name", flat=True
         )
-        if account_name in all_accounts_names:
+        if card_name in all_accounts_names:
             return render(
                 request,
                 "account_settings.html",
@@ -66,7 +67,8 @@ def add_card(request):
 
         card_account = CardAccount(
             user=request.user,
-            name=account_name,
+            name=card_name,
+            card_bank=card_bank,
         )
         card_account.save()
 

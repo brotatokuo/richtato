@@ -35,10 +35,10 @@
           {% csrf_token %}
           <div class="form-group">
             <label for="account-name">Card Name</label>
-            <input class="form-control" id="account-name" name="account-name" type="string" required />
+            <input class="form-control" id="card-name" name="card-name" type="string" required />
 
             <label for="card-bank">Select Card Bank:</label>
-            <select id="card-bank" class="form-control">
+            <select id="card-bank" name="card-bank" class="form-control">
               <option value="" selected disabled></option>
               {% for bank_id, bank_name in supported_card_banks %}
               <option value="{{ bank_id }}">{{ bank_name }}</option>
