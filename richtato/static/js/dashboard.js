@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
   plotOverviewLineChart(incomeOverviewLineChart, "/income/get-last-30-days/");
 
   const renderer = new BudgetRenderer('categories-container', '/budget/get-budget-rankings/');
-  renderer.fetchAndRender();
+  renderer.fetchAndRender({ count: 3 });
 });
 
 async function plotOverviewLineChart(ctx, endpointUrl) {

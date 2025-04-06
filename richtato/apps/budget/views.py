@@ -55,6 +55,7 @@ def calculate_budget_diff(diff: float):
 
 def get_budget_rankings(request):
     count = request.GET.get("count", None)
+    
     user = request.user
     pst = pytz.timezone("US/Pacific")
     year = request.GET.get("year", datetime.now(pst).year)

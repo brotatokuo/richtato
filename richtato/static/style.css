@@ -622,21 +622,6 @@ main .main-content .title::after {
   resize: none;
 }
 
-/* .main-content-boxes .box:nth-child(2) form button,
-.main-content-boxes .box button {
-  margin-top: var(--third-margin);
-  border: 1px solid var(--eee-color);
-  background-color: var(--green-color);
-  color: var(--black-color);
-  padding: var(--fifth-padding) var(--fourth-padding);
-  border-radius: var(--secondary-radius);
-  -webkit-border-radius: var(--secondary-radius);
-  -moz-border-radius: var(--secondary-radius);
-  -ms-border-radius: var(--secondary-radius);
-  -o-border-radius: var(--secondary-radius);
-  cursor: pointer;
-} */
-
 .main-content-boxes .box a {
   font-size: 0.8rem;
   text-decoration: none;
@@ -1352,9 +1337,6 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
   background-color: var(--red-color);
 }
 
-.main-content .box .box-section1 {
-  margin-bottom: var(--secondary-margin);
-}
 
 .main-content .box .settings-box-section2 textarea {
   background-color: var(--white-color);
@@ -1368,7 +1350,6 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
 
 .main-content .box .settings-box-section2 .settings-box-website-control .settings-box-title {
   line-height: 1.8;
-  margin-bottom: var(--fifth-margin);
 }
 
 .main-content .box .settings-box-section2 .settings-box-website-control .settings-box-title p:nth-child(2) {

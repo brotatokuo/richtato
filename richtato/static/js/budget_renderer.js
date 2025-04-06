@@ -14,7 +14,7 @@ class BudgetRenderer {
         if (month !== null) params.append('month', month);
 
         url.search = params.toString();
-
+        console.log("Fetching categories from URL:", url.toString());
         fetch(url)
             .then(this._checkResponse)
             .then((data) => this._renderCategories(data.category_rankings))
