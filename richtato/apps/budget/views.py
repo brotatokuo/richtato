@@ -113,5 +113,3 @@ def get_budget_rankings(request):
     ]
 
     return JsonResponse({"category_rankings": category_data})
-    return JsonResponse({"category_rankings": category_data})
-    return JsonResponse({"category_rankings": category_data})

@@ -179,14 +179,15 @@ def get_recent_entries(request):
     return JsonResponse(recent_entries, safe=False)
 
 
-def _get_data_table_income(user: User) -> JsonResponse:
-    expenses = (
+def _get_data_table_income(user: User, limit: int | None = None) -> JsonResponse:
+    entries = (
         Income.objects.filter(user=user)
         .order_by("-date")
         .values("id", "date", "description", "amount", "account_name__name")
     )
+    if limit:
+        entries = entries[:limit]
 
-    # Format the result efficiently
     data = [
         {
             "id": e["id"],
@@ -195,7 +196,7 @@ def _get_data_table_income(user: User) -> JsonResponse:
             "description": e["description"],
             "amount": format_currency(e["amount"]),
         }
-        for e in expenses
+        for e in entries
     ]
 
     columns = [
@@ -229,36 +230,36 @@ def get_line_graph_data(request):
 def get_last_30_days_income_sum(user: User) -> float:
     today = datetime.now(pst).date()
     thirty_days_ago = today - relativedelta(days=30)
-    total_expenses = Income.objects.filter(
+    total_entries = Income.objects.filter(
         user=user, date__gte=thirty_days_ago
     ).aggregate(total_amount=Sum("amount"))
-    total_sum = total_expenses["total_amount"] or 0  # Use 0 if there's no result
+    total_sum = total_entries["total_amount"] or 0  # Use 0 if there's no result
     return total_sum
 
 
 def get_last_30_days(request):
     """
-    Get the cumulative expenses for the last 30 days.
+    Get the cumulative entries for the last 30 days.
     """
     today = datetime.now(pst).date()
     thirty_days_ago = today - relativedelta(days=30)
-    daily_expenses = {today - timedelta(days=i): 0 for i in range(30)}
-    expenses = (
+    daily_entries = {today - timedelta(days=i): 0 for i in range(30)}
+    entries = (
         Income.objects.filter(user=request.user, date__gte=thirty_days_ago)
         .values("date")
         .annotate(total_amount=Sum("amount"))
     )
 
-    # Populate daily expenses with actual expense values
-    for expense in expenses:
+    # Populate daily entries with actual expense values
+    for expense in entries:
         expense_date = expense["date"]
-        daily_expenses[expense_date] = expense["total_amount"]
+        daily_entries[expense_date] = expense["total_amount"]
 
     # Generate cumulative sum for each day
     cumulative = []
     running_total = 0
 
-    for date, expense in sorted(daily_expenses.items()):
+    for date, expense in sorted(daily_entries.items()):
         running_total += expense
         cumulative.append(running_total)
     labels = list(range(1, len(cumulative) + 1))

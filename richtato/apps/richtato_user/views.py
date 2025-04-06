@@ -125,8 +125,10 @@ def table(request: HttpRequest):
 
 def get_table_data(request: HttpRequest):
     table_option = request.GET.get("option")
-    page_number = int(request.GET.get("page", 1))
-    logger.debug(f"Table option: {table_option}, Page number: {page_number}")
+    limit = request.GET.get("limit")
+    if limit:
+        limit = int(limit)
+    logger.debug(f"Table option: {table_option}, limit: {limit}")
     table_data_getters = {
         "expense": _get_data_table_expense,
         "income": _get_data_table_income,
@@ -134,7 +136,7 @@ def get_table_data(request: HttpRequest):
 
     if table_option in table_data_getters:
         logger.debug(f"Getting table data for {table_option}.")
-        return table_data_getters[table_option](request.user)
+        return table_data_getters[table_option](request.user, limit)
     else:
         logger.error(f"Invalid table option: {table_option}")
         return JsonResponse({"error": "Invalid table option."}, status=400)

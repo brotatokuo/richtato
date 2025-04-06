@@ -120,10 +120,10 @@ def update(request):
 
 def get_recent_entries(request):
     """
-    Get the most recent expenses for the user.
+    Get the most recent entries for the user.
     """
-    recent_expenses = Expense.objects.filter(user=request.user).order_by("-date")[:5]
-    recent_expenses_data = [
+    recent_entries = Expense.objects.filter(user=request.user).order_by("-date")[:5]
+    recent_entries_data = [
         {
             "id": expense.id,
             "date": format_date(expense.date),
@@ -132,9 +132,9 @@ def get_recent_entries(request):
             "amount": format_currency(expense.amount),
             "category": expense.category.name,
         }
-        for expense in recent_expenses
+        for expense in recent_entries
     ]
-    return JsonResponse(recent_expenses_data, safe=False)
+    return JsonResponse(recent_entries_data, safe=False)
 
 
 def get_line_graph_data(request):
@@ -156,45 +156,45 @@ def get_line_graph_data(request):
 def get_last_30_days_expense_sum(user: User) -> float:
     today = datetime.now(pst).date()
     thirty_days_ago = today - relativedelta(days=30)
-    total_expenses = Expense.objects.filter(
+    total_entries = Expense.objects.filter(
         user=user, date__gte=thirty_days_ago
     ).aggregate(total_amount=Sum("amount"))
-    total_sum = total_expenses["total_amount"] or 0  # Use 0 if there's no result
+    total_sum = total_entries["total_amount"] or 0  # Use 0 if there's no result
     return total_sum
 
 
 def get_last_30_days(request):
     """
-    Get the cumulative expenses for the last 30 days.
+    Get the cumulative entries for the last 30 days.
     """
     today = datetime.now(pst).date()
     thirty_days_ago = today - relativedelta(days=30)
-    daily_expenses = {today - timedelta(days=i): 0 for i in range(30)}
-    expenses = (
+    daily_entries = {today - timedelta(days=i): 0 for i in range(30)}
+    entries = (
         Expense.objects.filter(user=request.user, date__gte=thirty_days_ago)
         .values("date")
         .annotate(total_amount=Sum("amount"))
     )
 
-    # Populate daily expenses with actual expense values
-    for expense in expenses:
+    # Populate daily entries with actual expense values
+    for expense in entries:
         expense_date = expense["date"]
-        daily_expenses[expense_date] = expense["total_amount"]
+        daily_entries[expense_date] = expense["total_amount"]
 
     # Generate cumulative sum for each day
-    cumulative_expenses = []
+    cumulative_entries = []
     running_total = 0
 
-    for date, expense in sorted(daily_expenses.items()):
+    for date, expense in sorted(daily_entries.items()):
         running_total += expense
-        cumulative_expenses.append(running_total)
-    labels = list(range(1, len(cumulative_expenses) + 1))
+        cumulative_entries.append(running_total)
+    labels = list(range(1, len(cumulative_entries) + 1))
     chart_data = {
         "labels": labels,
         "datasets": [
             {
                 "label": "Expenses By Day",
-                "data": cumulative_expenses,
+                "data": cumulative_entries,
                 "borderColor": "rgba(232, 82, 63, 1)",
             }
         ],
@@ -202,32 +202,8 @@ def get_last_30_days(request):
     return JsonResponse(chart_data)
 
 
-def _get_table_data(user: User, page: int = 1, page_size: int = 15) -> list:
-    table_data = []
-    offset = (page - 1) * page_size
-
-    # Fetch only the required slice of data for the current page
-    expenses = Expense.objects.filter(
-        user=user,
-    ).order_by("-date")[offset : offset + page_size]
-
-    for expense in expenses:
-        table_data.append(
-            {
-                "id": expense.id,
-                "date": format_date(expense.date),
-                "card": expense.account_name.name,
-                "description": expense.description,
-                "amount": format_currency(expense.amount),
-                "category": expense.category.name,
-            }
-        )
-
-    return table_data
-
-
-def _get_data_table_expense(user: User) -> JsonResponse:
-    expenses = (
+def _get_data_table_expense(user: User, limit: int | None = None) -> JsonResponse:
+    entries = (
         Expense.objects.filter(user=user)
         .order_by("-date")
         .values(
@@ -238,9 +214,9 @@ def _get_data_table_expense(user: User) -> JsonResponse:
             "account_name__name",
             "category__name",
         )
-    )
-
-    # Format the result efficiently
+    )[:limit]
+    if limit:
+        entries = entries[:limit]
     data = [
         {
             "id": e["id"],
@@ -250,7 +226,7 @@ def _get_data_table_expense(user: User) -> JsonResponse:
             "amount": format_currency(e["amount"]),
             "category": e["category__name"],
         }
-        for e in expenses
+        for e in entries
     ]
 
     columns = [
@@ -328,10 +304,10 @@ def get_full_table_data(request):
     month = request.GET.get("month")
 
     table_data = []
-    expenses = Expense.objects.filter(
+    entries = Expense.objects.filter(
         user=request.user, date__year=year, date__month=month
     )
-    for expense in expenses:
+    for expense in entries:
         table_data.append(
             {
                 "id": expense.id,

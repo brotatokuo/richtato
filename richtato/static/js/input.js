@@ -38,21 +38,15 @@ document.addEventListener("DOMContentLoaded", () => {
     .getContext("2d");
   plotLineChart(incomeLineChart, "/income/get_line_graph_data/");
 
-  const expenseTable = new Table(
-    "expenseTable",
-    "/expense/get_recent_entries/",
-    document.getElementById("editExpenseTable"),
-    "/expense/update/",
-    null
-  );
+  const expenseTableUrl = "/get-table-data/?option=expense&limit=5";
+  let expenseTable = new NewTable(
+    '#expenseTable', expenseTableUrl,
+  )
 
-  const incomeTable = new Table(
-    "incomeTable",
-    "/income/get_recent_entries/",
-    document.getElementById("editIncomeTable"),
-    "/income/update/",
-    null
-  );
+  const incomeTableUrl = "/get-table-data/?option=income&limit=5";
+  let incomeTable = new NewTable(
+    '#incomeTable', incomeTableUrl,
+  )
 });
 
 async function plotLineChart(ctx, endpointUrl) {

@@ -1,10 +1,16 @@
 class NewTable {
-    constructor(tableId, tableUrl, config, options = {}) {
+    constructor(tableId, tableUrl, config = {}, options = {}) {
         this.tableId = tableId;
         this.tableUrl = tableUrl;
         this.data = null;
         this.columns = null;
-        this.config = config;
+        this.config = {
+            paging: false,
+            searching: false,
+            info: false,
+            lengthChange: false,
+            ...config  // Merge any passed config with the default
+        };
         this.options = options;
         this.instance = null;
         this.init();
@@ -46,13 +52,10 @@ class NewTable {
 
         // Populate the table body dynamically
         const tbody = $(this.tableId).find('tbody');
-        console.log("Table Body:", tbody);
-
         this.data.forEach((row, rowIndex) => {
             const tr = $('<tr></tr>')
             this.columns.forEach((col, colIndex) => {
                 const td = $('<td></td>').text(row[col.data]);
-                console.log(`🧱 Row ${rowIndex}, Column ${col.data}:`, td);
                 tr.append(td);
             });
 
