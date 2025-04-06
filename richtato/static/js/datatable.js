@@ -1,9 +1,10 @@
 class NewTable {
-    constructor(tableId, tableUrl, options = {}) {
+    constructor(tableId, tableUrl, config, options = {}) {
         this.tableId = tableId;
         this.tableUrl = tableUrl;
         this.data = null;
         this.columns = null;
+        this.config = config;
         this.options = options;
         this.instance = null;
         this.init();
@@ -32,7 +33,6 @@ class NewTable {
         const thead = $(this.tableId).find('thead');
         thead.empty(); // Clear existing header rows
         const headerRow = $('<tr></tr>');
-
         if (this.columns && this.columns.length > 0) {
             this.columns.forEach(col => {
                 const th = $('<th></th>').text(col.title);
@@ -52,37 +52,16 @@ class NewTable {
             const tr = $('<tr></tr>')
             this.columns.forEach((col, colIndex) => {
                 const td = $('<td></td>').text(row[col.data]);
+                console.log(`🧱 Row ${rowIndex}, Column ${col.data}:`, td);
                 tr.append(td);
             });
 
             tbody.append(tr);
         });
 
-        tableElement.DataTable({
-            paging: true,
-            searching: true,
-            info: false,
-            lengthChange: false
-        });
+        tableElement.DataTable(this.config);
     }
-
     init() {
         this.fetchData();
     }
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    const tableDropdown = document.getElementById("tableOption");
-    let tableOption = tableDropdown.value;
-    var tableUrl = `/get-table-data/?option=${encodeURIComponent(tableOption)}`;
-    console.log(tableUrl);
-    let fullTable = new NewTable('#fullTable', tableUrl);
-
-    tableDropdown.addEventListener("change", () => {
-        tableOption = tableDropdown.value; // Get the updated option value
-        console.log("Selected option:", tableOption);
-        var tableUrl = `/get-table-data/?option=${encodeURIComponent(tableOption)}`;
-        fullTable = new NewTable('#fullTable', tableUrl);
-    });
-
-});

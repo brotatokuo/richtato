@@ -33,18 +33,23 @@ def main(request):
 def get_cards(request):
     card_options = CardAccount.objects.filter(user=request.user).order_by("name")
 
-    json_data = []
+    data = []
     for card in card_options:
-        logger.debug(f"Card: {card}")
-        json_data.append(
+        data.append(
             {
-                "Id": card.id,
-                "Card": card.name,
-                "Bank": card.card_bank_title,
+                "id": card.id,
+                "card": card.name,
+                "bank": card.card_bank_title,
             }
         )
 
-    return JsonResponse(json_data, safe=False)
+    columns = [
+        {"title": "ID", "data": "id"},
+        {"title": "Card", "data": "card"},
+        {"title": "Bank", "data": "bank"},
+    ]
+
+    return JsonResponse({"columns": columns, "data": data})
 
 
 @login_required

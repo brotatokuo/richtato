@@ -1368,6 +1368,10 @@ main .projects-box .projects-box-section2 table tr td a.rejected {
   /* Stacks the elements vertically */
 }
 
+.general-info-section2 > * {
+  width: 100%;
+}
+
 .main-content .box .general-info-section2 form {
   align-items: flex-start;
   width: 90%;

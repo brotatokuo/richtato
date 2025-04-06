@@ -1,8 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const cardsTable = new Table(
-    "settings-card-table",
-    "/settings/get-cards/",
-    document.getElementById("settingsCardEditButton"),
-    saveTableEndpoint,
-  );
+  const tableConfig = {
+    paging: false,
+    searching: false,
+    info: false,
+    lengthChange: false,
+  };
+  let cardsTable = new NewTable("#settings-card-table", "/settings/get-cards/", tableConfig);
 });

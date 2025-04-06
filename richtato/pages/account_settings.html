@@ -16,21 +16,13 @@
         </div>
       </div>
       <div class="general-info-section2">
-        <table class="styled-table" id="settings-card-table">
-          <thead>
-            <tr>
-              <th style="display: none">Delete</th>
-              <th style="display: none">Card ID</th>
-              <th>Card Name</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Rows will be populated here by JavaScript -->
-          </tbody>
+        <table class="data-table" id="settings-card-table">
+          <thead></thead>
+          <tbody></tbody>
         </table>
 
         <button class="primary-button" id="settingsCardEditButton">Edit</button>
-        
+
         <form class="settings-add-form" , method="post" action="{% url 'settings_add_card'%}">
           {% csrf_token %}
           <div class="form-group">
@@ -59,6 +51,7 @@
 <script>
   const saveTableEndpoint = "{% url 'settings_update_cards' %}";
 </script>
+<script src="{% static 'js/datatable.js' %}"></script>
 <script src="{% static 'js/account_settings.js' %}"></script>
 
 {% endblock %}

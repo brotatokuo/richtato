@@ -211,7 +211,7 @@ def _get_data_table_income(user: User) -> JsonResponse:
 
 
 def get_line_graph_data(request):
-    chart_data = _get_line_graph_data(request.user, 5, Income)
+    chart_data = _get_line_graph_data(request.user, Income, 5)
     months = chart_data["labels"]
     values = chart_data["values"]
     datasets = [
