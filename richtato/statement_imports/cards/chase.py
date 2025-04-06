@@ -48,4 +48,4 @@ class ChaseCards(CardCanonicalizer):
         self.formatted_df["Description"] = self.df["Description"]
 
     def format_amount(self) -> None:
-        self.formatted_df["Amount"] = self.df["Amount"].astype(float)
+        self.formatted_df["Amount"] = self.df["Amount"].astype(float).abs()

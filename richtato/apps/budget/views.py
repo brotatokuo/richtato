@@ -8,6 +8,7 @@ from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
+from loguru import logger
 
 from richtato.apps.expense.models import Expense
 from richtato.apps.richtato_user.models import Category
@@ -26,10 +27,9 @@ def main(request) -> HttpResponse:
         .distinct()
     )
     years_list = sorted(list(set([date.year for date in expense_dates])), reverse=True)
-    months_list = sorted(
-        list(set([(date.year, date.month) for date in expense_dates])), reverse=True
-    )
-    months_list = [calendar.month_abbr[month[1]] for month in months_list]
+    unique_month_nums = sorted({date.month for date in expense_dates}, reverse=True)
+    months_list = [calendar.month_abbr[month] for month in unique_month_nums]
+
     print(years_list, months_list)
     category_list = sorted(
         list(Category.objects.filter(user=request.user).values_list("name", flat=True))
@@ -57,7 +57,14 @@ def get_budget_rankings(request):
     count = request.GET.get("count", None)
     user = request.user
     pst = pytz.timezone("US/Pacific")
-    today = datetime.now(pst)
+    year = request.GET.get("year", datetime.now(pst).year)
+    month_abbr = request.GET.get("month", datetime.now(pst).strftime("%b"))
+    month_map = {
+        month: index for index, month in enumerate(calendar.month_abbr) if month
+    }
+    month = month_map.get(month_abbr)
+
+    logger.debug(f"Year: {year}, Month: {month}")
 
     # Get budgets and expenses in one go
     budget_list = Category.objects.filter(user=user).values("name", "budget")
@@ -67,8 +74,8 @@ def get_budget_rankings(request):
         total_expense = Expense.objects.filter(
             user=user,
             category__name=budget["name"],
-            date__year=today.year,
-            date__month=today.month,
+            date__year=year,
+            date__month=month,
         ).aggregate(total_amount=Coalesce(Sum("amount"), Decimal(0)))["total_amount"]
 
         percent_budget = (

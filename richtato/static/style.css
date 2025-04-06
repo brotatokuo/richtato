@@ -539,6 +539,7 @@ main .main-content .title::after {
 
 .main-content-boxes .box .box-section1 .box-title {
   line-height: 1.6;
+  display: flex;
 }
 
 @media (max-width: 767px) {
@@ -2811,7 +2812,6 @@ form {
 
 .table-option {
   margin-bottom: 3%;
-  width: 100%;
   color: var(--text-color);
   background-color: var(--main-color);
   border: var(--secondary-color);

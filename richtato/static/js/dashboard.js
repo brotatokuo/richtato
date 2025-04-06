@@ -9,7 +9,8 @@ document.addEventListener("DOMContentLoaded", () => {
     .getContext("2d");
   plotOverviewLineChart(incomeOverviewLineChart, "/income/get-last-30-days/");
 
-  fetchAndRenderCategories(3);
+  const renderer = new BudgetRenderer('categories-container', '/budget/get-budget-rankings/');
+  renderer.fetchAndRender();
 });
 
 async function plotOverviewLineChart(ctx, endpointUrl) {
@@ -68,46 +69,3 @@ async function plotOverviewLineChart(ctx, endpointUrl) {
     console.error("Error fetching or plotting data:", error);
   }
 }
-
-// async function fetchProgress() {
-//   try {
-//     // const response = await fetch('/api/progress');
-//     // if (!response.ok) {
-//     //   throw new Error('Failed to fetch progress data');
-//     // }
-//     // const data = await response.json();
-//     // return data.progress;
-//     return 50; // Fallback to 50% for testing
-//   } catch (error) {
-//     console.error('Error fetching progress:', error);
-//     return 0; // Fallback to 0% if there's an error
-//   }
-// }
-
-// function updateIconBasedOnTitle(containerId) {
-//   // Get the container
-//   const container = document.querySelector(`#${containerId}`);
-
-//   // Get the title (first <li> inside the ul)
-//   const titleElement = container.querySelector('.third-box-info ul li:first-child');
-//   const iconElement = container.querySelector('.icon i');
-
-//   // Get the title text
-//   const title = titleElement.textContent.trim();
-
-//   // Set icon class based on title
-//   switch (title.toLowerCase()) {
-//     case 'travel':
-//       iconElement.className = 'fa-solid fa-plane fa-lg';  // Change to a plane icon for Travel
-//       break;
-//     case 'shopping':
-//       iconElement.className = 'fa-solid fa-shopping-cart fa-lg';  // Change to shopping cart icon for Shopping
-//       break;
-//     case 'food':
-//       iconElement.className = 'fa-solid fa-utensils fa-lg';  // Change to utensils icon for Food
-//       break;
-//     default:
-//       iconElement.className = 'fa-solid fa-question fa-lg';  // Default icon if the title is not recognized
-//   }
-// }
-

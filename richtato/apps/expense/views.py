@@ -138,7 +138,7 @@ def get_recent_entries(request):
 
 
 def get_line_graph_data(request):
-    chart_data = _get_line_graph_data(request.user, 5, Expense)
+    chart_data = _get_line_graph_data(request.user, Expense, 5)
     months = chart_data["labels"]
     values = chart_data["values"]
     datasets = [

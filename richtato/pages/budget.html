@@ -12,7 +12,17 @@
         <div class="box">
             <div class="box-section1">
                 <div class="box-title">
-                    <h2>{{ current_year }} {{current_month}}</h2>
+                    <select class="table-option" name="year-select" id="year">
+                        {% for year in years %}
+                        <option value="{{ year }}">{{ year }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <select class="table-option" name="month-select" id="month">
+                        {% for month in months %}
+                        <option value="{{ month }}">{{ month }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
             </div>
             <div class="third-box-section2" id="categories-container">
@@ -21,6 +31,7 @@
         </div>
     </div>
 </div>
-<script src="{% static 'js/core.js' %}"></script>
+<!-- <script src="{% static 'js/core.js' %}"></script> -->
+<script src="{% static 'js/budget_renderer.js' %}"></script>
 <script src="{% static 'js/budget.js' %}"></script>
 {% endblock %}
