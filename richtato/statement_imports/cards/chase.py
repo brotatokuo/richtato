@@ -14,7 +14,7 @@ class ChaseCards(CardCanonicalizer):
         """
         Reads Chase card data from a file."
         """
-        df = pd.read_csv(file_path, skiprows=4, header=0)
+        df = pd.read_csv(file_path, header=0)
         return cls(user, card_name, df)
 
     @property
@@ -22,12 +22,21 @@ class ChaseCards(CardCanonicalizer):
         """
         Returns the input columns for Chase card data.
         """
-        return ["Transaction Date", "Description", "Amount", "Category"]
+        return [
+            "Transaction Date",
+            "Post Date",
+            "Description",
+            "Category",
+            "Type",
+            "Amount",
+            "Memo",
+        ]
 
     def _format(self):
         """
         Canonicalizes the given Chase card data.
         """
+        print(self.df.columns)
         self.format_date()
         self.format_description()
         self.format_amount()
@@ -39,10 +48,4 @@ class ChaseCards(CardCanonicalizer):
         self.formatted_df["Description"] = self.df["Description"]
 
     def format_amount(self) -> None:
-        self.formatted_df["Amount"] = (
-            self.df["Amount"]
-            .str.replace(",", "")
-            .str.replace("$", "")
-            .astype(float)
-            .fillna(0)
-        )
+        self.formatted_df["Amount"] = self.df["Amount"].astype(float)

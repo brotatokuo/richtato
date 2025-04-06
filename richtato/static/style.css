@@ -2414,7 +2414,7 @@ form {
   min-height: 20px;
   max-height: 420px;
   padding: var(--secondary-padding);
-  background-color: var(--white-color);
+  background-color: var(--main-color);
   border-radius: var(--first-radius);
   -webkit-border-radius: var(--first-radius);
   -moz-border-radius: var(--first-radius);
@@ -2541,7 +2541,6 @@ form {
   min-width: 220px;
   flex: 1;
   padding: var(--fourth-padding) var(--third-padding);
-  background-color: var(--white-color);
   border-radius: var(--first-radius);
   -webkit-border-radius: var(--first-radius);
   -moz-border-radius: var(--first-radius);
@@ -2549,18 +2548,6 @@ form {
   -o-border-radius: var(--first-radius);
 }
 
-/* .files-main-content .files-boxes .file-box:hover .file-box-card-body img {
-  transform: rotate(5deg);
-  -webkit-transform: rotate(5deg);
-  -moz-transform: rotate(5deg);
-  -ms-transform: rotate(5deg);
-  -o-transform: rotate(5deg);
-  transition: 0.5s;
-  -webkit-transition: 0.5s;
-  -moz-transition: 0.5s;
-  -ms-transition: 0.5s;
-  -o-transition: 0.5s;
-} */
 
 .files-main-content .files-boxes .file-box>i {
   color: var(--third-color);
@@ -2572,7 +2559,6 @@ form {
   align-items: center;
   gap: var(--fourth-padding);
   padding-bottom: var(--fourth-padding);
-  border-bottom: 1px solid var(--eee-color);
 }
 
 .files-main-content .files-boxes .file-box .file-box-card-body img {
@@ -2959,4 +2945,15 @@ form {
   height: 50px;
   object-fit: cover;
   border-radius: 5px;
+}
+
+.remove-button {
+  color: white;
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
 }

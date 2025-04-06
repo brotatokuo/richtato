@@ -104,6 +104,7 @@ input[type="password"] {
   display: block;
   width: 100%;
   padding: 10px;
+  color: var(--text-color);
   font-size: 14px;
   border: 1px solid #ddd;
   background-color: var(--main-color);

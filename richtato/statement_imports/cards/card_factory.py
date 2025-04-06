@@ -26,7 +26,7 @@ class CardStatement:
         cls._canonicalizers[card_type.lower()] = canonicalizer_class
 
     @classmethod
-    def create_from_file(cls, user, card_type, card_name, file_path):
+    def create_from_file(cls, user, card_bank, card_name, file_path):
         """
         Create an instance of the appropriate card canonicalizer using its from_file method.
 
@@ -41,17 +41,17 @@ class CardStatement:
         Raises:
             ValueError: If no canonicalizer is registered for the given card type
         """
-        card_type_lower = card_type.lower()
+        card_bank_lower = card_bank.lower()
 
-        if card_type_lower not in cls._canonicalizers:
+        if card_bank_lower not in cls._canonicalizers:
             available_types = ", ".join(cls._canonicalizers.keys())
             raise ValueError(
-                f"No canonicalizer registered for card type '{card_type}'. "
+                f"No canonicalizer registered for card type '{card_bank}'. "
                 f"Available types: {available_types}"
             )
 
         # Use the from_file class method instead of constructor
-        canonicalizer_class = cls._canonicalizers[card_type_lower]
+        canonicalizer_class = cls._canonicalizers[card_bank_lower]
         return canonicalizer_class.from_file(user, card_name, file_path)
 
 

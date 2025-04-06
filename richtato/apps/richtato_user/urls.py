@@ -25,4 +25,4 @@ urlpatterns = [
     path("get-table-data/", views.get_table_data, name="get_table_data"),
     path("timeseries-plots/", views.timeseries_plots, name="timeseries_plots"),
     path("get-timeseries-data/", views.get_timeseries_data, name="get_timeseries_data"),
-    path("get-card-types/", views.get_card_types, name="get_card_types"),]
+    path("get-card-banks/", views.get_card_banks, name="get_card_banks"),]

@@ -227,12 +227,18 @@ def _get_table_data(user: User, page: int = 1, page_size: int = 15) -> list:
 
 
 def _get_data_table_expense(user: User) -> JsonResponse:
-    expenses = Expense.objects.filter(user=user) \
-        .order_by("-date") \
+    expenses = (
+        Expense.objects.filter(user=user)
+        .order_by("-date")
         .values(
-            "id", "date", "description", "amount",
-            "account_name__name", "category__name"
+            "id",
+            "date",
+            "description",
+            "amount",
+            "account_name__name",
+            "category__name",
         )
+    )
 
     # Format the result efficiently
     data = [
@@ -257,6 +263,7 @@ def _get_data_table_expense(user: User) -> JsonResponse:
     ]
 
     return JsonResponse({"columns": columns, "data": data})
+
 
 def _delete_expense(transaction_id):
     try:
@@ -316,69 +323,6 @@ def guess_category(request):
     return JsonResponse({"category": category})
 
 
-# def get_monthly_diff(request):
-#     """
-#     Get the monthly diff between income and expenses.
-#     """
-#     year = request.GET.get("year") or 2024
-
-#     month_list = [
-#         "Jan",
-#         "Feb",
-#         "Mar",
-#         "Apr",
-#         "May",
-#         "Jun",
-#         "Jul",
-#         "Aug",
-#         "Sep",
-#         "Oct",
-#         "Nov",
-#         "Dec",
-#     ]
-#     datasets = []
-#     all_expenses = Expense.objects.filter(user=request.user, date__year=year)
-#     all_incomes = Income.objects.filter(user=request.user, date__year=year)
-
-#     monthly_diffs = []
-
-#     for month in range(1, 13):
-#         # Filter expenses and incomes for the specific month and calculate totals
-#         monthly_expense = (
-#             all_expenses.filter(date__month=month).aggregate(Sum("amount"))[
-#                 "amount__sum"
-#             ]
-#             or 0
-#         )
-#         monthly_income = (
-#             all_incomes.filter(date__month=month).aggregate(Sum("amount"))[
-#                 "amount__sum"
-#             ]
-#             or 0
-#         )
-#         monthly_diff = round(float(monthly_income) - float(monthly_expense))
-
-#         # Append the difference to the monthly_diffs list
-#         monthly_diffs.append(monthly_diff)
-
-#     # Create the dataset for the chart
-#     background_color, border_color = color_picker(
-#         0
-#     )  # Assuming this function returns the correct colors
-#     datasets.append(
-#         {
-#             "label": "Monthly Diff",
-#             "data": monthly_diffs,
-#             "backgroundColor": background_color,
-#             "borderColor": border_color,
-#             "borderWidth": 1,
-#         }
-#     )
-
-#     # Return the JSON response
-#     return JsonResponse({"labels": month_list, "datasets": datasets})
-
-
 def get_full_table_data(request):
     year = request.GET.get("year")
     month = request.GET.get("month")
@@ -405,28 +349,28 @@ def upload_card_statements(request):
         logger.debug("Uploading card statements")
 
         files = request.FILES.getlist("files")
-        card_types = request.POST.getlist("card_types")
+        card_banks = request.POST.getlist("card_banks")
         card_names = request.POST.getlist("card_names")
 
         if not files:
             logger.warning("No files received in the request.")
             return JsonResponse({"error": "No files received"}, status=400)
 
-        if len(files) != len(card_types):
+        if len(files) != len(card_banks):
             logger.warning(
-                f"Mismatch between files ({len(files)}) and card accounts ({len(card_types)})"
+                f"Mismatch between files ({len(files)}) and card accounts ({len(card_banks)})"
             )
             return JsonResponse(
                 {"error": "Mismatch between files and card accounts"}, status=400
             )
 
         logger.debug(f"Files uploaded: {[file.name for file in files]}")
-        logger.debug(f"Card accounts selected: {card_types}")
+        logger.debug(f"Card banks selected: {card_banks}")
         logger.debug(f"Card names: {card_names}")
 
-        for file, card_type, card_name in zip(files, card_types, card_names):
+        for file, card_bank, card_name in zip(files, card_banks, card_names):
             card_statement = CardStatement.create_from_file(
-                request.user, card_type, card_name, file.file
+                request.user, card_bank, card_name, file.file
             )
             print(card_statement.formatted_df.head())
             card_statement.process()

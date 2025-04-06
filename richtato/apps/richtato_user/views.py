@@ -176,19 +176,18 @@ def get_timeseries_data(request: HttpRequest) -> JsonResponse:
     return JsonResponse(chart_data)
 
 
-def get_card_types(request: HttpRequest) -> JsonResponse:
-    cards = CardAccount.objects.filter(user=request.user).values("name", "card_type")
+def get_card_banks(request: HttpRequest) -> JsonResponse:
+    cards = CardAccount.objects.filter(user=request.user).values("name", "card_bank")
     logger.debug(f"Cards: {cards}")
     cards_dict = {
         "cards": [
             {
-                "value": card["card_type"],
+                "value": card["card_bank"],
                 "label": card["name"],
             }
             for card in cards
         ]
     }
-
     return JsonResponse(cards_dict, safe=False)
 
 

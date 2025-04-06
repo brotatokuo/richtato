@@ -1,21 +1,21 @@
 async function getCardTypes() {
     try {
-        const response = await fetch('/get-card-types');
+        const response = await fetch('/get-card-banks');
         if (!response.ok) {
-            throw new Error('Failed to fetch card types');
+            throw new Error('Failed to fetch card banks');
         }
         return await response.json();
     } catch (error) {
-        console.error('Error fetching card types:', error);
+        console.error('Error fetching card banks:', error);
         return [];
     }
 }
 
 async function initializeFileManager() {
-    const cardTypes = await getCardTypes();
+    const cardBanks = await getCardTypes();
 
-    // Create the fileManager instance after fetching cardTypes
-    const fileManager = new FileManager('files-boxes', 'files-statistics', cardTypes);
+    // Create the fileManager instance after fetching cardBanks
+    const fileManager = new FileManager('files-boxes', 'files-statistics', cardBanks);
 
     // Define the handleFiles function inside to ensure fileManager is available
     function handleFiles(files) {
@@ -61,13 +61,13 @@ async function initializeFileManager() {
 initializeFileManager();
 
 class File {
-    constructor(file, cardTypes, onRemoveCallback) {
+    constructor(file, cardBanks, onRemoveCallback) {
         this.path = URL.createObjectURL(file); // Temporary path for preview
         this.name = file.name;
         this.file_size = file.size;
         this.file = file;
-        this.cardTypes = cardTypes;
-        console.log("cardTypes", cardTypes);
+        this.cardBanks = cardBanks;
+        console.log("Card Banks", cardBanks);
         this.onRemoveCallback = onRemoveCallback; // Store the callback for removal
     }
 
@@ -76,7 +76,7 @@ class File {
         const dropdown = document.createElement("select");
         dropdown.classList.add("card-account-dropdown");
 
-        this.cardTypes.cards.forEach(cardType => {
+        this.cardBanks.cards.forEach(cardType => {
             const option = document.createElement("option");
             option.value = cardType.value;
             option.textContent = cardType.label;
@@ -91,13 +91,6 @@ class File {
         const removeButton = document.createElement('button');
         removeButton.innerHTML = '&times;';
         removeButton.classList.add('remove-button');
-        removeButton.style.position = 'absolute';
-        removeButton.style.top = '5px';
-        removeButton.style.right = '5px';
-        removeButton.style.background = 'transparent';
-        removeButton.style.border = 'none';
-        removeButton.style.fontSize = '16px';
-        removeButton.style.cursor = 'pointer';
 
         // Use the callback provided by FileManager
         removeButton.addEventListener('click', (e) => {
@@ -157,11 +150,11 @@ class File {
 
 
 class FileManager {
-    constructor(filesContainerId, statisticsContainerId, cardTypes) {
+    constructor(filesContainerId, statisticsContainerId, cardBanks) {
         this.filesContainer = document.getElementById(filesContainerId);
         this.statisticsContainer = document.getElementById(statisticsContainerId);
         this.uploadedFiles = []; // Stores instances of File
-        this.cardTypes = cardTypes;
+        this.cardBanks = cardBanks;
     }
 
     // Validate if the file is of a valid type (Excel or CSV)
@@ -192,7 +185,7 @@ class FileManager {
         }
 
         // Create a new File instance with a callback to removeFile
-        const newFile = new File(file, this.cardTypes, (fileToRemove) => {
+        const newFile = new File(file, this.cardBanks, (fileToRemove) => {
             this.removeFile(fileToRemove);
         });
         this.uploadedFiles.push(newFile);
@@ -236,14 +229,14 @@ class FileManager {
         this.uploadedFiles.forEach(fileObj => {
             formData.append('files', fileObj.file);
 
-            const selectedCardType = fileObj.dropdown.value;
+            const selectedCardBank = fileObj.dropdown.value;
             const selectedCardName = fileObj.dropdown.options[fileObj.dropdown.selectedIndex].textContent;
 
-            formData.append('card_types', selectedCardType);
+            formData.append('card_banks', selectedCardBank);
             formData.append('file_names', fileObj.name);
             formData.append('card_names', selectedCardName);
 
-            console.log('File name:', fileObj.name, 'Card Type:', selectedCardType, 'Card Name:', selectedCardName);
+            console.log('File name:', fileObj.name, 'Card Bank:', selectedCardBank, 'Card Name:', selectedCardName);
         });
 
         const csrftoken = getCSRFToken();
