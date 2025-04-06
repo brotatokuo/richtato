@@ -30,7 +30,6 @@ def main(request) -> HttpResponse:
     unique_month_nums = sorted({date.month for date in expense_dates}, reverse=True)
     months_list = [calendar.month_abbr[month] for month in unique_month_nums]
 
-    print(years_list, months_list)
     category_list = sorted(
         list(Category.objects.filter(user=request.user).values_list("name", flat=True))
     )

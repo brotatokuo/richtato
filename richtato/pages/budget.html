@@ -14,13 +14,17 @@
                 <div class="box-title">
                     <select class="table-option" name="year-select" id="year">
                         {% for year in years %}
-                        <option value="{{ year }}">{{ year }}</option>
+                            <option value="{{ year }}" {% if year == current_year %}selected{% endif %}>
+                                {{ year }}
+                            </option>
                         {% endfor %}
                     </select>
 
                     <select class="table-option" name="month-select" id="month">
                         {% for month in months %}
-                        <option value="{{ month }}">{{ month }}</option>
+                        <option value="{{ month }}" {% if month == current_month %}selected{% endif %}>
+                            {{ month }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>

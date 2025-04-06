@@ -12,7 +12,7 @@ def user_info(request: HttpRequest) -> dict:
 def date(request: HttpRequest) -> dict:
     current_date = datetime.now()
     return {
-        "current_year": str(current_date.year),
-        "current_month": str(current_date.strftime("%B")),
+        "current_year": int(current_date.year),
+        "current_month": str(current_date.strftime("%b")),
         "current_day": str(current_date.day),
     }
