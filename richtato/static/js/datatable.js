@@ -1,5 +1,5 @@
-class NewTable {
-    constructor(tableId, tableUrl, config = {}, options = {}) {
+class RichTable {
+    constructor(tableId, tableUrl, config = {}, visibleColumns = null) {
         this.tableId = tableId;
         this.tableUrl = tableUrl;
         this.data = null;
@@ -11,9 +11,9 @@ class NewTable {
             lengthChange: false,
             ...config  // Merge any passed config with the default
         };
-        this.options = options;
+        this.visibleColumns = visibleColumns;
         this.instance = null;
-        this.init();
+        this.fetchData();
     }
 
     async fetchData() {
@@ -31,40 +31,129 @@ class NewTable {
 
     renderTable() {
         const tableElement = $(this.tableId);
-        // Clear any existing table data (important for re-rendering)
-        if (tableElement.DataTable()) {
+        if ($.fn.DataTable.isDataTable(this.tableId)) {
             tableElement.DataTable().clear().destroy();
         }
 
-        const thead = $(this.tableId).find('thead');
-        thead.empty(); // Clear existing header rows
+        const thead = tableElement.find('thead');
+        const tbody = tableElement.find('tbody');
+
+        thead.empty();
+        tbody.empty();
+
         const headerRow = $('<tr></tr>');
-        if (this.columns && this.columns.length > 0) {
-            this.columns.forEach(col => {
-                const th = $('<th></th>').text(col.title);
-                headerRow.append(th);
-            });
-        } else {
-            console.error("No columns available to render!");
-        }
+        const columnsToShow = this.visibleColumns || this.columns.map(col => col.data);
+
+        this.columns.forEach((col) => {
+            if (!columnsToShow.includes(col.data)) return;
+            headerRow.append($('<th></th>').text(col.title));
+        });
 
         thead.append(headerRow);
 
-        // Populate the table body dynamically
-        const tbody = $(this.tableId).find('tbody');
-        this.data.forEach((row, rowIndex) => {
-            const tr = $('<tr></tr>')
-            this.columns.forEach((col, colIndex) => {
-                const td = $('<td></td>').text(row[col.data]);
-                tr.append(td);
+        this.data.forEach(row => {
+            const tr = $('<tr></tr>');
+            this.columns.forEach((col) => {
+                if (!columnsToShow.includes(col.data)) return;
+                tr.append($('<td></td>').text(row[col.data]));
             });
-
             tbody.append(tr);
         });
 
-        tableElement.DataTable(this.config);
-    }
-    init() {
-        this.fetchData();
+        const dt = tableElement.DataTable(this.config);
+
+        // Hook rows into EditableRow
+        dt.rows().every((i) => {
+            const dtRow = dt.row(i);
+            const $tr = $(dtRow.node());
+            const rowData = dtRow.data();
+
+            new EditableRow(
+                rowData,
+                this.columns,
+                columnsToShow,
+                $tr,
+                dtRow,
+                (updated) => console.log("Updated:", updated),
+                (deleted) => console.log("Deleted:", deleted)
+            );
+        });
     }
 }
+
+class EditableRow {
+    constructor(rowData, columnDefs, visibleColumns, tableRowElement, dataTableRow, onUpdate, onDelete) {
+        this.data = rowData;
+        this.columns = columnDefs;
+        this.visibleColumns = visibleColumns;
+        this.$tr = tableRowElement;
+        this.dtRow = dataTableRow;
+        this.onUpdate = onUpdate;
+        this.onDelete = onDelete;
+
+        this.attachClickHandler();
+    }
+
+    attachClickHandler() {
+        this.$tr.off('click').on('click', () => this.expand());
+    }
+
+    expand() {
+        // Collapse if already open
+        if (this.$tr.hasClass('shown')) {
+            this.dtRow.child.hide();
+            this.$tr.removeClass('shown');
+            return;
+        }
+
+        // Hide any others (optional depending on design)
+        $('.shown').each(function () {
+            $(this).removeClass('shown');
+            $(this).next('tr').remove();
+        });
+
+        const hiddenCols = this.columns.filter(col =>
+            !this.visibleColumns.includes(col.data) && col.data !== 'id'
+        );
+
+        const form = $('<div class="edit-form"></div>');
+
+        hiddenCols.forEach((col) => {
+            const input = $('<input type="text" class="form-control"/>')
+                .val(this.data[col.data])
+                .attr('data-field', col.data);
+
+            const label = $('<label></label>').text(col.title + ': ');
+            form.append($('<div class="form-group mb-2"></div>').append(label, input));
+        });
+
+        const editBtn = $('<button class="btn btn-sm btn-primary">Save</button>');
+        const deleteBtn = $('<button class="btn btn-sm btn-danger ms-2">Delete</button>');
+        const btnGroup = $('<div class="mt-2"></div>').append(editBtn, deleteBtn);
+        form.append(btnGroup);
+
+        editBtn.on('click', () => {
+            const updatedData = { ...this.data };
+            form.find('input').each(function () {
+                const field = $(this).data('field');
+                updatedData[field] = $(this).val();
+            });
+
+            this.dtRow.data(updatedData).draw();
+            this.dtRow.child.hide();
+            this.$tr.removeClass('shown');
+            this.onUpdate(updatedData);
+        });
+
+        deleteBtn.on('click', () => {
+            if (confirm("Are you sure you want to delete this row?")) {
+                this.dtRow.remove().draw();
+                this.onDelete(this.data);
+            }
+        });
+
+        this.dtRow.child(form).show();
+        this.$tr.addClass('shown');
+    }
+}
+

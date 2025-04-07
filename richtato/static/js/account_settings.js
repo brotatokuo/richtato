@@ -1,3 +1,3 @@
 document.addEventListener("DOMContentLoaded", () => {
-  let cardsTable = new NewTable("#settings-card-table", "/settings/get-cards/");
+  let cardsTable = new RichTable("#settings-card-table", "/settings/get-cards/");
 });

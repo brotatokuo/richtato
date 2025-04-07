@@ -39,12 +39,12 @@ document.addEventListener("DOMContentLoaded", () => {
   plotLineChart(incomeLineChart, "/income/get_line_graph_data/");
 
   const expenseTableUrl = "/get-table-data/?option=expense&limit=5";
-  let expenseTable = new NewTable(
+  let expenseTable = new RichTable(
     '#expenseTable', expenseTableUrl,
   )
 
   const incomeTableUrl = "/get-table-data/?option=income&limit=5";
-  let incomeTable = new NewTable(
+  let incomeTable = new RichTable(
     '#incomeTable', incomeTableUrl,
   )
 });
