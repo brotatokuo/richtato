@@ -39,8 +39,8 @@ pst = pytz.timezone("US/Pacific")
 def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
     if request.user.is_authenticated:
         logger.debug(f"User {request.user} is authenticated.")
-
-        networth = request.user.networth()
+        accounts = Account.objects.filter(user=request.user)
+        networth = sum(account.latest_balance for account in accounts) if accounts else 0.0   
         expense_sum = get_last_30_days_expense_sum(request.user)
         income_sum = get_last_30_days_income_sum(request.user)
         savings_rate = (
