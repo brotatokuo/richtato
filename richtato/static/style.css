@@ -2701,7 +2701,6 @@ form {
   height: 95%;
   max-height: 70vh;
   max-width: none;
-  touch-action: none;
 }
 
 .table-responsive {
