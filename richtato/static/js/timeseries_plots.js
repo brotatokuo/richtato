@@ -115,14 +115,21 @@ async function plotLineChart(ctx) {
                     },
                     zoom: {
                         zoom: {
+                            mode: 'x',
+                            drag:{
+                                enabled: true,
+                            },
                             wheel: {
                                 enabled: true,
                             },
                             pinch: {
                                 enabled: true
                             },
+                        },
+                        pan: {
                             mode: 'x',
-                        }
+                            enabled: true,
+                        },
                     }
                 }
             },
