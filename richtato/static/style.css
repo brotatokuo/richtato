@@ -2946,3 +2946,7 @@ form {
   font-style: italic;
   color: var(--green-color);
 }
+
+.data-table td, .data-table th {
+  text-align: left;
+}

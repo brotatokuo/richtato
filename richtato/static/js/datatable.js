@@ -1,5 +1,5 @@
 class RichTable {
-    constructor(tableId, tableUrl, config = {}, visibleColumns = null) {
+    constructor(tableId, tableUrl, config = {}, visibleColumns = null, invisibleColumns = null) {
         this.tableId = tableId;
         this.tableUrl = tableUrl;
         this.data = null;
@@ -12,6 +12,7 @@ class RichTable {
             ...config  // Merge any passed config with the default
         };
         this.visibleColumns = visibleColumns;
+        this.invisibleColumns = invisibleColumns;
         this.instance = null;
         this.fetchData();
     }
@@ -28,6 +29,23 @@ class RichTable {
             console.error('Error fetching data:', error);
         }
     }
+    
+    getColumnsToShow() {
+        const allColumns = this.columns.map(col => col.data);
+    
+        if (this.visibleColumns) {
+            return this.visibleColumns.filter(col => col.toLowerCase() !== 'id');
+        } else if (this.invisibleColumns) {
+            return allColumns.filter(col => 
+                !this.invisibleColumns.map(c => c.toLowerCase()).includes(col.toLowerCase()) &&
+                col.toLowerCase() !== 'id'
+            );
+        } else {
+            // Default: show everything except "id"
+            return allColumns.filter(col => col.toLowerCase() !== 'id');
+        }
+    }
+    
 
     renderTable() {
         const tableElement = $(this.tableId);
@@ -42,7 +60,9 @@ class RichTable {
         tbody.empty();
 
         const headerRow = $('<tr></tr>');
-        const columnsToShow = this.visibleColumns || this.columns.map(col => col.data);
+        const columnsToShow = this.getColumnsToShow();
+
+        console.log("Columns to show:", columnsToShow);
 
         this.columns.forEach((col) => {
             if (!columnsToShow.includes(col.data)) return;

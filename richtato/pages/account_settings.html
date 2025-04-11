@@ -46,6 +46,45 @@
         </form>
       </div>
     </div>
+
+    <div class="box">
+      <div class="box-section1">
+        <div class="box-title">
+          <h2>Accounts</h2>
+        </div>
+      </div>
+      <div class="general-info-section2">
+        <table class="data-table" id="accounts-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+
+        <!-- <button class="primary-button" id="settingsCardEditButton">Edit</button> -->
+
+        <form class="settings-add-form" , method="post" action="{% url 'account_add_entry'%}">
+          {% csrf_token %}
+          <div class="form-group">
+            <label for="account-name">Account Name</label>
+            <input class="form-control" id="account-name" name="account-name" type="string" required />
+
+            <label for="account-entity">Select Account Entity:</label>
+            <select id="account-entity" name="account-entity" class="form-control">
+              <option value="" selected disabled></option>
+              {% for bank_id, bank_name in supported_card_banks %}
+              <option value="{{ bank_id }}">{{ bank_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          {% if error_card_message %}
+          <div class="wrong-password">{{error_card_message}}</div>
+          {% endif %}
+
+          <button class="primary-button" id="submit-balance" type="submit">Add Card</button>
+        </form>
+      </div>
+    </div>
+
   </div>
 </div>
 <script>
