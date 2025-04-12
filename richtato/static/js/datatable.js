@@ -22,6 +22,7 @@ class RichTable {
             console.log("Fetching data from URL:", this.tableUrl);
             const response = await fetch(this.tableUrl);
             const data = await response.json();
+            console.log("Data fetched:", data);
             this.data = data.data;
             this.columns = data.columns;
             this.renderTable();

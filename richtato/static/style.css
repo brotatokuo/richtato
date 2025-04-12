@@ -1451,6 +1451,23 @@ form {
   margin-bottom: var(--third-margin);
 }
 
+.main-content .box .general-info-section2 form select {
+  background-color: var(--main-color);
+  color: var(--text-color);
+  margin-top: var(--fifth-margin);
+  margin-bottom: var(--third-margin);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+/* Invert the color of the spinner arrows */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    filter: invert(1);
+}
+
 .main-content .box .general-info-section2 form input::placeholder {
   font-size: 0.75rem;
 }

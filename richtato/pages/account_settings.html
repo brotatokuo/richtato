@@ -54,7 +54,7 @@
         </div>
       </div>
       <div class="general-info-section2">
-        <table class="data-table" id="accounts-table">
+        <table class="data-table" id="settings-accounts-table">
           <thead></thead>
           <tbody></tbody>
         </table>
@@ -70,10 +70,28 @@
             <label for="account-entity">Select Account Entity:</label>
             <select id="account-entity" name="account-entity" class="form-control">
               <option value="" selected disabled></option>
-              {% for bank_id, bank_name in supported_card_banks %}
-              <option value="{{ bank_id }}">{{ bank_name }}</option>
+              {% for asset_entity_id, asset_entity_name in supported_asset_accounts %}
+              <option value="{{ asset_entity_id }}">{{ asset_entity_name }}</option>
               {% endfor %}
             </select>
+
+            <label for="asset-type">Select Asset Type:</label>
+            <select id="asset-type" name="asset-type" class="form-control">
+              <option value="" selected disabled></option>
+              {% for asset_type_id, asset_type_name in supported_asset_types %}
+              <option value="{{ asset_type_id }}">{{ asset_type_name }}</option>
+              {% endfor %}
+            </select>
+
+            <label for="balance-date">Balance Date</label>
+            <input class="form-control" type="date" id="balance-date" name="balance-date" value="{{ today_date }}"
+              required />
+
+
+            <label for="balance-input">Balance</label>
+            <input class="form-control" id="balance-input" name="balance-input" type="number" min="0.01" step="0.01"
+              required />
+
           </div>
 
           {% if error_card_message %}

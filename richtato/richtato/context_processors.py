@@ -15,4 +15,5 @@ def date(request: HttpRequest) -> dict:
         "current_year": int(current_date.year),
         "current_month": str(current_date.strftime("%b")),
         "current_day": str(current_date.day),
+        "today_date": str(current_date.strftime("%Y-%m-%d")),
     }

@@ -1,57 +1,75 @@
 import json
-from datetime import datetime
 
 from django.contrib.auth.decorators import login_required
-from django.db.models.functions import ExtractYear
 from django.http import JsonResponse
-from django.shortcuts import HttpResponse, HttpResponseRedirect, render
+from django.shortcuts import HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 
 from richtato.apps.account.models import Account, AccountTransaction
-from richtato.utilities.tools import format_currency
 
-
-@login_required
-def main(request):
-    account_options = Account.objects.filter(user=request.user).values_list(
-        "id", "name"
-    )
-    unique_years = list(
-        AccountTransaction.objects.filter(account__user=request.user)
-        .annotate(Year=ExtractYear("date"))
-        .values_list("Year", flat=True)
-        .distinct()
-        .order_by("-Year")
-    )
-    accounts = Account.objects.filter(user=request.user)
-    networth = sum(account.latest_balance for account in accounts) if accounts else 0.0
-    return render(
-        request,
-        "account.html",
-        {
-            "networth": format_currency(networth),
-            "account_options": account_options,
-            "years": unique_years,
-            "today_date": datetime.today().strftime("%Y-%m-%d"),
-        },
-    )
+# @login_required
+# def main(request):
+#     account_options = Account.objects.filter(user=request.user).values_list(
+#         "id", "name"
+#     )
+#     unique_years = list(
+#         AccountTransaction.objects.filter(account__user=request.user)
+#         .annotate(Year=ExtractYear("date"))
+#         .values_list("Year", flat=True)
+#         .distinct()
+#         .order_by("-Year")
+#     )
+#     accounts = Account.objects.filter(user=request.user)
+#     networth = sum(account.latest_balance for account in accounts) if accounts else 0.0
+#     return render(
+#         request,
+#         "account.html",
+#         {
+#             "networth": format_currency(networth),
+#             "account_options": account_options,
+#             "years": unique_years,
+#             "today_date": datetime.today().strftime("%Y-%m-%d"),
+#         },
+#     )
 
 
 @login_required
 def add_entry(request):
     if request.method == "POST":
-        account = Account.objects.get(id=request.POST.get("account-id"))
-        balance = request.POST.get("balance-input")
-        date = request.POST.get("balance-date")
+        try:
+            account_name = request.POST.get("account-name")
+            account_entity_id = request.POST.get("account-entity")
+            asset_type_id = request.POST.get("asset-type")
+            balance = request.POST.get("balance-input")
+            date = request.POST.get("balance-date")
 
-        account_history = AccountTransaction(
-            account=account,
-            amount=balance,
-            date=date,
-        )
-        account_history.save()
-        return HttpResponseRedirect(reverse("account"))
-    return HttpResponse("Add account history error")
+            if account_name in Account.objects.filter(user=request.user).values_list(
+                "name", flat=True
+            ):
+                return HttpResponse("Account already exists", status=400)
+            else:
+                new_account = Account(
+                    name=account_name,
+                    asset_entity_name=account_entity_id,
+                    type=asset_type_id,
+                    user=request.user,
+                    latest_balance=balance,
+                    latest_balance_date=date,
+                )
+
+                account_history = AccountTransaction(
+                    account=new_account,
+                    amount=balance,
+                    date=date,
+                )
+                new_account.save()
+                account_history.save()
+            return HttpResponseRedirect(reverse("account_settings"))
+        except Account.DoesNotExist:
+            return HttpResponse("Account not found", status=404)
+        except Exception as e:
+            return HttpResponse(f"Error: {str(e)}", status=400)
+    return HttpResponse("Invalid request method", status=405)
 
 
 def update(request):
@@ -125,13 +143,4 @@ def update_accounts(request):
         except Exception as e:
             return JsonResponse({"success": False, "error": str(e)})
 
-    return JsonResponse({"success": False, "error": "Invalid request"})
-
-    return JsonResponse({"success": False, "error": "Invalid request"})
-    return JsonResponse({"success": False, "error": "Invalid request"})
-    return JsonResponse({"success": False, "error": "Invalid request"})
-
-    return JsonResponse({"success": False, "error": "Invalid request"})
-
-    return JsonResponse({"success": False, "error": "Invalid request"})
     return JsonResponse({"success": False, "error": "Invalid request"})

@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.views import View
 from loguru import logger
 
-from richtato.apps.account.models import Account
+from richtato.apps.account.models import Account, supported_asset_accounts, account_types
 from richtato.apps.expense.models import Expense
 from richtato.apps.expense.views import (
     _get_data_table_expense,
@@ -40,7 +40,9 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
     if request.user.is_authenticated:
         logger.debug(f"User {request.user} is authenticated.")
         accounts = Account.objects.filter(user=request.user)
-        networth = sum(account.latest_balance for account in accounts) if accounts else 0.0   
+        networth = (
+            sum(account.latest_balance for account in accounts) if accounts else 0.0
+        )
         expense_sum = get_last_30_days_expense_sum(request.user)
         income_sum = get_last_30_days_income_sum(request.user)
         savings_rate = (
@@ -115,7 +117,13 @@ def user_settings(request: HttpRequest):
 
 def account_settings(request: HttpRequest):
     return render(
-        request, "account_settings.html", {"supported_card_banks": supported_card_banks}
+        request,
+        "account_settings.html",
+        {
+            "supported_card_banks": supported_card_banks,
+            "supported_asset_accounts": supported_asset_accounts,
+            "supported_asset_types": account_types,
+        },
     )
 
 

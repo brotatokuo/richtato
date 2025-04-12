@@ -118,21 +118,32 @@ def update_cards(request):
 # region Account
 @login_required
 def get_accounts(request):
-    accounts = Account.objects.filter(user=request.user)
-    json_data = []
+    accounts = Account.objects.filter(user=request.user).order_by("name")
+
+    data = []
     for account in accounts:
-        json_data.append(
+        data.append(
             {
-                "Id": account.id,
-                "Name": account.name,
-                "Type": account.type,
-                "Balance": format_currency(account.latest_balance),
-                "Date": format_date(account.latest_balance_date)
-                if account.latest_balance_date
-                else None,
+                "id": account.id,
+                "name": account.name,
+                "type": account.type.title(),
+                "balance": format_currency(account.latest_balance),
+                "date": format_date(account.latest_balance_date)
+                if account.latest_balance_date else None,
             }
         )
-    return JsonResponse(json_data, safe=False)
+
+    columns = [
+        {"title": "ID", "data": "id"},
+        {"title": "Name", "data": "name"},
+        {"title": "Type", "data": "type"},
+        {"title": "Balance", "data": "balance"},
+        {"title": "Date", "data": "date"},
+    ]
+    print("Columns:", columns)
+    print("Data:", data)
+
+    return JsonResponse({"columns": columns, "data": data})
 
 
 @login_required

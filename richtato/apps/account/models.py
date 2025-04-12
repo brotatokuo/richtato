@@ -5,27 +5,29 @@ from django.db import models
 
 from richtato.apps.richtato_user.models import User
 
-supported_banks = [
+supported_asset_accounts = [
     ("bank_of_america", "Bank of America"),
     ("chase", "Chase"),
     ("citibank", "Citibank"),
     ("marcus", "Marcus by Goldman Sachs"),
+    ("other", "Other"),
+]
+
+account_types = [
+    ("checking", "Checking"),
+    ("savings", "Savings"),
+    ("retirement", "Retirement"),
+    ("investment", "Investment"),
 ]
 
 
 # Create your models here.
 class Account(models.Model):
-    account_types = [
-        ("checking", "Checking"),
-        ("savings", "Savings"),
-        ("retirement", "Retirement"),
-        ("investment", "Investment"),
-    ]
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="account")
     type = models.CharField(choices=account_types, max_length=50)
-    bank_name = models.CharField(
-        choices=account_types, max_length=50, null=True, blank=True
+    asset_entity_name = models.CharField(
+        choices=supported_asset_accounts, max_length=50, default="other"
     )
     name = models.CharField(max_length=100)
     latest_balance = models.DecimalField(
@@ -75,6 +77,4 @@ class AccountTransaction(models.Model):
 
         else:
             # Save normally if the date isn't later
-            super().save(*args, **kwargs)
-            super().save(*args, **kwargs)
             super().save(*args, **kwargs)
