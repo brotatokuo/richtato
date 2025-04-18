@@ -7,31 +7,6 @@ from django.urls import reverse
 
 from richtato.apps.account.models import Account, AccountTransaction
 
-# @login_required
-# def main(request):
-#     account_options = Account.objects.filter(user=request.user).values_list(
-#         "id", "name"
-#     )
-#     unique_years = list(
-#         AccountTransaction.objects.filter(account__user=request.user)
-#         .annotate(Year=ExtractYear("date"))
-#         .values_list("Year", flat=True)
-#         .distinct()
-#         .order_by("-Year")
-#     )
-#     accounts = Account.objects.filter(user=request.user)
-#     networth = sum(account.latest_balance for account in accounts) if accounts else 0.0
-#     return render(
-#         request,
-#         "account.html",
-#         {
-#             "networth": format_currency(networth),
-#             "account_options": account_options,
-#             "years": unique_years,
-#             "today_date": datetime.today().strftime("%Y-%m-%d"),
-#         },
-#     )
-
 
 @login_required
 def add_entry(request):

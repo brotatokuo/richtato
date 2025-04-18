@@ -1,136 +1,173 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    {% load static %}
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="{% static 'all.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'core.css' %}" />
+    <link rel="stylesheet" href="{% static 'style.css' %}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;500&display=swap"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="{% static 'images/richtato.ico' %}"
+    />
 
-<head>
-  {% load static %}
-  <meta charset="UTF-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="{% static 'all.min.css' %}" />
-  <link rel="stylesheet" href="{% static 'core.css' %}" />
-  <link rel="stylesheet" href="{% static 'style.css' %}" />
-  <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/2.2.2/css/dataTables.dataTables.min.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="icon" type="image/png" href="{% static 'images/richtato.ico' %}">
-  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;500&amp;display=swap" rel="stylesheet" />
-  <link rel="preload" href="https://cdn.jsdelivr.net/npm/chart.js" as="script" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  <script src="//cdn.datatables.net/2.2.2/js/dataTables.min.js"></script>
-  <script src="{% static 'js/datatable.js' %}"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.datatables.net/select/1.7.0/css/select.dataTables.min.css"
+    />
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{% static 'js/datatable.js' %}"></script>
 
-  <title>{% block title %}My Website{% endblock %}</title>
-</head>
+    <title>{% block title %}My Website{% endblock %}</title>
+  </head>
 
-<body>
-  <div class="loader">
-    <h1>Loading<span>....</span></h1>
-  </div>
-  <div class="page-content index-page">
-    <div class="sidebar" id="sidebar">
-      <i class="fa-solid fa-xmark xmark"></i>
-      <ul>
-        <li>
-          <a href="{% url 'index' %}" class="sidebar-link">
-            <i class="fa-regular fa-chart-bar fa-fw"></i>
-            <span>Dashboard</span>
-          </a>
-        </li>
+  <body>
+    <div class="loader">
+      <h1>Loading<span>....</span></h1>
+    </div>
+    <div class="page-content index-page">
+      <div class="sidebar" id="sidebar">
+        <i class="fa-solid fa-xmark xmark"></i>
+        <ul>
+          <li>
+            <a href="{% url 'index' %}" class="sidebar-link">
+              <i class="fa-regular fa-chart-bar fa-fw"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
 
-        <!-- <li>
+          <!-- <li>
           <a href="{% url 'profile' %}" class="sidebar-link">
             <i class="fa-regular fa-user fa-fw"></i><span>Profile</span>
           </a>
         </li> -->
 
-        <!-- <li>
+          <!-- <li>
           <a href="{% url 'goals' %}" class="sidebar-link">
             <i class="fa-solid fa-bullseye fa-fw"></i><span>Goals</span>
           </a>
         </li> -->
-        <li>
-          <a href="{% url 'budget' %}" class="sidebar-link">
-            <i class="fa-solid fa-money-bill-trend-up fa-fw"></i>
-            <span>Budget</span>
-          </a>
-        </li>
+          <li>
+            <a href="{% url 'budget' %}" class="sidebar-link">
+              <i class="fa-solid fa-money-bill-trend-up fa-fw"></i>
+              <span>Budget</span>
+            </a>
+          </li>
 
-        <li>
-          <a href="{% url 'timeseries_plots' %}" class="sidebar-link">
-            <i class="fa-solid fa-chart-simple fa-fw"></i><span>Graph</span>
-          </a>
-        </li>
+          <li>
+            <a href="{% url 'timeseries_plots' %}" class="sidebar-link">
+              <i class="fa-solid fa-chart-simple fa-fw"></i><span>Graph</span>
+            </a>
+          </li>
 
-        <li>
-          <a href="{% url 'table' %}" class="sidebar-link">
-            <i class="fa-solid fa-table fa-fw"></i> <span>Table</span>
-          </a>
-        </li>
+          <li>
+            <a href="{% url 'table' %}" class="sidebar-link">
+              <i class="fa-solid fa-table fa-fw"></i> <span>Table</span>
+            </a>
+          </li>
 
-        <li>
-          <a href="{% url 'input' %}" class="sidebar-link">
-            <i class="fa-regular fa-keyboard fa-fw"></i> <span>Data Input</span>
-          </a>
-        </li>
+          <li>
+            <a href="{% url 'input' %}" class="sidebar-link">
+              <i class="fa-regular fa-keyboard fa-fw"></i>
+              <span>Data Input</span>
+            </a>
+          </li>
 
-        <li>
-          <a href="{% url 'files' %}" class="sidebar-link">
-            <i class="fa-solid fa-cloud-arrow-up fa-fw"></i> <span>Upload</span>
-          </a>
-        </li>
+          <li>
+            <a href="{% url 'files' %}" class="sidebar-link">
+              <i class="fa-solid fa-cloud-arrow-up fa-fw"></i>
+              <span>Upload</span>
+            </a>
+          </li>
 
-        <li>
-          <a href="{% url 'account_settings' %}" class="sidebar-link">
-            <i class="fa-solid fa-gear fa-fw"></i>
-            <span>Settings</span>
-          </a>
-        </li>
+          <li>
+            <a href="{% url 'account_settings' %}" class="sidebar-link">
+              <i class="fa-solid fa-gear fa-fw"></i>
+              <span>Settings</span>
+            </a>
+          </li>
 
-        <!-- <li>
+          <!-- <li>
           <a href="{% url 'user_settings' %}" class="sidebar-link">
             <i class="fa-solid fa-sliders fa-fw"></i>
             <span>User Settings</span>
           </a>
         </li> -->
-      </ul>
-    </div>
-    <main id="main">
-      <div class="header">
-        <i class="fa-solid fa-bars bar-item" id="hamburger"></i>
-        <div class="brand">
-          <a href="{% url 'index' %}" class="brand-link">
-            <img src="{% static 'images/richtato.ico' %}" alt="Richtato Logo" class="brand-logo" />
-            <h3 class="brand-name">Richtato</h3>
-          </a>
-        </div>
-        <div class="profile">
-          <img src="{% static 'images/avatar.png' %}" id=navbar-profile alt="No Image" />
-          <div id="profileDropdown" class="dropdown hidden">
-            <ul>
-              {% if user.is_authenticated %}
-              <!-- Display if the user is logged in -->
-              <li><a href="{% url 'profile' %}"> <i class="fa-regular fa-user fa-fw"></i>{{ username }}</a></li>
-              <li><a href="{% url 'logout' %}"><i class="fa-solid fa-right-from-bracket"></i>Logout</a></li>
-              {% else %}
-              <!-- Display if the user is not logged in -->
-              <li><a href="{% url 'login' %}">Login</a></li>
-              <li><a href="{% url 'register' %}">Sign Up</a></li>
-              {% endif %}
-            </ul>
+        </ul>
+      </div>
+      <main id="main">
+        <div class="header">
+          <i class="fa-solid fa-bars bar-item" id="hamburger"></i>
+          <div class="brand">
+            <a href="{% url 'index' %}" class="brand-link">
+              <img
+                src="{% static 'images/richtato.ico' %}"
+                alt="Richtato Logo"
+                class="brand-logo"
+              />
+              <h3 class="brand-name">Richtato</h3>
+            </a>
+          </div>
+          <div class="profile">
+            <img
+              src="{% static 'images/avatar.png' %}"
+              id="navbar-profile"
+              alt="No Image"
+            />
+            <div id="profileDropdown" class="dropdown hidden">
+              <ul>
+                {% if user.is_authenticated %}
+                <!-- Display if the user is logged in -->
+                <li>
+                  <a href="{% url 'profile' %}">
+                    <i class="fa-regular fa-user fa-fw"></i>{{ username }}</a
+                  >
+                </li>
+                <li>
+                  <a href="{% url 'logout' %}"
+                    ><i class="fa-solid fa-right-from-bracket"></i>Logout</a
+                  >
+                </li>
+                {% else %}
+                <!-- Display if the user is not logged in -->
+                <li><a href="{% url 'login' %}">Login</a></li>
+                <li><a href="{% url 'register' %}">Sign Up</a></li>
+                {% endif %}
+              </ul>
+            </div>
           </div>
         </div>
-      </div>
-      {% block content %}
-      <!-- Content to be filled by child templates -->
-      {% endblock %}
-    </main>
-  </div>
+        {% block content %}
+        <!-- Content to be filled by child templates -->
+        {% endblock %}
+      </main>
+    </div>
 
-  <!-- Appzi: Capture Insightful Feedback -->
-  <script async src="https://w.appzi.io/w.js?token=JCm1L"></script>
-  <!-- End Appzi -->
-  <script src="{% static 'js/base.js' %}"></script>
-</body>
+    <!-- Appzi: Capture Insightful Feedback -->
+    <script async src="https://w.appzi.io/w.js?token=JCm1L"></script>
+    <!-- End Appzi -->
+    <script src="{% static 'js/base.js' %}"></script>
+  </body>
 </html>

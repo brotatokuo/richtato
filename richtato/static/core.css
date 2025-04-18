@@ -20,7 +20,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  height:100%;
+  height: 100%;
 }
 
 .login-header {
@@ -34,7 +34,7 @@ body {
 }
 
 .login-footer a {
-  color:#007bff;
+  color: #007bff;
   text-decoration: none;
 }
 
@@ -332,4 +332,8 @@ input[type="password"] {
   color: #98cc2c;
   font-size: 12px;
   background-color: #121212;
+}
+
+table.dataTable tbody td.custom-checkbox::before {
+  border-color: white !important;
 }

@@ -1,180 +1,219 @@
 class RichTable {
-    constructor(tableId, tableUrl, config = {}, visibleColumns = null, invisibleColumns = null) {
-        this.tableId = tableId;
-        this.tableUrl = tableUrl;
-        this.data = null;
-        this.columns = null;
-        this.config = {
-            paging: false,
-            searching: false,
-            info: false,
-            lengthChange: false,
-            ...config  // Merge any passed config with the default
-        };
-        this.visibleColumns = visibleColumns;
-        this.invisibleColumns = invisibleColumns;
-        this.instance = null;
-        this.fetchData();
+  constructor(
+    tableId,
+    tableUrl,
+    config = {},
+    visibleColumns = null,
+    invisibleColumns = null
+  ) {
+    this.tableId = tableId;
+    this.tableUrl = tableUrl;
+    this.data = null;
+    this.columns = null;
+    this.config = {
+      paging: false,
+      searching: false,
+      info: false,
+      lengthChange: false,
+      dom: "Bfrtip",
+      buttons: [],
+      select: {
+        style: "os",
+        selector: "td.select-checkbox",
+      },
+      columnDefs: [
+        {
+          targets: 0,
+          orderable: false,
+          className: "select-checkbox custom-checkbox",
+          defaultContent: "",
+        },
+      ],
+      order: [[1, "asc"]],
+      ...config,
+    };
+    this.visibleColumns = visibleColumns;
+    this.invisibleColumns = invisibleColumns;
+    this.instance = null;
+    this.fetchData();
+  }
+
+  async fetchData() {
+    try {
+      const response = await fetch(this.tableUrl);
+      const data = await response.json();
+      this.data = data.data;
+      this.columns = data.columns;
+      this.renderTable();
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  }
+
+  getColumnsToShow() {
+    const allColumns = this.columns.map((col) => col.data);
+    if (this.visibleColumns) {
+      return this.visibleColumns.filter((col) => col.toLowerCase() !== "id");
+    } else if (this.invisibleColumns) {
+      return allColumns.filter(
+        (col) =>
+          !this.invisibleColumns
+            .map((c) => c.toLowerCase())
+            .includes(col.toLowerCase()) && col.toLowerCase() !== "id"
+      );
+    } else {
+      return allColumns.filter((col) => col.toLowerCase() !== "id");
+    }
+  }
+
+  renderTable() {
+    const tableElement = $(this.tableId);
+    if ($.fn.DataTable.isDataTable(this.tableId)) {
+      tableElement.DataTable().clear().destroy();
     }
 
-    async fetchData() {
-        try {
-            console.log("Fetching data from URL:", this.tableUrl);
-            const response = await fetch(this.tableUrl);
-            const data = await response.json();
-            console.log("Data fetched:", data);
-            this.data = data.data;
-            this.columns = data.columns;
-            this.renderTable();
-        } catch (error) {
-            console.error('Error fetching data:', error);
-        }
-    }
-    
-    getColumnsToShow() {
-        const allColumns = this.columns.map(col => col.data);
-    
-        if (this.visibleColumns) {
-            return this.visibleColumns.filter(col => col.toLowerCase() !== 'id');
-        } else if (this.invisibleColumns) {
-            return allColumns.filter(col => 
-                !this.invisibleColumns.map(c => c.toLowerCase()).includes(col.toLowerCase()) &&
-                col.toLowerCase() !== 'id'
-            );
-        } else {
-            // Default: show everything except "id"
-            return allColumns.filter(col => col.toLowerCase() !== 'id');
-        }
-    }
-    
+    const thead = tableElement.find("thead");
+    const tbody = tableElement.find("tbody");
+    thead.empty();
+    tbody.empty();
 
-    renderTable() {
-        const tableElement = $(this.tableId);
-        if ($.fn.DataTable.isDataTable(this.tableId)) {
-            tableElement.DataTable().clear().destroy();
-        }
+    const headerRow = $("<tr></tr>");
+    headerRow.append($("<th></th>")); // For checkbox
+    const columnsToShow = this.getColumnsToShow();
 
-        const thead = tableElement.find('thead');
-        const tbody = tableElement.find('tbody');
+    columnsToShow.forEach((col) => {
+      const colObj = this.columns.find((c) => c.data === col);
+      headerRow.append($("<th></th>").text(colObj?.title || col));
+    });
 
-        thead.empty();
-        tbody.empty();
+    thead.append(headerRow);
 
-        const headerRow = $('<tr></tr>');
-        const columnsToShow = this.getColumnsToShow();
+    this.data.forEach((row) => {
+      const tr = $("<tr></tr>");
+      tr.append("<td></td>"); // checkbox column
+      columnsToShow.forEach((col) => {
+        tr.append($("<td></td>").text(row[col]));
+      });
+      tbody.append(tr);
+    });
 
-        console.log("Columns to show:", columnsToShow);
+    // Set columns with checkbox and visible ones
+    const allDTColumns = [
+      {
+        data: null,
+        defaultContent: "",
+        orderable: false,
+        className: "select-checkbox",
+      },
+      ...columnsToShow.map((col) => ({ data: col })),
+    ];
 
-        this.columns.forEach((col) => {
-            if (!columnsToShow.includes(col.data)) return;
-            headerRow.append($('<th></th>').text(col.title));
-        });
-
-        thead.append(headerRow);
-
-        this.data.forEach(row => {
-            const tr = $('<tr></tr>');
-            this.columns.forEach((col) => {
-                if (!columnsToShow.includes(col.data)) return;
-                tr.append($('<td></td>').text(row[col.data]));
-            });
-            tbody.append(tr);
-        });
-
-        const dt = tableElement.DataTable(this.config);
-
-        // Hook rows into EditableRow
-        dt.rows().every((i) => {
-            const dtRow = dt.row(i);
-            const $tr = $(dtRow.node());
-            const rowData = dtRow.data();
-
-            new EditableRow(
-                rowData,
-                this.columns,
-                columnsToShow,
-                $tr,
-                dtRow,
-                (updated) => console.log("Updated:", updated),
-                (deleted) => console.log("Deleted:", deleted)
-            );
-        });
-    }
-}
-
-class EditableRow {
-    constructor(rowData, columnDefs, visibleColumns, tableRowElement, dataTableRow, onUpdate, onDelete) {
-        this.data = rowData;
-        this.columns = columnDefs;
-        this.visibleColumns = visibleColumns;
-        this.$tr = tableRowElement;
-        this.dtRow = dataTableRow;
-        this.onUpdate = onUpdate;
-        this.onDelete = onDelete;
-
-        this.attachClickHandler();
-    }
-
-    attachClickHandler() {
-        this.$tr.off('click').on('click', () => this.expand());
-    }
-
-    expand() {
-        // Collapse if already open
-        if (this.$tr.hasClass('shown')) {
-            this.dtRow.child.hide();
-            this.$tr.removeClass('shown');
-            return;
-        }
-
-        // Hide any others (optional depending on design)
-        $('.shown').each(function () {
-            $(this).removeClass('shown');
-            $(this).next('tr').remove();
-        });
-
-        const hiddenCols = this.columns.filter(col =>
-            !this.visibleColumns.includes(col.data) && col.data !== 'id'
-        );
-
-        const form = $('<div class="edit-form"></div>');
-
-        hiddenCols.forEach((col) => {
-            const input = $('<input type="text" class="form-control"/>')
-                .val(this.data[col.data])
-                .attr('data-field', col.data);
-
-            const label = $('<label></label>').text(col.title + ': ');
-            form.append($('<div class="form-group mb-2"></div>').append(label, input));
-        });
-
-        const editBtn = $('<button class="btn btn-sm btn-primary">Save</button>');
-        const deleteBtn = $('<button class="btn btn-sm btn-danger ms-2">Delete</button>');
-        const btnGroup = $('<div class="mt-2"></div>').append(editBtn, deleteBtn);
-        form.append(btnGroup);
-
-        editBtn.on('click', () => {
-            const updatedData = { ...this.data };
-            form.find('input').each(function () {
-                const field = $(this).data('field');
-                updatedData[field] = $(this).val();
-            });
-
-            this.dtRow.data(updatedData).draw();
-            this.dtRow.child.hide();
-            this.$tr.removeClass('shown');
-            this.onUpdate(updatedData);
-        });
-
-        deleteBtn.on('click', () => {
+    this.config.columns = allDTColumns;
+    this.config.buttons = [
+      {
+        text: "Add",
+        action: () => this.handleAddEntry(),
+      },
+      {
+        text: "Edit",
+        action: () => {
+          const selectedData = this.instance.row({ selected: true }).data();
+          if (selectedData) {
+            this.handleEditEntry(selectedData);
+          } else {
+            alert("Please select a row to edit.");
+          }
+        },
+      },
+      {
+        text: "Delete",
+        action: () => {
+          const selectedRow = this.instance.row({ selected: true });
+          const rowData = selectedRow.data();
+          if (rowData) {
             if (confirm("Are you sure you want to delete this row?")) {
-                this.dtRow.remove().draw();
-                this.onDelete(this.data);
+              selectedRow.remove().draw();
+              console.log("Deleted:", rowData);
+              // TODO: Sync deletion with server
             }
-        });
+          } else {
+            alert("Please select a row to delete.");
+          }
+        },
+      },
+    ];
 
-        this.dtRow.child(form).show();
-        this.$tr.addClass('shown');
-    }
+    this.instance = tableElement.DataTable(this.config);
+  }
+  handleAddEntry() {
+    const columnsToRender = this.columns;
+    console.log("Columns to Render", columnsToRender);
+
+    // Create modal overlay
+    const modal = $(`
+        <div class="custom-modal-overlay">
+            <div class="custom-modal">
+            <div class="custom-modal-header">
+                <h3>Add New Entry</h3>
+                <span class="close-button">&times;</span>
+            </div>
+            <form class="custom-modal-form">
+            </form>
+            <div class="custom-modal-footer">
+                <button type="submit" class="save-button">Save</button>
+            </div>
+            </div>
+        </div>
+        `);
+
+    const form = modal.find("form");
+
+    // Dynamically create input fields
+    columnsToRender.forEach((col) => {
+      const field = $(`
+          <div class="form-group">
+            <label for="${col.data}">${col.title}</label>
+            <input type="text" id="${col.data}" name="${col.data}" class="form-control" />
+          </div>
+        `);
+      form.append(field);
+    });
+
+    // Add modal to body
+    $("body").append(modal);
+
+    // Event: Close modal
+    modal
+      .find(".close-button, .cancel-button")
+      .on("click", () => modal.remove());
+
+    // Event: Submit
+    modal.find(".save-button").on("click", (e) => {
+      e.preventDefault();
+      const newRow = {};
+      columnsToRender.forEach((col) => {
+        newRow[col] = form.find(`#${col}`).val();
+      });
+
+      this.instance.row.add(newRow).draw();
+      console.log("Created:", newRow);
+      // TODO: Send newRow to server via AJAX
+      modal.remove();
+    });
+  }
+
+  handleEditEntry(rowData) {
+    const columnsToShow = this.getColumnsToShow();
+    const updatedRow = { ...rowData };
+
+    columnsToShow.forEach((col) => {
+      const newValue = prompt(`Edit ${col}:`, rowData[col]);
+      if (newValue !== null) updatedRow[col] = newValue;
+    });
+
+    const row = this.instance.row((idx, data) => data === rowData);
+    row.data(updatedRow).draw();
+    console.log("Edited:", updatedRow);
+    // TODO: Send updatedRow to server
+  }
 }
-
