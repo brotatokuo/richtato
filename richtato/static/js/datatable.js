@@ -38,18 +38,6 @@ class RichTable {
     this.fetchData();
   }
 
-  async fetchData() {
-    try {
-      const response = await fetch(this.tableUrl);
-      const data = await response.json();
-      this.data = data.data;
-      this.columns = data.columns;
-      this.renderTable();
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  }
-
   getColumnsToShow() {
     const allColumns = this.columns.map((col) => col.data);
     if (this.visibleColumns) {
@@ -63,6 +51,18 @@ class RichTable {
       );
     } else {
       return allColumns.filter((col) => col.toLowerCase() !== "id");
+    }
+  }
+
+  async fetchData() {
+    try {
+      const response = await fetch(this.tableUrl);
+      const data = await response.json();
+      this.data = data.data;
+      this.columns = data.columns;
+      this.renderTable();
+    } catch (error) {
+      console.error("Error fetching data:", error);
     }
   }
 
@@ -146,25 +146,29 @@ class RichTable {
     this.instance = tableElement.DataTable(this.config);
   }
   handleAddEntry() {
-    const columnsToRender = this.columns;
+    const columnsToRender = this.columns.filter(
+      (col) => col.data.toLowerCase() !== "id"
+    );
     console.log("Columns to Render", columnsToRender);
 
     // Create modal overlay
+    const modalTitle = "Add New Entry";
     const modal = $(`
         <div class="custom-modal-overlay">
-            <div class="custom-modal">
+          <div class="custom-modal">
             <div class="custom-modal-header">
-                <h3>Add New Entry</h3>
-                <span class="close-button">&times;</span>
+              <h3>${modalTitle}</h3>
+              <span class="close-button">&times;</span>
             </div>
             <form class="custom-modal-form">
+              <!-- Form content goes here -->
             </form>
             <div class="custom-modal-footer">
-                <button type="submit" class="save-button">Save</button>
+              <button type="submit" class="save-button">Save</button>
             </div>
-            </div>
+          </div>
         </div>
-        `);
+      `);
 
     const form = modal.find("form");
 
@@ -183,37 +187,130 @@ class RichTable {
     $("body").append(modal);
 
     // Event: Close modal
-    modal
-      .find(".close-button, .cancel-button")
-      .on("click", () => modal.remove());
+    modal.find(".close-button").on("click", () => modal.remove());
+    $(document).on("keydown.modalEscape", (e) => {
+      if (e.key === "Escape") {
+        modal.remove();
+        $(document).off("keydown.modalEscape");
+      }
+    });
 
-    // Event: Submit
-    modal.find(".save-button").on("click", (e) => {
+    modal.find(".save-button").on("click", async (e) => {
       e.preventDefault();
-      const newRow = {};
+      const formData = {};
       columnsToRender.forEach((col) => {
-        newRow[col] = form.find(`#${col}`).val();
+        formData[col.data] = form.find(`#${col.data}`).val();
       });
 
-      this.instance.row.add(newRow).draw();
-      console.log("Created:", newRow);
-      // TODO: Send newRow to server via AJAX
+      try {
+        const response = await fetch("/account/entry/create/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCSRFToken(),
+          },
+          body: JSON.stringify(formData),
+        });
+        const newEntry = await response.json();
+        this.instance.row.add(newEntry).draw();
+        console.log("Created:", newEntry);
+      } catch (err) {
+        console.error("Add error:", err);
+      }
+
       modal.remove();
     });
   }
 
   handleEditEntry(rowData) {
-    const columnsToShow = this.getColumnsToShow();
+    const columnsToEdit = this.columns.filter(
+      (col) => col.data.toLowerCase() !== "id"
+    );
     const updatedRow = { ...rowData };
 
-    columnsToShow.forEach((col) => {
-      const newValue = prompt(`Edit ${col}:`, rowData[col]);
-      if (newValue !== null) updatedRow[col] = newValue;
+    const modal = $(`
+      <div class="custom-modal-overlay">
+        <div class="custom-modal">
+          <div class="custom-modal-header">
+            <h3>Edit Entry</h3>
+            <span class="close-button">&times;</span>
+          </div>
+          <form class="custom-modal-form"></form>
+          <div class="custom-modal-footer">
+            <button type="submit" class="save-button">Save</button>
+          </div>
+        </div>
+      </div>
+    `);
+
+    const form = modal.find("form");
+
+    columnsToEdit.forEach((col) => {
+      const field = $(`
+        <div class="form-group">
+          <label for="${col.data}">${col.title}</label>
+          <input type="text" id="${col.data}" name="${
+        col.data
+      }" class="form-control" value="${rowData[col.data]}" />
+        </div>
+      `);
+      form.append(field);
     });
 
-    const row = this.instance.row((idx, data) => data === rowData);
-    row.data(updatedRow).draw();
-    console.log("Edited:", updatedRow);
-    // TODO: Send updatedRow to server
+    $("body").append(modal);
+    modal.find(".close-button").on("click", () => modal.remove());
+
+    modal.find(".save-button").on("click", async (e) => {
+      e.preventDefault();
+      columnsToEdit.forEach((col) => {
+        updatedRow[col.data] = form.find(`#${col.data}`).val();
+      });
+
+      try {
+        const response = await fetch(`/api/entry/update/${rowData.id}/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCSRFToken(),
+          },
+          body: JSON.stringify(updatedRow),
+        });
+        const updated = await response.json();
+        this.instance
+          .row((_, data) => data.id === updated.id)
+          .data(updated)
+          .draw();
+        console.log("Updated:", updated);
+      } catch (err) {
+        console.error("Edit error:", err);
+      }
+
+      modal.remove();
+    });
+  }
+
+  handleDeleteEntry() {
+    const selectedRow = this.instance.row({ selected: true });
+    const rowData = selectedRow.data();
+
+    if (!rowData) {
+      alert("Select a row to delete.");
+      return;
+    }
+
+    if (confirm("Are you sure you want to delete this row?")) {
+      fetch(`/api/entry/delete/${rowData.id}/`, {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": getCSRFToken(),
+        },
+      })
+        .then((res) => res.json())
+        .then((result) => {
+          selectedRow.remove().draw();
+          console.log("Deleted:", result);
+        })
+        .catch((err) => console.error("Delete error:", err));
+    }
   }
 }

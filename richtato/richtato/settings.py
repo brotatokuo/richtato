@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "richtato.apps.income",
     "richtato.apps.expense",
     "richtato.apps.settings",
+    "rest_framework",
     "django.contrib.humanize",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -144,9 +145,9 @@ def configure_database_for_stage(deploy_stage: str) -> dict:
         case "PROD" | "DEV":
             PG_DB_URL = f"{deploy_stage}_DATABASE_URL"
             db_url = os.getenv(PG_DB_URL)
-            assert db_url, (
-                f"Missing {PG_DB_URL} environment variable for {deploy_stage}"
-            )
+            assert (
+                db_url
+            ), f"Missing {PG_DB_URL} environment variable for {deploy_stage}"
             tmpPostgres = urlparse(db_url)
             db_name = tmpPostgres.path.lstrip("/")
             return {

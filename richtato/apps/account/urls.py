@@ -1,9 +1,8 @@
 from django.urls import path
 
-from . import views
+from .views import AccountAPIView
 
-page_name = "account"
 urlpatterns = [
-    path("add-entry/", views.add_entry, name=f"{page_name}_add_entry"),
-    path("update/", views.update, name=f"{page_name}_update"),
+    path("api/accounts/", AccountAPIView.as_view()),  # POST
+    path("api/accounts/<int:pk>/", AccountAPIView.as_view()),  # PUT, DELETE
 ]
