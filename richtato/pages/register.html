@@ -20,8 +20,18 @@
       <div class="form-group">
         <label for="password">Password</label>
         <div class="password-container">
-          <input type="password" id="password" name="password" class="form-control" required />
-          <button type="button" onclick="togglePasswordVisibility('password', this)" class="show-password">
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="form-control"
+            required
+          />
+          <button
+            type="button"
+            onclick="togglePasswordVisibility('password', this)"
+            class="show-password"
+          >
             Show
           </button>
         </div>
@@ -30,13 +40,28 @@
       <div class="form-group">
         <label for="password2">Verify Password</label>
         <div class="password-container">
-          <input type="password" id="password2" name="password2" class="form-control" required />
-          <button type="button" onclick="togglePasswordVisibility('password2', this)" class="show-password">
+          <input
+            type="password"
+            id="password2"
+            name="password2"
+            class="form-control"
+            required
+          />
+          <button
+            type="button"
+            onclick="togglePasswordVisibility('password2', this)"
+            class="show-password"
+          >
             Show
           </button>
         </div>
       </div>
-      <input class="primary-button" id="register-button" type="submit" value="Register" />
+      <input
+        class="primary-button"
+        id="register-button"
+        type="submit"
+        value="Register"
+      />
     </form>
 
     <div class="login-footer">
@@ -44,6 +69,6 @@
     </div>
   </div>
 </div>
-<script src="{% static 'js/welcome.js' %}"></script>
+
 <script src="{% static 'js/core.js' %}"></script>
 {% endblock %}

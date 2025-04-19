@@ -10,11 +10,15 @@
   var staticImagePath = "{% static 'media/moneytree.png' %}";
 </script>
 
-
 <div class="home-page">
   <div class="home-container">
     <div class="gif-container">
-      <img src="{% static 'media/moneytree.gif' %}" alt="Growth GIF" class="growth-gif" id="growth-gif" />
+      <img
+        src="{% static 'media/moneytree.gif' %}"
+        alt="Growth GIF"
+        class="growth-gif"
+        id="growth-gif"
+      />
     </div>
     <div class="typewriter">
       <div class="typewriter-text">Save with Richtato!</div>
@@ -22,5 +26,4 @@
   </div>
 </div>
 
-<script src="{% static 'js/welcome.js' %}"></script>
 {% endblock %}
