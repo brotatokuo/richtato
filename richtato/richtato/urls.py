@@ -24,7 +24,7 @@ urlpatterns = [
     # Core user management (login, register, etc.)
     path("", include("apps.richtato_user.urls")),
     # Feature-specific URLs
-    path("account/", include("apps.account.urls")),
+    path("", include("richtato.apps.account.urls")),
     path("budget/", include("apps.budget.urls")),
     path("income/", include("apps.income.urls")),
     path("expense/", include("apps.expense.urls")),

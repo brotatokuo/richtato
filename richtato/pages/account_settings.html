@@ -20,28 +20,6 @@
           <thead></thead>
           <tbody></tbody>
         </table>
-
-        <!-- <form class="settings-add-form" , method="post" action="{% url 'settings_add_card'%}">
-          {% csrf_token %}
-          <div class="form-group">
-            <label for="account-name">Card Name</label>
-            <input class="form-control" id="card-name" name="card-name" type="string" required />
-
-            <label for="card-bank">Select Card Bank:</label>
-            <select id="card-bank" name="card-bank" class="form-control">
-              <option value="" selected disabled></option>
-              {% for bank_id, bank_name in supported_card_banks %}
-              <option value="{{ bank_id }}">{{ bank_name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          {% if error_card_message %}
-          <div class="wrong-password">{{error_card_message}}</div>
-          {% endif %}
-
-          <button class="primary-button" id="submit-balance" type="submit">Add Card</button>
-        </form> -->
       </div>
     </div>
 
@@ -56,46 +34,6 @@
           <thead></thead>
           <tbody></tbody>
         </table>
-
-        <!-- <form class="settings-add-form" , method="post" action="{% url 'account_add_entry'%}">
-          {% csrf_token %}
-          <div class="form-group">
-            <label for="account-name">Account Name</label>
-            <input class="form-control" id="account-name" name="account-name" type="string" required />
-
-            <label for="account-entity">Select Account Entity:</label>
-            <select id="account-entity" name="account-entity" class="form-control">
-              <option value="" selected disabled></option>
-              {% for asset_entity_id, asset_entity_name in supported_asset_accounts %}
-              <option value="{{ asset_entity_id }}">{{ asset_entity_name }}</option>
-              {% endfor %}
-            </select>
-
-            <label for="asset-type">Select Asset Type:</label>
-            <select id="asset-type" name="asset-type" class="form-control">
-              <option value="" selected disabled></option>
-              {% for asset_type_id, asset_type_name in supported_asset_types %}
-              <option value="{{ asset_type_id }}">{{ asset_type_name }}</option>
-              {% endfor %}
-            </select>
-
-            <label for="balance-date">Balance Date</label>
-            <input class="form-control" type="date" id="balance-date" name="balance-date" value="{{ today_date }}"
-              required />
-
-
-            <label for="balance-input">Balance</label>
-            <input class="form-control" id="balance-input" name="balance-input" type="number" min="0.01" step="0.01"
-              required />
-
-          </div>
-
-          {% if error_card_message %}
-          <div class="wrong-password">{{error_card_message}}</div>
-          {% endif %}
-
-          <button class="primary-button" id="submit-balance" type="submit">Add Card</button>
-        </form> -->
       </div>
     </div>
   </div>

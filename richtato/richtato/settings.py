@@ -50,7 +50,6 @@ INSTALLED_APPS = [
     "richtato.apps.income",
     "richtato.apps.expense",
     "richtato.apps.settings",
-    "rest_framework",
     "django.contrib.humanize",
     "django.contrib.admin",
     "django.contrib.auth",
