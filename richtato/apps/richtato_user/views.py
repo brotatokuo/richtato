@@ -12,7 +12,11 @@ from django.urls import reverse
 from django.views import View
 from loguru import logger
 
-from richtato.apps.account.models import Account, supported_asset_accounts, account_types
+from richtato.apps.account.models import (
+    Account,
+    supported_asset_accounts,
+    account_types,
+)
 from richtato.apps.expense.models import Expense
 from richtato.apps.expense.views import (
     _get_data_table_expense,
@@ -265,9 +269,6 @@ class RegisterView(View):
             return render(
                 request, "register.html", {"message": "Username already taken."}
             )
-
-        login(request, user)
-        return HttpResponseRedirect(reverse("index"))
 
         login(request, user)
         return HttpResponseRedirect(reverse("index"))
