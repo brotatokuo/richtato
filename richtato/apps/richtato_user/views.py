@@ -11,6 +11,9 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
 from loguru import logger
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from richtato.apps.account.models import (
     Account,
@@ -195,6 +198,47 @@ def get_card_banks(request: HttpRequest) -> JsonResponse:
         ]
     }
     return JsonResponse(cards_dict, safe=False)
+
+
+class CombinedGraphAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        months = request.query_params.get("months")
+        months = int(months) if months else None
+
+        expense_data = _get_line_graph_data(request.user, Expense, months)
+        logger.debug(f"Expense data: {expense_data}")
+
+        income_data = _get_line_graph_data(request.user, Income, months)
+        logger.debug(f"Income data: {income_data}")
+
+        chart_data = {
+            "labels": expense_data["labels"],  # assumes income labels match
+            "datasets": [
+                {
+                    "label": "Expenses",
+                    "data": expense_data["values"],
+                    "backgroundColor": "rgba(232, 82, 63, 0.2)",
+                    "borderColor": "rgba(232, 82, 63, 1)",
+                    "borderWidth": 1,
+                    "fill": True,
+                    "tension": 0.4,
+                },
+                {
+                    "label": "Income",
+                    "data": income_data["values"],
+                    "backgroundColor": "rgba(152, 204, 44, 0.2)",
+                    "borderColor": "rgba(152, 204, 44, 1)",
+                    "borderWidth": 1,
+                    "fill": True,
+                    "tension": 0.4,
+                },
+            ],
+        }
+
+        logger.debug(f"Combined chart data: {chart_data}")
+        return Response(chart_data)
 
 
 class LoginView(View):

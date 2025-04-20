@@ -1,9 +1,7 @@
 from django.urls import path
 
-from richtato.apps.expense import views as expense
-from richtato.apps.income import views as income
-
 from . import views
+from .views import CombinedGraphAPIView
 
 urlpatterns = [
     path("", views.index, name="index"),
@@ -22,6 +20,7 @@ urlpatterns = [
     path("table/", views.table, name="table"),
     path("get-table-data/", views.get_table_data, name="get_table_data"),
     path("timeseries-plots/", views.timeseries_plots, name="timeseries_plots"),
-    path("get-timeseries-data/", views.get_timeseries_data, name="get_timeseries_data"),
+    # path("get-timeseries-data/", views.get_timeseries_data, name="get_timeseries_data"),
+    path("api/timeseries-data/", CombinedGraphAPIView.as_view()),
     path("get-card-banks/", views.get_card_banks, name="get_card_banks"),
 ]
