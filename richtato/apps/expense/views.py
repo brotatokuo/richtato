@@ -6,22 +6,30 @@ from dateutil.relativedelta import relativedelta
 from django.contrib.auth.decorators import login_required
 from django.db.models import F, Sum
 from django.http import JsonResponse
-from django.shortcuts import HttpResponse, HttpResponseRedirect, render
+from django.shortcuts import (
+    HttpResponse,
+    HttpResponseRedirect,
+    get_object_or_404,
+    render,
+)
 from django.urls import reverse
 from google_gemini.ai import AI
 from loguru import logger
+from rest_framework import status
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
 from rest_framework.decorators import authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
-from richtato.apps.expense.models import Expense
 from richtato.apps.richtato_user.models import CardAccount, Category, User
 from richtato.apps.richtato_user.utils import _get_line_graph_data
 from richtato.categories.categories_manager import CategoriesManager
 from richtato.statement_imports.cards.card_factory import CardStatement
 from richtato.utilities.tools import format_currency, format_date
+from richtato.views import BaseAPIView
+
+from .models import Expense
+from .serializers import ExpenseSerializer
 
 pst = pytz.timezone("US/Pacific")
 
@@ -303,7 +311,14 @@ def upload_card_statements(request):
 
 @authentication_classes([SessionAuthentication, BasicAuthentication])
 @permission_classes([IsAuthenticated])
-class ExpenseAPIView(APIView):
+class ExpenseAPIView(BaseAPIView):
+    @property
+    def field_remap(self):
+        return {
+            "Account": "account_name__name",
+            "Category": "category__name",
+        }
+
     def get(self, request):
         """
         Get the most recent entries for the user.
@@ -337,3 +352,41 @@ class ExpenseAPIView(APIView):
             entries = entries[:limit]
 
         return Response(entries)
+
+    def post(self, request):
+        """
+        Create a new expense entry.
+        """
+        logger.debug(f"Request data: {request.data}")
+        serializer = ExpenseSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, pk):
+        """
+        Update an existing expense entry.
+        """
+        logger.debug(f"PATCH request data: {request.data}")
+        reversed_data = self.apply_fieldmap(request.data)
+        logger.debug(f"Reversed data: {reversed_data}")
+        expense = get_object_or_404(Expense, pk=pk, user=request.user)
+
+        serializer = ExpenseSerializer(expense, data=reversed_data, partial=True)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data)
+        else:
+            logger.error(f"Serializer errors: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        """
+        Delete an existing expense entry.
+        """
+        logger.debug(f"DELETE request for expense with pk: {pk}")
+        expense = get_object_or_404(Expense, pk=pk, user=request.user)
+
+        expense.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -3,12 +3,14 @@ class RichTable {
     tableId,
     apiEndpoint,
     editableColumnTitles = [],
+    queryLimit = null,
     config = {},
     hiddenColumns = ["id"]
   ) {
     this.tableId = tableId;
     this.apiEndpoint = apiEndpoint;
     this.editableColumnTitles = editableColumnTitles;
+    this.queryLimit = queryLimit;
     this.selectFields = {};
     this.fetchSelectFields();
     this.hiddenColumns = hiddenColumns;
@@ -56,8 +58,13 @@ class RichTable {
 
   async fetchData() {
     try {
-      console.log("Fetching data from:", this.apiEndpoint);
-      const response = await fetch(this.apiEndpoint);
+      let endpoint = this.apiEndpoint;
+      if (this.queryLimit !== null) {
+        endpoint += `?limit=${this.queryLimit}`;
+      }
+
+      console.log("Fetching data from:", endpoint);
+      const response = await fetch(endpoint);
       const data = await response.json();
       this.data = data;
 

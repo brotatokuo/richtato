@@ -36,8 +36,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const visibleColumns = ["date", "description", "amount"];
 
-  const expenseTableUrl = "/api/expenses/?limit=5";
-  let expenseTable = new RichTable("#expenseTable", expenseTableUrl, ["date", "description", "amount", "account", "category"]);
+  const expenseTableUrl = "/api/expenses/";
+  let expenseTable = new RichTable("#expenseTable", expenseTableUrl, ["date", "description", "amount", "account", "category"], 5);
 
   const incomeTableUrl = "/get-table-data/?option=income&limit=5";
   // let incomeTable = new RichTable(

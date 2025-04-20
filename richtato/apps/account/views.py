@@ -1,4 +1,3 @@
-# views.py
 from django.db.models import F
 from django.shortcuts import get_object_or_404
 from loguru import logger
@@ -10,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from richtato.utilities.tools import format_currency, format_date
+from richtato.views import BaseAPIView
 
 from .models import Account, account_types, supported_asset_accounts
 from .serializers import AccountSerializer
@@ -17,20 +17,25 @@ from .serializers import AccountSerializer
 
 @authentication_classes([SessionAuthentication, BasicAuthentication])
 @permission_classes([IsAuthenticated])
-class AccountAPIView(APIView):
+class AccountAPIView(BaseAPIView):
+    @property
+    def field_remap(self):
+        return {
+            "entity": "asset_entity_name",
+            "balance": "latest_balance",
+            "date": "latest_balance_date",
+        }
+
     def get(self, request):
+        annotate_fields = {key: F(value) for key, value in self.field_remap.items()}
+
         accounts = (
             Account.objects.filter(user=request.user)
-            .annotate(
-                entity=F("asset_entity_name"),
-                balance=F("latest_balance"),
-                date=F("latest_balance_date"),
-            )
+            .annotate(**annotate_fields)
             .order_by("name")
             .values("id", "name", "type", "entity", "balance", "date")
         )
 
-        # Optionally format date and currency
         data = []
         for account in accounts:
             data.append(
@@ -55,9 +60,10 @@ class AccountAPIView(APIView):
 
     def patch(self, request, pk):
         logger.debug(f"PATCH request data: {request.data}")
+        reversed_data = self.apply_fieldmap(request.data)
         account = get_object_or_404(Account, pk=pk, user=request.user)
 
-        serializer = AccountSerializer(account, data=request.data, partial=True)
+        serializer = AccountSerializer(account, data=reversed_data, partial=True)
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data)

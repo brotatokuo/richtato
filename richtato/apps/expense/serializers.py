@@ -12,7 +12,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
             "amount",
             "date",
             "description",
-            "category",
-            "account",
+            "category",  # Not working
+            "account_name",
         ]
         read_only_fields = ["id", "user"]
