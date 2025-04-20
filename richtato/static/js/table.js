@@ -1,27 +1,35 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const tableConfig = {
-        paging: true,
-        searching: true,
-        info: false,
-        lengthChange: false,
-    };
-    const visibleColumns = [
-        "date",
-        "description",
-        "amount"
-    ];
+document.addEventListener("DOMContentLoaded", () => {
+  const tableConfig = {
+    paging: true,
+    searching: true,
+    info: false,
+    lengthChange: false,
+  };
 
-    const tableDropdown = document.getElementById("tableOption");
-    let tableOption = tableDropdown.value;
-    var tableUrl = `api/expenses/`;
-    console.log(tableUrl);
-    let fullTable = new RichTable('#fullTable', tableUrl, tableConfig, visibleColumns);
+  const tableDropdown = document.getElementById("tableOption");
 
-    tableDropdown.addEventListener("change", () => {
-        tableOption = tableDropdown.value; // Get the updated option value
-        console.log("Selected option:", tableOption);
-        var tableUrl = `/get-table-data/?option=${encodeURIComponent(tableOption)}`;
-        fullTable = new RichTable('#fullTable', tableUrl, tableConfig, visibleColumns);
-    });
+  const loadTable = () => {
+    if (tableDropdown.value == "expense") {
+      let fullTable = new RichTable(
+        "#fullTable",
+        "/api/expenses/",
+        ["date", "description", "amount", "account", "category"],
+        null,
+        tableConfig
+      );
+    } else if (tableDropdown.value == "income") {
+      let fullTable = new RichTable(
+        "#fullTable",
+        "/api/incomes/",
+        ["date", "description", "amount", "account"],
+        null,
+        tableConfig
+      );
+    } else {
+      console.error("Invalid table option selected.");
+    }
+  };
 
+  loadTable();
+  tableDropdown.addEventListener("change", loadTable);
 });

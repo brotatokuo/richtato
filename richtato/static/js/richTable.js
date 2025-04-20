@@ -75,7 +75,6 @@ class RichTable {
         }));
       }
 
-      console.log("Fetched data:", this.data);
       this.renderTable();
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -98,7 +97,6 @@ class RichTable {
         }));
       }
 
-      console.log("Fetched select fields:", this.selectFields);
     } catch (error) {
       console.error("Error loading select field data:", error);
     }
@@ -293,7 +291,6 @@ class RichTable {
           }
           // Success - remove from table
           selectedRow.remove().draw();
-          console.log("Deleted row with ID:", rowData.id);
         })
         .catch((err) => console.error("Delete error:", err));
     }
