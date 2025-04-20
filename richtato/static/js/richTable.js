@@ -2,17 +2,15 @@ class RichTable {
   constructor(
     tableId,
     apiEndpoint,
-    editableColumns,
+    editableColumnTitles,
     config = {},
     hiddenColumns = ["id"]
   ) {
     this.tableId = tableId;
     this.apiEndpoint = apiEndpoint;
-    this.editableColumns = editableColumns;
+    this.editableColumnTitles = editableColumnTitles;
     this.selectFields = {};
-    this.data = null;
     this.fetchSelectFields();
-    this.columns = null;
     this.hiddenColumns = hiddenColumns;
 
     this.config = {
@@ -44,6 +42,15 @@ class RichTable {
   computeVisibleColumns() {
     this.visibleColumns = this.columns.filter(
       (col) => !this.hiddenColumns.includes(col.data)
+    );
+  }
+
+  computeEditableColumns() {
+    const editableSet = new Set(
+      this.editableColumnTitles.map((col) => col.toLowerCase())
+    );
+    this.editableColumns = this.columns.filter((col) =>
+      editableSet.has(col.title.toLowerCase())
     );
   }
 
@@ -92,6 +99,7 @@ class RichTable {
 
   renderTable() {
     this.computeVisibleColumns();
+    this.computeEditableColumns();
 
     const tableElement = $(this.tableId);
     if ($.fn.DataTable.isDataTable(this.tableId)) {
@@ -153,14 +161,14 @@ class RichTable {
     this.config.buttons = [
       {
         text: "Add",
-        action: () => this.handleAddEntry(),
+        action: () => this.openAddModal(),
       },
       {
         text: "Edit",
         action: () => {
           const selectedData = this.instance.row({ selected: true }).data();
           if (selectedData) {
-            this.handleEditEntry(selectedData);
+            this.openEditModal(selectedData);
           } else {
             alert("Please select a row to edit.");
           }
@@ -181,69 +189,35 @@ class RichTable {
     ];
   }
 
-  handleAddEntry() {
-    this.showAddModal(async (formData) => {
-      try {
-        const newEntry = await this.submitAddEntry(formData);
-        this.instance.row.add(newEntry).draw();
-        console.log("Created:", newEntry);
-      } catch (err) {
-        console.error("Add error:", err);
-      }
+  openAddModal(onSubmit) {
+    this.showEntryModal({
+      title: "Add New Entry",
+      columns: this.editableColumns,
+      initialData: {},
+      onSubmit: async (formData) => {
+        try {
+          const added = await this.submitAddEntry(formData);
+          this.fetchData(); // Optional: or update UI immediately
+          onSubmit?.(added);
+        } catch (error) {
+          alert(error.message);
+        }
+      },
     });
   }
 
-  showAddModal(onSubmit) {
-    const modalTitle = "Add New Entry";
-    const modal = $(`
-      <div class="custom-modal-overlay">
-        <div class="custom-modal">
-          <div class="custom-modal-header">
-            <h3>${modalTitle}</h3>
-            <span class="close-button">&times;</span>
-          </div>
-          <form class="custom-modal-form"></form>
-          <div class="custom-modal-footer">
-            <button type="submit" class="save-button">Save</button>
-          </div>
-        </div>
-      </div>
-    `);
-
-    const form = modal.find("form");
-    console.log("Form columns:", this.visibleColumns);
-
-    this.visibleColumns.forEach((col) => {
-      const field = $(`
-        <div class="form-group">
-          <label for="${col.data}">${col.title || col.data}</label>
-          <input type="text" id="${col.data}" name="${
-        col.data
-      }" class="form-control" />
-        </div>
-      `);
-      form.append(field);
-    });
-
-    $("body").append(modal);
-
-    modal.find(".close-button").on("click", () => modal.remove());
-    $(document).on("keydown.modalEscape", (e) => {
-      if (e.key === "Escape") {
-        modal.remove();
-        $(document).off("keydown.modalEscape");
-      }
-    });
-
-    modal.find(".save-button").on("click", async (e) => {
-      e.preventDefault();
-      const formData = {};
-      this.visibleColumns.forEach((col) => {
-        formData[col.data] = form.find(`#${col.data}`).val();
-      });
-
-      await onSubmit(formData);
-      modal.remove();
+  openEditModal(rowData) {
+    this.showEntryModal({
+      title: "Edit Entry",
+      columns: this.editableColumns,
+      initialData: rowData,
+      onSubmit: async (updatedData) => {
+        try {
+          await this.submitEditEntry(rowData.id, updatedData);
+        } catch (error) {
+          alert(error.message);
+        }
+      },
     });
   }
 
@@ -265,102 +239,6 @@ class RichTable {
     return await response.json();
   }
 
-  handleEditEntry(rowData) {
-    const editableSet = new Set(
-      this.editableColumns.map((col) => col.toLowerCase())
-    );
-    const columnsToEdit = this.columns.filter((col) =>
-      editableSet.has(col.title.toLowerCase())
-    );
-
-    const modal = $(`
-      <div class="custom-modal-overlay">
-        <div class="custom-modal">
-          <div class="custom-modal-header">
-            <h3>Edit Entry</h3>
-            <span class="close-button">&times;</span>
-          </div>
-          <form class="custom-modal-form"></form>
-          <div class="custom-modal-footer">
-            <button type="submit" class="save-button">Save</button>
-          </div>
-        </div>
-      </div>
-    `);
-
-    const form = modal.find("form");
-
-    columnsToEdit.forEach((col) => {
-      let value = rowData[col.data] ?? "";
-
-      const fieldGroup = $(`<div class="form-group"></div>`);
-      fieldGroup.append(`<label for="${col.data}">${col.title}</label>`);
-
-      if (this.selectFields[col.data]) {
-        const options = this.selectFields[col.data];
-
-        // If value is label, find matching value
-        const found = options.find(
-          (opt) => opt.label.toLowerCase() === value.toLowerCase()
-        );
-        if (found) {
-          value = found.value;
-        }
-
-        const select = $(
-          `<select id="${col.data}" name="${col.data}" class="form-control"></select>`
-        );
-
-        options.forEach((opt) => {
-          const selected = opt.value === value ? "selected" : "";
-          select.append(
-            `<option value="${opt.value}" ${selected}>${opt.label}</option>`
-          );
-        });
-
-        fieldGroup.append(select);
-      } else {
-        const input = $(
-          `<input type="text" id="${col.data}" name="${col.data}" class="form-control" value="${value}" />`
-        );
-        fieldGroup.append(input);
-      }
-
-      form.append(fieldGroup);
-    });
-
-    $("body").append(modal);
-
-    this.bindEditKeyboardEvents(modal);
-    this.bindEditFormSubmission(modal, form, columnsToEdit, rowData);
-  }
-
-  bindEditKeyboardEvents(modal) {
-    modal.find(".close-button").on("click", () => modal.remove());
-
-    $(document).on("keydown.modalEscape", (e) => {
-      if (e.key === "Escape") {
-        modal.remove();
-        $(document).off("keydown.modalEscape");
-      }
-    });
-  }
-
-  bindEditFormSubmission(modal, form, columnsToEdit, rowData) {
-    modal.find(".save-button").on("click", async (e) => {
-      e.preventDefault();
-      const updatedData = {};
-
-      columnsToEdit.forEach((col) => {
-        updatedData[col.data] = form.find(`#${col.data}`).val();
-      });
-      console.log("Updated data:", updatedData);
-      await this.submitEditEntry(rowData.id, updatedData);
-      this.fetchData();
-      modal.remove();
-    });
-  }
-
   async submitEditEntry(id, updatedData) {
     try {
       const response = await fetch(`${this.apiEndpoint}${id}/`, {
@@ -377,11 +255,7 @@ class RichTable {
       }
 
       const updated = await response.json();
-      this.instance
-        .row((_, data) => data.id === updated.id)
-        .data(updated)
-        .draw();
-      console.log("Updated:", updated);
+      this.fetchData();
     } catch (err) {
       console.error("Edit error:", err);
     }
@@ -416,5 +290,95 @@ class RichTable {
         })
         .catch((err) => console.error("Delete error:", err));
     }
+  }
+
+  showEntryModal({ title, columns, initialData = {}, onSubmit }) {
+    const modal = $(`
+      <div class="custom-modal-overlay">
+        <div class="custom-modal">
+          <div class="custom-modal-header">
+            <h3>${title}</h3>
+            <span class="close-button">&times;</span>
+          </div>
+          <form class="custom-modal-form"></form>
+          <div class="custom-modal-footer">
+            <button type="submit" class="save-button">Save</button>
+          </div>
+        </div>
+      </div>
+    `);
+
+    const form = modal.find("form");
+
+    columns.forEach((col) => {
+      let value = initialData[col.data] ?? "";
+
+      const fieldGroup = $(`<div class="form-group"></div>`);
+      fieldGroup.append(`<label for="${col.data}">${col.title}</label>`);
+
+      if (this.selectFields[col.data]) {
+        const options = this.selectFields[col.data];
+
+        const match = options.find(
+          (opt) => opt.label.toLowerCase() === value?.toLowerCase()
+        );
+        if (match) value = match.value;
+
+        const select = $(
+          `<select id="${col.data}" name="${col.data}" class="form-control"></select>`
+        );
+
+        options.forEach((opt) => {
+          const selected = opt.value === value ? "selected" : "";
+          select.append(
+            `<option value="${opt.value}" ${selected}>${opt.label}</option>`
+          );
+        });
+
+        fieldGroup.append(select);
+      } else {
+        const input = $(
+          `<input type="text" id="${col.data}" name="${col.data}" class="form-control" value="${value}" />`
+        );
+        fieldGroup.append(input);
+      }
+
+      form.append(fieldGroup);
+    });
+
+    $("body").append(modal);
+
+    const closeModal = () => {
+      modal.remove();
+      $(document).off("keydown.modalEscape");
+    };
+
+    $(document).on("keydown.modalEscape", (e) => {
+      if (e.key === "Escape") closeModal();
+    });
+
+    modal.find(".close-button").on("click", closeModal);
+
+    // Handle form submit (Enter key or Save button)
+    form.on("submit", async (e) => {
+      e.preventDefault();
+      const formData = {};
+      columns.forEach((col) => {
+        formData[col.data] = form.find(`#${col.data}`).val();
+      });
+
+      try {
+        await onSubmit(formData);
+        closeModal();
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+
+    // Optional: still bind Save button in case default behavior is overridden
+    modal.find(".save-button").on("click", (e) => {
+      e.preventDefault();
+      form.trigger("submit");
+    });
   }
 }
