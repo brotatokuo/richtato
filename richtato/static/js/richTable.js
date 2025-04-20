@@ -1,10 +1,17 @@
 class RichTable {
-  constructor(tableId, apiEndpoint, editableColumns, config = {}, invisibleColumns = []) {
+  constructor(
+    tableId,
+    apiEndpoint,
+    editableColumns,
+    config = {},
+    invisibleColumns = []
+  ) {
     this.tableId = tableId;
     this.apiEndpoint = apiEndpoint;
     this.editableColumns = editableColumns;
-
+    this.selectFields = {};
     this.data = null;
+    this.fetchSelectFields();
     this.columns = null;
     this.invisibleColumns = invisibleColumns;
 
@@ -42,9 +49,9 @@ class RichTable {
       this.data = data;
 
       if (this.data.length > 0) {
-        this.columns = Object.keys(this.data[0]).map(key => ({
+        this.columns = Object.keys(this.data[0]).map((key) => ({
           title: key.charAt(0).toUpperCase() + key.slice(1),
-          data: key
+          data: key,
         }));
       }
 
@@ -52,6 +59,28 @@ class RichTable {
       this.renderTable();
     } catch (error) {
       console.error("Error fetching data:", error);
+    }
+  }
+
+  async fetchSelectFields() {
+    try {
+      const response = await fetch(`${this.apiEndpoint}field-choices/`);
+      if (!response.ok) throw new Error("Failed to fetch select field data");
+
+      const data = await response.json();
+      this.selectFields = {};
+
+      // Loop over the keys and build selectFields
+      for (const [field, options] of Object.entries(data)) {
+        this.selectFields[field] = options.map((opt) => ({
+          value: opt.value,
+          label: opt.label,
+        }));
+      }
+
+      console.log("Fetched select fields:", this.selectFields);
+    } catch (error) {
+      console.error("Error loading select field data:", error);
     }
   }
 
@@ -245,18 +274,35 @@ class RichTable {
 
     columnsToEdit.forEach((col) => {
       const value = rowData[col.data] ?? "";
-      const field = $(`
-        <div class="form-group">
-          <label for="${col.data}">${col.title}</label>
-          <input type="text" id="${col.data}" name="${col.data}" class="form-control" value="${value}" />
-        </div>
-      `);
-      form.append(field);
+      const fieldGroup = $(`<div class="form-group"></div>`);
+      fieldGroup.append(`<label for="${col.data}">${col.title}</label>`);
+
+      // Check if this column should be a select field
+      if (this.selectFields[col.data]) {
+        const select = $(
+          `<select id="${col.data}" name="${col.data}" class="form-control"></select>`
+        );
+
+        this.selectFields[col.data].forEach((opt) => {
+          const selected = opt.value === value ? "selected" : "";
+          select.append(
+            `<option value="${opt.value}" ${selected}>${opt.label}</option>`
+          );
+        });
+
+        fieldGroup.append(select);
+      } else {
+        const input = $(
+          `<input type="text" id="${col.data}" name="${col.data}" class="form-control" value="${value}" />`
+        );
+        fieldGroup.append(input);
+      }
+
+      form.append(fieldGroup);
     });
 
     $("body").append(modal);
 
-    // Bind keyboard and save logic separately
     this.bindEditKeyboardEvents(modal);
     this.bindEditFormSubmission(modal, form, columnsToEdit, rowData);
   }
@@ -321,7 +367,9 @@ class RichTable {
       return;
     }
 
-    if (confirm("Are you sure you want to delete this row?")) {
+    if (
+      confirm("Deleting this will delete all associated data. Are you sure?")
+    ) {
       console.log("Deleting row with ID:", rowData.id);
       fetch(`${this.apiEndpoint}${rowData.id}/`, {
         method: "DELETE",

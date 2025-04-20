@@ -1,4 +1,12 @@
 document.addEventListener("DOMContentLoaded", () => {
-  let cardsTable = new RichTable("#settings-card-table", "/api/card-accounts/", ["Name", "Bank"]);
-  let accountsTable = new RichTable("#settings-accounts-table", "/api/accounts/", ["Name", "Type", "Entity"]);
+  // let cardsTable = new RichTable(
+  //   "#settings-card-table",
+  //   "/api/card-accounts/",
+  //   ["Name", "Bank"]
+  // );
+  let accountsTable = new RichTable(
+    "#settings-accounts-table",
+    "/api/accounts/",
+    ["Name", "Type", "Entity"]
+  );
 });

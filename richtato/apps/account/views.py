@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from richtato.utilities.tools import format_currency, format_date
 
-from .models import Account
+from .models import Account, account_types, supported_asset_accounts
 from .serializers import AccountSerializer
 
 
@@ -63,3 +63,19 @@ class AccountAPIView(APIView):
 
         account.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AccountFieldChoicesAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        data = {
+            "type": [
+                {"value": value, "label": label} for value, label in account_types
+            ],
+            "entity": [
+                {"value": value, "label": label}
+                for value, label in supported_asset_accounts
+            ],
+        }
+        return Response(data)
