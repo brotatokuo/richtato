@@ -10,7 +10,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from richtato.apps.account.models import Account
-from richtato.apps.richtato_user.models import CardAccount, Category
+from richtato.apps.richtato_user.models import (
+    CardAccount,
+    Category,
+    supported_card_banks,
+)
 
 from .serializers import CardAccountSerializer
 
@@ -70,3 +74,16 @@ class CardAccountAPIView(APIView):
         card = get_object_or_404(CardAccount, pk=pk, user=request.user)
         card.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CardAccountFieldChoicesAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        data = {
+            "bank": [
+                {"value": value, "label": label}
+                for value, label in supported_card_banks
+            ],
+        }
+        return Response(data)

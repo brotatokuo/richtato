@@ -4,7 +4,7 @@ class RichTable {
     apiEndpoint,
     editableColumns,
     config = {},
-    invisibleColumns = []
+    hiddenColumns = ["id"]
   ) {
     this.tableId = tableId;
     this.apiEndpoint = apiEndpoint;
@@ -13,7 +13,7 @@ class RichTable {
     this.data = null;
     this.fetchSelectFields();
     this.columns = null;
-    this.invisibleColumns = invisibleColumns;
+    this.hiddenColumns = hiddenColumns;
 
     this.config = {
       paging: false,
@@ -39,6 +39,12 @@ class RichTable {
     };
     this.instance = null;
     this.fetchData();
+  }
+
+  computeVisibleColumns() {
+    this.visibleColumns = this.columns.filter(
+      (col) => !this.hiddenColumns.includes(col.data)
+    );
   }
 
   async fetchData() {
@@ -85,6 +91,8 @@ class RichTable {
   }
 
   renderTable() {
+    this.computeVisibleColumns();
+
     const tableElement = $(this.tableId);
     if ($.fn.DataTable.isDataTable(this.tableId)) {
       tableElement.DataTable().clear().destroy();
@@ -99,7 +107,11 @@ class RichTable {
     headerRow.append($("<th></th>")); // Checkbox column
 
     this.columns.forEach((col) => {
-      headerRow.append($("<th></th>").text(col.title));
+      const th = $("<th></th>").text(col.title);
+      if (this.hiddenColumns.includes(col.data)) {
+        th.css("display", "none");
+      }
+      headerRow.append(th);
     });
 
     thead.append(headerRow);
@@ -107,9 +119,15 @@ class RichTable {
     this.data.forEach((row) => {
       const tr = $("<tr></tr>");
       tr.append("<td></td>"); // Checkbox cell
+
       this.columns.forEach((col) => {
-        tr.append($("<td></td>").text(row[col.data] || ""));
+        const td = $("<td></td>").text(row[col.data] || "");
+        if (this.hiddenColumns.includes(col.data)) {
+          td.css("display", "none");
+        }
+        tr.append(td);
       });
+
       tbody.append(tr);
     });
 
@@ -122,7 +140,7 @@ class RichTable {
       },
       ...this.columns.map((col) => ({
         data: col.data,
-        visible: true,
+        visible: !this.hiddenColumns.includes(col.data),
       })),
     ];
 
@@ -273,17 +291,27 @@ class RichTable {
     const form = modal.find("form");
 
     columnsToEdit.forEach((col) => {
-      const value = rowData[col.data] ?? "";
+      let value = rowData[col.data] ?? "";
+
       const fieldGroup = $(`<div class="form-group"></div>`);
       fieldGroup.append(`<label for="${col.data}">${col.title}</label>`);
 
-      // Check if this column should be a select field
       if (this.selectFields[col.data]) {
+        const options = this.selectFields[col.data];
+
+        // If value is label, find matching value
+        const found = options.find(
+          (opt) => opt.label.toLowerCase() === value.toLowerCase()
+        );
+        if (found) {
+          value = found.value;
+        }
+
         const select = $(
           `<select id="${col.data}" name="${col.data}" class="form-control"></select>`
         );
 
-        this.selectFields[col.data].forEach((opt) => {
+        options.forEach((opt) => {
           const selected = opt.value === value ? "selected" : "";
           select.append(
             `<option value="${opt.value}" ${selected}>${opt.label}</option>`
@@ -328,6 +356,7 @@ class RichTable {
       });
       console.log("Updated data:", updatedData);
       await this.submitEditEntry(rowData.id, updatedData);
+      this.fetchData();
       modal.remove();
     });
   }
