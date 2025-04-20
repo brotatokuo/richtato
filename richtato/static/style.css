@@ -3058,6 +3058,18 @@ input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
 }
 
+.custom-modal input,
+.custom-modal select,
+.custom-modal textarea {
+  background-color: #1e1e1e;
+  color: #fff;
+  border: 1px solid #555;
+}
+
+input[type="date"] {
+  color-scheme: dark;
+}
+
 .mini-line-chart {
   position: absolute;
   padding-bottom: 10px;

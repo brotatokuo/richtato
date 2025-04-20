@@ -300,7 +300,7 @@ class RichTable {
             <h3>${title}</h3>
             <span class="close-button">&times;</span>
           </div>
-          <form class="custom-modal-form"></form>
+          <div class="custom-modal-body"></div>
           <div class="custom-modal-footer">
             <button type="submit" class="save-button">Save</button>
           </div>
@@ -308,64 +308,35 @@ class RichTable {
       </div>
     `);
 
-    const form = modal.find("form");
-
-    columns.forEach((col) => {
-      let value = initialData[col.data] ?? "";
-
-      const fieldGroup = $(`<div class="form-group"></div>`);
-      fieldGroup.append(`<label for="${col.data}">${col.title}</label>`);
-
-      if (this.selectFields[col.data]) {
-        const options = this.selectFields[col.data];
-
-        const match = options.find(
-          (opt) => opt.label.toLowerCase() === value?.toLowerCase()
-        );
-        if (match) value = match.value;
-
-        const select = $(
-          `<select id="${col.data}" name="${col.data}" class="form-control"></select>`
-        );
-
-        options.forEach((opt) => {
-          const selected = opt.value === value ? "selected" : "";
-          select.append(
-            `<option value="${opt.value}" ${selected}>${opt.label}</option>`
-          );
-        });
-
-        fieldGroup.append(select);
-      } else {
-        const input = $(
-          `<input type="text" id="${col.data}" name="${col.data}" class="form-control" value="${value}" />`
-        );
-        fieldGroup.append(input);
-      }
-
-      form.append(fieldGroup);
-    });
+    const formBuilder = new RichForm(columns, initialData, this.selectFields);
+    const form = formBuilder.generate();
+    modal.find(".custom-modal-body").append(form);
 
     $("body").append(modal);
 
     const closeModal = () => {
       modal.remove();
-      $(document).off("keydown.modalEscape");
+      $(document).off("keydown.modalEscape.modalEnter");
     };
 
+    // Handle Esc key to close
     $(document).on("keydown.modalEscape", (e) => {
       if (e.key === "Escape") closeModal();
     });
 
+    // Handle Enter key to submit form
+    $(document).on("keydown.modalEnter", (e) => {
+      if (e.key === "Enter" && !$(e.target).is("textarea")) {
+        e.preventDefault();
+        form.trigger("submit");
+      }
+    });
+
     modal.find(".close-button").on("click", closeModal);
 
-    // Handle form submit (Enter key or Save button)
     form.on("submit", async (e) => {
       e.preventDefault();
-      const formData = {};
-      columns.forEach((col) => {
-        formData[col.data] = form.find(`#${col.data}`).val();
-      });
+      const formData = formBuilder.getData();
 
       try {
         await onSubmit(formData);
@@ -375,10 +346,76 @@ class RichTable {
       }
     });
 
-    // Optional: still bind Save button in case default behavior is overridden
     modal.find(".save-button").on("click", (e) => {
       e.preventDefault();
       form.trigger("submit");
     });
+  }
+}
+
+class RichForm {
+  constructor(columns, initialData = {}, selectFields = {}) {
+    this.columns = columns;
+    this.initialData = initialData;
+    this.selectFields = selectFields;
+  }
+
+  generate() {
+    const form = $('<form class="custom-modal-form"></form>');
+
+    this.columns.forEach((col) => {
+      const fieldGroup = $('<div class="form-group"></div>');
+      fieldGroup.append(`<label for="${col.data}">${col.title}</label>`);
+
+      const value = this.initialData[col.data] ?? "";
+      const input = this.createInput(col, value);
+      fieldGroup.append(input);
+
+      form.append(fieldGroup);
+    });
+
+    this.form = form;
+    return form;
+  }
+
+  createInput(col, value) {
+    if (this.selectFields[col.data]) {
+      const select = $(
+        `<select id="${col.data}" name="${col.data}" class="form-control"></select>`
+      );
+      const options = this.selectFields[col.data];
+
+      const match = options.find(
+        (opt) => opt.label.toLowerCase() === value?.toLowerCase()
+      );
+      if (match) value = match.value;
+
+      options.forEach((opt) => {
+        const selected = opt.value === value ? "selected" : "";
+        select.append(
+          `<option value="${opt.value}" ${selected}>${opt.label}</option>`
+        );
+      });
+
+      return select;
+    }
+
+    let type = "text";
+    if (col.title.toLowerCase() === "date") {
+      type = "date";
+      if (value) value = new Date(value).toISOString().split("T")[0];
+    }
+
+    return $(
+      `<input type="${type}" id="${col.data}" name="${col.data}" class="form-control" value="${value}" />`
+    );
+  }
+
+  getData() {
+    const data = {};
+    this.columns.forEach((col) => {
+      data[col.data] = this.form.find(`#${col.data}`).val();
+    });
+    return data;
   }
 }

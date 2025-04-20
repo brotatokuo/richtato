@@ -85,19 +85,6 @@ h2 {
   position: relative;
 }
 
-.form-control {
-  width: 100%;
-  padding: 10px;
-  font-size: 14px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  box-sizing: border-box;
-  appearance: none;
-  /* Reset browser-specific styling */
-  -webkit-appearance: none;
-  /* Reset browser-specific styling for WebKit browsers */
-}
-
 input[type="text"],
 input[type="email"],
 input[type="password"] {

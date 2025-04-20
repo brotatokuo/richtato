@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const tableDropdown = document.getElementById("tableOption");
     let tableOption = tableDropdown.value;
-    var tableUrl = `/get-table-data/?option=${encodeURIComponent(tableOption)}`;
+    var tableUrl = `api/expenses/`;
     console.log(tableUrl);
     let fullTable = new RichTable('#fullTable', tableUrl, tableConfig, visibleColumns);
 
