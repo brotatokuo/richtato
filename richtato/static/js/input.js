@@ -23,10 +23,6 @@ Array.from(currencyInputs).forEach((currencyInput) => {
 });
 
 const descriptionInput = document.getElementById("expense-description");
-descriptionInput.addEventListener("blur", () => {
-  const description = descriptionInput.value;
-  guessCategoryFromDescription(description);
-});
 
 document.addEventListener("DOMContentLoaded", () => {
   const expenseLineChart = document
@@ -38,22 +34,15 @@ document.addEventListener("DOMContentLoaded", () => {
     .getContext("2d");
   plotLineChart(incomeLineChart, "/income/get_line_graph_data/");
 
-  const visibleColumns = [
-    "date",
-    "description",
-    "amount"
-  ]
+  const visibleColumns = ["date", "description", "amount"];
 
-  const expenseTableUrl = "/get-table-data/?option=expense&limit=5";
-  let expenseTable = new RichTable(
-    '#expenseTable', expenseTableUrl, {}, visibleColumns
-  )
+  const expenseTableUrl = "/api/expenses/?limit=5";
+  let expenseTable = new RichTable("#expenseTable", expenseTableUrl);
 
   const incomeTableUrl = "/get-table-data/?option=income&limit=5";
-  let incomeTable = new RichTable(
-    '#incomeTable', incomeTableUrl, {}, visibleColumns
-  )
-
+  // let incomeTable = new RichTable(
+  //   '#incomeTable', incomeTableUrl, {}, visibleColumns
+  // )
 });
 
 async function plotLineChart(ctx, endpointUrl) {
@@ -87,35 +76,41 @@ async function plotLineChart(ctx, endpointUrl) {
           x: {
             beginAtZero: true,
             ticks: {
-              color: getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim() || "#fff",
+              color:
+                getComputedStyle(document.documentElement)
+                  .getPropertyValue("--text-color")
+                  .trim() || "#fff",
             },
             grid: {
               color: "rgba(255, 255, 255, 0.2)", // Light grid lines for dark mode
-            }
+            },
           },
           y: {
             beginAtZero: true,
             ticks: {
-              color: getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim() || "#fff",
+              color:
+                getComputedStyle(document.documentElement)
+                  .getPropertyValue("--text-color")
+                  .trim() || "#fff",
               callback: function (value, index, values) {
                 const roundedValue = Math.round(value);
-                return new Intl.NumberFormat('en-US', {
-                  style: 'currency',
-                  currency: 'USD',
-                  maximumFractionDigits: 0 // Ensure no decimal places are shown
+                return new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: "USD",
+                  maximumFractionDigits: 0, // Ensure no decimal places are shown
                 }).format(roundedValue);
-              }
+              },
             },
             grid: {
               color: "rgba(255, 255, 255, 0.2)", // Light grid lines for dark mode
-            }
+            },
           },
         },
         plugins: {
           legend: {
             display: false, // Set to true if you want to display the legend
           },
-        }
+        },
       },
     });
   } catch (error) {

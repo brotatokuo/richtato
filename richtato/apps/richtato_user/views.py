@@ -19,7 +19,6 @@ from richtato.apps.account.models import (
 )
 from richtato.apps.expense.models import Expense
 from richtato.apps.expense.views import (
-    _get_data_table_expense,
     get_last_30_days_expense_sum,
 )
 from richtato.apps.income.models import Income
@@ -142,7 +141,7 @@ def get_table_data(request: HttpRequest):
         limit = int(limit)
     logger.debug(f"Table option: {table_option}, limit: {limit}")
     table_data_getters = {
-        "expense": _get_data_table_expense,
+        "expense": 0,
         "income": _get_data_table_income,
     }
 

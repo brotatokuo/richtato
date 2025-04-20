@@ -24,4 +24,4 @@ class AccountSerializer(serializers.ModelSerializer):
             "latest_balance_date",
             "history",
         ]
-        read_only_fields = ["latest_balance", "latest_balance_date", "user"]
+        read_only_fields = ["id", "latest_balance", "latest_balance_date", "user"]

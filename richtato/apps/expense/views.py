@@ -1,15 +1,20 @@
 import json
 from datetime import datetime, timedelta
-from time import sleep
+
 import pytz
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
+from django.db.models import F, Sum
 from django.http import JsonResponse
 from django.shortcuts import HttpResponse, HttpResponseRedirect, render
 from django.urls import reverse
 from google_gemini.ai import AI
 from loguru import logger
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+from rest_framework.decorators import authentication_classes, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from richtato.apps.expense.models import Expense
 from richtato.apps.richtato_user.models import CardAccount, Category, User
@@ -118,25 +123,6 @@ def update(request):
         return JsonResponse({"success": False, "error": str(e)})
 
 
-def get_recent_entries(request):
-    """
-    Get the most recent entries for the user.
-    """
-    recent_entries = Expense.objects.filter(user=request.user).order_by("-date")[:5]
-    recent_entries_data = [
-        {
-            "id": expense.id,
-            "date": format_date(expense.date),
-            "card": expense.account_name.name,
-            "description": expense.description,
-            "amount": format_currency(expense.amount),
-            "category": expense.category.name,
-        }
-        for expense in recent_entries
-    ]
-    return JsonResponse(recent_entries_data, safe=False)
-
-
 def get_line_graph_data(request):
     chart_data = _get_line_graph_data(request.user, Expense, 5)
     months = chart_data["labels"]
@@ -200,45 +186,6 @@ def get_last_30_days(request):
         ],
     }
     return JsonResponse(chart_data)
-
-
-def _get_data_table_expense(user: User, limit: int | None = None) -> JsonResponse:
-    entries = (
-        Expense.objects.filter(user=user)
-        .order_by("-date")
-        .values(
-            "id",
-            "date",
-            "description",
-            "amount",
-            "account_name__name",
-            "category__name",
-        )
-    )[:limit]
-    if limit:
-        entries = entries[:limit]
-    data = [
-        {
-            "id": e["id"],
-            "date": format_date(e["date"]),
-            "card": e["account_name__name"],
-            "description": e["description"],
-            "amount": format_currency(e["amount"]),
-            "category": e["category__name"],
-        }
-        for e in entries
-    ]
-
-    columns = [
-        {"title": "ID", "data": "id"},
-        {"title": "Date", "data": "date"},
-        {"title": "Card", "data": "card"},
-        {"title": "Description", "data": "description"},
-        {"title": "Amount", "data": "amount"},
-        {"title": "Category", "data": "category"},
-    ]
-
-    return JsonResponse({"columns": columns, "data": data})
 
 
 def _delete_expense(transaction_id):
@@ -352,3 +299,41 @@ def upload_card_statements(request):
 
         return JsonResponse({"message": "Files uploaded successfully"}, status=200)
     return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+@authentication_classes([SessionAuthentication, BasicAuthentication])
+@permission_classes([IsAuthenticated])
+class ExpenseAPIView(APIView):
+    def get(self, request):
+        """
+        Get the most recent entries for the user.
+        """
+        limit_param = request.GET.get("limit", None)
+
+        try:
+            limit = int(limit_param) if limit_param is not None else None
+        except ValueError:
+            return Response({"error": "Invalid limit value"}, status=400)
+
+        entries = (
+            Expense.objects.filter(user=request.user)
+            .annotate(
+                Account=F("account_name__name"),
+                Category=F("category__name"),
+            )
+            .order_by("-date")
+            .values(
+                "id",
+                "date",
+                "description",
+                "amount",
+                "Account",
+                "Category",
+            )
+        )
+
+        if limit is not None:
+            logger.debug(f"Limit: {limit}")
+            entries = entries[:limit]
+
+        return Response(entries)

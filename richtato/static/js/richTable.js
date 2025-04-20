@@ -2,7 +2,7 @@ class RichTable {
   constructor(
     tableId,
     apiEndpoint,
-    editableColumnTitles,
+    editableColumnTitles = [],
     config = {},
     hiddenColumns = ["id"]
   ) {

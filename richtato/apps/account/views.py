@@ -1,4 +1,5 @@
 # views.py
+from django.db.models import F
 from django.shortcuts import get_object_or_404
 from loguru import logger
 from rest_framework import status
@@ -18,20 +19,27 @@ from .serializers import AccountSerializer
 @permission_classes([IsAuthenticated])
 class AccountAPIView(APIView):
     def get(self, request):
-        accounts = Account.objects.filter(user=request.user).order_by("name")
+        accounts = (
+            Account.objects.filter(user=request.user)
+            .annotate(
+                entity=F("asset_entity_name"),
+                balance=F("latest_balance"),
+                date=F("latest_balance_date"),
+            )
+            .order_by("name")
+            .values("id", "name", "type", "entity", "balance", "date")
+        )
 
+        # Optionally format date and currency
         data = []
         for account in accounts:
             data.append(
                 {
-                    "id": account.id,
-                    "name": account.name,
-                    "type": account.type.title(),
-                    "entity": account.asset_entity_name.title(),
-                    "balance": format_currency(account.latest_balance),
-                    "date": format_date(account.latest_balance_date)
-                    if account.latest_balance_date
-                    else None,
+                    **account,
+                    "type": account["type"].title(),
+                    "entity": account["entity"].title(),
+                    "balance": format_currency(account["balance"]),
+                    "date": format_date(account["date"]) if account["date"] else None,
                 }
             )
 
