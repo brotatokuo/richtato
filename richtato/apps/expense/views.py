@@ -9,7 +9,9 @@ from rest_framework.authentication import BasicAuthentication, SessionAuthentica
 from rest_framework.decorators import authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from richtato.apps.settings.models import CardAccount, Category
 from richtato.views import BaseAPIView
 
 from .models import Expense
@@ -99,3 +101,22 @@ class ExpenseAPIView(BaseAPIView):
 
         expense.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ExpenseFieldChoicesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user_card_accounts = CardAccount.objects.filter(user=request.user)
+        user_categories = Category.objects.filter(user=request.user)
+        data = {
+            "account": [
+                {"value": account.id, "label": account.name}
+                for account in user_card_accounts
+            ],
+            "ategory": [
+                {"value": category.id, "label": category.name}
+                for category in user_categories
+            ],
+        }
+        return Response(data)

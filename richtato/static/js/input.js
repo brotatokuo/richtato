@@ -25,24 +25,29 @@ Array.from(currencyInputs).forEach((currencyInput) => {
 const descriptionInput = document.getElementById("expense-description");
 
 document.addEventListener("DOMContentLoaded", () => {
-  const expenseLineChart = document
-    .getElementById("expenseLineChart")
-    .getContext("2d");
-  plotLineChart(expenseLineChart, "/expense/get_line_graph_data/");
-  const incomeLineChart = document
-    .getElementById("incomeLineChart")
-    .getContext("2d");
-  plotLineChart(incomeLineChart, "/income/get_line_graph_data/");
+  // const expenseLineChart = document
+  //   .getElementById("expenseLineChart")
+  //   .getContext("2d");
+  // plotLineChart(expenseLineChart, "/expense/get_line_graph_data/");
+  // const incomeLineChart = document
+  //   .getElementById("incomeLineChart")
+  //   .getContext("2d");
+  // plotLineChart(incomeLineChart, "/income/get_line_graph_data/");
 
-  const visibleColumns = ["date", "description", "amount"];
 
-  const expenseTableUrl = "/api/expenses/";
-  let expenseTable = new RichTable("#expenseTable", expenseTableUrl, ["date", "description", "amount", "account", "category"], 5);
+  let expenseTable = new RichTable(
+    "#expenseTable",
+    "/api/expenses/",
+    ["date", "description", "amount", "account", "category"],
+    5
+  );
 
-  const incomeTableUrl = "/get-table-data/?option=income&limit=5";
-  // let incomeTable = new RichTable(
-  //   '#incomeTable', incomeTableUrl, {}, visibleColumns
-  // )
+  let incomeTable = new RichTable(
+    "#incomeTable",
+    "/api/incomes/",
+    ["date", "description", "amount", "account"],
+    5
+  );
 });
 
 async function plotLineChart(ctx, endpointUrl) {
