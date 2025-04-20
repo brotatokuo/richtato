@@ -211,9 +211,9 @@ class RichTable {
     `);
 
     const form = modal.find("form");
-    console.log("Form columns:", this.renderColumns);
+    console.log("Form columns:", this.visibleColumns);
 
-    this.renderColumns.forEach((col) => {
+    this.visibleColumns.forEach((col) => {
       const field = $(`
         <div class="form-group">
           <label for="${col.data}">${col.title || col.data}</label>
@@ -238,7 +238,7 @@ class RichTable {
     modal.find(".save-button").on("click", async (e) => {
       e.preventDefault();
       const formData = {};
-      this.renderColumns.forEach((col) => {
+      this.visibleColumns.forEach((col) => {
         formData[col.data] = form.find(`#${col.data}`).val();
       });
 
