@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const loadTable = () => {
     if (tableDropdown.value == "expense") {
-      let fullTable = new RichTable(
+      new RichTable(
         "#fullTable",
         "/api/expenses/",
         ["date", "description", "amount", "account", "category"],
@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
         tableConfig
       );
     } else if (tableDropdown.value == "income") {
-      let fullTable = new RichTable(
+      new RichTable(
         "#fullTable",
         "/api/incomes/",
         ["date", "description", "amount", "account"],
