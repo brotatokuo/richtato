@@ -64,7 +64,7 @@ class CardAccount(models.Model):
         User, on_delete=models.CASCADE, related_name="card_account"
     )
     name = models.CharField(max_length=100)
-    card_bank = models.CharField(choices=supported_card_banks, max_length=50)
+    bank = models.CharField(choices=supported_card_banks, max_length=50)
 
     def __str__(self):
         return f"[{self.user}] {self.name}"
@@ -72,7 +72,7 @@ class CardAccount(models.Model):
     @property
     def card_bank_title(self):
         """Returns the human-readable bank name."""
-        return dict(supported_card_banks).get(self.card_bank, self.card_bank)
+        return dict(supported_card_banks).get(self.bank, self.bank)
 
 
 class Category(models.Model):

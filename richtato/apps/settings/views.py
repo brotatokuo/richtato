@@ -1,13 +1,18 @@
-import json
 from datetime import datetime
 
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import HttpResponseRedirect, render
-from django.urls import reverse
+from django.shortcuts import get_object_or_404, render
+from loguru import logger
+from rest_framework import status
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+from rest_framework.decorators import authentication_classes, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from richtato.apps.account.models import Account
 from richtato.apps.richtato_user.models import CardAccount, Category
+
+from .serializers import CardAccountSerializer
 
 
 def main(request):
@@ -24,87 +29,44 @@ def main(request):
     )
 
 
-# region Card Accounts
-def get_cards(request):
-    card_options = CardAccount.objects.filter(user=request.user).order_by("name")
+@authentication_classes([SessionAuthentication, BasicAuthentication])
+@permission_classes([IsAuthenticated])
+class CardAccountAPIView(APIView):
+    def get(self, request):
+        cards = CardAccount.objects.filter(user=request.user).order_by("name")
 
-    data = []
-    for card in card_options:
-        data.append(
-            {
-                "id": card.id,
-                "card": card.name,
-                "bank": card.card_bank_title,
-            }
-        )
-
-    columns = [
-        {"title": "ID", "data": "id"},
-        {"title": "Card", "data": "card"},
-        {"title": "Bank", "data": "bank"},
-    ]
-
-    return JsonResponse({"columns": columns, "data": data})
-
-
-@login_required
-def add_card(request):
-    if request.method == "POST":
-        card_name = request.POST.get("card-name").strip()
-        card_bank = request.POST.get("card-bank").strip()
-
-        all_accounts_names = CardAccount.objects.filter(user=request.user).values_list(
-            "name", flat=True
-        )
-        if card_name in all_accounts_names:
-            return render(
-                request,
-                "account_settings.html",
+        data = []
+        for card in cards:
+            data.append(
                 {
-                    "error_card_message": "Card Name already exists. Please choose a different name.",
-                },
+                    "id": card.id,
+                    "name": card.name,
+                    "bank": card.card_bank_title,
+                }
             )
+        logger.debug(f"Get Cards: {data}")
+        return Response(data)
 
-        card_account = CardAccount(
-            user=request.user,
-            name=card_name,
-            card_bank=card_bank,
-        )
-        card_account.save()
+    def post(self, request):
+        serializer = CardAccountSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        return HttpResponseRedirect(reverse("account_settings"))
-    return HttpResponse("Add account error")
+    def patch(self, request, pk):
+        logger.debug(f"Patch request data: {request.data}")
+        card = get_object_or_404(CardAccount, pk=pk, user=request.user)
+        serializer = CardAccountSerializer(card, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            logger.debug(f"Updated card account {pk}: {serializer.data}")
+            return Response(serializer.data)
+        else:
+            logger.error(f"Error updating card account {pk}: {serializer.errors}")
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-@login_required
-def update_cards(request):
-    if request.method == "POST":
-        try:
-            # Decode the JSON body from the request
-            data = json.loads(request.body.decode("utf-8"))
-            for card in data:
-                # Extract the fields for each transaction
-                delete_bool = card.get("delete")
-                card_id = card.get("id")
-                card_name = card.get("card").strip()
-                card_bank = card.get("bank").strip()
-
-                if delete_bool:
-                    CardAccount.objects.get(id=card_id).delete()
-                    continue
-
-                CardAccount.objects.update_or_create(
-                    user=request.user,
-                    id=card_id,
-                    defaults={"name": card_name, "card_bank": card_bank},
-                )
-
-            return JsonResponse({"success": True})
-
-        except Exception as e:
-            return JsonResponse({"success": False, "error": str(e)})
-
-    return JsonResponse({"success": False, "error": "Invalid request"})
-
-
-# endregion
+    def delete(self, request, pk):
+        card = get_object_or_404(CardAccount, pk=pk, user=request.user)
+        card.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -1,4 +1,5 @@
 # views.py
+from django.shortcuts import get_object_or_404
 from loguru import logger
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
@@ -40,30 +41,25 @@ class AccountAPIView(APIView):
         logger.debug(f"Request data: {request.data}")
         serializer = AccountSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(user=request.user)  # Assign user manually
+            serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request, pk):
         logger.debug(f"PATCH request data: {request.data}")
-        try:
-            account = Account.objects.get(pk=pk, user=request.user)
-        except Account.DoesNotExist:
-            return Response({"error": "Not found"}, status=status.HTTP_404_NOT_FOUND)
+        account = get_object_or_404(Account, pk=pk, user=request.user)
 
         serializer = AccountSerializer(account, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data)
         else:
-            logger.debug(f"Serializer errors: {serializer.errors}")
+            logger.error(f"Serializer errors: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
         logger.debug(f"DELETE request for account with pk: {pk}")
-        try:
-            account = Account.objects.get(pk=pk, user=request.user)
-            account.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except Account.DoesNotExist:
-            return Response({"error": "Not found"}, status=status.HTTP_404_NOT_FOUND)
+        account = get_object_or_404(Account, pk=pk, user=request.user)
+
+        account.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -28,5 +28,5 @@ urlpatterns = [
     path("budget/", include("apps.budget.urls")),
     path("income/", include("apps.income.urls")),
     path("expense/", include("apps.expense.urls")),
-    path("settings/", include("apps.settings.urls")),
+    path("", include("apps.settings.urls")),
 ]

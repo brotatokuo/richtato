@@ -1,12 +1,10 @@
 from django.urls import path
 
-from . import views
+from .views import CardAccountAPIView
 
-page_name = "settings"
 urlpatterns = [
-    path("", views.main, name=page_name),
-    # Card Account
-    path("get-cards/", views.get_cards, name=f"{page_name}_get_cards"),
-    path("add-card/", views.add_card, name=f"{page_name}_add_card"),
-    path("update-cards/", views.update_cards, name=f"{page_name}_update_cards"),
+    path("api/card-accounts/", CardAccountAPIView.as_view()),  # GET, POST
+    path(
+        "api/card-accounts/<int:pk>/", CardAccountAPIView.as_view()
+    ),  # PUT, PATCH, DELETE
 ]
