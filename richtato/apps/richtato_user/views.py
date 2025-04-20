@@ -149,8 +149,8 @@ def get_table_data(request: HttpRequest):
         return JsonResponse({"error": "Invalid table option."}, status=400)
 
 
-def timeseries_plots(request: HttpRequest):
-    return render(request, "timeseries_plots.html")
+def timeseries_graph(request: HttpRequest):
+    return render(request, "timeseries_graph.html")
 
 
 def get_timeseries_data(request: HttpRequest) -> JsonResponse:
@@ -220,7 +220,7 @@ class CombinedGraphAPIView(APIView):
                     "label": "Expenses",
                     "data": expense_data["values"],
                     "backgroundColor": "rgba(232, 82, 63, 0.2)",
-                    "borderColor": "rgba(232, 82, 63, 1)",
+                    "borderColor": "rgba(232, 82, 63, 0.5)",
                     "borderWidth": 1,
                     "fill": True,
                     "tension": 0.4,
@@ -229,7 +229,7 @@ class CombinedGraphAPIView(APIView):
                     "label": "Income",
                     "data": income_data["values"],
                     "backgroundColor": "rgba(152, 204, 44, 0.2)",
-                    "borderColor": "rgba(152, 204, 44, 1)",
+                    "borderColor": "rgba(152, 204, 44, 0.5)",
                     "borderWidth": 1,
                     "fill": True,
                     "tension": 0.4,

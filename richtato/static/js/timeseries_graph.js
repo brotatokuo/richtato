@@ -170,13 +170,4 @@ class TimeseriesGraph {
       this.chart.resetZoom();
     }
   }
-
-  /**
-   * Updates the selected time range and refreshes the chart
-   * @param {string} range - The new time range
-   */
-  async setTimeRange(range) {
-    this.selectedRange = range;
-    await this.updateChart();
-  }
 }
