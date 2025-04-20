@@ -14,18 +14,11 @@ from loguru import logger
 
 from richtato.apps.account.models import (
     Account,
-    supported_asset_accounts,
     account_types,
+    supported_asset_accounts,
 )
 from richtato.apps.expense.models import Expense
-from richtato.apps.expense.views import (
-    get_last_30_days_expense_sum,
-)
 from richtato.apps.income.models import Income
-from richtato.apps.income.views import (
-    _get_data_table_income,
-    get_last_30_days_income_sum,
-)
 from richtato.apps.richtato_user.models import (
     CardAccount,
     Category,
@@ -46,8 +39,8 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
         networth = (
             sum(account.latest_balance for account in accounts) if accounts else 0.0
         )
-        expense_sum = get_last_30_days_expense_sum(request.user)
-        income_sum = get_last_30_days_income_sum(request.user)
+        expense_sum = 0
+        income_sum = 0
         savings_rate = (
             round((income_sum - expense_sum) / income_sum * 100) if income_sum else 0
         )
@@ -142,7 +135,7 @@ def get_table_data(request: HttpRequest):
     logger.debug(f"Table option: {table_option}, limit: {limit}")
     table_data_getters = {
         "expense": 0,
-        "income": _get_data_table_income,
+        "income": 0,
     }
 
     if table_option in table_data_getters:

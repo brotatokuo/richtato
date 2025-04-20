@@ -17,12 +17,11 @@ urlpatterns = [
     path("goals/", views.goals, name="goals"),
     path("profile/", views.profile, name="profile"),
     path("input/", views.input, name="input"),
-    path("input/add-expense/", expense.add_entry, name="add_expense"),
-    path("input/add-income/", income.add_entry, name="add_income"),
     path("user_settings/", views.user_settings, name="user_settings"),
     path("account-settings/", views.account_settings, name="account_settings"),
     path("table/", views.table, name="table"),
     path("get-table-data/", views.get_table_data, name="get_table_data"),
     path("timeseries-plots/", views.timeseries_plots, name="timeseries_plots"),
     path("get-timeseries-data/", views.get_timeseries_data, name="get_timeseries_data"),
-    path("get-card-banks/", views.get_card_banks, name="get_card_banks"),]
+    path("get-card-banks/", views.get_card_banks, name="get_card_banks"),
+]
