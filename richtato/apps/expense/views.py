@@ -11,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from richtato.apps.richtato_user.utils import _get_line_graph_data
 from richtato.apps.settings.models import CardAccount, Category
 from richtato.views import BaseAPIView
 
@@ -101,6 +102,28 @@ class ExpenseAPIView(BaseAPIView):
 
         expense.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ExpenseGraphAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        months = request.query_params.get("months")
+        chart_data = _get_line_graph_data(request.user, Expense, months)
+        return Response(
+            {
+                "labels": chart_data["labels"],
+                "datasets": [
+                    {
+                        "label": "Expense",
+                        "data": chart_data["values"],
+                        "backgroundColor": "rgba(232, 82, 63, 0.2)",
+                        "borderColor": "rgba(232, 82, 63, 1)",
+                        "borderWidth": 1,
+                    }
+                ],
+            }
+        )
 
 
 class ExpenseFieldChoicesView(APIView):

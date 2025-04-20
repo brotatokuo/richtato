@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from richtato.apps.account.models import Account
+from richtato.apps.richtato_user.utils import _get_line_graph_data
 from richtato.views import BaseAPIView
 
 from .models import Income
@@ -96,6 +97,28 @@ class IncomeAPIView(BaseAPIView):
 
         income.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class IncomeGraphAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        months = request.query_params.get("months")
+        chart_data = _get_line_graph_data(request.user, Income, months)
+        return Response(
+            {
+                "labels": chart_data["labels"],
+                "datasets": [
+                    {
+                        "label": "Income",
+                        "data": chart_data["values"],
+                        "backgroundColor": "rgba(152, 204, 44, 0.2)",
+                        "borderColor": "rgba(152, 204, 44, 1)",
+                        "borderWidth": 1,
+                    }
+                ],
+            }
+        )
 
 
 class IncomeFieldChoicesView(APIView):

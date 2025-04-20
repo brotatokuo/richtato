@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import IncomeAPIView, IncomeFieldChoicesView
+from .views import IncomeAPIView, IncomeFieldChoicesView, IncomeGraphAPIView
 
 page_name = "incomes"
 urlpatterns = [
@@ -10,4 +10,5 @@ urlpatterns = [
         f"api/{page_name}/field-choices/",
         IncomeFieldChoicesView.as_view(),
     ),  # GET, POST
+    path(f"api/{page_name}/graph/", IncomeGraphAPIView.as_view()),  # GET
 ]
