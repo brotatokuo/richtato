@@ -137,7 +137,7 @@ class ExpenseFieldChoicesView(APIView):
                 {"value": account.id, "label": account.name}
                 for account in user_card_accounts
             ],
-            "ategory": [
+            "category": [
                 {"value": category.id, "label": category.name}
                 for category in user_categories
             ],

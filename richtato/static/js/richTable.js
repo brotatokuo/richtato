@@ -97,6 +97,7 @@ class RichTable {
         }));
       }
 
+      console.log("Select fields loaded:", this.selectFields);
     } catch (error) {
       console.error("Error loading select field data:", error);
     }
@@ -365,6 +366,7 @@ class RichForm {
   }
 
   generate() {
+    console.log("Form selectFields:", this.selectFields);
     const form = $('<form class="custom-modal-form"></form>');
 
     this.columns.forEach((col) => {
@@ -383,16 +385,20 @@ class RichForm {
   }
 
   createInput(col, value) {
-    if (this.selectFields[col.data]) {
+    const key = col.data.toLowerCase();
+
+    if (this.selectFields[key]) {
       const select = $(
         `<select id="${col.data}" name="${col.data}" class="form-control"></select>`
       );
-      const options = this.selectFields[col.data];
+      const options = this.selectFields[key];
 
       const match = options.find(
         (opt) => opt.label.toLowerCase() === value?.toLowerCase()
       );
-      if (match) value = match.value;
+      if (match) {
+        value = match.value;
+      }
 
       options.forEach((opt) => {
         const selected = opt.value === value ? "selected" : "";
