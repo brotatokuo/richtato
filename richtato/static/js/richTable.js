@@ -313,7 +313,12 @@ class RichTable {
       </div>
     `);
 
-    const formBuilder = new RichForm(columns, initialData, this.selectFields);
+    const formBuilder = new RichForm(
+      this.tableId,
+      columns,
+      initialData,
+      this.selectFields
+    );
     const form = formBuilder.generate();
     modal.find(".custom-modal-body").append(form);
 
@@ -359,7 +364,8 @@ class RichTable {
 }
 
 class RichForm {
-  constructor(columns, initialData = {}, selectFields = {}) {
+  constructor(formTableID, columns, initialData = {}, selectFields = {}) {
+    this.formTableID = formTableID;
     this.columns = columns;
     this.initialData = initialData;
     this.selectFields = selectFields;
@@ -378,6 +384,13 @@ class RichForm {
       fieldGroup.append(input);
 
       form.append(fieldGroup);
+
+      if (
+        (col.data === "description") &
+        (this.formTableID === "#expenseTable")
+      ) {
+        input.on("blur", () => this.categorizeTransaction());
+      }
     });
 
     this.form = form;
@@ -413,7 +426,13 @@ class RichForm {
     let type = "text";
     if (col.title.toLowerCase() === "date") {
       type = "date";
-      if (value) value = new Date(value).toISOString().split("T")[0];
+      if (!value) {
+        const today = new Date();
+        value = today.toISOString().split("T")[0];
+        console.log("Setting date to today:", value);
+      } else {
+        value = new Date(value).toISOString().split("T")[0];
+      }
     }
 
     return $(
@@ -427,5 +446,45 @@ class RichForm {
       data[col.data] = this.form.find(`#${col.data}`).val();
     });
     return data;
+  }
+
+  async categorizeTransaction() {
+    const description = this.form.find("#description").val();
+    if (!description) return;
+
+    try {
+      const response = await fetch(`/api/expenses/categorize-transaction/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCSRFToken(), // Add if CSRF token is required
+        },
+        body: JSON.stringify({ description }),
+      });
+
+      const result = await response.json();
+      console.log("Categorization result:", result);
+      if (result.category) {
+        const $categoryField = this.form.find("#Category");
+        console.log(
+          "Found category field:",
+          $categoryField.length > 0,
+          $categoryField
+        );
+
+        if ($categoryField.length === 0) {
+          console.warn("⚠️ Category select field not found in the form!");
+        } else {
+          $categoryField.val(result.category);
+          console.log("✅ Set category value to:", result.category);
+          console.log(
+            "🔍 Current selected option:",
+            $categoryField.find("option:selected").text()
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Failed to categorize transaction:", error);
+    }
   }
 }

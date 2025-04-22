@@ -16,6 +16,7 @@ from richtato.apps.settings.models import CardAccount, Category
 from richtato.views import BaseAPIView
 
 from .models import Expense
+from google_gemini.ai import AI
 from .serializers import ExpenseSerializer
 
 pst = pytz.timezone("US/Pacific")
@@ -143,3 +144,24 @@ class ExpenseFieldChoicesView(APIView):
             ],
         }
         return Response(data)
+
+
+class CategorizeTransactionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """
+        Categorize a transaction based on the description.
+        """
+        description = request.data.get("description")
+        if not description:
+            return Response({"error": "Description is required."}, status=400)
+
+        # Use AI to categorize the transaction
+        category = AI.categorize_transaction(request.user, description)
+
+        cateogry_id = (
+            Category.objects.filter(user=request.user, name=category).first().id
+        )
+
+        return Response({"category": cateogry_id})
