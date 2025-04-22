@@ -391,6 +391,9 @@ class RichForm {
       ) {
         input.on("blur", () => this.categorizeTransaction());
       }
+      if (col.data === "amount") {
+        input.on("blur", () => this.computeAmount());
+      }
     });
 
     this.form = form;
@@ -486,5 +489,33 @@ class RichForm {
     } catch (error) {
       console.error("Failed to categorize transaction:", error);
     }
+  }
+
+  computeAmount() {
+    const amountInput = this.form.find("#amount");
+    let balance = amountInput.val();
+
+    if (!balance) return;
+
+    if (balance.startsWith("=")) {
+      try {
+        balance = eval(balance.slice(1));
+        console.log("Evaluated formula:", balance);
+      } catch (error) {
+        console.error("Invalid formula:", error);
+        return;
+      }
+    } else {
+      try {
+        balance = eval(balance);
+      } catch (error) {
+        console.error("Invalid number input:", error);
+        return;
+      }
+    }
+
+    balance = parseFloat(balance).toFixed(2);
+    amountInput.val(balance); // ✅ Update the form field
+    console.log("Updated amount field with:", balance);
   }
 }
