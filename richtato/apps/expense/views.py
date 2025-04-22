@@ -109,8 +109,7 @@ class ExpenseGraphAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        months = request.query_params.get("months")
-        chart_data = _get_line_graph_data(request.user, Expense, months)
+        chart_data = _get_line_graph_data(request.user, Expense)
         return Response(
             {
                 "labels": chart_data["labels"],

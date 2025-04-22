@@ -153,36 +153,36 @@ def timeseries_graph(request: HttpRequest):
     return render(request, "timeseries_graph.html")
 
 
-def get_timeseries_data(request: HttpRequest) -> JsonResponse:
-    month_range = request.GET.get("month_range")
-    month_range = int(month_range) if month_range else None
-    expense_data = _get_line_graph_data(request.user, Expense, month_range)
-    logger.debug(f"Expense data: {expense_data}")
-    income_data = _get_line_graph_data(request.user, Income, month_range)
-    logger.debug(f"Income data: {income_data}")
+# def get_timeseries_data(request: HttpRequest) -> JsonResponse:
+#     month_range = request.GET.get("month_range")
+#     month_range = int(month_range) if month_range else None
+#     expense_data = _get_line_graph_data(request.user, Expense, month_range)
+#     logger.debug(f"Expense data: {expense_data}")
+#     income_data = _get_line_graph_data(request.user, Income, month_range)
+#     logger.debug(f"Income data: {income_data}")
 
-    chart_data = {
-        "labels": expense_data["labels"],
-        "datasets": [
-            {
-                "label": "Expenses",
-                "data": expense_data["values"],
-                "borderColor": "rgba(232, 82, 63, 0.5)",
-                "fill": True,
-                "tension": 0.4,
-            },
-            {
-                "label": "Income",
-                "data": income_data["values"],
-                "borderColor": "rgba(152, 204, 44, 0.5)",
-                "fill": True,
-                "tension": 0.4,
-            },
-        ],
-    }
-    logger.debug(f"Chart data: {chart_data}")
+#     chart_data = {
+#         "labels": expense_data["labels"],
+#         "datasets": [
+#             {
+#                 "label": "Expenses",
+#                 "data": expense_data["values"],
+#                 "borderColor": "rgba(232, 82, 63, 0.5)",
+#                 "fill": True,
+#                 "tension": 0.4,
+#             },
+#             {
+#                 "label": "Income",
+#                 "data": income_data["values"],
+#                 "borderColor": "rgba(152, 204, 44, 0.5)",
+#                 "fill": True,
+#                 "tension": 0.4,
+#             },
+#         ],
+#     }
+#     logger.debug(f"Chart data: {chart_data}")
 
-    return JsonResponse(chart_data)
+#     return JsonResponse(chart_data)
 
 
 def get_card_banks(request: HttpRequest) -> JsonResponse:
@@ -204,13 +204,10 @@ class CombinedGraphAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        months = request.query_params.get("months")
-        months = int(months) if months else None
-
-        expense_data = _get_line_graph_data(request.user, Expense, months)
+        expense_data = _get_line_graph_data(request.user, Expense)
         logger.debug(f"Expense data: {expense_data}")
 
-        income_data = _get_line_graph_data(request.user, Income, months)
+        income_data = _get_line_graph_data(request.user, Income)
         logger.debug(f"Income data: {income_data}")
 
         chart_data = {
