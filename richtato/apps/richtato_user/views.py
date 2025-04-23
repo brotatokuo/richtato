@@ -134,6 +134,13 @@ def timeseries_graph(request: HttpRequest):
     return render(request, "timeseries_graph.html")
 
 
+class CardBanksAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(supported_card_banks)
+
+
 class CombinedGraphAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
