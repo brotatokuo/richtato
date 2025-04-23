@@ -11,11 +11,6 @@ document.addEventListener("DOMContentLoaded", () => {
   );
   incomeGraph.render();
 
-  // const incomeOverviewLineChart = document
-  //   .getElementById("income-overview-line-chart")
-  //   .getContext("2d");
-  // plotOverviewLineChart(incomeOverviewLineChart, "/income/get-last-30-days/");
-
   const renderer = new BudgetRenderer(
     "categories-container",
     "/budget/get-budget-rankings/"
