@@ -52,7 +52,10 @@ class CardAccountAPIView(APIView):
         return Response(data)
 
     def post(self, request):
-        serializer = CardAccountSerializer(data=request.data)
+        data = request.data.copy()
+        data["account_name"] = data.get("Account", None)
+        serializer = CardAccountSerializer(data=data)
+        logger.debug(f"Post request data: {data}")
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
