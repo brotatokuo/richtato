@@ -1,3 +1,4 @@
+from richtato.apps.richtato_user.models import User
 from richtato.statement_imports.cards.american_express import AmericanExpressCards
 from richtato.statement_imports.cards.bank_of_america import BankOfAmericaCards
 from richtato.statement_imports.cards.chase import ChaseCards
@@ -26,7 +27,9 @@ class CardStatement:
         cls._canonicalizers[card_type.lower()] = canonicalizer_class
 
     @classmethod
-    def create_from_file(cls, user, card_bank, card_name, file_path):
+    def create_from_file(
+        cls, user: User, card_bank: str, card_name: str, file_path: str
+    ):
         """
         Create an instance of the appropriate card canonicalizer using its from_file method.
 

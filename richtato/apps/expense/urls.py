@@ -5,6 +5,7 @@ from .views import (
     ExpenseFieldChoicesView,
     ExpenseGraphAPIView,
     CategorizeTransactionView,
+    ImportStatementsView,
 )
 
 page_name = "expenses"
@@ -16,4 +17,5 @@ urlpatterns = [
     path(
         f"api/{page_name}/categorize-transaction/", CategorizeTransactionView.as_view()
     ),  # Post
+    path(f"api/{page_name}/import-statements/", ImportStatementsView.as_view()),  # Post
 ]

@@ -268,7 +268,7 @@ class FileManager {
       );
 
       try {
-        const response = await fetch("/expense/upload-card-statements/", {
+        const response = await fetch("/api/expenses/import-statements/", {
           method: "POST",
           body: formData,
           headers: {

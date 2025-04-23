@@ -3,7 +3,6 @@ from django.db.models import F
 from django.shortcuts import (
     get_object_or_404,
 )
-from google_gemini.ai import AI
 from loguru import logger
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
@@ -12,11 +11,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from richtato.apps.expense.imports import ExpenseManager
 from richtato.apps.richtato_user.utils import (
     _get_line_graph_data_by_day,
     _get_line_graph_data_by_month,
 )
 from richtato.apps.settings.models import CardAccount, Category
+from richtato.google_gemini.ai import AI
+from richtato.statement_imports.cards.card_factory import CardStatement
 from richtato.views import BaseAPIView
 
 from .models import Expense
@@ -177,3 +179,49 @@ class CategorizeTransactionView(APIView):
         )
 
         return Response({"category": cateogry_id})
+
+
+class ImportStatementsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """
+        Import statements and categorize transactions.
+        """
+        # Assuming the request contains a file with transactions
+        def ensure_list(obj):
+            if obj is None:
+                return []
+            if isinstance(obj, list):
+                return obj
+            return [obj]
+
+        # Usage
+        files = ensure_list(request.FILES.getlist("files"))  # For files specifically
+        card_banks = ensure_list(request.data.get("card_banks"))
+        file_names = ensure_list(request.data.get("file_names"))
+
+        if not files or not card_banks or not file_names:
+            return Response(
+                {"error": "Files, card banks, and file names are required."}, status=400
+            )
+
+        logger.debug(f"Files: {files}")
+        logger.debug(f"Card banks: {card_banks}")
+        logger.debug(f"File names: {file_names}")
+
+        # Process the files and categorize transactions
+        for file, card_bank, file_name in zip(files, card_banks, file_names):
+            logger.debug(f"Processing file: {file_name} for card bank: {card_bank}")
+            card_statement = CardStatement.create_from_file(
+                request.user,
+                card_bank,
+                file_name,
+                file,
+            )
+            logger.debug(card_statement.formatted_df)
+            ExpenseManager.import_from_dataframe(
+                card_statement.formatted_df, request.user
+            )
+
+        return Response({"message": "File processed successfully."})
