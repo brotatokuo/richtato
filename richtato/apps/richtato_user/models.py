@@ -15,6 +15,7 @@ supported_card_banks = [
     ("bilt", "BILT"),
     ("chase", "Chase"),
     ("citibank", "Citibank"),
+    ("other", "Other"),
 ]
 
 
