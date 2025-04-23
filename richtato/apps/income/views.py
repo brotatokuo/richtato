@@ -12,7 +12,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from richtato.apps.account.models import Account
-from richtato.apps.richtato_user.utils import _get_line_graph_data
+from richtato.apps.richtato_user.utils import (
+    _get_line_graph_data_by_day,
+    _get_line_graph_data_by_month,
+)
 from richtato.views import BaseAPIView
 
 from .models import Income
@@ -103,7 +106,15 @@ class IncomeGraphAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        chart_data = _get_line_graph_data(request.user, Income)
+        date_range = request.query_params.get("range", "all")
+        logger.debug(f"Date range: {date_range}")
+        if date_range == "all":
+            chart_data = _get_line_graph_data_by_month(request.user, Income)
+        elif date_range == "30d":
+            logger.debug("Getting data for the last 30 days")
+            chart_data = _get_line_graph_data_by_day(request.user, Income)
+        else:
+            return Response({"error": "Invalid range. Use '30d' or 'all'."}, status=400)
         return Response(
             {
                 "labels": chart_data["labels"],

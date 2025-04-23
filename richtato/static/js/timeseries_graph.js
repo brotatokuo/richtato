@@ -265,3 +265,78 @@ class SimpleTimeseriesGraph {
     };
   }
 }
+class BackgroundTimeseriesGraph {
+  constructor(elementId, endpointUrl) {
+    const canvas = document.getElementById(elementId);
+    if (!canvas) {
+      throw new Error(`Element with ID "${elementId}" not found.`);
+    }
+
+    this.ctx = canvas.getContext("2d");
+    this.endpointUrl = endpointUrl;
+    this.chart = null;
+  }
+
+  async fetchData() {
+    const response = await fetch(this.endpointUrl);
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    return await response.json();
+  }
+
+  async render() {
+    try {
+      const chartData = await this.fetchData();
+
+      this.chart = new Chart(this.ctx, {
+        type: "line",
+        data: {
+          labels: chartData.labels,
+          datasets: chartData.datasets.map((dataset) => ({
+            label: dataset.label,
+            data: dataset.data,
+            backgroundColor: dataset.backgroundColor,
+            borderColor: dataset.borderColor,
+            borderWidth: dataset.borderWidth || 2,
+            fill: dataset.fill !== undefined ? dataset.fill : false,
+            tension: dataset.tension !== undefined ? dataset.tension : 0.3,
+            pointRadius:
+              dataset.pointRadius !== undefined ? dataset.pointRadius : 0,
+            pointHoverRadius:
+              dataset.pointHoverRadius !== undefined
+                ? dataset.pointHoverRadius
+                : 0,
+          })),
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              display: false,
+            },
+            y: {
+              display: false,
+            },
+          },
+          plugins: {
+            legend: {
+              display: false,
+            },
+          },
+          animation: {
+            x: {
+              from: 0,
+            },
+            y: {
+              from: 50,
+            },
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Error rendering background timeseries graph:", error);
+    }
+  }
+}

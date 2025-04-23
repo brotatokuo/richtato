@@ -3,6 +3,7 @@ from django.db.models import F
 from django.shortcuts import (
     get_object_or_404,
 )
+from google_gemini.ai import AI
 from loguru import logger
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
@@ -11,12 +12,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from richtato.apps.richtato_user.utils import _get_line_graph_data
+from richtato.apps.richtato_user.utils import (
+    _get_line_graph_data_by_day,
+    _get_line_graph_data_by_month,
+)
 from richtato.apps.settings.models import CardAccount, Category
 from richtato.views import BaseAPIView
 
 from .models import Expense
-from google_gemini.ai import AI
 from .serializers import ExpenseSerializer
 
 pst = pytz.timezone("US/Pacific")
@@ -109,7 +112,17 @@ class ExpenseGraphAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        chart_data = _get_line_graph_data(request.user, Expense)
+        date_range = request.query_params.get("range", "all")
+        logger.debug(f"Date range: {date_range}")
+
+        if date_range == "all":
+            chart_data = _get_line_graph_data_by_month(request.user, Expense)
+        elif date_range == "30d":
+            logger.debug("Getting data for the last 30 days")
+            chart_data = _get_line_graph_data_by_day(request.user, Expense)
+        else:
+            return Response({"error": "Invalid range. Use '30d' or 'all'."}, status=400)
+
         return Response(
             {
                 "labels": chart_data["labels"],

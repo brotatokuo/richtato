@@ -28,7 +28,7 @@ from richtato.apps.richtato_user.models import (
     User,
     supported_card_banks,
 )
-from richtato.apps.richtato_user.utils import _get_line_graph_data
+from richtato.apps.richtato_user.utils import _get_line_graph_data_by_month
 from richtato.utilities.tools import format_currency
 
 pst = pytz.timezone("US/Pacific")
@@ -130,84 +130,18 @@ def table(request: HttpRequest):
     return render(request, "table.html")
 
 
-def get_table_data(request: HttpRequest):
-    table_option = request.GET.get("option")
-    limit = request.GET.get("limit")
-    if limit:
-        limit = int(limit)
-    logger.debug(f"Table option: {table_option}, limit: {limit}")
-    table_data_getters = {
-        "expense": 0,
-        "income": 0,
-    }
-
-    if table_option in table_data_getters:
-        logger.debug(f"Getting table data for {table_option}.")
-        return table_data_getters[table_option](request.user, limit)
-    else:
-        logger.error(f"Invalid table option: {table_option}")
-        return JsonResponse({"error": "Invalid table option."}, status=400)
-
-
 def timeseries_graph(request: HttpRequest):
     return render(request, "timeseries_graph.html")
-
-
-# def get_timeseries_data(request: HttpRequest) -> JsonResponse:
-#     month_range = request.GET.get("month_range")
-#     month_range = int(month_range) if month_range else None
-#     expense_data = _get_line_graph_data(request.user, Expense, month_range)
-#     logger.debug(f"Expense data: {expense_data}")
-#     income_data = _get_line_graph_data(request.user, Income, month_range)
-#     logger.debug(f"Income data: {income_data}")
-
-#     chart_data = {
-#         "labels": expense_data["labels"],
-#         "datasets": [
-#             {
-#                 "label": "Expenses",
-#                 "data": expense_data["values"],
-#                 "borderColor": "rgba(232, 82, 63, 0.5)",
-#                 "fill": True,
-#                 "tension": 0.4,
-#             },
-#             {
-#                 "label": "Income",
-#                 "data": income_data["values"],
-#                 "borderColor": "rgba(152, 204, 44, 0.5)",
-#                 "fill": True,
-#                 "tension": 0.4,
-#             },
-#         ],
-#     }
-#     logger.debug(f"Chart data: {chart_data}")
-
-#     return JsonResponse(chart_data)
-
-
-def get_card_banks(request: HttpRequest) -> JsonResponse:
-    cards = CardAccount.objects.filter(user=request.user).values("name", "card_bank")
-    logger.debug(f"Cards: {cards}")
-    cards_dict = {
-        "cards": [
-            {
-                "value": card["card_bank"],
-                "label": card["name"],
-            }
-            for card in cards
-        ]
-    }
-    return JsonResponse(cards_dict, safe=False)
 
 
 class CombinedGraphAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        expense_data = _get_line_graph_data(request.user, Expense)
+        expense_data = _get_line_graph_data_by_month(request.user, Expense)
         logger.debug(f"Expense data: {expense_data}")
 
-        income_data = _get_line_graph_data(request.user, Income)
+        income_data = _get_line_graph_data_by_month(request.user, Income)
         logger.debug(f"Income data: {income_data}")
 
         chart_data = {

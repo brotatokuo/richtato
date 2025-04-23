@@ -18,8 +18,6 @@ urlpatterns = [
     path("user_settings/", views.user_settings, name="user_settings"),
     path("account-settings/", views.account_settings, name="account_settings"),
     path("table/", views.table, name="table"),
-    path("get-table-data/", views.get_table_data, name="get_table_data"),
     path("timeseries-graph/", views.timeseries_graph, name="timeseries_graph"),
     path("api/timeseries-data/", CombinedGraphAPIView.as_view()),
-    path("get-card-banks/", views.get_card_banks, name="get_card_banks"),
 ]
