@@ -40,4 +40,3 @@ class BankOfAmericaCards(CardCanonicalizer):
 
     def format_amount(self) -> None:
         self.formatted_df["Amount"] = -1 * self.df["Amount"].astype(float)
-        self.formatted_df["Amount"] = -1 * self.df["Amount"].astype(float)

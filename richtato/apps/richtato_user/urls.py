@@ -19,5 +19,4 @@ urlpatterns = [
     path("table/", views.table, name="table"),
     path("timeseries-graph/", views.timeseries_graph, name="timeseries_graph"),
     path("api/timeseries-data/", views.CombinedGraphAPIView.as_view()),
-    path("api/card-banks/", views.CardBanksAPIView.as_view(), name="card_accounts"),
 ]

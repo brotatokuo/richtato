@@ -3,6 +3,7 @@ from richtato.statement_imports.cards.american_express import AmericanExpressCar
 from richtato.statement_imports.cards.bank_of_america import BankOfAmericaCards
 from richtato.statement_imports.cards.chase import ChaseCards
 from richtato.statement_imports.cards.citi import CitiCards
+from loguru import logger
 
 
 class CardStatement:
@@ -34,7 +35,7 @@ class CardStatement:
         Create an instance of the appropriate card canonicalizer using its from_file method.
 
         Args:
-            card_type (str): The type of card to process
+            card_bank (str): The id of the card account
             card_name (str): The name of the card
             file_path (str): Path to the file containing card data
 

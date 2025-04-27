@@ -138,7 +138,9 @@ class CardBanksAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response(supported_card_banks)
+        card_accounts = CardAccount.objects.filter(user=request.user)
+        logger.debug(f"User card accounts: {card_accounts}")
+        return Response(card_accounts)
 
 
 class CombinedGraphAPIView(APIView):

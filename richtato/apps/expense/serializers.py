@@ -1,17 +1,15 @@
 from rest_framework import serializers
 
-from richtato.apps.richtato_user.models import CardAccount, Category
-
-from .models import Expense
+from richtato.apps.expense.models import Expense
+from richtato.apps.richtato_user.models import CardAccount, Category, User
 
 
 class ExpenseSerializer(serializers.ModelSerializer):
-    Account = serializers.PrimaryKeyRelatedField(
-        queryset=CardAccount.objects.all(), source="account_name"
+    account_name = serializers.PrimaryKeyRelatedField(
+        queryset=CardAccount.objects.all()
     )
-    Category = serializers.PrimaryKeyRelatedField(
-        queryset=Category.objects.all(), source="category"
-    )
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
+    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
 
     class Meta:
         model = Expense
@@ -20,7 +18,8 @@ class ExpenseSerializer(serializers.ModelSerializer):
             "amount",
             "date",
             "description",
-            "Category",
-            "Account",
+            "user",
+            "category",
+            "account_name",
         ]
         read_only_fields = ["id"]

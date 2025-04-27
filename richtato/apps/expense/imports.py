@@ -3,6 +3,7 @@ from django.db import models
 
 from richtato.apps.expense.serializers import ExpenseSerializer
 from richtato.apps.richtato_user.models import CardAccount, Category
+from loguru import logger
 
 
 class ExpenseManager(models.Manager):
@@ -14,17 +15,19 @@ class ExpenseManager(models.Manager):
                 category = Category.objects.get(name=row["Category"], user=user)
 
                 data = {
+                    "user": user.id,
                     "amount": row["Amount"],
                     "date": row["Date"],
                     "description": row["Description"],
-                    "Account": account.id,
-                    "Category": category.id,
+                    "account_name": account.id,
+                    "category": category.id,
                 }
-
+                logger.debug(f"Processing row: {data}")
                 serializer = ExpenseSerializer(data=data)
                 if serializer.is_valid():
                     serializer.save()
+                    logger.info("Expense saved successfully")
                 else:
-                    print(f"Invalid row: {serializer.errors}")
+                    logger.error(f"Invalid row: {serializer.errors}")
             except Exception as e:
-                print(f"Error processing row: {e}")
+                logger.error(f"Error processing row: {e}")

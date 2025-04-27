@@ -1,6 +1,6 @@
 async function getCardTypes() {
   try {
-    const response = await fetch("/api/card-banks/", {
+    const response = await fetch("/api/card-accounts/", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -21,13 +21,13 @@ async function getCardTypes() {
 }
 
 async function initializeFileManager() {
-  const cardBanks = await getCardTypes();
+  const cardAccounts = await getCardTypes();
 
-  // Create the fileManager instance after fetching cardBanks
+  // Create the fileManager instance after fetching cardAccounts
   const fileManager = new FileManager(
     "files-boxes",
     "files-statistics",
-    cardBanks
+    cardAccounts
   );
 
   // Define the handleFiles function inside to ensure fileManager is available
@@ -74,12 +74,12 @@ async function initializeFileManager() {
 initializeFileManager();
 
 class File {
-  constructor(file, cardBanks, onRemoveCallback) {
+  constructor(file, cardAccounts, onRemoveCallback) {
     this.path = URL.createObjectURL(file); // Temporary path for preview
     this.name = file.name;
     this.file_size = file.size;
     this.file = file;
-    this.cardBanks = cardBanks;
+    this.cardAccounts = cardAccounts;
     this.onRemoveCallback = onRemoveCallback;
     this.fileBox = null;
     this.processingSpinner = null;
@@ -90,10 +90,11 @@ class File {
     const dropdown = document.createElement("select");
     dropdown.classList.add("card-account-dropdown");
 
-    this.cardBanks.forEach(([value, label]) => {
+    console.log("Card accounts:", this.cardAccounts);
+    this.cardAccounts.forEach(({ id, name }) => {
       const option = document.createElement("option");
-      option.value = value;
-      option.textContent = label;
+      option.value = id;
+      option.textContent = name;
       dropdown.appendChild(option);
     });
 
@@ -181,11 +182,11 @@ class File {
 }
 
 class FileManager {
-  constructor(filesContainerId, statisticsContainerId, cardBanks) {
+  constructor(filesContainerId, statisticsContainerId, cardAccounts) {
     this.filesContainer = document.getElementById(filesContainerId);
     this.statisticsContainer = document.getElementById(statisticsContainerId);
     this.uploadedFiles = []; // Stores instances of File
-    this.cardBanks = cardBanks;
+    this.cardAccounts = cardAccounts;
   }
 
   // Validate if the file is of a valid type (Excel or CSV)
@@ -218,7 +219,7 @@ class FileManager {
     }
 
     // Create a new File instance with a callback to removeFile
-    const newFile = new File(file, this.cardBanks, (fileToRemove) => {
+    const newFile = new File(file, this.cardAccounts, (fileToRemove) => {
       this.removeFile(fileToRemove);
     });
     this.uploadedFiles.push(newFile);
@@ -255,42 +256,36 @@ class FileManager {
 
   async uploadFiles() {
     const csrftoken = getCSRFToken();
-    for (let fileObj of this.uploadedFiles.slice()) {
-      fileObj.setProcessing();
 
-      const formData = new FormData();
+    const formData = new FormData();
+    console.log("Preparing upload:");
+
+    for (let fileObj of this.uploadedFiles) {
       formData.append("files", fileObj.file);
-      formData.append("card_banks", fileObj.dropdown.value);
-      formData.append("file_names", fileObj.name);
-      formData.append(
-        "card_names",
-        fileObj.dropdown.options[fileObj.dropdown.selectedIndex].textContent
-      );
-
-      try {
-        const response = await fetch("/api/expenses/import-statements/", {
-          method: "POST",
-          body: formData,
-          headers: {
-            "X-CSRFToken": csrftoken,
-          },
-          credentials: "include",
-        });
-
-        if (!response.ok) {
-          throw new Error(
-            `Failed to upload ${fileObj.name}: ${response.status}`
-          );
-        }
-
-        // Remove from UI and memory after successful upload
-        this.removeFile(fileObj);
-      } catch (error) {
-        console.error("Upload failed for file:", fileObj.name, error);
-        fileObj.clearProcessing(); // Let user retry or remove
-        alert(`Failed to upload ${fileObj.name}. Please try again.`);
-      }
+      formData.append("card_accounts", fileObj.dropdown.value);
     }
+
+    try {
+      const response = await fetch("/api/expenses/import-statements/", {
+        method: "POST",
+        body: formData,
+        headers: {
+          "X-CSRFToken": csrftoken,
+        },
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("Server error:", error);
+        throw new Error(`Failed to upload. Status: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Upload failed", error);
+      alert("Upload failed. Please try again.");
+    }
+
+    // Only show this message if all files were uploaded successfully
     alert("All files have been uploaded successfully!");
   }
 }

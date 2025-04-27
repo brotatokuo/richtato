@@ -188,6 +188,7 @@ class ImportStatementsView(APIView):
         """
         Import statements and categorize transactions.
         """
+
         # Assuming the request contains a file with transactions
         def ensure_list(obj):
             if obj is None:
@@ -198,25 +199,17 @@ class ImportStatementsView(APIView):
 
         # Usage
         files = ensure_list(request.FILES.getlist("files"))  # For files specifically
-        card_banks = ensure_list(request.data.get("card_banks"))
-        file_names = ensure_list(request.data.get("file_names"))
-
-        if not files or not card_banks or not file_names:
-            return Response(
-                {"error": "Files, card banks, and file names are required."}, status=400
-            )
-
-        logger.debug(f"Files: {files}")
-        logger.debug(f"Card banks: {card_banks}")
-        logger.debug(f"File names: {file_names}")
+        card_accounts = ensure_list(request.data.get("card_accounts"))
 
         # Process the files and categorize transactions
-        for file, card_bank, file_name in zip(files, card_banks, file_names):
-            logger.debug(f"Processing file: {file_name} for card bank: {card_bank}")
+        for file, card_account in zip(files, card_accounts):
+            card_bank = CardAccount.objects.get(id=card_account, user=request.user).bank
+            card_name = CardAccount.objects.get(id=card_account, user=request.user).name
+            logger.debug(f"Card bank: {card_bank}")
             card_statement = CardStatement.create_from_file(
                 request.user,
                 card_bank,
-                file_name,
+                card_name,
                 file,
             )
             logger.debug(card_statement.formatted_df)
