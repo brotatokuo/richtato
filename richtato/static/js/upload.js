@@ -280,12 +280,15 @@ class FileManager {
         console.error("Server error:", error);
         throw new Error(`Failed to upload. Status: ${response.status}`);
       }
+      if (response.status === 200) {
+        this.uploadedFiles.forEach((fileObj) => fileObj.clearProcessing());
+        this.uploadedFiles = []; // Clear the uploaded files
+        this.filesContainer.innerHTML = ""; // Clear the UI
+        this.updateStatisticsVisibility(); // Update visibility
+      }
     } catch (error) {
       console.error("Upload failed", error);
       alert("Upload failed. Please try again.");
     }
-
-    // Only show this message if all files were uploaded successfully
-    alert("All files have been uploaded successfully!");
   }
 }
