@@ -203,13 +203,12 @@ class ImportStatementsView(APIView):
 
         # Process the files and categorize transactions
         for file, card_account in zip(files, card_accounts):
-            card_bank = CardAccount.objects.get(id=card_account, user=request.user).bank
-            card_name = CardAccount.objects.get(id=card_account, user=request.user).name
-            logger.debug(f"Card bank: {card_bank}")
+            card = CardAccount.objects.get(id=card_account, user=request.user)
+            logger.debug(f"Card: {card}")
             card_statement = CardStatement.create_from_file(
                 request.user,
-                card_bank,
-                card_name,
+                card.bank,
+                card.name,
                 file,
             )
             logger.debug(card_statement.formatted_df)
