@@ -131,7 +131,7 @@ def table(request: HttpRequest):
 
 
 def timeseries_graph(request: HttpRequest):
-    return render(request, "timeseries_graph.html")
+    return render(request, "graph.html")
 
 
 class CardBanksAPIView(APIView):
