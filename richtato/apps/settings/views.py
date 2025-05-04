@@ -39,23 +39,31 @@ class CardAccountAPIView(APIView):
     def get(self, request):
         cards = CardAccount.objects.filter(user=request.user).order_by("name")
 
-        data = []
+        rows = []
         for card in cards:
-            data.append(
+            rows.append(
                 {
                     "id": card.id,
                     "name": card.name,
                     "bank": card.card_bank_title,
                 }
             )
-        logger.debug(f"Get Cards: {data}")
+        data = {
+            "columns": [
+                {"field": "id", "title": "ID"},
+                {"field": "name", "title": "Name"},
+                {"field": "bank", "title": "Bank"},
+            ],
+            "rows": rows,
+        }
+
         return Response(data)
 
     def post(self, request):
         data = request.data.copy()
-        data["account_name"] = data.get("Account", None)
-        serializer = CardAccountSerializer(data=data)
         logger.debug(f"Post request data: {data}")
+        data["account_name"] = data.get("Name", None)
+        serializer = CardAccountSerializer(data=data)
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)

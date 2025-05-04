@@ -48,12 +48,18 @@ class RichTable {
   }
 
   computeEditableColumns() {
+    console.log("Input Editable columns:", this.editableColumnTitles);
+    console.log("Columns:", this.columns);
     const editableSet = new Set(
-      this.editableColumnTitles.map((col) => col.toLowerCase())
+      this.editableColumnTitles.map((col) => col.trim().toLowerCase())
     );
-    this.editableColumns = this.columns.filter((col) =>
-      editableSet.has(col.title.toLowerCase())
-    );
+
+    this.editableColumns = this.columns
+      .filter((col) => editableSet.has(col.title.trim().toLowerCase()))
+      .map((col) => ({
+        title: col.title,
+        field: col.data,
+      }));
   }
 
   async fetchData() {
@@ -66,14 +72,13 @@ class RichTable {
       console.log("Fetching data from:", endpoint);
       const response = await fetch(endpoint);
       const data = await response.json();
-      this.data = data;
+      this.data = data.rows || [];
 
-      if (this.data.length > 0) {
-        this.columns = Object.keys(this.data[0]).map((key) => ({
-          title: key.charAt(0).toUpperCase() + key.slice(1),
-          data: key,
-        }));
-      }
+      // Always set columns (even if rows are empty)
+      this.columns = (data.columns || []).map((col) => ({
+        title: col.title,
+        data: col.field,
+      }));
 
       this.renderTable();
     } catch (error) {
@@ -196,6 +201,7 @@ class RichTable {
   }
 
   openAddModal(onSubmit) {
+    console.log("Opening add modal with columns:", this.editableColumns);
     this.showEntryModal({
       title: "Add New Entry",
       columns: this.editableColumns,
@@ -228,6 +234,7 @@ class RichTable {
   }
 
   async submitAddEntry(formData) {
+    console.log("Submitting form data:", formData);
     const response = await fetch(this.apiEndpoint, {
       method: "POST",
       headers: {
@@ -373,25 +380,28 @@ class RichForm {
 
   generate() {
     console.log("Form selectFields:", this.selectFields);
+    console.log("Form columns:", this.columns);
     const form = $('<form class="custom-modal-form"></form>');
 
     this.columns.forEach((col) => {
       const fieldGroup = $('<div class="form-group"></div>');
-      fieldGroup.append(`<label for="${col.data}">${col.title}</label>`);
+      // Use the field property for the field name
+      const fieldName = col.field;
 
-      const value = this.initialData[col.data] ?? "";
+      fieldGroup.append(`<label for="${fieldName}">${col.title}</label>`);
+
+      // Check both the field name and data property in initialData
+      const value = this.initialData[fieldName] ?? "";
       const input = this.createInput(col, value);
       fieldGroup.append(input);
 
       form.append(fieldGroup);
 
-      if (
-        (col.data === "description") &
-        (this.formTableID === "#expenseTable")
-      ) {
+      // Special handling for specific fields
+      if ((fieldName === "description") && (this.formTableID === "#expenseTable")) {
         input.on("blur", () => this.categorizeTransaction());
       }
-      if (col.data === "amount") {
+      if (fieldName === "amount") {
         input.on("blur", () => this.computeAmount());
       }
     });
@@ -401,21 +411,27 @@ class RichForm {
   }
 
   createInput(col, value) {
-    const key = col.data.toLowerCase();
+    const fieldName = col.field;
+    const key = fieldName.toLowerCase();
 
+    // Handle select fields from the selectFields object
     if (this.selectFields[key]) {
       const select = $(
-        `<select id="${col.data}" name="${col.data}" class="form-control"></select>`
+        `<select id="${fieldName}" name="${fieldName}" class="form-control"></select>`
       );
       const options = this.selectFields[key];
 
+      // Match by value or label
       const match = options.find(
-        (opt) => opt.label.toLowerCase() === value?.toLowerCase()
+        (opt) => opt.label.toLowerCase() === String(value).toLowerCase() ||
+          opt.value === value
       );
+
       if (match) {
         value = match.value;
       }
 
+      // Add options to the select element
       options.forEach((opt) => {
         const selected = opt.value === value ? "selected" : "";
         select.append(
@@ -426,6 +442,7 @@ class RichForm {
       return select;
     }
 
+    // Handle date fields
     let type = "text";
     if (col.title.toLowerCase() === "date") {
       type = "date";
@@ -433,21 +450,38 @@ class RichForm {
         const today = new Date();
         value = today.toISOString().split("T")[0];
         console.log("Setting date to today:", value);
-      } else {
-        value = new Date(value).toISOString().split("T")[0];
+      } else if (value) {
+        try {
+          value = new Date(value).toISOString().split("T")[0];
+        } catch (e) {
+          console.error("Invalid date value:", value);
+          value = "";
+        }
       }
     }
 
+    // Prepare the value for HTML insertion by escaping it
+    const safeValue = String(value).replace(/"/g, "&quot;");
+
     return $(
-      `<input type="${type}" id="${col.data}" name="${col.data}" class="form-control" value="${value}" />`
+      `<input type="${type}" id="${fieldName}" name="${fieldName}" class="form-control" value="${safeValue}" />`
     );
   }
 
   getData() {
     const data = {};
     this.columns.forEach((col) => {
-      data[col.data] = this.form.find(`#${col.data}`).val();
+      // We use the field property for form element IDs
+      const fieldName = col.field;
+
+      // Find the form element and get its value
+      const element = this.form.find(`#${fieldName}`);
+      if (element.length > 0) {
+        // Store the value using the field property as the key
+        data[fieldName] = element.val();
+      }
     });
+    console.log("Collected form data:", data);
     return data;
   }
 
@@ -460,7 +494,7 @@ class RichForm {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-CSRFToken": getCSRFToken(), // Add if CSRF token is required
+          "X-CSRFToken": getCSRFToken(),
         },
         body: JSON.stringify({ description }),
       });
@@ -468,6 +502,7 @@ class RichForm {
       const result = await response.json();
       console.log("Categorization result:", result);
       if (result.category) {
+        // Use lowercase 'category' to match the field name
         const $categoryField = this.form.find("#Category");
         console.log(
           "Found category field:",
@@ -515,7 +550,7 @@ class RichForm {
     }
 
     balance = parseFloat(balance).toFixed(2);
-    amountInput.val(balance); // ✅ Update the form field
+    amountInput.val(balance);
     console.log("Updated amount field with:", balance);
   }
 }

@@ -36,9 +36,9 @@ class AccountAPIView(BaseAPIView):
             .values("id", "name", "type", "entity", "balance", "date")
         )
 
-        data = []
+        rows = []
         for account in accounts:
-            data.append(
+            rows.append(
                 {
                     **account,
                     "type": account["type"].title(),
@@ -47,7 +47,17 @@ class AccountAPIView(BaseAPIView):
                     "date": format_date(account["date"]) if account["date"] else None,
                 }
             )
-
+        data = {
+            "columns": [
+                {"field": "id", "title": "ID"},
+                {"field": "name", "title": "Name"},
+                {"field": "type", "title": "Type"},
+                {"field": "entity", "title": "Entity"},
+                {"field": "balance", "title": "Balance"},
+                {"field": "date", "title": "Date"},
+            ],
+            "rows": rows,
+        }
         return Response(data)
 
     def post(self, request):

@@ -68,8 +68,19 @@ class ExpenseAPIView(BaseAPIView):
         if limit is not None:
             logger.debug(f"Limit: {limit}")
             entries = entries[:limit]
-
-        return Response(entries)
+        
+        data = {
+            "columns": [
+                {"field": "id", "title": "ID"},
+                {"field": "date", "title": "Date"},
+                {"field": "description", "title": "Description"},
+                {"field": "amount", "title": "Amount"},
+                {"field": "Account", "title": "Account"},
+                {"field": "Category", "title": "Category"},
+            ],
+            "rows": entries,
+        }
+        return Response(data)
 
     def post(self, request):
         """
@@ -146,7 +157,7 @@ class ExpenseFieldChoicesView(APIView):
 
     def get(self, request):
         user_card_accounts = CardAccount.objects.filter(user=request.user)
-        user_categories = Category.objects.filter(user=request.user)
+        user_categories = Category.objects.filter()
         data = {
             "account": [
                 {"value": account.id, "label": account.name}
@@ -175,9 +186,9 @@ class CategorizeTransactionView(APIView):
         category = AI.categorize_transaction(request.user, description)
 
         cateogry_id = (
-            Category.objects.filter(user=request.user, name=category).first().id
+            Category.objects.filter(name=category).first().id
         )
-
+        logger.debug(f"Categorized as: {category}")
         return Response({"category": cateogry_id})
 
 

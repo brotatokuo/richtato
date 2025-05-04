@@ -1,7 +1,7 @@
 {% extends 'base.html' %} {% load static %}
 <!-- prettier-ignore-start -->
 {% block title %} Budget {%endblock %}
-<!-- prettier-ignore-start -->
+<!-- prettier-ignore-end -->
 {% block content %}
 
 <div class="main-content">
@@ -14,7 +14,9 @@
                 <div class="box-title">
                     <select class="table-option" name="year-select" id="year">
                         {% for year in years %}
-                        <option value="{{ year }}" {% if year==current_year %}selected{% endif %}>
+                        <!-- prettier-ignore-start -->
+                        <option value="{{ year }}" {% if year == current_year %}selected{% endif %}>
+                        <!-- prettier-ignore-end -->
                             {{ year }}
                         </option>
                         {% endfor %}
@@ -22,7 +24,9 @@
 
                     <select class="table-option" name="month-select" id="month">
                         {% for month in months %}
-                        <option value="{{ month }}" {% if month==current_month %}selected{% endif %}>
+                        <!-- prettier-ignore-start -->
+                        <option value="{{ month }}" {% if month == current_month %}selected{% endif %}>
+                        <!-- prettier-ignore-end -->
                             {{ month }}
                         </option>
                         {% endfor %}

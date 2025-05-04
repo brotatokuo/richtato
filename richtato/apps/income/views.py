@@ -1,8 +1,6 @@
 import pytz
 from django.db.models import F
-from django.shortcuts import (
-    get_object_or_404,
-)
+from django.shortcuts import get_object_or_404
 from loguru import logger
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
@@ -61,7 +59,18 @@ class IncomeAPIView(BaseAPIView):
             logger.debug(f"Limit: {limit}")
             entries = entries[:limit]
 
-        return Response(entries)
+        data = {
+            "columns": [
+                {"field": "id", "title": "ID"},
+                {"field": "date", "title": "Date"},
+                {"field": "Account", "title": "Account"},
+                {"field": "description", "title": "Description"},
+                {"field": "amount", "title": "Amount"},
+            ],
+            "rows": entries,
+        }
+
+        return Response(data)
 
     def post(self, request):
         """
