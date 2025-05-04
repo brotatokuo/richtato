@@ -14,15 +14,15 @@
                 <div class="box-title">
                     <select class="table-option" name="year-select" id="year">
                         {% for year in years %}
-                            <option value="{{ year }}" {% if year == current_year %}selected{% endif %}>
-                                {{ year }}
-                            </option>
+                        <option value="{{ year }}" {% if year==current_year %}selected{% endif %}>
+                            {{ year }}
+                        </option>
                         {% endfor %}
                     </select>
 
                     <select class="table-option" name="month-select" id="month">
                         {% for month in months %}
-                        <option value="{{ month }}" {% if month == current_month %}selected{% endif %}>
+                        <option value="{{ month }}" {% if month==current_month %}selected{% endif %}>
                             {{ month }}
                         </option>
                         {% endfor %}
@@ -36,6 +36,6 @@
     </div>
 </div>
 <!-- <script src="{% static 'js/core.js' %}"></script> -->
-<script src="{% static 'js/budget_renderer.js' %}"></script>
+<script src="{% static 'js/budgetRenderer.js' %}"></script>
 <script src="{% static 'js/budget.js' %}"></script>
 {% endblock %}
