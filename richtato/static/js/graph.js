@@ -1,4 +1,4 @@
 document.addEventListener("DOMContentLoaded", async () => {
-    const timeseriesGraph = new TimeseriesGraph('lineChart', '/api/timeseries-data/');
+    const timeseriesGraph = new TimeseriesGraph('cashFlowLineChart', '/api/timeseries-data/');
     timeseriesGraph.init();
 });

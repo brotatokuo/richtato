@@ -18,5 +18,6 @@ urlpatterns = [
     path("account-settings/", views.account_settings, name="account_settings"),
     path("table/", views.table, name="table"),
     path("timeseries-graph/", views.timeseries_graph, name="timeseries_graph"),
+    path("assets/", views.assets, name="assets"),
     path("api/timeseries-data/", views.CombinedGraphAPIView.as_view()),
 ]

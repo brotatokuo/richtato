@@ -69,6 +69,10 @@ def dashboard(request: HttpRequest) -> HttpResponse:
 def get_user_id(request: HttpRequest):
     return JsonResponse({"userID": request.user.pk})
 
+def assets(request: HttpRequest):
+    assets = Account.objects.filter(user=request.user).values("id", "name")
+    logger.debug(f"Assets for user {request.user}: {assets}")
+    return render(request, "assets.html", {"assets": assets})
 
 def friends(request: HttpRequest):
     return render(request, "friends.html")
