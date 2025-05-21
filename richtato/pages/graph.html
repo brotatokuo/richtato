@@ -23,20 +23,20 @@
 
     <div class="box">
       <h2>Sankey By Account</h2>
-      <div class="general-info-section2">
+      <div class="general-info-section2" id="sankey-account">
         {{ sankey_by_account|safe }}
       </div>
     </div>
 
     <div class="box">
       <h2>Sankey By Category</h2>
-      <div class="general-info-section2">
+      <div class="general-info-section2" id="sankey-category">
         {{ sankey_by_category|safe }}
       </div>
     </div>
   </div>
 </div>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
-  <script src="{% static 'js/timeseriesGraph.js' %}"></script>
-  <script src="{% static 'js/graph.js' %}"></script>
-  {% endblock %}
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+<script src="{% static 'js/timeseriesGraph.js' %}"></script>
+<script src="{% static 'js/graph.js' %}"></script>
+{% endblock %}

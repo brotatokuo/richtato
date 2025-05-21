@@ -149,7 +149,7 @@ def configure_database_for_stage(deploy_stage: str) -> dict:
                 db_url
             ), f"Missing {PG_DB_URL} environment variable for {deploy_stage}"
             tmpPostgres = urlparse(db_url)
-            db_name = tmpPostgres.path.lstrip("/")
+            db_name = tmpPostgres.path.replace("/", "")
             return {
                 "default": {
                     "ENGINE": "django.db.backends.postgresql",

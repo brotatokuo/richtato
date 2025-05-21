@@ -2,7 +2,6 @@
 import os
 from datetime import datetime
 
-import plotly.io as pio
 import pytz
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -22,7 +21,11 @@ from richtato.apps.account.models import (
     supported_asset_accounts,
 )
 from richtato.apps.expense.models import Expense
-from richtato.apps.expense.utils import sankey_by_account, sankey_by_category
+from richtato.apps.expense.utils import (
+    convert_plotly_fig_to_html,
+    sankey_by_account,
+    sankey_by_category,
+)
 from richtato.apps.income.models import Income
 from richtato.apps.richtato_user.models import (
     CardAccount,
@@ -143,13 +146,9 @@ def timeseries_graph(request: HttpRequest):
     pg_client = PostgresClient()
     expense_df = pg_client.get_expense_df(request.user.pk)
     sankey_by_account_fig = sankey_by_account(expense_df)
-    sankey_by_account_html = pio.to_html(
-        sankey_by_account_fig, full_html=False, include_plotlyjs="cdn"
-    )
+    sankey_by_account_html = convert_plotly_fig_to_html(sankey_by_account_fig)
     sankey_by_category_fig = sankey_by_category(expense_df)
-    sankey_by_category_html = pio.to_html(
-        sankey_by_category_fig, full_html=False, include_plotlyjs="cdn"
-    )
+    sankey_by_category_html = convert_plotly_fig_to_html(sankey_by_category_fig)
     return render(
         request,
         "graph.html",
