@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from richtato.utilities.tools import format_currency, format_date
 from richtato.views import BaseAPIView
 
-from .models import Account, account_types, supported_asset_accounts
+from .models import Account, AccountTransaction, account_types, supported_asset_accounts
 from .serializers import AccountSerializer
 
 
@@ -100,6 +100,31 @@ class AccountFieldChoicesAPIView(APIView):
             "entity": [
                 {"value": value, "label": label}
                 for value, label in supported_asset_accounts
+            ],
+        }
+        return Response(data)
+
+
+class AccountTransactionsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        account = get_object_or_404(Account, pk=pk, user=request.user)
+        transactions = AccountTransaction.objects.filter(account=account).order_by("-date")
+        data = {
+            "columns": [
+                {"field": "id", "title": "ID"},
+                {"field": "date", "title": "Date"},
+                {"field": "amount", "title": "Amount"},
+                {"field": "description", "title": "Description"},
+            ],
+            "rows": [
+                {
+                    "id": transaction.id,
+                    "date": format_date(transaction.date),
+                    "amount": format_currency(transaction.amount),
+                }
+                for transaction in transactions
             ],
         }
         return Response(data)
