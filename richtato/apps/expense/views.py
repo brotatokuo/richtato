@@ -87,7 +87,14 @@ class ExpenseAPIView(BaseAPIView):
         Create a new expense entry.
         """
         logger.debug(f"Request data: {request.data}")
-        serializer = ExpenseSerializer(data=request.data)
+        #HACK
+        modified_data = request.data.copy()
+        modified_data["account_name"] = modified_data.pop("Account", None)
+        modified_data["category"] = modified_data.pop("Category", None)
+        modified_data["user"] = request.user.id
+        logger.debug(f"Modified data: {modified_data}")
+        
+        serializer = ExpenseSerializer(data=modified_data)
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
