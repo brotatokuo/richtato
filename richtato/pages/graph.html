@@ -9,22 +9,33 @@
   </div>
 
   <div class="main-content-boxes wide">
-
     <div class="box">
       <div class="general-info-section2">
         <canvas class="line-chart" id="cashFlowLineChart"></canvas>
       </div>
     </div>
-  </div>
 
-  <div class="main-content-boxes wide">
-    <div class="box">
+    <!-- <div class="box">
       <div class="general-info-section2">
         <canvas class="line-chart" id="assetsLineChart"></canvas>
       </div>
+    </div> -->
+
+    <div class="box">
+      <h2>Sankey By Account</h2>
+      <div class="general-info-section2">
+        {{ sankey_by_account|safe }}
+      </div>
+    </div>
+
+    <div class="box">
+      <h2>Sankey By Category</h2>
+      <div class="general-info-section2">
+        {{ sankey_by_category|safe }}
+      </div>
     </div>
   </div>
-
+</div>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
   <script src="{% static 'js/timeseriesGraph.js' %}"></script>
   <script src="{% static 'js/graph.js' %}"></script>

@@ -2,6 +2,7 @@
 import os
 from datetime import datetime
 
+import plotly.io as pio
 import pytz
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -21,6 +22,7 @@ from richtato.apps.account.models import (
     supported_asset_accounts,
 )
 from richtato.apps.expense.models import Expense
+from richtato.apps.expense.utils import sankey_by_account, sankey_by_category
 from richtato.apps.income.models import Income
 from richtato.apps.richtato_user.models import (
     CardAccount,
@@ -29,6 +31,7 @@ from richtato.apps.richtato_user.models import (
     supported_card_banks,
 )
 from richtato.apps.richtato_user.utils import _get_line_graph_data_by_month
+from richtato.utilities.postgres.pg_client import PostgresClient
 from richtato.utilities.tools import format_currency
 
 pst = pytz.timezone("US/Pacific")
@@ -69,10 +72,12 @@ def dashboard(request: HttpRequest) -> HttpResponse:
 def get_user_id(request: HttpRequest):
     return JsonResponse({"userID": request.user.pk})
 
+
 def assets(request: HttpRequest):
     assets = Account.objects.filter(user=request.user).values("id", "name")
     logger.debug(f"Assets for user {request.user}: {assets}")
     return render(request, "assets.html", {"assets": assets})
+
 
 def friends(request: HttpRequest):
     return render(request, "friends.html")
@@ -135,7 +140,24 @@ def table(request: HttpRequest):
 
 
 def timeseries_graph(request: HttpRequest):
-    return render(request, "graph.html")
+    pg_client = PostgresClient()
+    expense_df = pg_client.get_expense_df(request.user.pk)
+    sankey_by_account_fig = sankey_by_account(expense_df)
+    sankey_by_account_html = pio.to_html(
+        sankey_by_account_fig, full_html=False, include_plotlyjs="cdn"
+    )
+    sankey_by_category_fig = sankey_by_category(expense_df)
+    sankey_by_category_html = pio.to_html(
+        sankey_by_category_fig, full_html=False, include_plotlyjs="cdn"
+    )
+    return render(
+        request,
+        "graph.html",
+        {
+            "sankey_by_account": sankey_by_account_html,
+            "sankey_by_category": sankey_by_category_html,
+        },
+    )
 
 
 class CardBanksAPIView(APIView):
