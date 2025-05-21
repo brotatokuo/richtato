@@ -4,7 +4,7 @@ import plotly.io as pio
 
 
 class SankeyDiagramBuilder:
-    def __init__(self, df: pd.DataFrame, group_column: str, title: str):
+    def __init__(self, df: pd.DataFrame, group_column: str, title: str | None = None):
         self.df = df
         self.group_column = group_column
         self.title = title
@@ -65,15 +65,11 @@ class SankeyDiagramBuilder:
 
 
 def sankey_by_account(df) -> go.Figure:
-    return SankeyDiagramBuilder(
-        df, group_column="account_name", title="Expenses split by Account Name"
-    ).build()
+    return SankeyDiagramBuilder(df, group_column="account_name").build()
 
 
 def sankey_by_category(df) -> go.Figure:
-    return SankeyDiagramBuilder(
-        df, group_column="category_name", title="Expenses split by Category"
-    ).build()
+    return SankeyDiagramBuilder(df, group_column="category_name").build()
 
 
 def convert_plotly_fig_to_html(fig) -> str:
