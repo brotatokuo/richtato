@@ -33,7 +33,7 @@
         </div>
       </div>
       <div class="general-info-section2">
-        <select id="accountDropdown">
+        <select id="accountDropdown" class="table-option">
           <option value="">All</option>
           {% for asset in assets %}
           <option value="{{ asset.id }}">{{ asset.name }}</option>
