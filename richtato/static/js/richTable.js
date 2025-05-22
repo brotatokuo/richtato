@@ -34,7 +34,6 @@ class RichTable {
           defaultContent: "",
         },
       ],
-      order: [[1, "asc"]],
       ...config,
     };
     this.instance = null;
@@ -400,7 +399,7 @@ class RichForm {
       form.append(fieldGroup);
 
       // Special handling for specific fields
-      if ((fieldName === "description") && (this.formTableID === "#expenseTable")) {
+      if (fieldName === "description" && this.formTableID === "#expenseTable") {
         input.on("blur", () => this.categorizeTransaction());
       }
       if (fieldName === "amount") {
@@ -425,7 +424,8 @@ class RichForm {
 
       // Match by value or label
       const match = options.find(
-        (opt) => opt.label.toLowerCase() === String(value).toLowerCase() ||
+        (opt) =>
+          opt.label.toLowerCase() === String(value).toLowerCase() ||
           opt.value === value
       );
 
