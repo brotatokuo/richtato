@@ -137,19 +137,26 @@ class AccountDetailAPIView(APIView):
 
     def get(self, request, pk=None):
         user = request.user
+        limit_param = request.GET.get("limit", None)
 
-        # If account ID is provided, filter by it
+        try:
+            limit = int(limit_param) if limit_param is not None else None
+        except ValueError:
+            return Response({"error": "Invalid limit value"}, status=400)
+
         if pk:
             account = get_object_or_404(Account, pk=pk, user=user)
             transactions = AccountTransaction.objects.filter(account=account).order_by(
                 "-date"
             )
         else:
-            # No account ID → return all user’s transactions
             transactions = AccountTransaction.objects.filter(
                 account__user=user
             ).order_by("-date")
 
+        if limit is not None:
+            transactions = transactions[:limit]
+            
         data = {
             "columns": [
                 {"field": "id", "title": "ID"},

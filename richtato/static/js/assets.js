@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
             "#detailAssetsTable",
             endpoint,
             ["Date", "Amount", "Account"],
-            5
+            10
         );
     }
 });
