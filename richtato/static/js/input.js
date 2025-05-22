@@ -41,13 +41,19 @@ document.addEventListener("DOMContentLoaded", () => {
     "#expenseTable",
     "/api/expenses/",
     ["date", "description", "amount", "account", "category"],
-    5
+    5,
+    {},
+    ["id"],
+    () => expenseGraph.init()
   );
 
   const incomeTable = new RichTable(
     "#incomeTable",
     "/api/incomes/",
     ["date", "description", "amount", "account"],
-    5
+    5,
+    {},
+    ["id"],
+    () => incomeGraph.init()
   );
 });

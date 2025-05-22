@@ -5,7 +5,8 @@ class RichTable {
     editableColumnTitles = [],
     queryLimit = null,
     config = {},
-    hiddenColumns = ["id"]
+    hiddenColumns = ["id"],
+    refreshCallback = null
   ) {
     this.tableId = tableId;
     this.apiEndpoint = apiEndpoint;
@@ -14,6 +15,7 @@ class RichTable {
     this.selectFields = {};
     this.fetchSelectFields();
     this.hiddenColumns = hiddenColumns;
+    this.refreshCallback = refreshCallback;
 
     this.config = {
       paging: false,
@@ -188,11 +190,12 @@ class RichTable {
       },
       {
         text: "Delete",
-        action: () => {
+        action: async () => {
           const selectedRow = this.instance.row({ selected: true });
           const rowData = selectedRow.data();
           if (rowData) {
-            this.handleDeleteEntry(rowData);
+            await this.handleDeleteEntry(rowData);
+            await this.fetchData(); // Wait until deletion completes
           } else {
             alert("Please select a row to delete.");
           }
@@ -210,7 +213,7 @@ class RichTable {
       onSubmit: async (formData) => {
         try {
           const added = await this.submitAddEntry(formData);
-          this.fetchData(); // Optional: or update UI immediately
+          this.fetchData();
           onSubmit?.(added);
         } catch (error) {
           alert(error.message);
@@ -250,58 +253,49 @@ class RichTable {
       throw new Error(`Failed to add entry: ${error}`);
     }
 
-    return await response.json();
+    const result = await response.json();
+    await this.fetchData();
+    console.log("Callack after adding:", this.refreshCallback);
+    this.refreshCallback?.();
+    return result;
   }
 
   async submitEditEntry(id, updatedData) {
-    try {
-      const response = await fetch(`${this.apiEndpoint}${id}/`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": getCSRFToken(),
-        },
-        body: JSON.stringify(updatedData),
-      });
+    const response = await fetch(`${this.apiEndpoint}${id}/`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCSRFToken(),
+      },
+      body: JSON.stringify(updatedData),
+    });
 
-      if (!response.ok) {
-        throw new Error("Failed to update entry");
-      }
-
-      const updated = await response.json();
-      this.fetchData();
-    } catch (err) {
-      console.error("Edit error:", err);
+    if (!response.ok) {
+      throw new Error("Failed to update entry");
     }
+
+    await response.json();
+    await this.fetchData();
+    this.refreshCallback?.();
   }
 
-  handleDeleteEntry() {
-    const selectedRow = this.instance.row({ selected: true });
-    const rowData = selectedRow.data();
-
-    if (!rowData) {
-      alert("Select a row to delete.");
-      return;
-    }
-
+  async handleDeleteEntry(rowData) {
     if (
       confirm("Deleting this will delete all associated data. Are you sure?")
     ) {
-      console.log("Deleting row with ID:", rowData.id);
-      fetch(`${this.apiEndpoint}${rowData.id}/`, {
+      const res = await fetch(`${this.apiEndpoint}${rowData.id}/`, {
         method: "DELETE",
         headers: {
           "X-CSRFToken": getCSRFToken(),
         },
-      })
-        .then((res) => {
-          if (!res.ok) {
-            throw new Error("Failed to delete entry");
-          }
-          // Success - remove from table
-          selectedRow.remove().draw();
-        })
-        .catch((err) => console.error("Delete error:", err));
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to delete entry");
+      }
+
+      await this.fetchData();
+      this.refreshCallback?.();
     }
   }
 

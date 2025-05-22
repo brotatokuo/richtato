@@ -183,6 +183,14 @@ class SimpleTimeseriesGraph {
   async init() {
     try {
       const chartData = await this.fetchData();
+
+      // Destroy existing chart if it exists
+      if (this.chart) {
+        this.chart.destroy();
+        this.chart = null;
+      }
+
+      // Render new chart with fetched data
       this.renderChart(chartData);
     } catch (error) {
       console.error("Error initializing chart:", error);

@@ -504,6 +504,7 @@ main .main-content .title::after {
   -ms-border-radius: var(--first-radius);
   -o-border-radius: var(--first-radius);
   overflow: hidden;
+  min-height: 300px;
 }
 
 .main-content-boxes .box.first-box {
