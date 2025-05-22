@@ -77,7 +77,8 @@ def get_user_id(request: HttpRequest):
 
 
 def assets(request: HttpRequest):
-    assets = Account.objects.filter(user=request.user).values("id", "name")
+    logger.debug(f"User {request.user} is authenticated.")
+    assets = Account.objects.filter(user=request.user)
     logger.debug(f"Assets for user {request.user}: {assets}")
     return render(request, "assets.html", {"assets": assets})
 

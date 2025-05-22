@@ -110,7 +110,9 @@ class AccountTransactionsAPIView(APIView):
 
     def get(self, request, pk):
         account = get_object_or_404(Account, pk=pk, user=request.user)
-        transactions = AccountTransaction.objects.filter(account=account).order_by("-date")
+        transactions = AccountTransaction.objects.filter(account=account).order_by(
+            "-date"
+        )
         data = {
             "columns": [
                 {"field": "id", "title": "ID"},
@@ -125,6 +127,63 @@ class AccountTransactionsAPIView(APIView):
                     "amount": format_currency(transaction.amount),
                 }
                 for transaction in transactions
+            ],
+        }
+        return Response(data)
+
+
+class AccountDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk=None):
+        user = request.user
+
+        # If account ID is provided, filter by it
+        if pk:
+            account = get_object_or_404(Account, pk=pk, user=user)
+            transactions = AccountTransaction.objects.filter(account=account).order_by(
+                "-date"
+            )
+        else:
+            # No account ID → return all user’s transactions
+            transactions = AccountTransaction.objects.filter(
+                account__user=user
+            ).order_by("-date")
+
+        data = {
+            "columns": [
+                {"field": "id", "title": "ID"},
+                {"field": "date", "title": "Date"},
+                {"field": "amount", "title": "Amount"},
+                {"field": "account", "title": "Account"},
+            ],
+            "rows": [
+                {
+                    "id": t.id,
+                    "date": format_date(t.date),
+                    "amount": format_currency(t.amount),
+                    "account": t.account.name,
+                }
+                for t in transactions
+            ],
+        }
+
+        return Response(data)
+
+
+class AccountDetailFieldChoicesAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        print("AccountDetailFieldChoicesAPIView")
+        data = {
+            "type": [
+                {"value": "checking", "label": "Checking"},
+                {"value": "savings", "label": "Savings"},
+            ],
+            "asset_entity_name": [
+                {"value": "bank", "label": "Bank"},
+                {"value": "investment", "label": "Investment"},
             ],
         }
         return Response(data)

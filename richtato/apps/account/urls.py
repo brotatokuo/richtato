@@ -1,6 +1,12 @@
 from django.urls import path
 
-from .views import AccountAPIView, AccountFieldChoicesAPIView, AccountTransactionsAPIView
+from .views import (
+    AccountAPIView,
+    AccountDetailAPIView,
+    AccountDetailFieldChoicesAPIView,
+    AccountFieldChoicesAPIView,
+    AccountTransactionsAPIView,
+)
 
 page_name = "accounts"
 urlpatterns = [
@@ -9,6 +15,13 @@ urlpatterns = [
     path(
         f"api/{page_name}/field-choices/", AccountFieldChoicesAPIView.as_view()
     ),  # GET
+    # For all accounts
+    path(f"api/{page_name}/details/", AccountDetailAPIView.as_view()),
+    path(
+        f"api/{page_name}/details/field-choices/",
+        AccountDetailFieldChoicesAPIView.as_view(),
+    ),
+    path(f"api/{page_name}/details/<int:pk>/", AccountDetailAPIView.as_view()),
     path(
         f"api/{page_name}/<int:pk>/transactions/", AccountTransactionsAPIView.as_view()
     ),  # GET, POST, PATCH, DELETE

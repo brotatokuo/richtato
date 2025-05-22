@@ -45,6 +45,7 @@ class RichTable {
     this.visibleColumns = this.columns.filter(
       (col) => !this.hiddenColumns.includes(col.data)
     );
+    console.log("Visible columns:", this.visibleColumns);
   }
 
   computeEditableColumns() {
@@ -79,7 +80,7 @@ class RichTable {
         title: col.title,
         data: col.field,
       }));
-
+      console.log("Fetched data:", this.data);
       this.renderTable();
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -92,6 +93,7 @@ class RichTable {
       if (!response.ok) throw new Error("Failed to fetch select field data");
 
       const data = await response.json();
+      console.log("Select field data:", data);
       this.selectFields = {};
 
       // Loop over the keys and build selectFields

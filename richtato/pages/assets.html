@@ -34,6 +34,7 @@
       </div>
       <div class="general-info-section2">
         <select id="accountDropdown">
+          <option value="">All</option>
           {% for asset in assets %}
           <option value="{{ asset.id }}">{{ asset.name }}</option>
           {% endfor %}
