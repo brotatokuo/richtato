@@ -50,11 +50,11 @@ class AccountAPIView(BaseAPIView):
         data = {
             "columns": [
                 {"field": "id", "title": "ID"},
+                {"field": "date", "title": "Date"},
                 {"field": "name", "title": "Name"},
                 {"field": "type", "title": "Type"},
                 {"field": "entity", "title": "Entity"},
                 {"field": "balance", "title": "Balance"},
-                {"field": "date", "title": "Date"},
             ],
             "rows": rows,
         }
@@ -156,7 +156,7 @@ class AccountDetailAPIView(APIView):
 
         if limit is not None:
             transactions = transactions[:limit]
-            
+
         data = {
             "columns": [
                 {"field": "id", "title": "ID"},
