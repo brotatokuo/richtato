@@ -20,18 +20,16 @@
         <canvas class="line-chart" id="assetsLineChart"></canvas>
       </div>
     </div> -->
-
-    <div class="box">
-      <h2>Expense Stream by Accout</h2>
-      <div class="general-info-section2" id="sankey-account">
-        {{ sankey_by_account|safe }}
-      </div>
-    </div>
-
     <div class="box">
       <h2>Expense Stream by Category</h2>
       <div class="general-info-section2" id="sankey-category">
         {{ sankey_by_category|safe }}
+      </div>
+    </div>
+    <div class="box">
+      <h2>Expense Stream by Account</h2>
+      <div class="general-info-section2" id="sankey-account">
+        {{ sankey_by_account|safe }}
       </div>
     </div>
   </div>

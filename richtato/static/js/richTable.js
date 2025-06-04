@@ -444,7 +444,7 @@ class RichForm {
       type = "date";
       if (!value) {
         const today = new Date();
-        value = today.toISOString().split("T")[0];
+        const value = today.toLocaleDateString("sv-SE"); // "YYYY-MM-DD" in local time
         console.log("Setting date to today:", value);
       } else if (value) {
         try {
