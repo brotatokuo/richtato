@@ -12,7 +12,7 @@ from richtato.utilities.tools import format_currency, format_date
 from richtato.views import BaseAPIView
 
 from .models import Account, AccountTransaction, account_types, supported_asset_accounts
-from .serializers import AccountSerializer
+from .serializers import AccountSerializer, AccountTransactionSerializer
 
 
 @authentication_classes([SessionAuthentication, BasicAuthentication])
@@ -177,12 +177,20 @@ class AccountDetailAPIView(APIView):
 
         return Response(data)
 
+    def post(self, request):
+        logger.debug(f"POST request data: {request.data}")
+        serializer = AccountTransactionSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class AccountDetailFieldChoicesAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        print("AccountDetailFieldChoicesAPIView")
+        user_accounts_dict = self._get_user_accounts(request.user)
         data = {
             "type": [
                 {"value": "checking", "label": "Checking"},
@@ -192,5 +200,10 @@ class AccountDetailFieldChoicesAPIView(APIView):
                 {"value": "bank", "label": "Bank"},
                 {"value": "investment", "label": "Investment"},
             ],
+            "account": user_accounts_dict,
         }
         return Response(data)
+
+    def _get_user_accounts(self, user) -> list[dict]:
+        user_accounts = Account.objects.filter(user=user).values("id", "name")
+        return [{"value": acc["id"], "label": acc["name"]} for acc in user_accounts]

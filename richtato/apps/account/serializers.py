@@ -25,3 +25,10 @@ class AccountSerializer(serializers.ModelSerializer):
             "history",
         ]
         read_only_fields = ["id", "latest_balance", "latest_balance_date", "user"]
+
+
+class AccountTransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AccountTransaction
+        fields = ["id", "account", "amount", "date"]
+        read_only_fields = ["id"]
