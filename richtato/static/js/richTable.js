@@ -442,11 +442,12 @@ class RichForm {
     let type = "text";
     if (col.title.toLowerCase() === "date") {
       type = "date";
+
       if (!value) {
         const today = new Date();
-        const value = today.toLocaleDateString("sv-SE"); // "YYYY-MM-DD" in local time
+        value = today.toISOString().split("T")[0]; // safer and more consistent format
         console.log("Setting date to today:", value);
-      } else if (value) {
+      } else {
         try {
           value = new Date(value).toISOString().split("T")[0];
         } catch (e) {
