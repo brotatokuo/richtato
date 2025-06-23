@@ -243,12 +243,38 @@ class CategoryView(APIView):
             logger.error(f"Category creation error: {serializer.errors}")
             return Response(serializer.errors, status=400)
 
+    def patch(self, request, pk):
+        try:
+            category = Category.objects.get(pk=pk, user=request.user)
+        except Category.DoesNotExist:
+            return Response({"error": "Category not found."}, status=404)
+
+        serializer = CategorySerializer(category, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            logger.error(f"Category update error: {serializer.errors}")
+            return Response(serializer.errors, status=400)
+
+    def delete(self, request, pk):
+        try:
+            category = Category.objects.get(pk=pk, user=request.user)
+            category.delete()
+            return Response(status=204)
+        except Category.DoesNotExist:
+            return Response({"error": "Category not found."}, status=404)
+
 
 class CategoryFieldChoicesAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         data = {
+            "name": [
+                {"value": value, "label": label}
+                for value, label in Category.supported_categories
+            ],
             "type": [
                 {"value": value, "label": label}
                 for value, label in Category.CATEGORY_TYPES
