@@ -82,7 +82,7 @@ class Category(models.Model):
         ("nonessential", "Non Essential"),
     ]
     supported_categories = [
-        (category.name.lower().replace(" ", "_").replace("/", "_"), category.name)
+        (category.name.replace(" ", "_").replace("/", "_"), category.name)
         for category in BaseCategory._registered_categories
     ]
 

@@ -33,6 +33,7 @@ from richtato.apps.richtato_user.models import (
     User,
     supported_card_banks,
 )
+from richtato.apps.richtato_user.serializers import CategorySerializer
 from richtato.apps.richtato_user.utils import _get_line_graph_data_by_month
 from richtato.utilities.postgres.pg_client import PostgresClient
 from richtato.utilities.tools import format_currency
@@ -205,6 +206,81 @@ class CombinedGraphAPIView(APIView):
 
         logger.debug(f"Combined chart data: {chart_data}")
         return Response(chart_data)
+
+
+class CategoryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request) -> Response:
+        categories = Category.objects.filter(user=request.user).values()
+        rows = []
+        for category in categories:
+            rows.append(
+                {
+                    **category,
+                    "name": category["name"],
+                    "type": category["type"],
+                    "budget": format_currency(category["budget"]),
+                }
+            )
+        data = {
+            "columns": [
+                {"field": "id", "title": "ID"},
+                {"field": "name", "title": "Name"},
+                {"field": "type", "title": "Type"},
+                {"field": "budget", "title": "Budget"},
+            ],
+            "rows": rows,
+        }
+        return Response(data)
+
+    def post(self, request):
+        serializer = CategorySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=201)
+        else:
+            logger.error(f"Category creation error: {serializer.errors}")
+            return Response(serializer.errors, status=400)
+
+    def patch(self, request, pk):
+        try:
+            category = Category.objects.get(pk=pk, user=request.user)
+        except Category.DoesNotExist:
+            return Response({"error": "Category not found."}, status=404)
+
+        serializer = CategorySerializer(category, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            logger.error(f"Category update error: {serializer.errors}")
+            return Response(serializer.errors, status=400)
+
+    def delete(self, request, pk):
+        try:
+            category = Category.objects.get(pk=pk, user=request.user)
+            category.delete()
+            return Response(status=204)
+        except Category.DoesNotExist:
+            return Response({"error": "Category not found."}, status=404)
+
+
+class CategoryFieldChoicesAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        data = {
+            "name": [
+                {"value": value, "label": label}
+                for value, label in Category.supported_categories
+            ],
+            "type": [
+                {"value": value, "label": label}
+                for value, label in Category.CATEGORY_TYPES
+            ],
+        }
+        return Response(data)
 
 
 class LoginView(View):
