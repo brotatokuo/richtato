@@ -250,11 +250,8 @@ class CategoryFieldChoicesAPIView(APIView):
     def get(self, request):
         data = {
             "type": [
-                {"value": value, "label": label} for value, label in account_types
-            ],
-            "entity": [
                 {"value": value, "label": label}
-                for value, label in supported_asset_accounts
+                for value, label in Category.CATEGORY_TYPES
             ],
         }
         return Response(data)
