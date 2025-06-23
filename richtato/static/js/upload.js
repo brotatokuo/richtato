@@ -90,8 +90,8 @@ class File {
     const dropdown = document.createElement("select");
     dropdown.classList.add("card-account-dropdown");
 
-    console.log("Card accounts:", this.cardAccounts);
-    this.cardAccounts.forEach(({ id, name }) => {
+    console.log("Card accounts:", this.cardAccounts.rows);
+    this.cardAccounts.rows.forEach(({ id, name }) => {
       const option = document.createElement("option");
       option.value = id;
       option.textContent = name;
