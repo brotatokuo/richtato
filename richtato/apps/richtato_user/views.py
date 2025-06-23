@@ -212,15 +212,15 @@ class CategoryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request) -> Response:
-        categories = Category.objects.filter(user=request.user).values()
+        categories = Category.objects.filter(user=request.user)
         rows = []
         for category in categories:
             rows.append(
                 {
-                    **category,
-                    "name": category["name"],
-                    "type": category["type"],
-                    "budget": format_currency(category["budget"]),
+                    "id": category.id,
+                    "name": category.name,
+                    "type": category.get_type_display(),
+                    "budget": format_currency(category.budget),
                 }
             )
         data = {
@@ -235,7 +235,10 @@ class CategoryView(APIView):
         return Response(data)
 
     def post(self, request):
-        serializer = CategorySerializer(data=request.data)
+        data = request.data
+        data["budget"] = float(data["budget"].replace("$", ""))
+        logger.debug(f"Category creation data: {data}")
+        serializer = CategorySerializer(data=data)
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status=201)
@@ -248,8 +251,10 @@ class CategoryView(APIView):
             category = Category.objects.get(pk=pk, user=request.user)
         except Category.DoesNotExist:
             return Response({"error": "Category not found."}, status=404)
-
-        serializer = CategorySerializer(category, data=request.data, partial=True)
+        data = request.data
+        data["budget"] = float(data["budget"].replace("$", ""))
+        logger.debug(f"Category edit data: {data}")
+        serializer = CategorySerializer(category, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
