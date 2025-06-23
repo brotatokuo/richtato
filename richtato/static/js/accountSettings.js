@@ -9,4 +9,10 @@ document.addEventListener("DOMContentLoaded", () => {
     "/api/accounts/",
     ["Name", "Type", "Entity"]
   );
+
+  let categoryTable = new RichTable(
+    "#settings-categories-table",
+    "/api/categories/",
+    ["Name", "Budget", "Type"]
+  );
 });

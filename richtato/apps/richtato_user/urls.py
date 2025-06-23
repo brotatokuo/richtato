@@ -19,5 +19,20 @@ urlpatterns = [
     path("table/", views.table, name="table"),
     path("timeseries-graph/", views.timeseries_graph, name="timeseries_graph"),
     path("assets/", views.assets, name="assets"),
-    path("api/timeseries-data/", views.CombinedGraphAPIView.as_view()),
+    path(
+        "api/timeseries-data/",
+        views.CombinedGraphAPIView.as_view(),
+        name="timeseries_data_api",
+    ),
+    path("api/categories/", views.CategoryView.as_view(), name="categories_api"),
+    path(
+        "api/categories/<int:pk>/",
+        views.CategoryView.as_view(),
+        name="category_detail_api",
+    ),  # PUT, PATCH, DELETE
+    path(
+        "api/categories/field-choices/",
+        views.CategoryFieldChoicesAPIView.as_view(),
+        name="category_field_choices_api",
+    ),  # GET
 ]
