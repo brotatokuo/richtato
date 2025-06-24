@@ -4,14 +4,14 @@ from decimal import Decimal
 
 import pytz
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from loguru import logger
 
 from richtato.apps.expense.models import Expense
-from richtato.apps.richtato_user.models import Category
+from richtato.apps.richtato_user.models import Budget, Category
 from richtato.utilities.tools import format_currency
 
 
@@ -54,44 +54,62 @@ def calculate_budget_diff(diff: float):
 
 def get_budget_rankings(request):
     count = request.GET.get("count", None)
-    
+
     user = request.user
-    pst = pytz.timezone("US/Pacific")
-    year = request.GET.get("year", datetime.now(pst).year)
-    month_abbr = request.GET.get("month", datetime.now(pst).strftime("%b"))
+    utc = pytz.timezone("UTC")
+    year = int(request.GET.get("year", datetime.now(utc).year))
+    month_abbr = request.GET.get("month", datetime.now(utc).strftime("%b"))
+
     month_map = {
         month: index for index, month in enumerate(calendar.month_abbr) if month
     }
     month = month_map.get(month_abbr)
+    if not month:
+        return JsonResponse({"error": "Invalid month"}, status=400)
 
     logger.debug(f"Year: {year}, Month: {month}")
 
-    # Get budgets and expenses in one go
-    budget_list = Category.objects.filter(user=user).values("name", "budget")
-    budget_expenses = []
+    # Target month date range
+    start_of_month = datetime(year, month, 1, tzinfo=utc)
+    last_day = calendar.monthrange(year, month)[1]
+    end_of_month = datetime(year, month, last_day, 23, 59, 59, tzinfo=utc)
 
-    for budget in budget_list:
+    # Get budgets active during the month
+    logger.debug(f"Start of month: {start_of_month}, End of month: {end_of_month}")
+    budgets = (
+        Budget.objects.filter(
+            user=user,
+            start_date__lte=end_of_month,
+        )
+        .filter(Q(end_date__isnull=True) | Q(end_date__gte=start_of_month))
+        .select_related("category")
+    )
+    logger.debug(f"Budgets found: {budgets.count()}")
+    logger.debug(f"Budgets: {budgets}")
+    budget_expenses = []
+    for budget in budgets:
         total_expense = Expense.objects.filter(
             user=user,
-            category__name=budget["name"],
-            date__year=year,
-            date__month=month,
-        ).aggregate(total_amount=Coalesce(Sum("amount"), Decimal(0)))["total_amount"]
+            category=budget.category,
+            date__gte=start_of_month,
+            date__lt=end_of_month,
+        ).aggregate(total=Coalesce(Sum("amount"), Decimal(0)))["total"]
 
         percent_budget = (
-            round(total_expense / budget["budget"] * 100) if budget["budget"] else 0
+            round(total_expense / budget.amount * 100) if budget.amount else 0
         )
+
         budget_expenses.append(
             {
-                "category_name": budget["name"],
-                "budget": budget["budget"],
+                "category_name": budget.category.name,
+                "budget": budget.amount,
                 "expense": total_expense,
-                "difference": total_expense - budget["budget"],
+                "difference": total_expense - budget.amount,
                 "percent_budget": percent_budget,
             }
         )
 
-    # Sort and get top 3 budget categories by percent spent
+    # Sort by budget % used
     budget_rankings = sorted(
         budget_expenses, key=lambda x: x["percent_budget"], reverse=True
     )
@@ -99,7 +117,6 @@ def get_budget_rankings(request):
     if count:
         budget_rankings = budget_rankings[: int(count)]
 
-    # Prepare the category data for the response
     category_data = [
         {
             "name": ranking["category_name"],
@@ -110,5 +127,5 @@ def get_budget_rankings(request):
         }
         for ranking in budget_rankings
     ]
-
+    logger.debug(f"Category Data: {category_data}")
     return JsonResponse({"category_rankings": category_data})
