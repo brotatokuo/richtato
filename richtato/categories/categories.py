@@ -267,7 +267,7 @@ class EntertainmentCategory(BaseCategory):
 
     def generate_keywords(self):
         entertainment = [
-            "sports basement",
+            "cinemark" "sports basement",
             "sports",
             "game",
             "movie",
@@ -328,6 +328,7 @@ class HousingCategory(BaseCategory):
             "condo",
             "townhouse",
             "homeowners",
+            "ikea",
         ]
 
         return housing
@@ -523,6 +524,9 @@ class SubscriptionsCategory(BaseCategory):
             "twitch",
             "patreon",
             "onlyfans",
+            "plaid",
+            "openai",
+            "chatgpt",
         ]
 
         keywords = subscriptions

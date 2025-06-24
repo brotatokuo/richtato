@@ -1,56 +1,96 @@
 import os
+from abc import ABC, abstractmethod
 
 import google.generativeai as genai
 from fuzzywuzzy import fuzz
 from loguru import logger
 
+# Optional imports
+from openai import OpenAI as OpenAIClient
+
 from richtato.apps.richtato_user.models import Category, User
 
-API_KEY = os.environ.get("GEMINI_API_KEY")
-model = genai.GenerativeModel("gemini-1.5-flash-8b")
+
+class BaseAI(ABC):
+    @abstractmethod
+    def simplify_description(self, input: str) -> str:
+        pass
+
+    @abstractmethod
+    def categorize_transaction(self, user: User, input: str) -> str:
+        pass
 
 
-class AI:
+class OpenAI(BaseAI):
     def __init__(self):
-        genai.configure(api_key=API_KEY)
-        self.model = genai.GenerativeModel("gemini-1.5-flash-8b")
+        # Initialize the OpenAI client with API key
+        self.client = OpenAIClient(api_key=os.environ["OPENAI_API_KEY"])
+        self.model_name = "gpt-3.5-turbo"
 
-    @classmethod
-    def description_simplifier(cls, input: str) -> str:
-        """
-        Given a transaction description, use AI to simplify the description into a more concise form.
-        """
+    def _ask(self, prompt: str) -> str:
+        # Use the new v1.0+ API syntax
+        response = self.client.chat.completions.create(
+            model=self.model_name,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.choices[0].message.content.strip()
+
+    def simplify_description(self, input: str) -> str:
+        prompt = f"""Simplify this transaction description: "{input}", into a more concise description."""
+        return self._ask(prompt)
+
+    def categorize_transaction(self, user: User, input: str) -> str:
+        category_list = list(
+            Category.objects.exclude(name="Unknown").values_list("name", flat=True)
+        )
+        category_string = ", ".join(category_list)
         prompt = f"""
-        Simplify this transcation description: "{input}", into a more concise description.
+        Given the following categories: {category_string}
+        Which category best matches the input text: "{input}"?
+        Please choose only from the given categories.
         """
-        result = model.generate_content([prompt])
-        best_match = result.text.strip()
 
+        response = self._ask(prompt)
+        if response in category_list:
+            return response
+
+        best_match = max(category_list, key=lambda x: fuzz.ratio(x, response))
+        logger.info(
+            f'Input: "{input}" | AI Response: "{response}" | Best Match: "{best_match}"'
+        )
         return best_match
 
-    @classmethod
-    def categorize_transaction(cls, user: User, input: str) -> str:
-        """
-        Given an input text and a list of categories, use AI to determine the best category match for the input text.
-        """
+
+class GeminiAI(BaseAI):
+    def __init__(self):
+        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+        self.model = genai.GenerativeModel("gemini-1.5-flash-8b")
+
+    def _ask(self, prompt: str) -> str:
+        response = self.model.generate_content([prompt])
+        return response.text.strip()
+
+    def simplify_description(self, input: str) -> str:
+        prompt = f"""Simplify this transaction description: "{input}", into a more concise description."""
+        return self._ask(prompt)
+
+    def categorize_transaction(self, user: User, input: str) -> str:
         category_list = Category.objects.exclude(name="Unknown").values_list(
             "name", flat=True
         )
         category_string = ", ".join(category_list)
         prompt = f"""
-            Given the following categories: {category_string}
-            Which category best matches the input text: "{input}"?
-            Please choose only from the given categories.
-            """
+        Given the following categories: {category_string}
+        Which category best matches the input text: "{input}"?
+        Please choose only from the given categories.
+        """
 
-        result = model.generate_content([prompt])
-        model_response = result.text.strip()
+        response = self._ask(prompt)
+        if response in category_list:
+            return response
 
-        if model_response in category_list:
-            return model_response
-
-        best_match = max(category_list, key=lambda x: fuzz.ratio(x, model_response))
+        best_match = max(category_list, key=lambda x: fuzz.ratio(x, response))
         logger.info(
-            f'Input: "{input}" | AI Response: "{model_response}" | Best Match: "{best_match}"'
+            f'Input: "{input}" | AI Response: "{response}" | Best Match: "{best_match}"'
         )
         return best_match
