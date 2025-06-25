@@ -19,6 +19,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let BudgetTable = new RichTable(
     "#settings-budget-table",
     "/api/budget/",
-    ["Name", "Type"]
+    ["Category", "Amount", "Start Date", "End Date"]
   );
 });

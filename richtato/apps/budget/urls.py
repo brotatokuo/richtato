@@ -14,4 +14,8 @@ urlpatterns = [
     path(
         f"api/{page_name}/<int:pk>/", views.BudgetAPIView.as_view()
     ),  # PUT, PATCH, DELETE
+    path(
+        f"api/{page_name}/field-choices/",
+        views.BudgetFieldChoicesView.as_view(),
+    ),  # GET, POST
 ]

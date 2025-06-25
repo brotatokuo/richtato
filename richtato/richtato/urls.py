@@ -25,7 +25,7 @@ urlpatterns = [
     path("", include("apps.richtato_user.urls")),
     # Feature-specific URLs
     path("", include("richtato.apps.account.urls")),
-    path("budget/", include("apps.budget.urls")),
+    path("", include("richtato.apps.budget.urls")),
     path("", include("richtato.apps.income.urls")),
     path("", include("richtato.apps.expense.urls")),
     path("", include("apps.settings.urls")),
