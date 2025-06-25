@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const year = yearSelect.value;
   const month = monthSelect.value;
 
-  const renderer = new BudgetRenderer('categories-container', '/budget/get-budget-rankings/');
+  const renderer = new BudgetRenderer('categories-container', '/get-budget-rankings/');
   renderer.fetchAndRender({ year, month });
 
   yearSelect.addEventListener("change", () => {

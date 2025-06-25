@@ -417,6 +417,7 @@ class RichForm {
       const options = this.selectFields[key];
 
       // Match by value or label
+      console.log("Processing options:", options);
       const match = options.find(
         (opt) =>
           opt.label.toLowerCase() === String(value).toLowerCase() ||
@@ -440,7 +441,7 @@ class RichForm {
 
     // Handle date fields
     let type = "text";
-    if (col.title.toLowerCase() === "date") {
+    if (col.title.toLowerCase().includes("date")) {
       type = "date";
 
       if (!value) {

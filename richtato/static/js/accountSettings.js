@@ -13,6 +13,12 @@ document.addEventListener("DOMContentLoaded", () => {
   let categoryTable = new RichTable(
     "#settings-categories-table",
     "/api/categories/",
-    ["Name", "Budget", "Type"]
+    ["Name", "Type"]
+  );
+
+  let BudgetTable = new RichTable(
+    "#settings-budget-table",
+    "/api/budget/",
+    ["Category", "Amount", "Start Date", "End Date"]
   );
 });

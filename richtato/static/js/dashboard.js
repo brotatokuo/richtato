@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const renderer = new BudgetRenderer(
     "categories-container",
-    "/budget/get-budget-rankings/"
+    "/get-budget-rankings/"
   );
   renderer.fetchAndRender({ count: 3 });
 });
