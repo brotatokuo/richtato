@@ -1,9 +1,14 @@
+from decimal import Decimal
+
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
     PermissionsMixin,
+    User,
 )
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 from richtato.categories.categories import BaseCategory
 
@@ -95,3 +100,30 @@ class Category(models.Model):
 
     def __str__(self):
         return f"[{self.user}] {self.name} ({self.type})"
+
+    @classmethod
+    def create_default_categories_for_user(cls, user):
+        """Create all supported categories for a user"""
+        categories_to_create = []
+
+        for category_key, category_display in cls.supported_categories:
+            # Check if category already exists for this user
+            if not cls.objects.filter(user=user, name=category_key).exists():
+                # You might want to set different defaults based on category
+                category_type = "essential"  # or determine based on category_key
+                categories_to_create.append(
+                    cls(
+                        user=user,
+                        name=category_key,
+                        type=category_type,
+                    )
+                )
+
+        if categories_to_create:
+            cls.objects.bulk_create(categories_to_create)
+
+    @receiver(post_save, sender=User)
+    def create_user_categories(sender, instance, created, **kwargs):
+        """Signal to create categories when a new user is created"""
+        if created:  # Only for newly created users
+            Category.create_default_categories_for_user(instance)
