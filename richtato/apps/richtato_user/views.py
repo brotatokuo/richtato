@@ -250,7 +250,6 @@ class CategoryView(APIView):
         except Category.DoesNotExist:
             return Response({"error": "Category not found."}, status=404)
         data = request.data
-        data["budget"] = float(data["budget"].replace("$", ""))
         logger.debug(f"Category edit data: {data}")
         serializer = CategorySerializer(category, data=data, partial=True)
         if serializer.is_valid():
