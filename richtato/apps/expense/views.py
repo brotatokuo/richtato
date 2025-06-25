@@ -17,7 +17,7 @@ from richtato.apps.richtato_user.utils import (
     _get_line_graph_data_by_month,
 )
 from richtato.apps.settings.models import CardAccount, Category
-from richtato.google_gemini.ai import AI
+from richtato.google_gemini.ai import OpenAI
 from richtato.statement_imports.cards.card_factory import CardStatement
 from richtato.views import BaseAPIView
 
@@ -68,7 +68,7 @@ class ExpenseAPIView(BaseAPIView):
         if limit is not None:
             logger.debug(f"Limit: {limit}")
             entries = entries[:limit]
-        
+
         data = {
             "columns": [
                 {"field": "id", "title": "ID"},
@@ -87,13 +87,13 @@ class ExpenseAPIView(BaseAPIView):
         Create a new expense entry.
         """
         logger.debug(f"Request data: {request.data}")
-        #HACK
+        # HACK
         modified_data = request.data.copy()
         modified_data["account_name"] = modified_data.pop("Account", None)
         modified_data["category"] = modified_data.pop("Category", None)
         modified_data["user"] = request.user.id
         logger.debug(f"Modified data: {modified_data}")
-        
+
         serializer = ExpenseSerializer(data=modified_data)
         if serializer.is_valid():
             serializer.save(user=request.user)
@@ -190,11 +190,9 @@ class CategorizeTransactionView(APIView):
             return Response({"error": "Description is required."}, status=400)
 
         # Use AI to categorize the transaction
-        category = AI.categorize_transaction(request.user, description)
+        category = OpenAI().categorize_transaction(request.user, description)
 
-        cateogry_id = (
-            Category.objects.filter(name=category).first().id
-        )
+        cateogry_id = Category.objects.filter(name=category).first().id
         logger.debug(f"Categorized as: {category}")
         return Response({"category": cateogry_id})
 
