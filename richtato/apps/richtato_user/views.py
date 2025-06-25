@@ -220,7 +220,6 @@ class CategoryView(APIView):
                     "id": category.id,
                     "name": category.name,
                     "type": category.get_type_display(),
-                    "budget": format_currency(category.budget),
                 }
             )
         data = {
@@ -228,7 +227,6 @@ class CategoryView(APIView):
                 {"field": "id", "title": "ID"},
                 {"field": "name", "title": "Name"},
                 {"field": "type", "title": "Type"},
-                {"field": "budget", "title": "Budget"},
             ],
             "rows": rows,
         }

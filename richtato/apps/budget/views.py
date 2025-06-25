@@ -10,9 +10,11 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from loguru import logger
 
+from richtato.apps.budget.models import Budget
 from richtato.apps.expense.models import Expense
-from richtato.apps.richtato_user.models import Budget, Category
+from richtato.apps.richtato_user.models import Category
 from richtato.utilities.tools import format_currency
+from richtato.views import BaseAPIView
 
 
 @login_required
@@ -129,3 +131,19 @@ def get_budget_rankings(request):
     ]
     logger.debug(f"Category Data: {category_data}")
     return JsonResponse({"category_rankings": category_data})
+
+
+class BudgetAPIView(BaseAPIView):
+    def get(self, request):
+        budgets = Budget.objects.filter(user=request.user)
+        budgets_data = [
+            {
+                "name": budget.name,
+                "category": budget.category.name,
+                "amount": format_currency(budget.amount),
+                "start_date": budget.start_date.isoformat() if budget.start_date else None,
+                "end_date": budget.end_date.isoformat() if budget.end_date else None,
+            }
+            for budget in budgets
+        ]
+

@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
@@ -97,25 +95,3 @@ class Category(models.Model):
 
     def __str__(self):
         return f"[{self.user}] {self.name} ({self.type})"
-
-
-class Budget(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="budgets")
-    category = models.ForeignKey(
-        Category, on_delete=models.CASCADE, related_name="budgets"
-    )
-    start_date = models.DateField()
-    end_date = models.DateField(null=True, blank=True)  # optional open-ended range
-    amount = models.DecimalField(
-        max_digits=10, decimal_places=2, default=Decimal(100.00)
-    )
-
-    class Meta:
-        unique_together = (
-            "user",
-            "category",
-            "start_date",
-        )  # Prevent overlapping duplicates
-
-    def __str__(self):
-        return f"[{self.user}] {self.category.name} - {self.amount} from {self.start_date} to {self.end_date or '∞'}"
