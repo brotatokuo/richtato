@@ -1,9 +1,9 @@
 import pandas as pd
 from django.db import models
+from loguru import logger
 
 from richtato.apps.expense.serializers import ExpenseSerializer
 from richtato.apps.richtato_user.models import CardAccount, Category
-from loguru import logger
 
 
 class ExpenseManager(models.Manager):
@@ -22,12 +22,13 @@ class ExpenseManager(models.Manager):
                     "account_name": account.id,
                     "category": category.id,
                 }
-                logger.debug(f"Processing row: {data}")
                 serializer = ExpenseSerializer(data=data)
                 if serializer.is_valid():
                     serializer.save()
-                    logger.info("Expense saved successfully")
                 else:
                     logger.error(f"Invalid row: {serializer.errors}")
             except Exception as e:
+                logger.error(
+                    f"User category {row['Category']} not found for user {user.username} "
+                )
                 logger.error(f"Error processing row: {e}")

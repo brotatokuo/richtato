@@ -264,6 +264,7 @@ class FileManager {
       formData.append("files", fileObj.file);
       formData.append("card_accounts", fileObj.dropdown.value);
     }
+    console.log("form data:", formData);
 
     try {
       const response = await fetch("/api/expenses/import-statements/", {

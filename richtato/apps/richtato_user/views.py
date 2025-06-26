@@ -88,8 +88,8 @@ def friends(request: HttpRequest):
     return render(request, "friends.html")
 
 
-def files(request: HttpRequest):
-    return render(request, "files.html")
+def upload(request: HttpRequest):
+    return render(request, "upload.html")
 
 
 def goals(request: HttpRequest):

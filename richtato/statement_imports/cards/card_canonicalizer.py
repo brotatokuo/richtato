@@ -5,6 +5,7 @@ from loguru import logger
 
 from richtato.apps.expense.models import Expense
 from richtato.apps.richtato_user.models import CardAccount, Category
+from richtato.artificial_intelligence.ai import OpenAI
 from richtato.categories.categories_manager import CategoriesManager
 
 
@@ -109,7 +110,8 @@ class CardCanonicalizer(ABC):
         self.formatted_df.loc[uncategorized_mask, "Category"] = self.formatted_df[
             uncategorized_mask
         ].apply(
-            lambda row: AI.categorize_transaction(self.user, row["Description"]), axis=1
+            lambda row: OpenAI().categorize_transaction(self.user, row["Description"]),
+            axis=1,
         )
 
     def process(self) -> None:

@@ -112,7 +112,7 @@ class BudgetRenderer {
             'dining': 'fa-utensils',
             'investments': 'fa-chart-line',
             'subscriptions': 'fa-file-invoice',
-            'charity/donations': 'fa-heart',
+            'charity': 'fa-heart',
             'pet': 'fa-paw',
             'wholesale': 'fa-warehouse',
             'car': 'fa-car',

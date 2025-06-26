@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
@@ -85,7 +83,7 @@ class Category(models.Model):
         ("nonessential", "Non Essential"),
     ]
     supported_categories = [
-        (category.name.replace(" ", "_").replace("/", "_"), category.name)
+        (category.name.replace("/", "_"), category.name)
         for category in BaseCategory._registered_categories
     ]
 

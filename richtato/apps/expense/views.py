@@ -1,8 +1,6 @@
 import pytz
 from django.db.models import F
-from django.shortcuts import (
-    get_object_or_404,
-)
+from django.shortcuts import get_object_or_404
 from loguru import logger
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
@@ -17,7 +15,7 @@ from richtato.apps.richtato_user.utils import (
     _get_line_graph_data_by_month,
 )
 from richtato.apps.settings.models import CardAccount, Category
-from richtato.google_gemini.ai import OpenAI
+from richtato.artificial_intelligence.ai import OpenAI
 from richtato.statement_imports.cards.card_factory import CardStatement
 from richtato.views import BaseAPIView
 
@@ -215,8 +213,9 @@ class ImportStatementsView(APIView):
 
         # Usage
         files = ensure_list(request.FILES.getlist("files"))  # For files specifically
-        card_accounts = ensure_list(request.data.get("card_accounts"))
-
+        card_accounts = ensure_list(request.data.getlist("card_accounts"))
+        logger.debug(f"Files: {files}")
+        logger.debug(f"Card Accounts: {card_accounts}")
         # Process the files and categorize transactions
         for file, card_account in zip(files, card_accounts):
             card = CardAccount.objects.get(id=card_account, user=request.user)
@@ -227,7 +226,7 @@ class ImportStatementsView(APIView):
                 card.name,
                 file,
             )
-            logger.debug(card_statement.formatted_df)
+            # logger.debug(card_statement.formatted_df)
             ExpenseManager.import_from_dataframe(
                 card_statement.formatted_df, request.user
             )

@@ -536,7 +536,7 @@ class SubscriptionsCategory(BaseCategory):
 class CharityCategory(BaseCategory):
     @property
     def name(self):
-        return "Charity/Donations"
+        return "Charity"
 
     def generate_keywords(self):
         charity = [
