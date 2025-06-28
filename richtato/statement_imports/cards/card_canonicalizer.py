@@ -93,7 +93,7 @@ class CardCanonicalizer(ABC):
         """
         Computes the category for each transaction in the DataFrame.
         """
-        categories_manager = CategoriesManager()
+        categories_manager = CategoriesManager(self.user)
         if "Category" in self.df.columns:
             self.formatted_df["Category"] = self.df["Category"].apply(
                 categories_manager.search

@@ -3,9 +3,11 @@ from abc import ABC, abstractmethod
 
 class BaseCategory(ABC):
     _registered_categories = []
+    _registry = {}
 
     def __init__(self):
         BaseCategory._registered_categories.append(self)
+        BaseCategory._registry[self.name] = self.__class__
         self.keywords = self.generate_keywords()
 
     @property
@@ -23,6 +25,10 @@ class BaseCategory(ABC):
     def get_registered_categories(cls):
         """Returns all registered category instances."""
         return cls._registered_categories
+
+    @classmethod
+    def get_registry(cls):
+        return dict(cls._registry)
 
 
 class TravelCategory(BaseCategory):
@@ -267,7 +273,7 @@ class EntertainmentCategory(BaseCategory):
 
     def generate_keywords(self):
         entertainment = [
-            "cinemark" "sports basement",
+            "cinemarksports basement",
             "sports",
             "game",
             "movie",
