@@ -31,6 +31,15 @@ class BankOfAmericaCards(CardCanonicalizer):
         self.format_date()
         self.format_description()
         self.format_amount()
+        self.drop_unwanted_rows()
+
+    def drop_unwanted_rows(self) -> None:
+        """
+        Drops rows that are not needed
+        """
+        self.df = self.df[
+            ~self.df["Description"].str.contains("Online payment", case=False, na=False)
+        ]
 
     def format_date(self) -> None:
         self.formatted_df["Date"] = self.df["Posted Date"]
