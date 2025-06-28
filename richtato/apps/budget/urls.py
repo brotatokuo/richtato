@@ -4,7 +4,7 @@ from . import views
 
 page_name = "budget"
 urlpatterns = [
-    path("", views.main, name=page_name),
+    path(f"{page_name}", views.main, name=page_name),
     path(
         "get-budget-rankings/",
         views.get_budget_rankings,
