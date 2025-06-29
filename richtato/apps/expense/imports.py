@@ -22,6 +22,7 @@ class ExpenseManager(models.Manager):
                     "account_name": account.id,
                     "category": category.id,
                 }
+
                 serializer = ExpenseSerializer(data=data)
                 if serializer.is_valid():
                     serializer.save()

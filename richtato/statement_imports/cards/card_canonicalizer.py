@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 import pandas as pd
 from loguru import logger
+import re
 
 from richtato.apps.expense.models import Expense
 from richtato.apps.richtato_user.models import CardAccount, Category
@@ -57,12 +58,31 @@ class CardCanonicalizer(ABC):
         """
         self._format()
         self.formatted_df["Card"] = self.card_name
+        self.drop_payment_rows()
         self._convert_date()
         self._convert_amount()
         self._compute_category()
         self.formatted_df.sort_values("Date", inplace=True)
         self.formatted_df.reset_index(drop=True, inplace=True)
         return self.formatted_df
+
+    def drop_payment_rows(self) -> None:
+        """
+        Drops rows that are not needed
+        """
+        keywords_to_filter = [
+            "Online payment",
+            "Mobile payment",
+            # Add more as needed
+        ]
+
+        # Join the keywords into a regex pattern
+        pattern = "|".join(map(re.escape, keywords_to_filter))  # escape handles special characters
+
+        # Filter the DataFrame
+        self.df = self.df[
+            ~self.df["Description"].str.contains(pattern, case=False, na=False)
+        ]
 
     def check_input_format(self):
         """
@@ -94,25 +114,20 @@ class CardCanonicalizer(ABC):
         Computes the category for each transaction in the DataFrame.
         """
         categories_manager = CategoriesManager(self.user)
-        if "Category" in self.df.columns:
-            self.formatted_df["Category"] = self.df["Category"].apply(
-                categories_manager.search
-            )
-        else:
-            self.formatted_df["Category"] = self.formatted_df["Description"].apply(
-                categories_manager.search
-            )
+        self.formatted_df["Category"] = self.formatted_df["Description"].apply(
+            categories_manager.search
+        )
         uncategorized_mask = self.formatted_df["Category"].isna()
         logger.debug(
             f"Uncategorized transactions: {self.formatted_df[uncategorized_mask].to_string()}"
         )
 
-        self.formatted_df.loc[uncategorized_mask, "Category"] = self.formatted_df[
-            uncategorized_mask
-        ].apply(
-            lambda row: OpenAI().categorize_transaction(self.user, row["Description"]),
-            axis=1,
-        )
+        uncategorized_df = self.formatted_df[uncategorized_mask]
+        categorized_df = OpenAI().categorize_dataframe(self.user, uncategorized_df)
+        self.formatted_df.loc[uncategorized_mask, "Category"] = categorized_df[
+            "Category"
+        ].values
+
 
     def process(self) -> None:
         """

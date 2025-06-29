@@ -1,7 +1,9 @@
 import os
 from abc import ABC, abstractmethod
+import re
 
 import google.generativeai as genai
+import pandas as pd
 from fuzzywuzzy import fuzz
 from loguru import logger
 
@@ -39,10 +41,15 @@ class OpenAI(BaseAI):
         prompt = f"""Simplify this transaction description: "{input}", into a more concise description."""
         return self._ask(prompt)
 
-    def categorize_transaction(self, user: User, input: str) -> str:
-        category_list = list(
-            Category.objects.exclude(name="Unknown").values_list("name", flat=True)
+    def get_user_categories(self, user: User) -> list[str]:
+        return list(
+            Category.objects.filter(user=user)
+            .exclude(name="Unknown")
+            .values_list("name", flat=True)
         )
+
+    def categorize_transaction(self, user: User, input: str) -> str:
+        category_list = self.get_user_categories(user)
         category_string = ", ".join(category_list)
         prompt = f"""
         Given the following categories: {category_string}
@@ -51,14 +58,57 @@ class OpenAI(BaseAI):
         """
 
         response = self._ask(prompt)
-        if response in category_list:
-            return response
+        return response
 
-        best_match = max(category_list, key=lambda x: fuzz.ratio(x, response))
-        logger.info(
-            f'Input: "{input}" | AI Response: "{response}" | Best Match: "{best_match}"'
-        )
-        return best_match
+    def categorize_dataframe(self, user: User, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Categorizes all rows in the DataFrame based on the 'Description' column in a single prompt.
+        """
+        if "Description" not in df.columns:
+            raise ValueError("DataFrame must contain a 'Description' column.")
+
+        # Get user's categories
+        categories = self.get_user_categories(user)
+        category_string = ", ".join(categories)
+
+        descriptions = df["Description"].tolist()
+
+        # Build and send the prompt
+        prompt = self._build_batch_prompt(descriptions, category_string)
+        response = self._ask(prompt)
+
+        # Parse LLM response
+        predicted = self._parse_batch_response(response, descriptions)
+        df["Category"] = predicted
+        logger.info(f"Categorization Completed: {len(predicted)} transactions categorized.")
+        logger.debug(df)
+        return df
+
+    def _build_batch_prompt(self, descriptions: list[str], category_string: str) -> str:
+        lines = "\n".join(f"{i + 1}. {desc}" for i, desc in enumerate(descriptions))
+        logger.debug(f"Category String: {category_string}")
+        prompt = f"""
+            You are a financial categorization assistant.
+
+            Given the following list of categories:
+            {category_string}
+
+            Please categorize the following transactions using only one of the above categories for each.
+
+            Transactions:
+            {lines}
+
+            Respond in the format:
+            1: <Category>
+            2: <Category>
+            ...
+            """
+        return prompt
+    
+    def _parse_batch_response(self, response: str, batch: list[str]) -> list[str]:
+        matches = re.findall(r"(\d+):\s*(.+)", response)
+        mapping = {int(i): cat.strip() for i, cat in matches}
+        return [mapping.get(i + 1, "Unknown") for i in range(len(batch))]
 
 
 class GeminiAI(BaseAI):
