@@ -227,7 +227,6 @@ class ImportStatementsView(APIView):
                 file,
             )
             logger.debug("Card Statement formatted")
-            logger.debug(card_statement.formatted_df)
             ExpenseManager.import_from_dataframe(
                 card_statement.formatted_df, request.user
             )

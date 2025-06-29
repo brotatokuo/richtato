@@ -86,7 +86,6 @@ class OpenAI(BaseAI):
 
     def _build_batch_prompt(self, descriptions: list[str], category_string: str) -> str:
         lines = "\n".join(f"{i + 1}. {desc}" for i, desc in enumerate(descriptions))
-        logger.debug(f"Category String: {category_string}")
         prompt = f"""
             You are a financial categorization assistant.
 
