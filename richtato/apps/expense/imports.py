@@ -12,7 +12,13 @@ class ExpenseManager(models.Manager):
         for _, row in df.iterrows():
             try:
                 account = CardAccount.objects.get(name=row["Card"], user=user)
-                category = Category.objects.get(name=row["Category"], user=user)
+
+                try:
+                    category = Category.objects.get(name=row["Category"], user=user)
+                except Category.DoesNotExist:
+                    category, _ = Category.objects.get_or_create(
+                        name="Unknown", user=user
+                    )
 
                 data = {
                     "user": user.id,
@@ -29,7 +35,4 @@ class ExpenseManager(models.Manager):
                 else:
                     logger.error(f"Invalid row: {serializer.errors}")
             except Exception as e:
-                logger.error(
-                    f"User category {row['Category']} not found for user {user.username} "
-                )
                 logger.error(f"Error processing row: {e}")
