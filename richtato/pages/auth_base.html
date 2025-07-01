@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    {% load static %}
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="{% static 'all.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/main.css' %}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;500&display=swap"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="{% static 'images/richtato.ico' %}"
+    />
+
+    <script src="{% static 'js/utils/helpers.js' %}"></script>
+    <script src="{% static 'js/utils/api.js' %}"></script>
+
+    <title>{% block title %}Richtato{% endblock %}</title>
+
+    <style>
+      /* Override for auth pages - show header but no sidebar */
+      .page-content {
+        display: block !important;
+        grid-template-columns: none !important;
+      }
+
+      .sidebar {
+        display: none !important;
+      }
+
+      body {
+        background-color: var(--main-color);
+      }
+
+      .auth-page {
+        min-height: calc(100vh - 65px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--main-color);
+      }
+
+      /* Auth specific header styling */
+      .header {
+        background-color: var(--main-color);
+        padding: var(--third-padding);
+        min-height: 65px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="header">
+      <div class="brand">
+        <a href="{% url 'index' %}" class="brand-link">
+          <img
+            src="{% static 'images/richtato.ico' %}"
+            alt="Richtato Logo"
+            class="brand-logo"
+          />
+          <h3 class="brand-name">Richtato</h3>
+        </a>
+      </div>
+      <div class="profile">
+        <img
+          src="{% static 'images/avatar.png' %}"
+          id="navbar-profile"
+          alt="Profile"
+        />
+      </div>
+    </div>
+
+    <div class="auth-page">
+      {% block content %}
+      <!-- Content to be filled by child templates -->
+      {% endblock %}
+    </div>
+
+    <script src="{% static 'js/utils/common.js' %}"></script>
+  </body>
+</html>

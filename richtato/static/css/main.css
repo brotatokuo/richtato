@@ -1,0 +1,106 @@
+/* Main stylesheet - imports all organized CSS files */
+@import url('variables.css');
+@import url('base.css');
+@import url('components.css');
+@import url('layout.css');
+@import url('navbar.css');
+
+/* Page-specific styles can be added here or in separate files */
+
+/* Welcome page styles */
+.welcome-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--main-color) 0%, var(--secondary-color) 100%);
+}
+
+.welcome-content {
+  text-align: center;
+  padding: var(--main-padding);
+  background-color: var(--white-color);
+  border-radius: var(--first-radius);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+}
+
+.welcome-title {
+  font-size: 3rem;
+  font-weight: 600;
+  color: var(--title-color);
+  margin-bottom: var(--secondary-margin);
+}
+
+.welcome-subtitle {
+  font-size: var(--font-size-large);
+  color: var(--text-color);
+  margin-bottom: var(--main-margin);
+}
+
+/* Dashboard specific styles */
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--secondary-margin);
+  margin-bottom: var(--main-margin);
+}
+
+.stat-card {
+  background-color: var(--white-color);
+  padding: var(--secondary-padding);
+  border-radius: var(--first-radius);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--green-color);
+  margin-bottom: var(--fifth-margin);
+}
+
+.stat-label {
+  font-size: var(--font-size-small);
+  color: var(--third-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Upload area styles */
+.drop-zone {
+  border: 2px dashed var(--ccc-color);
+  border-radius: var(--first-radius);
+  padding: var(--main-padding);
+  text-align: center;
+  transition: all 0.3s ease;
+  background-color: var(--main-color);
+}
+
+.drop-zone:hover,
+.drop-zone.dragover {
+  border-color: var(--green-color);
+  background-color: rgba(152, 204, 44, 0.1);
+}
+
+.upload-icon {
+  font-size: 3rem;
+  color: var(--green-color);
+  margin-bottom: var(--secondary-margin);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .welcome-title {
+    font-size: 2rem;
+  }
+
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+}

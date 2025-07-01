@@ -5,13 +5,12 @@
 <!-- prettier-ignore-start -->
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'home.css' %}" />
 <script>
   var staticImagePath = "{% static 'media/moneytree.png' %}";
 </script>
 
-<div class="home-page">
-  <div class="home-container">
+<div class="welcome-container">
+  <div class="welcome-content">
     <div class="gif-container">
       <img
         src="{% static 'media/moneytree.gif' %}"
@@ -21,9 +20,11 @@
       />
     </div>
     <div class="typewriter">
-      <div class="typewriter-text">Save with Richtato!</div>
+      <div class="typewriter-text welcome-title">Save with Richtato!</div>
     </div>
+    <p class="welcome-subtitle">Your personal finance management solution</p>
   </div>
 </div>
-<script src="{% static 'js/core.js' %}"></script>
+<script src="{% static 'js/utils/common.js' %}"></script>
+<script src="{% static 'js/pages/welcome.js' %}"></script>
 {% endblock %}
