@@ -14,12 +14,12 @@ document.addEventListener("DOMContentLoaded", (event) => {
   const sidebar = document.querySelector(".sidebar");
 
   // Hide the sidebar by adding the "sidebar-hidden" class
-  function hideSidebar() {
-    sidebar.style.display = "none";
-    pageContent.classList.add("sidebar-hidden");
-  }
+  // function hideSidebar() {
+  //   sidebar.style.display = "none";
+  //   pageContent.classList.add("sidebar-hidden");
+  // }
 
-  hideSidebar();
+  // hideSidebar();
   const hamburger = document.querySelector("#hamburger");
   hamburger.style.display = "none";
 

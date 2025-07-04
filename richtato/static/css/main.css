@@ -8,21 +8,25 @@
 /* Page-specific styles can be added here or in separate files */
 
 /* Welcome page styles */
-.welcome-container {
+.welcome-page {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  min-height: calc(100vh - 65px); /* Account for header */
   background: linear-gradient(135deg, var(--main-color) 0%, var(--secondary-color) 100%);
+  width: 100%;
+  position: relative;
+  margin: 0;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
-.welcome-content {
+.welcome-center {
   text-align: center;
   padding: var(--main-padding);
-  background-color: var(--white-color);
   border-radius: var(--first-radius);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   max-width: 600px;
+  width: 100%;
 }
 
 .welcome-title {
@@ -94,6 +98,16 @@
 @media (max-width: 768px) {
   .welcome-title {
     font-size: 2rem;
+  }
+
+  .welcome-page {
+    padding: 10px;
+    min-height: calc(100vh - 65px);
+  }
+
+  .welcome-center {
+    padding: 20px;
+    max-width: 100%;
   }
 
   .dashboard-stats {

@@ -2,15 +2,15 @@
 
 <!-- prettier-ignore-start -->
 {% block title %} Richtato {% endblock %}
-<!-- prettier-ignore-start -->
+<!-- prettier-ignore-end -->
 
 {% block content %}
 <script>
   var staticImagePath = "{% static 'media/moneytree.png' %}";
 </script>
 
-<div class="welcome-container">
-  <div class="welcome-content">
+<div class="welcome-page">
+  <div class="welcome-center">
     <div class="gif-container">
       <img
         src="{% static 'media/moneytree.gif' %}"
@@ -25,6 +25,6 @@
     <p class="welcome-subtitle">Your personal finance management solution</p>
   </div>
 </div>
+
 <script src="{% static 'js/utils/common.js' %}"></script>
-<script src="{% static 'js/pages/welcome.js' %}"></script>
 {% endblock %}
