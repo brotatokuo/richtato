@@ -11,7 +11,7 @@
 .welcome-page {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   min-height: calc(100vh - 65px); /* Account for header */
   background: linear-gradient(135deg, var(--main-color) 0%, var(--secondary-color) 100%);
   width: 100%;
@@ -19,14 +19,105 @@
   margin: 0;
   padding: 20px;
   box-sizing: border-box;
+  overflow-y: auto;
 }
 
 .welcome-center {
   text-align: center;
   padding: var(--main-padding);
+  background-color: var(--primary-color);
   border-radius: var(--first-radius);
-  max-width: 600px;
+  max-width: 800px;
   width: 100%;
+}
+
+/* Feature grid */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 15px;
+  margin: 25px 0;
+}
+
+.feature-card {
+  background-color: var(--main-color);
+  padding: 15px;
+  border-radius: var(--first-radius);
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+}
+
+.feature-icon {
+  font-size: 2rem;
+  color: var(--green-color);
+  margin-bottom: 10px;
+}
+
+.feature-card h3 {
+  color: var(--title-color);
+  margin-bottom: 8px;
+  font-size: 1.1rem;
+}
+
+.feature-card p {
+  color: var(--text-color);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+/* CTA section */
+.cta-section {
+  margin-top: 30px;
+  padding-top: 25px;
+  border-top: 1px solid var(--ccc-color);
+}
+
+.cta-text {
+  font-size: 1.1rem;
+  color: var(--text-color);
+  margin-bottom: 25px;
+  line-height: 1.6;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.cta-button {
+  padding: 12px 30px;
+  border-radius: var(--first-radius);
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.cta-button.primary {
+  background-color: var(--green-color);
+  color: #000;
+}
+
+.cta-button.primary:hover {
+  background-color: #7FB800;
+  transform: translateY(-2px);
+}
+
+.cta-button.secondary {
+  background-color: transparent;
+  color: var(--green-color);
+  border-color: var(--green-color);
+}
+
+.cta-button.secondary:hover {
+  background-color: var(--green-color);
+  color: #000;
 }
 
 .welcome-title {
@@ -108,6 +199,29 @@
   .welcome-center {
     padding: 20px;
     max-width: 100%;
+  }
+
+  .feature-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .feature-card {
+    padding: 15px;
+  }
+
+  .feature-icon {
+    font-size: 2rem;
+  }
+
+  .cta-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .cta-button {
+    width: 100%;
+    max-width: 250px;
   }
 
   .dashboard-stats {
