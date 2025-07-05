@@ -82,10 +82,50 @@
   }
 }
 
+/* Sidebar brand */
+.sidebar-brand {
+  margin: 50px 0 20px 0; /* Space for toggle button and navigation */
+  padding: 0 8px;
+}
+
+.sidebar-brand-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--white-color);
+  padding: 8px;
+  border-radius: var(--secondary-radius);
+  transition: background-color 0.3s ease;
+}
+
+.sidebar-brand-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-brand-logo {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 4px;
+}
+
+.sidebar-brand-name {
+  margin-left: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.3s ease 0.1s;
+  white-space: nowrap;
+}
+
+.sidebar.expanded .sidebar-brand-name {
+  opacity: 1;
+}
+
 /* Sidebar navigation */
 .sidebar ul {
   list-style: none;
-  margin-top: 50px; /* Space for toggle button */
+  margin-top: 0;
 }
 
 .sidebar ul li a {
@@ -173,7 +213,7 @@
   }
 }
 
-/* Header - Original design */
+/* Header - Simplified without brand */
 .header {
   display: flex;
   justify-content: space-between;
@@ -181,18 +221,6 @@
   background-color: var(--main-color);
   padding: var(--third-padding);
   min-height: 65px;
-}
-
-.header .brand {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--fourth-padding);
-}
-
-.header .brand h3,
-.brand-name {
-  color: var(--white-color);
 }
 
 .header .profile {
@@ -221,20 +249,6 @@
   padding-right: 15px;
 }
 
-/* Brand elements */
-.brand-link {
-  display: flex;
-  align-items: center;
-  text-decoration: none;
-  color: var(--white-color);
-}
-
-.brand-logo {
-  width: 30px;
-  height: auto;
-  margin-right: 10px;
-  vertical-align: middle;
-}
 
 /* Dropdown */
 .dropdown {

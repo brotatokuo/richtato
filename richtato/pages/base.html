@@ -54,6 +54,19 @@
           <i class="fa-solid fa-chevron-left"></i>
         </button>
         <i class="fa-solid fa-xmark xmark"></i>
+
+        <!-- Brand in sidebar -->
+        <div class="sidebar-brand">
+          <a href="{% url 'index' %}" class="sidebar-brand-link">
+            <img
+              src="{% static 'images/richtato.ico' %}"
+              alt="Richtato Logo"
+              class="sidebar-brand-logo"
+            />
+            <span class="sidebar-brand-name">Richtato</span>
+          </a>
+        </div>
+
         <ul>
           <li>
             <a href="{% url 'index' %}" class="sidebar-link">
@@ -106,16 +119,6 @@
       <main id="main">
         <div class="header">
           <i class="fa-solid fa-bars bar-item" id="hamburger"></i>
-          <div class="brand">
-            <a href="{% url 'index' %}" class="brand-link">
-              <img
-                src="{% static 'images/richtato.ico' %}"
-                alt="Richtato Logo"
-                class="brand-logo"
-              />
-              <h3 class="brand-name">Richtato</h3>
-            </a>
-          </div>
           <div class="profile">
             <img
               src="{% static 'images/avatar.png' %}"
