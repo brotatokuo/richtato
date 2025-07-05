@@ -1,55 +1,224 @@
 {% extends 'base.html' %} {% load static %}
 <!-- prettier-ignore-start -->
-{% block title %} Dashboard {%endblock %}
+{% block title %} BI Dashboard {%endblock %}
 <!-- prettier-ignore-start -->
 {% block content %}
 <div class="main-content">
   <div class="title">
-    <h1>Dashboard</h1>
+    <h1>Financial Intelligence Dashboard</h1>
   </div>
-  <div class="main-content-boxes">
-    <div class="box">
-      <div class="box-title">
-        <h2>Summary</h2>
+
+  <!-- KPI Summary Row -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <h3>Net Worth</h3>
+        <i class="fa-solid fa-chart-line kpi-icon"></i>
       </div>
-      <div class="fourth-box-section2">
-        <div class="small-box">
-          <h3>Networth</h3>
-          <span class="currency">{{ networth }}</span>
-        </div>
+      <div class="kpi-value currency">{{ networth }}</div>
+      <div class="kpi-change positive">+5.2% this month</div>
+    </div>
 
-        <div class="small-box">
-          <h3>Savings Rate</h3>
-          <span>{{ savings_rate }}</span>
-        </div>
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <h3>Savings Rate</h3>
+        <i class="fa-solid fa-piggy-bank kpi-icon"></i>
+      </div>
+      <div class="kpi-value">{{ savings_rate }}</div>
+      <div class="kpi-change positive">Above average</div>
+    </div>
 
-        <div class="small-box">
-          <h3>Income</h3>
-          <span class="currency">{{ income_sum }}</span>
-          <canvas class="mini-line-chart" id="income-overview-line-chart"></canvas>
-        </div>
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <h3>Monthly Cash Flow</h3>
+        <i class="fa-solid fa-money-bill-trend-up kpi-icon"></i>
+      </div>
+      <div class="kpi-value currency">{{ monthly_cash_flow }}</div>
+      <div class="kpi-change">{{ income_sum }} - {{ expense_sum }}</div>
+    </div>
 
-        <div class="small-box">
-          <h3>Expenses</h3>
-          <span class="currency">{{ expense_sum }}</span>
-          <canvas class="mini-line-chart" id="expense-overview-line-chart"></canvas>
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <h3>Budget Utilization</h3>
+        <i class="fa-solid fa-percentage kpi-icon"></i>
+      </div>
+      <div class="kpi-value">{{ budget_utilization }}%</div>
+      <div class="kpi-progress">
+        <div class="progress-bar" style="width: {{ budget_utilization }}%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Analytics Grid -->
+  <div class="analytics-grid">
+
+    <!-- Cash Flow Trend -->
+    <div class="analytics-card large">
+      <div class="card-header">
+        <h2>Cash Flow Trend</h2>
+        <div class="card-controls">
+          <select id="cashflow-period">
+            <option>Last 6 months</option>
+            <option>Last year</option>
+            <option>All time</option>
+          </select>
+        </div>
+      </div>
+      <div class="chart-container">
+        <canvas id="cashFlowChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Expense Breakdown Pie Chart -->
+    <div class="analytics-card">
+      <div class="card-header">
+        <h2>Expense Categories</h2>
+      </div>
+      <div class="chart-container">
+        <canvas id="expensePieChart"></canvas>
+      </div>
+      <div class="chart-legend" id="expense-legend"></div>
+    </div>
+
+    <!-- Income vs Expenses -->
+    <div class="analytics-card">
+      <div class="card-header">
+        <h2>Income vs Expenses</h2>
+      </div>
+      <div class="chart-container">
+        <canvas id="incomeExpenseChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Spending Patterns Heatmap -->
+    <div class="analytics-card">
+      <div class="card-header">
+        <h2>Spending Patterns</h2>
+        <span class="subtitle">Daily spending by category</span>
+      </div>
+      <div class="heatmap-container" id="spendingHeatmap">
+        <!-- Heatmap will be generated here -->
+      </div>
+    </div>
+
+    <!-- Budget Progress -->
+    <div class="analytics-card">
+      <div class="card-header">
+        <h2>Budget Progress</h2>
+      </div>
+      <div class="budget-progress-container" id="budget-progress">
+        <!-- Budget progress bars will be inserted here -->
+      </div>
+    </div>
+
+    <!-- Top Merchants -->
+    <div class="analytics-card">
+      <div class="card-header">
+        <h2>Top Spending Destinations</h2>
+      </div>
+      <div class="merchant-list" id="top-merchants">
+        <!-- Top merchants will be populated here -->
+      </div>
+    </div>
+
+    <!-- Savings Trend -->
+    <div class="analytics-card">
+      <div class="card-header">
+        <h2>Savings Accumulation</h2>
+      </div>
+      <div class="chart-container">
+        <canvas id="savingsChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Financial Health Score -->
+    <div class="analytics-card">
+      <div class="card-header">
+        <h2>Financial Health Score</h2>
+      </div>
+      <div class="health-score-container">
+        <div class="score-circle">
+          <div class="score-value" id="health-score">85</div>
+          <div class="score-label">Good</div>
+        </div>
+        <div class="score-breakdown">
+          <div class="score-item">
+            <span>Emergency Fund</span>
+            <div class="score-bar"><div class="score-fill" style="width: 90%"></div></div>
+          </div>
+          <div class="score-item">
+            <span>Debt-to-Income</span>
+            <div class="score-bar"><div class="score-fill" style="width: 75%"></div></div>
+          </div>
+          <div class="score-item">
+            <span>Savings Rate</span>
+            <div class="score-bar"><div class="score-fill" style="width: 85%"></div></div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="box">
-      <div class="box-section1">
-        <div class="box-title">
-          <h2>Budget This Month</h2>
-        </div>
+    <!-- Expense Stream by Category -->
+    <div class="analytics-card large">
+      <div class="card-header">
+        <h2>Expense Stream by Category</h2>
+        <span class="subtitle">Money flow visualization</span>
       </div>
-      <div class="third-box-section2" id="categories-container">
-        <!-- Categories will be inserted here dynamically -->
+      <div class="chart-container sankey-container" id="sankey-category">
+        {{ sankey_by_category|safe }}
       </div>
     </div>
+
+    <!-- Expense Stream by Account -->
+    <div class="analytics-card large">
+      <div class="card-header">
+        <h2>Expense Stream by Account</h2>
+        <span class="subtitle">Account-based spending flow</span>
+      </div>
+      <div class="chart-container sankey-container" id="sankey-account">
+        {{ sankey_by_account|safe }}
+      </div>
+    </div>
+
+    <!-- AI Insights -->
+    <div class="analytics-card insights">
+      <div class="card-header">
+        <h2>AI Insights</h2>
+        <i class="fa-solid fa-brain ai-icon"></i>
+      </div>
+      <div class="insights-container">
+        <div class="insight-item">
+          <i class="fa-solid fa-lightbulb insight-icon"></i>
+          <div class="insight-text">
+            <strong>Optimization Opportunity:</strong> You spent 23% more on dining out this month. Consider meal planning to save $200.
+          </div>
+        </div>
+        <div class="insight-item">
+          <i class="fa-solid fa-trend-up insight-icon"></i>
+          <div class="insight-text">
+            <strong>Positive Trend:</strong> Your savings rate has improved by 12% over the last quarter.
+          </div>
+        </div>
+        <div class="insight-item">
+          <i class="fa-solid fa-exclamation-triangle insight-icon warning"></i>
+          <div class="insight-text">
+            <strong>Budget Alert:</strong> You're 85% through your entertainment budget with 10 days left in the month.
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
-<script src="{% static 'js/budgetRenderer.js' %}"></script>
-<script src="{% static 'js/timeseriesGraph.js' %}"></script>
-<script src="{% static 'js/dashboard.js' %}"></script>
+
+<!-- Include Chart.js and plugins -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+<!-- Dashboard Scripts -->
+<script src="{% static 'js/components/budgetRenderer.js' %}"></script>
+<script src="{% static 'js/components/timeseriesGraph.js' %}"></script>
+<script src="{% static 'js/pages/dashboard.js' %}"></script>
+<script src="{% static 'js/pages/bi-dashboard.js' %}"></script>
 {% endblock %}
