@@ -1,7 +1,8 @@
-def format_currency(value):
+def format_currency(value, decimals=2):
+    format_str = f"{{:,.{decimals}f}}"
     if value < 0:
-        return "-${:,.2f}".format(abs(value))
-    return "${:,.2f}".format(value)
+        return f"-${format_str.format(abs(value))}"
+    return f"${format_str.format(value)}"
 
 
 def format_date(value):

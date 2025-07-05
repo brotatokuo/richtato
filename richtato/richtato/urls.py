@@ -28,5 +28,6 @@ urlpatterns = [
     path("", include("richtato.apps.budget.urls")),
     path("", include("richtato.apps.income.urls")),
     path("", include("richtato.apps.expense.urls")),
+    path("dashboard/", include("richtato.apps.dashboard.urls")),
     path("", include("apps.settings.urls")),
 ]

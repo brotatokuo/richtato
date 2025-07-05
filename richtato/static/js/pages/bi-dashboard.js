@@ -20,80 +20,68 @@ function initCashFlowChart() {
     const ctx = document.getElementById('cashFlowChart');
     if (!ctx) return;
 
-    // Sample data - replace with actual data from backend
-    const cashFlowData = {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        datasets: [{
-            label: 'Net Cash Flow',
-            data: [1200, 1800, -500, 2200, 1600, 2400],
-            borderColor: '#98CC2C',
-            backgroundColor: 'rgba(152, 204, 44, 0.1)',
-            fill: true,
-            tension: 0.4
-        }, {
-            label: 'Income',
-            data: [5000, 5200, 4800, 5500, 5100, 5400],
-            borderColor: '#4CAF50',
-            backgroundColor: 'transparent',
-            borderDash: [5, 5]
-        }, {
-            label: 'Expenses',
-            data: [3800, 3400, 5300, 3300, 3500, 3000],
-            borderColor: '#FF6B6B',
-            backgroundColor: 'transparent',
-            borderDash: [5, 5]
-        }]
-    };
+    // Fetch real data from backend
+    fetch('/dashboard/api/cash-flow/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('Error fetching cash flow data:', data.error);
+                return;
+            }
 
-    new Chart(ctx, {
-        type: 'line',
-        data: cashFlowData,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                    labels: {
-                        color: '#ffffff'
-                    }
-                },
-                zoom: {
-                    zoom: {
-                        wheel: { enabled: true },
-                        pinch: { enabled: true },
-                        mode: 'x',
-                    },
-                    pan: {
-                        enabled: true,
-                        mode: 'x',
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    ticks: {
-                        color: '#ffffff'
-                    },
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)'
-                    }
-                },
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        color: '#ffffff',
-                        callback: function(value) {
-                            return '$' + value.toLocaleString();
+            new Chart(ctx, {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        },
+                        zoom: {
+                            zoom: {
+                                wheel: { enabled: true },
+                                pinch: { enabled: true },
+                                mode: 'x',
+                            },
+                            pan: {
+                                enabled: true,
+                                mode: 'x',
+                            }
                         }
                     },
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)'
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#ffffff',
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString();
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
                     }
                 }
-            }
-        }
-    });
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching cash flow data:', error);
+        });
 }
 
 // 2. Expense Categories Pie Chart
@@ -101,51 +89,47 @@ function initExpensePieChart() {
     const ctx = document.getElementById('expensePieChart');
     if (!ctx) return;
 
-    const expenseData = {
-        labels: ['Housing', 'Food', 'Transportation', 'Entertainment', 'Healthcare', 'Other'],
-        datasets: [{
-            data: [1200, 600, 400, 300, 200, 300],
-            backgroundColor: [
-                '#98CC2C',
-                '#4CAF50',
-                '#81C784',
-                '#A5D6A7',
-                '#C8E6C9',
-                '#E8F5E8'
-            ],
-            borderWidth: 2,
-            borderColor: '#fff'
-        }]
-    };
+    // Fetch real data from backend
+    fetch('/dashboard/api/expense-categories/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('Error fetching expense categories data:', data.error);
+                return;
+            }
 
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: expenseData,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 20,
-                        usePointStyle: true,
-                        color: '#ffffff'
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const value = context.parsed;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((value / total) * 100).toFixed(1);
-                            return `${context.label}: $${value.toLocaleString()} (${percentage}%)`;
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                color: '#ffffff'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.parsed;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${context.label}: $${value.toLocaleString()} (${percentage}%)`;
+                                }
+                            }
                         }
                     }
                 }
-            }
-        }
-    });
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching expense categories data:', error);
+        });
 }
 
 // 3. Income vs Expenses Bar Chart
@@ -153,59 +137,57 @@ function initIncomeExpenseChart() {
     const ctx = document.getElementById('incomeExpenseChart');
     if (!ctx) return;
 
-    const incomeExpenseData = {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        datasets: [{
-            label: 'Income',
-            data: [5000, 5200, 4800, 5500, 5100, 5400],
-            backgroundColor: '#98CC2C',
-            borderRadius: 4
-        }, {
-            label: 'Expenses',
-            data: [3800, 3400, 5300, 3300, 3500, 3000],
-            backgroundColor: '#FF6B6B',
-            borderRadius: 4
-        }]
-    };
+    // Fetch real data from backend
+    fetch('/dashboard/api/income-expenses/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('Error fetching income vs expenses data:', data.error);
+                return;
+            }
 
-    new Chart(ctx, {
-        type: 'bar',
-        data: incomeExpenseData,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                    labels: {
-                        color: '#ffffff'
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    ticks: {
-                        color: '#ffffff'
-                    },
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)'
-                    }
-                },
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        color: '#ffffff',
-                        callback: function(value) {
-                            return '$' + value.toLocaleString();
+            new Chart(ctx, {
+                type: 'bar',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#ffffff'
+                            }
                         }
                     },
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)'
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#ffffff',
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString();
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
                     }
                 }
-            }
-        }
-    });
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching income vs expenses data:', error);
+        });
 }
 
 // 4. Savings Accumulation Chart
@@ -213,62 +195,57 @@ function initSavingsChart() {
     const ctx = document.getElementById('savingsChart');
     if (!ctx) return;
 
-    const savingsData = {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        datasets: [{
-            label: 'Total Savings',
-            data: [10000, 11200, 10700, 12900, 14500, 16900],
-            borderColor: '#98CC2C',
-            backgroundColor: 'rgba(152, 204, 44, 0.1)',
-            fill: true,
-            tension: 0.4
-        }, {
-            label: 'Monthly Savings',
-            data: [1200, 1200, -500, 2200, 1600, 2400],
-            type: 'bar',
-            backgroundColor: '#4CAF50',
-            borderRadius: 4
-        }]
-    };
+    // Fetch real data from backend
+    fetch('/dashboard/api/savings/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('Error fetching savings data:', data.error);
+                return;
+            }
 
-    new Chart(ctx, {
-        type: 'line',
-        data: savingsData,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                    labels: {
-                        color: '#ffffff'
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    ticks: {
-                        color: '#ffffff'
-                    },
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)'
-                    }
-                },
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        color: '#ffffff',
-                        callback: function(value) {
-                            return '$' + value.toLocaleString();
+            new Chart(ctx, {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#ffffff'
+                            }
                         }
                     },
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)'
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#ffffff',
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString();
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
                     }
                 }
-            }
-        }
-    });
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching savings data:', error);
+        });
 }
 
 // 5. Spending Patterns Heatmap
@@ -339,77 +316,90 @@ function initBudgetProgress() {
     const container = document.getElementById('budget-progress');
     if (!container) return;
 
-    const budgets = [
-        { category: 'Housing', spent: 1200, budget: 1500, color: '#98CC2C' },
-        { category: 'Food', spent: 600, budget: 700, color: '#4CAF50' },
-        { category: 'Transportation', spent: 350, budget: 400, color: '#81C784' },
-        { category: 'Entertainment', spent: 280, budget: 300, color: '#FF6B6B' }
-    ];
+    // Fetch real budget data from backend
+    fetch('/dashboard/api/budget-progress/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('Error fetching budget progress data:', data.error);
+                return;
+            }
 
-    let progressHTML = '';
-    budgets.forEach(item => {
-        const percentage = (item.spent / item.budget) * 100;
-        const status = percentage > 90 ? 'warning' : percentage > 100 ? 'over' : 'good';
+            const budgets = data.budgets || [];
+            const colors = ['#98CC2C', '#4CAF50', '#81C784', '#A5D6A7', '#C8E6C9', '#E8F5E8'];
 
-        progressHTML += `
-            <div class="budget-item">
-                <div class="budget-header">
-                    <span class="budget-category">${item.category}</span>
-                    <span class="budget-amount">$${item.spent.toLocaleString()} / $${item.budget.toLocaleString()}</span>
-                </div>
-                <div class="budget-bar">
-                    <div class="budget-fill ${status}" style="width: ${Math.min(percentage, 100)}%; background-color: ${item.color}"></div>
-                </div>
-                <div class="budget-percentage">${percentage.toFixed(1)}%</div>
-            </div>
-        `;
-    });
+            let progressHTML = '';
+            budgets.forEach((item, index) => {
+                const percentage = item.percentage;
+                const status = percentage > 90 ? 'warning' : percentage > 100 ? 'over' : 'good';
+                const color = colors[index % colors.length];
 
-    container.innerHTML = progressHTML;
+                progressHTML += `
+                    <div class="budget-item">
+                        <div class="budget-header">
+                            <span class="budget-category">${item.category}</span>
+                            <span class="budget-amount">$${item.spent.toLocaleString()} / $${item.budget.toLocaleString()}</span>
+                        </div>
+                        <div class="budget-bar">
+                            <div class="budget-fill ${status}" style="width: ${Math.min(percentage, 100)}%; background-color: ${color}"></div>
+                        </div>
+                        <div class="budget-percentage">${percentage.toFixed(1)}%</div>
+                    </div>
+                `;
+            });
 
-    // Add CSS for budget progress
-    const style = document.createElement('style');
-    style.textContent = `
-        .budget-item {
-            margin-bottom: 20px;
-        }
-        .budget-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
-        }
-        .budget-category {
-            font-weight: 500;
-        }
-        .budget-amount {
-            color: var(--text-color);
-        }
-        .budget-bar {
-            height: 12px;
-            background: var(--main-color);
-            border-radius: 6px;
-            overflow: hidden;
-            margin-bottom: 5px;
-        }
-        .budget-fill {
-            height: 100%;
-            transition: width 0.3s ease;
-            border-radius: 6px;
-        }
-        .budget-fill.warning {
-            opacity: 0.8;
-        }
-        .budget-fill.over {
-            background-color: #FF6B6B !important;
-        }
-        .budget-percentage {
-            text-align: right;
-            font-size: 0.8rem;
-            color: var(--text-color);
-        }
-    `;
-    document.head.appendChild(style);
+            container.innerHTML = progressHTML;
+
+            // Add CSS for budget progress if not already added
+            if (!document.getElementById('budget-progress-styles')) {
+                const style = document.createElement('style');
+                style.id = 'budget-progress-styles';
+                style.textContent = `
+                    .budget-item {
+                        margin-bottom: 20px;
+                    }
+                    .budget-header {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-bottom: 8px;
+                        font-size: 0.9rem;
+                    }
+                    .budget-category {
+                        font-weight: 500;
+                    }
+                    .budget-amount {
+                        color: var(--text-color);
+                    }
+                    .budget-bar {
+                        height: 12px;
+                        background: var(--main-color);
+                        border-radius: 6px;
+                        overflow: hidden;
+                        margin-bottom: 5px;
+                    }
+                    .budget-fill {
+                        height: 100%;
+                        transition: width 0.3s ease;
+                        border-radius: 6px;
+                    }
+                    .budget-fill.warning {
+                        opacity: 0.8;
+                    }
+                    .budget-fill.over {
+                        background-color: #FF6B6B !important;
+                    }
+                    .budget-percentage {
+                        text-align: right;
+                        font-size: 0.8rem;
+                        color: var(--text-color);
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching budget progress data:', error);
+        });
 }
 
 // 7. Top Merchants List
@@ -417,80 +407,90 @@ function initTopMerchants() {
     const container = document.getElementById('top-merchants');
     if (!container) return;
 
-    const merchants = [
-        { name: 'Amazon', amount: 245, transactions: 8, category: 'Shopping' },
-        { name: 'Starbucks', amount: 156, transactions: 12, category: 'Food' },
-        { name: 'Shell Gas Station', amount: 180, transactions: 6, category: 'Transportation' },
-        { name: 'Netflix', amount: 15, transactions: 1, category: 'Entertainment' },
-        { name: 'Whole Foods', amount: 320, transactions: 4, category: 'Food' }
-    ];
+    // Fetch real merchant data from backend
+    fetch('/dashboard/api/top-merchants/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('Error fetching top merchants data:', data.error);
+                return;
+            }
 
-    let merchantHTML = '';
-    merchants.forEach((merchant, index) => {
-        merchantHTML += `
-            <div class="merchant-item">
-                <div class="merchant-rank">#${index + 1}</div>
-                <div class="merchant-info">
-                    <div class="merchant-name">${merchant.name}</div>
-                    <div class="merchant-category">${merchant.category}</div>
-                </div>
-                <div class="merchant-stats">
-                    <div class="merchant-amount">$${merchant.amount}</div>
-                    <div class="merchant-count">${merchant.transactions} transactions</div>
-                </div>
-            </div>
-        `;
-    });
+            const merchants = data.merchants || [];
 
-    container.innerHTML = merchantHTML;
+            let merchantHTML = '';
+            merchants.forEach((merchant, index) => {
+                merchantHTML += `
+                    <div class="merchant-item">
+                        <div class="merchant-rank">#${index + 1}</div>
+                        <div class="merchant-info">
+                            <div class="merchant-name">${merchant.name}</div>
+                            <div class="merchant-category">${merchant.category}</div>
+                        </div>
+                        <div class="merchant-stats">
+                            <div class="merchant-amount">$${merchant.amount.toLocaleString()}</div>
+                            <div class="merchant-count">${merchant.transactions} transactions</div>
+                        </div>
+                    </div>
+                `;
+            });
 
-    // Add CSS for merchant list
-    const style = document.createElement('style');
-    style.textContent = `
-        .merchant-item {
-            display: flex;
-            align-items: center;
-            padding: 15px 0;
-            border-bottom: 1px solid var(--main-color);
-        }
-        .merchant-item:last-child {
-            border-bottom: none;
-        }
-        .merchant-rank {
-            width: 30px;
-            height: 30px;
-            background: var(--green-color);
-            color: #000;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 0.8rem;
-            margin-right: 15px;
-        }
-        .merchant-info {
-            flex: 1;
-        }
-        .merchant-name {
-            font-weight: 500;
-            margin-bottom: 3px;
-        }
-        .merchant-category {
-            font-size: 0.8rem;
-            color: var(--text-color);
-        }
-        .merchant-stats {
-            text-align: right;
-        }
-        .merchant-amount {
-            font-weight: 600;
-            color: var(--title-color);
-        }
-        .merchant-count {
-            font-size: 0.8rem;
-            color: var(--text-color);
-        }
-    `;
-    document.head.appendChild(style);
+            container.innerHTML = merchantHTML;
+
+            // Add CSS for merchant list if not already added
+            if (!document.getElementById('merchant-list-styles')) {
+                const style = document.createElement('style');
+                style.id = 'merchant-list-styles';
+                style.textContent = `
+                    .merchant-item {
+                        display: flex;
+                        align-items: center;
+                        padding: 15px 0;
+                        border-bottom: 1px solid var(--main-color);
+                    }
+                    .merchant-item:last-child {
+                        border-bottom: none;
+                    }
+                    .merchant-rank {
+                        width: 30px;
+                        height: 30px;
+                        background: var(--green-color);
+                        color: #000;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: 600;
+                        font-size: 0.8rem;
+                        margin-right: 15px;
+                    }
+                    .merchant-info {
+                        flex: 1;
+                    }
+                    .merchant-name {
+                        font-weight: 500;
+                        margin-bottom: 3px;
+                    }
+                    .merchant-category {
+                        font-size: 0.8rem;
+                        color: var(--text-color);
+                    }
+                    .merchant-stats {
+                        text-align: right;
+                    }
+                    .merchant-amount {
+                        font-weight: 600;
+                        color: var(--title-color);
+                    }
+                    .merchant-count {
+                        font-size: 0.8rem;
+                        color: var(--text-color);
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching top merchants data:', error);
+        });
 }

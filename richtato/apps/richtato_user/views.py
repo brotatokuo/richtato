@@ -47,7 +47,9 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
         logger.debug(f"User {request.user} is authenticated.")
         accounts = Account.objects.filter(user=request.user)
         networth = (
-            sum(account.latest_balance for account in accounts) if accounts else 0.0
+            round(sum(account.latest_balance for account in accounts))
+            if accounts
+            else 0.0
         )
         expense_sum = 0
         income_sum = 0
@@ -61,7 +63,7 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
         sankey_by_category_html = convert_plotly_fig_to_html(sankey_by_category_fig)
 
         context = {
-            "networth": format_currency(networth),
+            "networth": format_currency(networth, 0),
             "expense_sum": format_currency(expense_sum),
             "income_sum": format_currency(income_sum),
             "savings_rate": f"{savings_rate}%",

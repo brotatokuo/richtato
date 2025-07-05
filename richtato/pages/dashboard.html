@@ -39,7 +39,7 @@
 
     <div class="kpi-card">
       <div class="kpi-header">
-        <h3>Budget Utilization</h3>
+        <h3>Financial Health</h3>
         <i class="fa-solid fa-percentage kpi-icon"></i>
       </div>
       <div class="kpi-value">{{ budget_utilization }}%</div>
@@ -69,7 +69,27 @@
       </div>
     </div>
 
-    <!-- Expense Breakdown Pie Chart -->
+    <!-- Income vs Expenses -->
+    <div class="analytics-card">
+      <div class="card-header">
+        <h2>Income vs Expenses</h2>
+      </div>
+      <div class="chart-container">
+        <canvas id="incomeExpenseChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Savings Trend -->
+    <div class="analytics-card">
+      <div class="card-header">
+        <h2>Savings Accumulation</h2>
+      </div>
+      <div class="chart-container">
+        <canvas id="savingsChart"></canvas>
+      </div>
+    </div>
+
+        <!-- Expense Breakdown Pie Chart -->
     <div class="analytics-card">
       <div class="card-header">
         <h2>Expense Categories</h2>
@@ -80,13 +100,13 @@
       <div class="chart-legend" id="expense-legend"></div>
     </div>
 
-    <!-- Income vs Expenses -->
+    <!-- Budget Progress -->
     <div class="analytics-card">
       <div class="card-header">
-        <h2>Income vs Expenses</h2>
+        <h2>Budget Progress</h2>
       </div>
-      <div class="chart-container">
-        <canvas id="incomeExpenseChart"></canvas>
+      <div class="budget-progress-container" id="budget-progress">
+        <!-- Budget progress bars will be inserted here -->
       </div>
     </div>
 
@@ -101,16 +121,6 @@
       </div>
     </div>
 
-    <!-- Budget Progress -->
-    <div class="analytics-card">
-      <div class="card-header">
-        <h2>Budget Progress</h2>
-      </div>
-      <div class="budget-progress-container" id="budget-progress">
-        <!-- Budget progress bars will be inserted here -->
-      </div>
-    </div>
-
     <!-- Top Merchants -->
     <div class="analytics-card">
       <div class="card-header">
@@ -118,43 +128,6 @@
       </div>
       <div class="merchant-list" id="top-merchants">
         <!-- Top merchants will be populated here -->
-      </div>
-    </div>
-
-    <!-- Savings Trend -->
-    <div class="analytics-card">
-      <div class="card-header">
-        <h2>Savings Accumulation</h2>
-      </div>
-      <div class="chart-container">
-        <canvas id="savingsChart"></canvas>
-      </div>
-    </div>
-
-    <!-- Financial Health Score -->
-    <div class="analytics-card">
-      <div class="card-header">
-        <h2>Financial Health Score</h2>
-      </div>
-      <div class="health-score-container">
-        <div class="score-circle">
-          <div class="score-value" id="health-score">85</div>
-          <div class="score-label">Good</div>
-        </div>
-        <div class="score-breakdown">
-          <div class="score-item">
-            <span>Emergency Fund</span>
-            <div class="score-bar"><div class="score-fill" style="width: 90%"></div></div>
-          </div>
-          <div class="score-item">
-            <span>Debt-to-Income</span>
-            <div class="score-bar"><div class="score-fill" style="width: 75%"></div></div>
-          </div>
-          <div class="score-item">
-            <span>Savings Rate</span>
-            <div class="score-bar"><div class="score-fill" style="width: 85%"></div></div>
-          </div>
-        </div>
       </div>
     </div>
 
