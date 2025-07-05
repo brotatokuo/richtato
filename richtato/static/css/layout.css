@@ -1,41 +1,50 @@
 /* Layout and navigation styles - Restored Original Design */
 
-/* Sidebar - Original design */
+/* Sidebar - Simplified overlay design */
 .sidebar {
-  height: 100%;
+  height: 100vh;
   background-color: var(--third-color);
-  padding: var(--third-padding);
+  padding: var(--third-padding) 10px;
   display: flex;
-  width: 220px;
+  width: 60px;
   flex-direction: column;
-  position: relative;
-  transition: transform 0.45s;
-  -webkit-transition: transform 0.45s;
-  -moz-transition: transform 0.45s;
-  -ms-transition: transform 0.45s;
-  -o-transition: transform 0.45s;
-  transform: translateX(0);
+  position: fixed;
+  top: 0;
+  left: 0;
+  transition: width 0.3s ease, box-shadow 0.3s ease;
   z-index: 1000;
+  overflow: hidden;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Sidebar expanded state (overlay) */
+.sidebar.expanded {
+  width: 220px;
+  padding: var(--third-padding);
+  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.2);
+  background-color: var(--third-color);
+}
+
+/* Page content - always centered, no margin adjustments */
+.page-content {
+  margin-left: 0;
+  width: 100%;
 }
 
 @media (max-width: 767px) {
   .sidebar {
-    transform: translateX(-250px);
-    height: 100%;
-    width: 250px;
-    z-index: 1000;
-    top: 0;
-    left: 0;
-    transition: transform 0.3s ease-in-out;
-    position: fixed;
+    transform: translateX(-60px);
+    width: 60px;
   }
 
-  .sidebar.collapsed {
-    transform: translateX(-250px);
+  .sidebar.expanded {
+    transform: translateX(0);
+    width: 220px;
   }
 
   .sidebar.open {
     transform: translateX(0);
+    width: 220px;
   }
 }
 
@@ -76,6 +85,7 @@
 /* Sidebar navigation */
 .sidebar ul {
   list-style: none;
+  margin-top: 50px; /* Space for toggle button */
 }
 
 .sidebar ul li a {
@@ -83,15 +93,15 @@
   align-items: center;
   font-weight: 500;
   font-size: 0.92rem;
-  padding: var(--fourth-padding);
-  margin: var(--fifth-margin);
+  padding: 12px 8px;
+  margin: 4px 0;
   text-decoration: none;
   color: var(--text-color);
   border-radius: var(--secondary-radius);
-  -webkit-border-radius: var(--secondary-radius);
-  -moz-border-radius: var(--secondary-radius);
-  -ms-border-radius: var(--secondary-radius);
-  -o-border-radius: var(--secondary-radius);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  position: relative;
 }
 
 .sidebar ul li a:hover,
@@ -101,7 +111,53 @@
 }
 
 .sidebar ul li a i {
-  margin-right: var(--fifth-margin);
+  min-width: 20px;
+  text-align: center;
+  margin-right: 0;
+}
+
+/* Text labels - hidden by default, shown on expanded */
+.sidebar ul li a span {
+  opacity: 0;
+  margin-left: 15px;
+  transition: opacity 0.3s ease 0.1s;
+}
+
+.sidebar.expanded ul li a span {
+  opacity: 1;
+}
+
+/* Toggle button */
+.sidebar-toggle {
+  position: absolute;
+  top: 15px;
+  right: -15px;
+  width: 30px;
+  height: 30px;
+  background: var(--green-color);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  z-index: 1001;
+}
+
+.sidebar-toggle:hover {
+  background: #7FB800;
+  transform: scale(1.1);
+}
+
+.sidebar-toggle i {
+  color: #000;
+  font-size: 0.9rem;
+  transition: transform 0.3s ease;
+}
+
+.sidebar.expanded .sidebar-toggle i {
+  transform: rotate(180deg);
 }
 
 @media (max-width: 767px) {
@@ -220,13 +276,13 @@ a i {
 /* Main content */
 main,
 #main {
-  overflow: hidden;
   width: 100%;
   max-width: none;
   min-height: 100vh;
   display: flex;
+  margin: 0 auto;
   flex-direction: column;
-  position: relative;
+  position: absolute;
   left: 0;
   right: 0;
 }

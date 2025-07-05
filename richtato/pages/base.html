@@ -50,6 +50,9 @@
     </div>
     <div class="page-content index-page">
       <div class="sidebar" id="sidebar">
+        <button class="sidebar-toggle" id="sidebar-toggle">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
         <i class="fa-solid fa-xmark xmark"></i>
         <ul>
           <li>
@@ -65,27 +68,10 @@
             </a>
           </li>
 
-          <!-- <li>
-          <a href="{% url 'profile' %}" class="sidebar-link">
-            <i class="fa-regular fa-user fa-fw"></i><span>Profile</span>
-          </a>
-        </li> -->
-
-          <!-- <li>
-          <a href="{% url 'goals' %}" class="sidebar-link">
-            <i class="fa-solid fa-bullseye fa-fw"></i><span>Goals</span>
-          </a>
-        </li> -->
           <li>
             <a href="{% url 'budget' %}" class="sidebar-link">
               <i class="fa-solid fa-money-bill-trend-up fa-fw"></i>
               <span>Budget</span>
-            </a>
-          </li>
-
-          <li>
-            <a href="{% url 'timeseries_graph' %}" class="sidebar-link">
-              <i class="fa-solid fa-chart-simple fa-fw"></i><span>Graph</span>
             </a>
           </li>
 
@@ -115,13 +101,6 @@
               <span>Settings</span>
             </a>
           </li>
-
-          <!-- <li>
-          <a href="{% url 'user_settings' %}" class="sidebar-link">
-            <i class="fa-solid fa-sliders fa-fw"></i>
-            <span>User Settings</span>
-          </a>
-        </li> -->
         </ul>
       </div>
       <main id="main">
@@ -174,5 +153,6 @@
 
     <script async src="https://w.appzi.io/w.js?token=JCm1L"></script>
     <script src="{% static 'js/components/navigation.js' %}"></script>
+    <script src="{% static 'js/components/sidebar.js' %}"></script>
   </body>
 </html>
