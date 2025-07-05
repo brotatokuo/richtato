@@ -119,6 +119,19 @@
       <main id="main">
         <div class="header">
           <i class="fa-solid fa-bars bar-item" id="hamburger"></i>
+
+          <!-- Mobile brand - only visible on mobile -->
+          <div class="mobile-brand">
+            <a href="{% url 'index' %}" class="mobile-brand-link">
+              <img
+                src="{% static 'images/richtato.ico' %}"
+                alt="Richtato Logo"
+                class="mobile-brand-logo"
+              />
+              <span class="mobile-brand-name">Richtato</span>
+            </a>
+          </div>
+
           <div class="profile">
             <img
               src="{% static 'images/avatar.png' %}"

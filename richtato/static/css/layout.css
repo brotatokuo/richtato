@@ -33,8 +33,8 @@
 
 @media (max-width: 767px) {
   .sidebar {
-    transform: translateX(-60px);
-    width: 60px;
+    transform: translateX(-220px);
+    width: 220px;
   }
 
   .sidebar.expanded {
@@ -45,6 +45,36 @@
   .sidebar.open {
     transform: translateX(0);
     width: 220px;
+  }
+
+  /* Hide toggle button on mobile */
+  .sidebar-toggle {
+    display: none !important;
+  }
+
+  /* Ensure brand name is always visible on mobile */
+  .sidebar-brand-name {
+    opacity: 1;
+  }
+
+  /* Ensure navigation text is always visible on mobile */
+  .sidebar ul li a span {
+    opacity: 1;
+  }
+
+  /* Show mobile brand in header */
+  .mobile-brand {
+    display: flex !important;
+  }
+
+  /* Adjust header layout on mobile */
+  .header {
+    justify-content: flex-start;
+    gap: 15px;
+  }
+
+  .header .profile {
+    margin-left: auto;
   }
 }
 
@@ -230,6 +260,30 @@
   background-color: var(--main-color);
   padding: var(--third-padding);
   min-height: 65px;
+}
+
+/* Mobile brand in header - hidden by default */
+.mobile-brand {
+  display: none;
+}
+
+.mobile-brand-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--white-color);
+}
+
+.mobile-brand-logo {
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+}
+
+.mobile-brand-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--white-color);
 }
 
 .header .profile {

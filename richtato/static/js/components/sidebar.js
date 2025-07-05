@@ -7,32 +7,71 @@ document.addEventListener('DOMContentLoaded', function() {
 function initSidebar() {
     const sidebar = document.getElementById('sidebar');
     const toggleBtn = document.getElementById('sidebar-toggle');
+    const hamburgerBtn = document.getElementById('hamburger');
 
-    if (!sidebar || !toggleBtn) {
-        console.log('Sidebar elements not found');
+    if (!sidebar) {
+        console.log('Sidebar element not found');
         return;
     }
 
-    // Sidebar defaults to collapsed (icon-only) state
-    // Load saved sidebar state - default to collapsed
-    const isExpanded = localStorage.getItem('sidebarExpanded') === 'true';
-    if (isExpanded) {
-        expandSidebar();
+    // Check if mobile
+    const isMobile = () => window.innerWidth <= 767;
+
+    // Desktop behavior
+    if (!isMobile() && toggleBtn) {
+        // Sidebar defaults to collapsed (icon-only) state on desktop
+        const isExpanded = localStorage.getItem('sidebarExpanded') === 'true';
+        if (isExpanded) {
+            expandSidebar();
+        }
+
+        // Toggle functionality for desktop
+        toggleBtn.addEventListener('click', function() {
+            if (sidebar.classList.contains('expanded')) {
+                collapseSidebar();
+            } else {
+                expandSidebar();
+            }
+        });
+
+        // Close sidebar when clicking outside (for overlay behavior) - desktop only
+        document.addEventListener('click', function(e) {
+            if (!isMobile() && !sidebar.contains(e.target) && sidebar.classList.contains('expanded')) {
+                collapseSidebar();
+            }
+        });
     }
 
-    // Toggle functionality
-    toggleBtn.addEventListener('click', function() {
-        if (sidebar.classList.contains('expanded')) {
-            collapseSidebar();
-        } else {
-            expandSidebar();
+    // Mobile hamburger menu behavior
+    if (hamburgerBtn) {
+        hamburgerBtn.addEventListener('click', function() {
+            if (isMobile()) {
+                // On mobile, always show expanded sidebar when hamburger is clicked
+                if (sidebar.classList.contains('open')) {
+                    sidebar.classList.remove('open');
+                } else {
+                    sidebar.classList.add('open');
+                    sidebar.classList.add('expanded'); // Ensure it's fully expanded
+                }
+            }
+        });
+    }
+
+    // Close mobile sidebar when clicking outside
+    document.addEventListener('click', function(e) {
+        if (isMobile() && !sidebar.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+            sidebar.classList.remove('open');
         }
     });
 
-    // Close sidebar when clicking outside (for overlay behavior)
-    document.addEventListener('click', function(e) {
-        if (!sidebar.contains(e.target) && sidebar.classList.contains('expanded')) {
-            collapseSidebar();
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        if (isMobile()) {
+            // On mobile, remove desktop states
+            sidebar.classList.remove('expanded');
+        } else {
+            // On desktop, remove mobile states
+            sidebar.classList.remove('open');
         }
     });
 
