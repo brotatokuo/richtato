@@ -329,7 +329,8 @@
   padding: 5px 10px;
   border: 1px solid var(--ccc-color);
   border-radius: var(--secondary-radius);
-  background: var(--white-color);
+  background: var(--primary-color);
+  color: var(--text-color);
 }
 
 .chart-container {

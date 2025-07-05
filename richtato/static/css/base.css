@@ -33,11 +33,11 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #0077ffcb;
+  background-color: var(--green-color);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--green-color);
+  background-color: gold;
 }
 
 /* Loading animation - Original design */

@@ -54,6 +54,9 @@ function initCashFlowChart() {
             plugins: {
                 legend: {
                     position: 'top',
+                    labels: {
+                        color: '#ffffff'
+                    }
                 },
                 zoom: {
                     zoom: {
@@ -68,12 +71,24 @@ function initCashFlowChart() {
                 }
             },
             scales: {
+                x: {
+                    ticks: {
+                        color: '#ffffff'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
                 y: {
                     beginAtZero: true,
                     ticks: {
+                        color: '#ffffff',
                         callback: function(value) {
                             return '$' + value.toLocaleString();
                         }
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
                     }
                 }
             }
@@ -114,7 +129,8 @@ function initExpensePieChart() {
                     position: 'bottom',
                     labels: {
                         padding: 20,
-                        usePointStyle: true
+                        usePointStyle: true,
+                        color: '#ffffff'
                     }
                 },
                 tooltip: {
@@ -160,16 +176,31 @@ function initIncomeExpenseChart() {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    position: 'top'
+                    position: 'top',
+                    labels: {
+                        color: '#ffffff'
+                    }
                 }
             },
             scales: {
+                x: {
+                    ticks: {
+                        color: '#ffffff'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
                 y: {
                     beginAtZero: true,
                     ticks: {
+                        color: '#ffffff',
                         callback: function(value) {
                             return '$' + value.toLocaleString();
                         }
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
                     }
                 }
             }
@@ -208,16 +239,31 @@ function initSavingsChart() {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    position: 'top'
+                    position: 'top',
+                    labels: {
+                        color: '#ffffff'
+                    }
                 }
             },
             scales: {
+                x: {
+                    ticks: {
+                        color: '#ffffff'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
                 y: {
                     beginAtZero: true,
                     ticks: {
+                        color: '#ffffff',
                         callback: function(value) {
                             return '$' + value.toLocaleString();
                         }
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
                     }
                 }
             }
