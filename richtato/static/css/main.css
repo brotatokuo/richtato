@@ -471,21 +471,41 @@
 
 /* Sankey Diagrams */
 .sankey-container {
-  padding: 15px;
-  min-height: 400px;
+  padding: 10px;
+  min-height: 380px;
+  height: 380px;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.sankey-container .plotly-graph-div {
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  border-radius: 8px;
 }
 
 .sankey-container svg {
   max-width: 100%;
-  height: auto;
+  max-height: 100%;
+  overflow: hidden !important;
 }
 
-/* Ensure sankey diagrams are responsive */
+/* Remove scrollbars completely */
 .analytics-card .sankey-container {
-  overflow-x: auto;
+  overflow: hidden;
+}
+
+.sankey-container::-webkit-scrollbar {
+  display: none;
+}
+
+.sankey-container {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Responsive adjustments */

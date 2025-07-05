@@ -54,11 +54,18 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
         savings_rate = (
             round((income_sum - expense_sum) / income_sum * 100) if income_sum else 0
         )
+
+        pg_client = PostgresClient()
+        expense_df = pg_client.get_expense_df(request.user.pk)
+        sankey_by_category_fig = sankey_by_category(expense_df)
+        sankey_by_category_html = convert_plotly_fig_to_html(sankey_by_category_fig)
+
         context = {
             "networth": format_currency(networth),
             "expense_sum": format_currency(expense_sum),
             "income_sum": format_currency(income_sum),
             "savings_rate": f"{savings_rate}%",
+            "sankey_by_category": sankey_by_category_html,
         }
 
         # Render the response with the context
