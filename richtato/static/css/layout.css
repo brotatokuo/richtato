@@ -418,13 +418,13 @@ main .main-content .title::after {
 }
 
 /* Responsive grid - max 2 columns, down to 1 on small screens */
-@media (min-width: 768px) {
+@media (min-width: 1000px) {
   .main-content-boxes {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1000px) {
   .main-content-boxes {
     grid-template-columns: 1fr;
     gap: var(--secondary-padding);
@@ -491,4 +491,18 @@ main .main-content .title::after {
   .header input[type="search"]:focus {
     padding-right: 0px;
   }
+}
+
+.general-info-section2 {
+  display: flex;
+  justify-content: center;
+  /* Centers horizontally */
+  align-items: center;
+  /* Centers vertically */
+  flex-direction: column;
+  /* Stacks the elements vertically */
+}
+
+.table-responsive {
+  width: 100%;
 }
