@@ -1,12 +1,13 @@
 {% extends 'base.html' %} {% load static %}
 <!-- prettier-ignore-start -->
-{% block title %} BI Dashboard {%endblock %}
+{% block title %}Dashboard {%endblock %}
 <!-- prettier-ignore-start -->
 {% block content %}
 <div class="main-content">
   <div class="title">
     <h1>Dashboard</h1>
   </div>
+
 
   <!-- KPI Summary Row -->
   <div class="kpi-row">
@@ -50,8 +51,6 @@
   </div>
 
   <!-- Main Analytics Grid -->
-  <div class="analytics-grid">
-
     <!-- Cash Flow Trend -->
     <div class="analytics-card large">
       <div class="card-header">
@@ -111,15 +110,14 @@
     </div>
 
     <!-- Spending Patterns Heatmap -->
-    <div class="analytics-card">
+    <!-- <div class="analytics-card">
       <div class="card-header">
         <h2>Spending Patterns</h2>
         <span class="subtitle">Daily spending by category</span>
       </div>
       <div class="heatmap-container" id="spendingHeatmap">
-        <!-- Heatmap will be generated here -->
       </div>
-    </div>
+    </div> -->
 
     <!-- Top Merchants -->
     <div class="analytics-card">
@@ -131,13 +129,13 @@
       </div>
     </div>
 
-    <!-- Expense Stream by Category -->
+    <!-- Cash Flow -->
     <div class="analytics-card large">
       <div class="card-header">
-        <h2>Expense Stream by Category</h2>
+        <h2>Cash Flow</h2>
       </div>
       <div class="chart-container sankey-container" id="sankey-category">
-        {{ sankey_by_category|safe }}
+        {{ sankey_cash_flow|safe }}
       </div>
     </div>
 
@@ -150,9 +148,9 @@
         {{ sankey_by_account|safe }}
       </div>
     </div> -->
-
-    <!-- AI Insights -->
-    <div class="analytics-card insights">
+    <div class="analytics-grid">
+     <!-- AI Insights -->
+    <div class="analytics-card insights large">
       <div class="card-header">
         <h2>AI Insights</h2>
         <i class="fa-solid fa-brain ai-icon"></i>
@@ -178,7 +176,6 @@
         </div>
       </div>
     </div>
-
   </div>
 </div>
 

@@ -40,6 +40,27 @@ body {
   background-color: gold;
 }
 
+input[type="date"] {
+  background-color: var(--primary-color);
+  color-scheme: dark;
+  color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+/* Invert calendar icon */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+
 /* Loading animation - Original design */
 div.loader {
   height: 100vh;
@@ -62,7 +83,7 @@ div.loader {
 
 div.loader h1 {
   position: relative;
-  color: var(--blue-color);
+  color: var(--green-color);
 }
 
 div.loader h1 span {
@@ -99,4 +120,90 @@ div.loader h1 span {
   .page-content {
     grid-template-columns: 0 1fr;
   }
+}
+
+/* RichForm */
+.rich-form-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.rich-form {
+  background: var(--main-color);
+  border-radius: 8px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.rich-form-header {
+  position: relative;
+  padding: 15px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.close-button {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  font-size: 20px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: white;
+}
+
+.rich-form-form {
+  padding: 20px;
+}
+
+.rich-form-footer {
+  padding: 15px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: right;
+}
+
+.save-button {
+  padding: 8px 16px;
+  background: var(--green-color);
+  color: black;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+
+.rich-form select {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  color: var(--text-color);
+  font-size: 14px;
+  border: 1px solid white;
+  background-color: var(--primary-color);
+  border-radius: 2px;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.rich-form select:focus {
+  outline: none;
+  border-color: gold;
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.3); /* soft gold glow */
+}
+
+.rich-form select:hover {
+  border-color: #ddd;
 }

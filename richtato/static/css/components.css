@@ -167,8 +167,8 @@ input[type="password"] {
   color: var(--text-color);
   font-size: 14px;
   border: 1px solid white;
-  background-color: var(--secondary-color);
-  border-radius: 4px;
+  background-color: var(--primary-color);
+  border-radius: 2px;
   box-sizing: border-box;
   appearance: none;
   -webkit-appearance: none;

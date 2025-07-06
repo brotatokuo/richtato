@@ -7,6 +7,52 @@
 
 /* Page-specific styles can be added here or in separate files */
 
+/* DataTables Button Styling */
+.dt-buttons {
+  margin-bottom: 15px !important;
+  display: flex;
+  gap: 8px;
+}
+
+.dt-button {
+  color: var(--primary-color) !important;
+  border: none !important;
+  padding: 10px 16px !important;
+  border-radius: var(--first-radius) !important;
+  cursor: pointer !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.dt-button:hover {
+  background: #7cb518 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.dt-button:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Ensure buttons are visible in all table containers */
+.dataTables_wrapper .dt-buttons {
+  margin-bottom: 15px;
+}
+
+/* RichTable modal styling adjustments */
+.rich-table-modal {
+  z-index: 10000 !important;
+}
+
+.rich-table-modal .modal-content {
+  background: var(--primary-color);
+  border-radius: var(--first-radius);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
 /* Welcome page styles */
 .welcome-page {
   display: flex;
