@@ -1,4 +1,5 @@
 from django.urls import path
+
 from . import views
 
 urlpatterns = [
@@ -15,5 +16,5 @@ urlpatterns = [
     path(
         "api/budget-progress/", views.budget_progress_data, name="budget_progress_data"
     ),
-    path("api/top-merchants/", views.top_merchants_data, name="top_merchants_data"),
+    path("api/top-categories/", views.top_categories_data, name="top_categories_data"),
 ]

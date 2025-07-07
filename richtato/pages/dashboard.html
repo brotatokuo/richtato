@@ -8,7 +8,6 @@
     <h1>Dashboard</h1>
   </div>
 
-
   <!-- KPI Summary Row -->
   <div class="kpi-row">
     <div class="kpi-card">
@@ -45,7 +44,10 @@
       </div>
       <div class="kpi-value">{{ budget_utilization }}%</div>
       <div class="kpi-progress">
-        <div class="progress-bar" style="width: {{ budget_utilization }}%"></div>
+        <div
+          class="progress-bar"
+          style="width: {{ budget_utilization }}%"
+        ></div>
       </div>
     </div>
   </div>
@@ -58,9 +60,9 @@
         <h2>Cash Flow Trend</h2>
         <div class="card-controls">
           <select id="cashflow-period">
-            <option>Last 6 months</option>
-            <option>Last year</option>
-            <option>All time</option>
+            <option value="6m">Last 6 months</option>
+            <option value="1y">Last year</option>
+            <option value="all">All time</option>
           </select>
         </div>
       </div>
@@ -89,10 +91,65 @@
       </div>
     </div>
 
-        <!-- Expense Breakdown Pie Chart -->
+    <!-- Top Categories -->
+    <div class="analytics-card">
+      <div class="card-header">
+        <h2>Top Spending Categories</h2>
+        <div class="card-controls">
+          <select id="categories-period">
+            <option value="30d">Last 30 days</option>
+            <option value="3m">Last 3 months</option>
+            <option value="6m">Last 6 months</option>
+            <option value="1y">Last year</option>
+            <option value="all">All time</option>
+          </select>
+          <div class="view-toggle">
+            <button class="view-btn active" data-view="list">
+              <i class="fa-solid fa-list"></i>
+            </button>
+            <button class="view-btn" data-view="table">
+              <i class="fa-solid fa-table"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="categories-container">
+        <!-- Categories list view -->
+        <div class="categories-list" id="top-categories">
+          <!-- Top categories will be populated here -->
+        </div>
+        <!-- Categories table view -->
+        <div class="categories-table-container" id="categories-table">
+          <!-- Categories table will be populated here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Expense Breakdown Pie Chart -->
     <div class="analytics-card">
       <div class="card-header">
         <h2>Expense Categories</h2>
+        <div class="card-controls">
+          <select id="expense-categories-year">
+            <option value="2024">2024</option>
+            <option value="2023">2023</option>
+            <option value="2022">2022</option>
+          </select>
+          <select id="expense-categories-month">
+            <option value="1">January</option>
+            <option value="2">February</option>
+            <option value="3">March</option>
+            <option value="4">April</option>
+            <option value="5">May</option>
+            <option value="6">June</option>
+            <option value="7">July</option>
+            <option value="8">August</option>
+            <option value="9">September</option>
+            <option value="10">October</option>
+            <option value="11">November</option>
+            <option value="12">December</option>
+          </select>
+        </div>
       </div>
       <div class="chart-container">
         <canvas id="expensePieChart"></canvas>
@@ -107,26 +164,6 @@
       </div>
       <div class="budget-progress-container" id="budget-progress">
         <!-- Budget progress bars will be inserted here -->
-      </div>
-    </div>
-
-    <!-- Spending Patterns Heatmap -->
-    <!-- <div class="analytics-card">
-      <div class="card-header">
-        <h2>Spending Patterns</h2>
-        <span class="subtitle">Daily spending by category</span>
-      </div>
-      <div class="heatmap-container" id="spendingHeatmap">
-      </div>
-    </div> -->
-
-    <!-- Top Merchants -->
-    <div class="analytics-card">
-      <div class="card-header">
-        <h2>Top Spending Destinations</h2>
-      </div>
-      <div class="merchant-list" id="top-merchants">
-        <!-- Top merchants will be populated here -->
       </div>
     </div>
 
@@ -150,7 +187,7 @@
       </div>
     </div> -->
 
-     <!-- AI Insights -->
+    <!-- AI Insights -->
     <div class="analytics-card insights large">
       <div class="card-header">
         <h2>AI Insights</h2>
@@ -160,19 +197,22 @@
         <div class="insight-item">
           <i class="fa-solid fa-lightbulb insight-icon"></i>
           <div class="insight-text">
-            <strong>Optimization Opportunity:</strong> You spent 23% more on dining out this month. Consider meal planning to save $200.
+            <strong>Optimization Opportunity:</strong> You spent 23% more on
+            dining out this month. Consider meal planning to save $200.
           </div>
         </div>
         <div class="insight-item">
           <i class="fa-solid fa-trend-up insight-icon"></i>
           <div class="insight-text">
-            <strong>Positive Trend:</strong> Your savings rate has improved by 12% over the last quarter.
+            <strong>Positive Trend:</strong> Your savings rate has improved by
+            12% over the last quarter.
           </div>
         </div>
         <div class="insight-item">
           <i class="fa-solid fa-exclamation-triangle insight-icon warning"></i>
           <div class="insight-text">
-            <strong>Budget Alert:</strong> You're 85% through your entertainment budget with 10 days left in the month.
+            <strong>Budget Alert:</strong> You're 85% through your entertainment
+            budget with 10 days left in the month.
           </div>
         </div>
       </div>

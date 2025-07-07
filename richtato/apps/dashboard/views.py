@@ -16,12 +16,39 @@ from richtato.apps.income.models import Income
 @login_required
 def cash_flow_data(request):
     """
-    Get cash flow data for the past 6 months (income, expenses, net cash flow)
+    Get cash flow data with period filtering (income, expenses, net cash flow)
     """
     try:
-        # Get date range - last 6 months
+        # Get period parameter from request
+        period = request.GET.get("period", "6m")
+
+        # Calculate date range based on period
         end_date = timezone.now().date()
-        start_date = end_date - relativedelta(months=6)
+
+        if period == "6m":
+            start_date = end_date - relativedelta(months=6)
+        elif period == "1y":
+            start_date = end_date - relativedelta(years=1)
+        elif period == "all":
+            # For all time, get data from the earliest transaction
+            earliest_income = (
+                Income.objects.filter(user=request.user).order_by("date").first()
+            )
+            earliest_expense = (
+                Expense.objects.filter(user=request.user).order_by("date").first()
+            )
+
+            if earliest_income and earliest_expense:
+                start_date = min(earliest_income.date, earliest_expense.date)
+            elif earliest_income:
+                start_date = earliest_income.date
+            elif earliest_expense:
+                start_date = earliest_expense.date
+            else:
+                start_date = end_date - relativedelta(months=6)  # Default fallback
+        else:
+            # Default to 6 months
+            start_date = end_date - relativedelta(months=6)
 
         # Generate monthly labels
         labels = []
@@ -313,50 +340,68 @@ def budget_progress_data(request):
 
 
 @login_required
-def top_merchants_data(request):
+def top_categories_data(request):
     """
-    Get top spending destinations
+    Get top spending destinations with period filtering
     """
     try:
-        # Get data from last 30 days
+        # Get period parameter from request
+        period = request.GET.get("period", "30d")
+
+        # Calculate date range based on period
         end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=30)
+
+        if period == "30d":
+            start_date = end_date - timedelta(days=30)
+        elif period == "3m":
+            start_date = end_date - relativedelta(months=3)
+        elif period == "6m":
+            start_date = end_date - relativedelta(months=6)
+        elif period == "1y":
+            start_date = end_date - relativedelta(years=1)
+        elif period == "all":
+            start_date = None
+        else:
+            # Default to 30 days
+            start_date = end_date - timedelta(days=30)
 
         # Use PostgresClient to get expense data
         pg_client = PostgresClient()
         expense_df = pg_client.get_expense_df(request.user.pk)
 
         if expense_df.empty:
-            return JsonResponse({"merchants": []})
+            return JsonResponse({"categories": []})
 
+        # Filter by date range if not 'all'
         # Filter by date range
         expense_df["date"] = pd.to_datetime(expense_df["date"]).dt.date
-        expense_df = expense_df[
-            (expense_df["date"] >= start_date) & (expense_df["date"] <= end_date)
-        ]
+        if start_date is not None:
+            expense_df = expense_df[
+                (expense_df["date"] >= start_date) & (expense_df["date"] <= end_date)
+            ]
 
-        # Group by merchant and calculate totals
-        merchant_data = (
-            expense_df.groupby("merchant")
-            .agg({"amount": ["sum", "count"], "category_name": "first"})
+        # Group and aggregate
+        grouped = (
+            expense_df.groupby("category_name")
+            .agg(amount_sum=("amount", "sum"), transaction_count=("amount", "count"))
             .reset_index()
         )
 
-        merchant_data.columns = ["merchant", "amount", "transactions", "category"]
-        merchant_data = merchant_data.sort_values("amount", ascending=False).head(5)
+        # Sort and select top 5
+        top_categories = grouped.sort_values("amount_sum", ascending=False).head(5)
 
-        merchants = []
-        for _, row in merchant_data.iterrows():
-            merchants.append(
-                {
-                    "name": row["merchant"],
-                    "amount": float(row["amount"]),
-                    "transactions": int(row["transactions"]),
-                    "category": row["category"],
-                }
-            )
+        # Prepare response
+        categories = [
+            {
+                "name": row["category_name"],
+                "amount": float(row["amount_sum"]),
+                "transactions": int(row["transaction_count"]),
+                "category": row["category_name"],
+            }
+            for _, row in top_categories.iterrows()
+        ]
 
-        return JsonResponse({"merchants": merchants})
+        return JsonResponse({"categories": categories})
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
