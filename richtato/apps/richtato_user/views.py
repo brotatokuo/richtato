@@ -10,6 +10,8 @@ from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, JsonRes
 from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from loguru import logger
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -357,6 +359,16 @@ class RegisterView(View):
                 },
             )
 
+        # Validate password requirements
+        if not self._validate_password(password):
+            return render(
+                request,
+                "register.html",
+                {
+                    "message": "Password must be at least 8 characters long and contain at least one symbol (!@#$%^&*).",
+                },
+            )
+
         try:
             user = User.objects.create_user(username=username, password=password)
             user.save()
@@ -368,3 +380,42 @@ class RegisterView(View):
 
         login(request, user)
         return HttpResponseRedirect(reverse("index"))
+
+    def _validate_password(self, password):
+        """
+        Validate password requirements:
+        - At least 8 characters long
+        - Contains at least one symbol
+        """
+        if len(password) < 8:
+            return False
+
+        import re
+
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+            return False
+
+        return True
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def check_username_availability(request):
+    """
+    Check if a username is available for registration.
+    Returns JSON response with availability status.
+    """
+    username = request.POST.get("username", "").strip()
+
+    if not username:
+        return JsonResponse({"available": False, "message": "Username is required."})
+
+    try:
+        User.objects.get(username=username)
+        return JsonResponse({"available": False, "message": "Username already taken."})
+    except User.DoesNotExist:
+        return JsonResponse({"available": True, "message": "Username is available."})
+    except Exception:
+        return JsonResponse(
+            {"available": False, "message": "Error checking username availability."}
+        )
