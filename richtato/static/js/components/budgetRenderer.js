@@ -37,7 +37,7 @@ class BudgetRenderer {
     }
 
     _createCategoryElement(category, index) {
-        const wrapper = this._createDiv('third-box-section2-details');
+        const wrapper = this._createDiv('budget-category-item');
 
         const iconDiv = this._createIconElement(category.name);
         const infoDiv = this._createInfoElement(category, index);
@@ -49,7 +49,7 @@ class BudgetRenderer {
     }
 
     _createIconElement(categoryName) {
-        const iconDiv = this._createDiv('icon');
+        const iconDiv = this._createDiv('budget-category-icon');
         const icon = document.createElement('i');
         icon.className = 'fa-solid fa-question fa-lg'; // Default
 
@@ -63,7 +63,7 @@ class BudgetRenderer {
     }
 
     _createInfoElement(category, index) {
-        const infoDiv = this._createDiv('third-box-info');
+        const infoDiv = this._createDiv('budget-category-info');
 
         const ul = document.createElement('ul');
         ['name', 'budget', 'message'].forEach((key) => {
@@ -81,11 +81,17 @@ class BudgetRenderer {
     }
 
     _createPercentageBar(id, percent) {
-        const barWrapper = this._createDiv('percentage-bar');
-        const bar = this._createDiv('percentage');
+        const barWrapper = this._createDiv('budget-progress-bar');
+        const bar = this._createDiv('budget-progress-fill');
         bar.id = `percentage-${id}`;
         bar.style.width = Math.abs(percent) + '%';
-        bar.style.backgroundColor = percent < 100 ? 'green' : 'red';
+
+        // Add appropriate CSS classes based on percentage
+        if (percent >= 100) {
+            bar.classList.add('over-budget');
+        } else if (percent >= 80) {
+            bar.classList.add('warning');
+        }
 
         barWrapper.appendChild(bar);
         return barWrapper;

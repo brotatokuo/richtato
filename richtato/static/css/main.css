@@ -618,3 +618,190 @@
     font-size: 1.5rem;
   }
 }
+
+/* Budget page specific styles */
+.budget-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.budget-dropdown {
+  color: var(--text-color);
+  background-color: var(--main-color);
+  border: 1px solid var(--secondary-color);
+  border-radius: var(--first-radius);
+  padding: 10px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.budget-dropdown:focus {
+  border-color: var(--green-color);
+  box-shadow: 0 0 0 2px rgba(152, 204, 44, 0.2);
+}
+
+.budget-dropdown:hover {
+  border-color: var(--green-color);
+}
+
+.budget-categories-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fourth-padding);
+}
+
+.budget-category-item {
+  margin-top: var(--secondary-margin);
+  display: flex;
+  align-items: center;
+  gap: var(--secondary-padding);
+  padding: 15px;
+  background-color: var(--main-color);
+  border-radius: var(--first-radius);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.budget-category-icon {
+  width: 80px;
+  height: 75px;
+  color: var(--blue-color);
+  background-color: rgb(0 117 255 / 20%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--secondary-radius);
+  font-size: 1.5rem;
+  transition: transform 0.3s ease;
+}
+
+.budget-category-icon:hover {
+  transform: scale(1.05);
+}
+
+.budget-category-item:nth-child(2) .budget-category-icon {
+  background-color: rgb(245 158 11 / 20%);
+  color: var(--orange-color);
+}
+
+.budget-category-item:nth-child(3) .budget-category-icon {
+  background-color: rgb(34 197 94 / 20%);
+  color: var(--green-color);
+}
+
+.budget-category-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.budget-category-info ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.budget-category-info li {
+  font-size: 0.9rem;
+  margin-bottom: var(--fifth-margin);
+  color: var(--text-color);
+}
+
+.budget-category-info li:nth-child(2) {
+  font-weight: bold;
+  color: var(--title-color);
+}
+
+.budget-category-info li:last-child {
+  margin-bottom: 0;
+}
+
+/* Budget category progress bars */
+.budget-progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: var(--main-color);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.budget-progress-fill {
+  height: 100%;
+  background-color: var(--green-color);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.budget-progress-fill.over-budget {
+  background-color: var(--red-color);
+}
+
+.budget-progress-fill.warning {
+  background-color: var(--orange-color);
+}
+
+/* Budget summary stats */
+.budget-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 20px;
+  background-color: var(--secondary-color);
+  border-radius: var(--first-radius);
+}
+
+.budget-summary-item {
+  text-align: center;
+  padding: 15px;
+  background-color: var(--main-color);
+  border-radius: var(--secondary-radius);
+}
+
+.budget-summary-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--green-color);
+  margin-bottom: 5px;
+}
+
+.budget-summary-label {
+  font-size: 0.85rem;
+  color: var(--text-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive design for budget page */
+@media (max-width: 768px) {
+  .budget-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .budget-dropdown {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  .budget-category-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 15px;
+  }
+
+  .budget-category-icon {
+    width: 60px;
+    height: 55px;
+  }
+
+  .budget-summary {
+    grid-template-columns: 1fr;
+  }
+}
