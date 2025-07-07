@@ -59,6 +59,7 @@
   justify-content: center;
   align-items: flex-start;
   min-height: calc(100vh - 65px); /* Account for header */
+  height: auto;
   background: linear-gradient(135deg, var(--main-color) 0%, var(--secondary-color) 100%);
   width: 100%;
   position: relative;
@@ -66,6 +67,7 @@
   padding: 20px;
   box-sizing: border-box;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .welcome-center {

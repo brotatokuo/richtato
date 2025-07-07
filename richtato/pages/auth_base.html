@@ -56,6 +56,36 @@
         justify-content: space-between;
         align-items: center;
       }
+
+      .brand {
+        display: flex;
+        align-items: center;
+      }
+
+      .brand-link {
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+        color: var(--white-color);
+        transition: opacity 0.3s ease;
+      }
+
+      .brand-link:hover {
+        opacity: 0.8;
+      }
+
+      .brand-logo {
+        width: 32px;
+        height: 32px;
+        margin-right: 10px;
+      }
+
+      .brand-name {
+        color: var(--white-color);
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin: 0;
+      }
     </style>
   </head>
 
@@ -71,13 +101,7 @@
           <h3 class="brand-name">Richtato</h3>
         </a>
       </div>
-      <div class="profile">
-        <img
-          src="{% static 'images/avatar.png' %}"
-          id="navbar-profile"
-          alt="Profile"
-        />
-      </div>
+      <div></div>
     </div>
 
     <div class="auth-page">

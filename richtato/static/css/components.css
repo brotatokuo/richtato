@@ -104,10 +104,7 @@ body {
 }
 
 .login-footer a:hover {
-  color: var(--white-color);
-  background-color: var(--green-color);
-  padding: 4px 8px;
-  border-radius: 4px;
+  color: gold;
 }
 
 .settings-form {
@@ -164,12 +161,10 @@ input[type="password"] {
   display: block;
   width: 100%;
   padding: 10px;
-  color: var(--text-color);
+  color: black;
   font-size: 14px;
-  border: 1px solid white;
-  background-color: var(--primary-color);
-  border-radius: 2px;
-  box-sizing: border-box;
+  border: none;
+  background-color: rgb(196, 196, 196);
   appearance: none;
   -webkit-appearance: none;
 }
@@ -177,7 +172,7 @@ input[type="password"] {
 input[type="text"]:focus,
 input[type="email"]:focus,
 input[type="password"]:focus {
-  border-color: var(--blue-color);
+  border-color: var(--green-color);
   outline: none;
 }
 
@@ -190,7 +185,7 @@ input[type="password"]:focus {
   border: none;
   font-size: 14px;
   cursor: pointer;
-  color: #007bff;
+  color: black;
   outline: none;
 }
 
@@ -211,7 +206,7 @@ input[type="password"]:focus {
 
 .btn-primary:hover,
 .primary-button:hover {
-  background-color: #7da824;
+  background-color: gold;
   color: #000;
 }
 
@@ -340,7 +335,6 @@ input[type="password"]:focus {
   width: 40%;
   max-width: 400px;
   padding: 20px;
-  border: 1px solid #ddd;
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   transform: translateY(-65px);
