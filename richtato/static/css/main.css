@@ -373,10 +373,10 @@
 
 .card-controls select {
   padding: 5px 10px;
-  border: 1px solid var(--ccc-color);
+  border: none;
   border-radius: var(--secondary-radius);
   background: var(--primary-color);
-  color: var(--text-color);
+  color: var(--green-color);
 }
 
 .chart-container {
