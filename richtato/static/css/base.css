@@ -60,7 +60,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(1);
 }
 
-
 /* Loading animation - Original design */
 div.loader {
   height: 100vh;
@@ -181,7 +180,6 @@ div.loader h1 span {
   border-radius: 4px;
   cursor: pointer;
 }
-
 
 .rich-form select {
   display: block;
