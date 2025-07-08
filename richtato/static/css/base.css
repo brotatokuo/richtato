@@ -181,13 +181,27 @@ div.loader h1 span {
   cursor: pointer;
 }
 
+.rich-form input[type="text"] {
+  width: 100%;
+  padding: 10px;
+  color: var(--text-color);
+  font-size: 14px;
+  background-color: var(--primary-color);
+  border: 1px solid #888888;
+  border-radius: 2px;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
 .rich-form select {
   display: block;
   width: 100%;
   padding: 10px;
   color: var(--text-color);
   font-size: 14px;
-  border: 1px solid white;
+  border: 1px solid #888888;
   background-color: var(--primary-color);
   border-radius: 2px;
   box-sizing: border-box;

@@ -80,7 +80,7 @@ def cash_flow_data(request):
                     user=request.user, date__gte=month_start, date__lte=month_end
                 ).aggregate(total=Sum("amount"))["total"]
                 or 0
-            ) * -1
+            )
 
             income_data.append(float(monthly_income))
             expense_data.append(float(monthly_expense))
@@ -210,7 +210,7 @@ def income_expenses_data(request):
                     user=request.user, date__gte=current_date, date__lte=month_end
                 ).aggregate(total=Sum("amount"))["total"]
                 or 0
-            ) * -1
+            )
 
             income_data.append(float(monthly_income))
             expense_data.append(float(monthly_expense))
