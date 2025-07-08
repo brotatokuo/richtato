@@ -52,17 +52,6 @@ function initCashFlowChart() {
                   color: "#ffffff",
                 },
               },
-              zoom: {
-                zoom: {
-                  wheel: { enabled: true },
-                  pinch: { enabled: true },
-                  mode: "x",
-                },
-                pan: {
-                  enabled: true,
-                  mode: "x",
-                },
-              },
             },
             scales: {
               x: {
@@ -121,8 +110,31 @@ function initExpensePieChart() {
     fetch(url)
       .then((response) => response.json())
       .then((data) => {
-        if (data.error) {
-          console.error("Error fetching expense categories data:", data.error);
+        const chartContainer = ctx.parentElement;
+        // Remove previous message if any
+        const prevMsg = chartContainer.querySelector(".no-data-message");
+        if (prevMsg) prevMsg.remove();
+        if (
+          !data.labels ||
+          !data.datasets ||
+          !data.labels.length ||
+          !data.datasets.length ||
+          !data.datasets[0].data.length ||
+          data.datasets[0].data.every((v) => v === 0)
+        ) {
+          if (expensePieChart) {
+            expensePieChart.destroy();
+            expensePieChart = null;
+          }
+          // Show message
+          const msg = document.createElement("div");
+          msg.className = "no-data-message";
+          msg.textContent = "No data for Year and Month";
+          msg.style.textAlign = "center";
+          msg.style.padding = "40px 0";
+          msg.style.color = "#aaa";
+          msg.style.fontSize = "1.1rem";
+          chartContainer.appendChild(msg);
           return;
         }
         if (expensePieChart) {
@@ -167,19 +179,27 @@ function initExpensePieChart() {
       });
   }
 
-  // Get current year and month
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
-
-  // Set dropdowns to current year and month
   const yearSelect = document.getElementById("expense-categories-year");
   const monthSelect = document.getElementById("expense-categories-month");
-  if (yearSelect) yearSelect.value = currentYear;
-  if (monthSelect) monthSelect.value = currentMonth;
 
-  // Initial load
-  fetchAndRenderExpensePie(currentYear, currentMonth);
+  // Dynamically populate year dropdown from backend and render chart after years are loaded
+  fetch("/dashboard/api/expense-years/")
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.years && data.years.length > 0) {
+        // Fill dropdown in descending order
+        yearSelect.innerHTML = data.years
+          .map((year) => `<option value="${year}">${year}</option>`)
+          .join("");
+        // Default to latest year
+        yearSelect.value = data.years[0];
+        // Set month to current month if not already set
+        const now = new Date();
+        monthSelect.value = (now.getMonth() + 1).toString();
+        // Initial chart render
+        fetchAndRenderExpensePie(yearSelect.value, monthSelect.value);
+      }
+    });
 
   // Add event listeners for year and month dropdowns
   if (yearSelect && monthSelect) {
@@ -399,11 +419,16 @@ function initBudgetProgress() {
 
       let progressHTML = "";
       budgets.forEach((item, index) => {
-        const percentage = item.percentage;
+        const percentage =
+          typeof item.percentage === "number" && !isNaN(item.percentage)
+            ? item.percentage
+            : 0;
         const status =
           percentage > 90 ? "warning" : percentage > 100 ? "over" : "good";
         const color = colors[index % colors.length];
 
+        const safePercentage =
+          typeof percentage === "number" && !isNaN(percentage) ? percentage : 0;
         progressHTML += `
                     <div class="budget-item">
                         <div class="budget-header">
@@ -418,7 +443,7 @@ function initBudgetProgress() {
           100
         )}%; background-color: ${color}"></div>
                         </div>
-                        <div class="budget-percentage">${percentage.toFixed(
+                        <div class="budget-percentage">${safePercentage.toFixed(
                           1
                         )}%</div>
                     </div>

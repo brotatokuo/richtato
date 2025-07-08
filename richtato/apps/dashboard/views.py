@@ -126,9 +126,24 @@ def expense_categories_data(request):
     Get expense breakdown by category for pie chart
     """
     try:
-        # Get expenses from last 30 days
-        end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=30)
+        # Get year and month from query params
+        import calendar
+        from datetime import date
+
+        year = request.GET.get("year")
+        month = request.GET.get("month")
+        today = timezone.now().date()
+        if year and month:
+            year = int(year)
+            month = int(month)
+            start_date = date(year, month, 1)
+            last_day = calendar.monthrange(year, month)[1]
+            end_date = date(year, month, last_day)
+        else:
+            # Default to current month
+            start_date = today.replace(day=1)
+            last_day = calendar.monthrange(today.year, today.month)[1]
+            end_date = today.replace(day=last_day)
 
         expenses = (
             Expense.objects.filter(
@@ -405,3 +420,13 @@ def top_categories_data(request):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
+@login_required
+def expense_years(request):
+    # .dates returns list of datetime objects
+    date_list = Expense.objects.filter(user=request.user).dates(
+        "date", "year", order="DESC"
+    )
+    years = [d.year for d in date_list]  # Extract year from datetime.date
+    return JsonResponse({"years": years})

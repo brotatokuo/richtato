@@ -6,6 +6,7 @@ import pytz
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
+from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
@@ -54,11 +55,27 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
             if accounts
             else 0.0
         )
-        expense_sum = 0
-        income_sum = 0
-        savings_rate = (
-            round((income_sum - expense_sum) / income_sum * 100) if income_sum else 0
+        # Calculate total income and total expense
+        total_income = (
+            Income.objects.filter(user=request.user).aggregate(total=Sum("amount"))[
+                "total"
+            ]
+            or 0
         )
+        total_expense = (
+            Expense.objects.filter(user=request.user).aggregate(total=Sum("amount"))[
+                "total"
+            ]
+            or 0
+        )
+        expense_sum = total_expense
+        income_sum = total_income
+        if total_income > 0:
+            print("Total income: ", total_income)
+            print("Total expense: ", total_expense)
+            savings_rate = round((total_income - total_expense) / total_income * 100, 1)
+        else:
+            savings_rate = 0
 
         # pg_client = PostgresClient()
         # expense_df = pg_client.get_expense_df(request.user.pk)

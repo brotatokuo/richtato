@@ -17,4 +17,5 @@ urlpatterns = [
         "api/budget-progress/", views.budget_progress_data, name="budget_progress_data"
     ),
     path("api/top-categories/", views.top_categories_data, name="top_categories_data"),
+    path("api/expense-years/", views.expense_years, name="expense_years"),
 ]
