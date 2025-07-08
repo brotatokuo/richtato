@@ -3,7 +3,7 @@
 /* Sidebar - Simplified overlay design */
 .sidebar {
   height: 100vh;
-  background-color: var(--third-color);
+  background-color: var(--main-color);
   padding: var(--third-padding) 10px;
   display: flex;
   width: 60px;

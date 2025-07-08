@@ -3,7 +3,7 @@
   /* Colors - Original values */
   --white-color: #fff;
   --red-color: red;
-  --main-color: #f1f5f9;
+  --main-color: black;
   --secondary-color: #f6f6f6;
   --third-color: #888;
   --blue-color: #0075ff;
@@ -46,8 +46,8 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --text-color: #fffffff6;
-    --main-color: #212121;
-    --secondary-color: #303030;
+    --main-color: black;
+    --secondary-color: #0d0d0d;
     --third-color: #111111;
     --title-color: #b4b4b4;
   }

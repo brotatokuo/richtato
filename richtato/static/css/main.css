@@ -87,15 +87,17 @@
 }
 
 .feature-card {
-  background-color: var(--main-color);
+  background-color: transparent;
+  border: 1px solid #333333;
   padding: 15px;
   border-radius: var(--first-radius);
   text-align: center;
-  transition: transform 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .feature-card:hover {
   transform: translateY(-5px);
+  border-color: var(--green-color);
 }
 
 .feature-icon {
