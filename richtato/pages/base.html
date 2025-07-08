@@ -111,6 +111,18 @@
             </a>
           </li>
         </ul>
+
+        <!-- Theme Toggle at bottom of sidebar -->
+        <div class="sidebar-theme-toggle">
+          <button
+            id="theme-toggle-btn"
+            class="sidebar-theme-toggle-btn"
+            title="Toggle Dark/Light Mode"
+          >
+            <i class="fa-solid fa-moon" id="theme-icon"></i>
+            <span>Dark mode</span>
+          </button>
+        </div>
       </div>
       <main id="main">
         <div class="header">
@@ -165,5 +177,6 @@
 
     <script src="{% static 'js/components/navigation.js' %}"></script>
     <script src="{% static 'js/components/sidebar.js' %}"></script>
+    <script src="{% static 'js/components/themeToggle.js' %}"></script>
   </body>
 </html>
