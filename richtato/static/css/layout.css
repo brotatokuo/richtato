@@ -47,7 +47,7 @@
     width: 220px;
   }
 
-  /* Hide toggle button on mobile */
+  /* Show hamburger menu on mobile */
   .sidebar-toggle {
     display: none !important;
   }
@@ -242,13 +242,6 @@
 @media (max-width: 767px) {
   .sidebar ul li a i {
     font-size: 1rem;
-  }
-}
-
-/* Hide sidebar close button on desktop */
-@media (min-width: 768px) {
-  .sidebar .xmark {
-    display: none;
   }
 }
 

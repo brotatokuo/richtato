@@ -11,7 +11,15 @@ document.addEventListener("DOMContentLoaded", (event) => {
   }
 
   const hamburger = document.querySelector("#hamburger");
-  hamburger.style.display = "none";
+  function updateHamburgerDisplay() {
+    if (window.innerWidth <= 767) {
+      hamburger.style.display = "inline-block";
+    } else {
+      hamburger.style.display = "none";
+    }
+  }
+  updateHamburgerDisplay();
+  window.addEventListener("resize", updateHamburgerDisplay);
 
   const loginButton = document.querySelector("#login-button");
   if (loginButton) {
