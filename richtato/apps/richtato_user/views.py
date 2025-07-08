@@ -83,10 +83,6 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
         # Create comprehensive cash flow Sankey diagram
         sankey_cash_flow_fig = sankey_cash_flow_overview(request.user.pk)
         sankey_cash_flow_html = convert_plotly_fig_to_html(sankey_cash_flow_fig)
-        # Save the sankey cash flow HTML to a file
-        with open("/Users/alan/Desktop/sankey_cash_flow.html", "w") as f:
-            f.write(sankey_cash_flow_html)
-            logger.info("Saved sankey cash flow HTML to file.")
 
         context = {
             "networth": format_currency(networth, 0),
