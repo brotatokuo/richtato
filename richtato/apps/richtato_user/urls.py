@@ -35,4 +35,7 @@ urlpatterns = [
         views.CategoryFieldChoicesAPIView.as_view(),
         name="category_field_choices_api",
     ),  # GET
+    path(
+        "api/check-username/", views.check_username_availability, name="check_username"
+    ),
 ]

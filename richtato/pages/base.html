@@ -5,9 +5,8 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="{% static 'all.min.css' %}" />
-    <link rel="stylesheet" href="{% static 'core.css' %}" />
-    <link rel="stylesheet" href="{% static 'style.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/all.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/main.css' %}" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -38,7 +37,10 @@
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
     <script src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="{% static 'js/richTable.js' %}"></script>
+    <script src="{% static 'js/utils/helpers.js' %}"></script>
+    <script src="{% static 'js/utils/common.js' %}"></script>
+    <script src="{% static 'js/utils/api.js' %}"></script>
+    <script src="{% static 'js/components/richTable.js' %}"></script>
 
     <title>{% block title %}My Website{% endblock %}</title>
   </head>
@@ -49,7 +51,23 @@
     </div>
     <div class="page-content index-page">
       <div class="sidebar" id="sidebar">
+        <button class="sidebar-toggle" id="sidebar-toggle">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
         <i class="fa-solid fa-xmark xmark"></i>
+
+        <!-- Brand in sidebar -->
+        <div class="sidebar-brand">
+          <a href="{% url 'index' %}" class="sidebar-brand-link">
+            <img
+              src="{% static 'images/richtato.ico' %}"
+              alt="Richtato Logo"
+              class="sidebar-brand-logo"
+            />
+            <span class="sidebar-brand-name">Richtato</span>
+          </a>
+        </div>
+
         <ul>
           <li>
             <a href="{% url 'index' %}" class="sidebar-link">
@@ -64,27 +82,10 @@
             </a>
           </li>
 
-          <!-- <li>
-          <a href="{% url 'profile' %}" class="sidebar-link">
-            <i class="fa-regular fa-user fa-fw"></i><span>Profile</span>
-          </a>
-        </li> -->
-
-          <!-- <li>
-          <a href="{% url 'goals' %}" class="sidebar-link">
-            <i class="fa-solid fa-bullseye fa-fw"></i><span>Goals</span>
-          </a>
-        </li> -->
           <li>
             <a href="{% url 'budget' %}" class="sidebar-link">
               <i class="fa-solid fa-money-bill-trend-up fa-fw"></i>
               <span>Budget</span>
-            </a>
-          </li>
-
-          <li>
-            <a href="{% url 'timeseries_graph' %}" class="sidebar-link">
-              <i class="fa-solid fa-chart-simple fa-fw"></i><span>Graph</span>
             </a>
           </li>
 
@@ -114,28 +115,24 @@
               <span>Settings</span>
             </a>
           </li>
-
-          <!-- <li>
-          <a href="{% url 'user_settings' %}" class="sidebar-link">
-            <i class="fa-solid fa-sliders fa-fw"></i>
-            <span>User Settings</span>
-          </a>
-        </li> -->
         </ul>
       </div>
       <main id="main">
         <div class="header">
           <i class="fa-solid fa-bars bar-item" id="hamburger"></i>
-          <div class="brand">
-            <a href="{% url 'index' %}" class="brand-link">
+
+          <!-- Mobile brand - only visible on mobile -->
+          <div class="mobile-brand">
+            <a href="{% url 'index' %}" class="mobile-brand-link">
               <img
                 src="{% static 'images/richtato.ico' %}"
                 alt="Richtato Logo"
-                class="brand-logo"
+                class="mobile-brand-logo"
               />
-              <h3 class="brand-name">Richtato</h3>
+              <span class="mobile-brand-name">Richtato</span>
             </a>
           </div>
+
           <div class="profile">
             <img
               src="{% static 'images/avatar.png' %}"
@@ -171,7 +168,7 @@
       </main>
     </div>
 
-    <script async src="https://w.appzi.io/w.js?token=JCm1L"></script>
-    <script src="{% static 'js/base.js' %}"></script>
+    <script src="{% static 'js/components/navigation.js' %}"></script>
+    <script src="{% static 'js/components/sidebar.js' %}"></script>
   </body>
 </html>

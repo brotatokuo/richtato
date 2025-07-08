@@ -6,10 +6,13 @@ import pytz
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
+from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from loguru import logger
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -25,6 +28,7 @@ from richtato.apps.expense.utils import (
     convert_plotly_fig_to_html,
     sankey_by_account,
     sankey_by_category,
+    sankey_cash_flow_overview,
 )
 from richtato.apps.income.models import Income
 from richtato.apps.richtato_user.models import (
@@ -47,18 +51,45 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
         logger.debug(f"User {request.user} is authenticated.")
         accounts = Account.objects.filter(user=request.user)
         networth = (
-            sum(account.latest_balance for account in accounts) if accounts else 0.0
+            round(sum(account.latest_balance for account in accounts))
+            if accounts
+            else 0.0
         )
-        expense_sum = 0
-        income_sum = 0
-        savings_rate = (
-            round((income_sum - expense_sum) / income_sum * 100) if income_sum else 0
+        # Calculate total income and total expense
+        total_income = (
+            Income.objects.filter(user=request.user).aggregate(total=Sum("amount"))[
+                "total"
+            ]
+            or 0
         )
+        total_expense = (
+            Expense.objects.filter(user=request.user).aggregate(total=Sum("amount"))[
+                "total"
+            ]
+            or 0
+        )
+        expense_sum = total_expense
+        income_sum = total_income
+        if total_income > 0:
+            print("Total income: ", total_income)
+            print("Total expense: ", total_expense)
+            savings_rate = round((total_income - total_expense) / total_income * 100, 1)
+        else:
+            savings_rate = 0
+
+        # pg_client = PostgresClient()
+        # expense_df = pg_client.get_expense_df(request.user.pk)
+
+        # Create comprehensive cash flow Sankey diagram
+        sankey_cash_flow_fig = sankey_cash_flow_overview(request.user.pk)
+        sankey_cash_flow_html = convert_plotly_fig_to_html(sankey_cash_flow_fig)
+
         context = {
-            "networth": format_currency(networth),
+            "networth": format_currency(networth, 0),
             "expense_sum": format_currency(expense_sum),
             "income_sum": format_currency(income_sum),
             "savings_rate": f"{savings_rate}%",
+            "sankey_cash_flow": sankey_cash_flow_html,
         }
 
         # Render the response with the context
@@ -341,6 +372,16 @@ class RegisterView(View):
                 },
             )
 
+        # Validate password requirements
+        if not self._validate_password(password):
+            return render(
+                request,
+                "register.html",
+                {
+                    "message": "Password must be at least 8 characters long and contain at least one symbol (!@#$%^&*).",
+                },
+            )
+
         try:
             user = User.objects.create_user(username=username, password=password)
             user.save()
@@ -352,3 +393,42 @@ class RegisterView(View):
 
         login(request, user)
         return HttpResponseRedirect(reverse("index"))
+
+    def _validate_password(self, password):
+        """
+        Validate password requirements:
+        - At least 8 characters long
+        - Contains at least one symbol
+        """
+        if len(password) < 8:
+            return False
+
+        import re
+
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+            return False
+
+        return True
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def check_username_availability(request):
+    """
+    Check if a username is available for registration.
+    Returns JSON response with availability status.
+    """
+    username = request.POST.get("username", "").strip()
+
+    if not username:
+        return JsonResponse({"available": False, "message": "Username is required."})
+
+    try:
+        User.objects.get(username=username)
+        return JsonResponse({"available": False, "message": "Username already taken."})
+    except User.DoesNotExist:
+        return JsonResponse({"available": True, "message": "Username is available."})
+    except Exception:
+        return JsonResponse(
+            {"available": False, "message": "Error checking username availability."}
+        )

@@ -1,0 +1,221 @@
+/* Base styles and resets - Restored Original Design */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+ul {
+  list-style: none;
+}
+
+a {
+  text-decoration: none;
+  color: var(--text-color);
+}
+
+body {
+  font-family: "Open Sans", sans-serif;
+  color: var(--text-color);
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Scrollbar styling - Original design */
+::-webkit-scrollbar {
+  width: 15px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--white-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--green-color);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: gold;
+}
+
+input[type="date"] {
+  background-color: var(--primary-color);
+  color-scheme: dark;
+  color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+/* Invert calendar icon */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+/* Loading animation - Original design */
+div.loader {
+  height: 100vh;
+  width: 100%;
+  background-color: var(--main-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.5rem;
+  position: fixed;
+  top: 0;
+  z-index: 1000;
+}
+
+@media (max-width: 767px) {
+  div.loader {
+    font-size: 1rem;
+  }
+}
+
+div.loader h1 {
+  position: relative;
+  color: var(--green-color);
+}
+
+div.loader h1 span {
+  position: absolute;
+  width: 52px;
+  overflow: hidden;
+  animation: load 0.9s infinite linear;
+  -webkit-animation: load 0.9s infinite linear;
+}
+
+@keyframes load {
+  0% {
+    width: 5px;
+  }
+}
+
+/* Page layout - Original design */
+.page-content {
+  min-height: 100vh;
+  width: 100vw;
+  background-color: var(--main-color);
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+
+.index-page {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .page-content {
+    grid-template-columns: 0 1fr;
+  }
+}
+
+/* RichForm */
+.rich-form-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.rich-form {
+  background: var(--main-color);
+  border-radius: 8px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.rich-form-header {
+  position: relative;
+  padding: 15px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.close-button {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  font-size: 20px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: white;
+}
+
+.rich-form-form {
+  padding: 20px;
+}
+
+.rich-form-footer {
+  padding: 15px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: right;
+}
+
+.save-button {
+  padding: 8px 16px;
+  background: var(--green-color);
+  color: black;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.rich-form input[type="text"] {
+  width: 100%;
+  padding: 10px;
+  color: var(--text-color);
+  font-size: 14px;
+  background-color: var(--primary-color);
+  border: 1px solid #888888;
+  border-radius: 2px;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.rich-form select {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  color: var(--text-color);
+  font-size: 14px;
+  border: 1px solid #888888;
+  background-color: var(--primary-color);
+  border-radius: 2px;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.rich-form select:focus {
+  outline: none;
+  border-color: gold;
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.3); /* soft gold glow */
+}
+
+.rich-form select:hover {
+  border-color: #ddd;
+}

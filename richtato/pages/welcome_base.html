@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    {% load static %}
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="{% static 'css/all.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/main.css' %}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600&display=swap"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="{% static 'images/richtato.ico' %}"
+    />
+
+    <script src="{% static 'js/utils/helpers.js' %}"></script>
+    <script src="{% static 'js/utils/api.js' %}"></script>
+
+    <title>{% block title %}Richtato{% endblock %}</title>
+
+    <style>
+      /* Welcome page specific overrides */
+      html, body {
+        font-family: "Open Sans", sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: black;
+        color: var(--text-color);
+        overflow: hidden;
+        height: 100%;
+      }
+
+      /* Hide any page-content grid styling that might interfere */
+      .page-content {
+        display: block !important;
+        grid-template-columns: none !important;
+      }
+
+      /* Make sure sidebar is hidden */
+      .sidebar {
+        display: none !important;
+      }
+
+      /* Welcome page container */
+      .welcome-container {
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        box-sizing: border-box;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="welcome-container">
+      {% block content %}
+      <!-- Content to be filled by child templates -->
+      {% endblock %}
+    </div>
+
+    <script src="{% static 'js/utils/common.js' %}"></script>
+  </body>
+</html>

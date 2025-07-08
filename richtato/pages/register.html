@@ -1,6 +1,7 @@
-{% extends "base.html" %} {% load static %}
+{% extends "auth_base.html" %} {% load static %}
 <!-- prettier-ignore-start -->
 {% block title %} Register {% endblock %}
+{% block auth_title %} Sign Up {% endblock %}
 <!-- prettier-ignore-start -->
 
 {% block content %}
@@ -15,10 +16,15 @@
       <div class="form-group">
         <label for="username">Username</label>
         <input type="text" id="username" name="username" required />
+        <div class="error-message" id="username-error" style="display: none;"></div>
       </div>
 
       <div class="form-group">
-        <label for="password">Password</label>
+        <label for="password">Password
+          <span class="password-info" id="password-info-trigger">
+            <i class="info-icon">ⓘ</i>
+          </span>
+        </label>
         <div class="password-container">
           <input
             type="password"
@@ -35,6 +41,10 @@
             Show
           </button>
         </div>
+        <div class="password-requirements" id="password-requirements" style="display: none;">
+          <small>Password must be at least 8 characters long and contain at least one symbol (!@#$%^&*)</small>
+        </div>
+        <div class="error-message" id="password-error" style="display: none;"></div>
       </div>
 
       <div class="form-group">
@@ -55,6 +65,7 @@
             Show
           </button>
         </div>
+        <div class="error-message" id="password2-error" style="display: none;"></div>
       </div>
       <input
         class="primary-button"
@@ -70,5 +81,126 @@
   </div>
 </div>
 
-<script src="{% static 'js/core.js' %}"></script>
+<script>
+// Register page specific JavaScript
+document.addEventListener('DOMContentLoaded', () => {
+  const registerButton = document.querySelector("#register-button");
+  const usernameInput = document.querySelector("#username");
+  const passwordInput = document.querySelector("#password");
+  const password2Input = document.querySelector("#password2");
+  const passwordInfoTrigger = document.querySelector("#password-info-trigger");
+  const passwordRequirements = document.querySelector("#password-requirements");
+
+  if (registerButton) {
+    registerButton.addEventListener("keypress", (event) => {
+      if (event.key === "Enter") {
+        registerButton.click();
+      }
+    });
+  }
+
+  // Username validation on blur
+  if (usernameInput) {
+    usernameInput.addEventListener('blur', async function() {
+      const username = this.value.trim();
+      const errorDiv = document.querySelector("#username-error");
+
+      if (!username) {
+        showError(errorDiv, "Username is required.");
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/check-username/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `username=${encodeURIComponent(username)}`
+        });
+
+        const data = await response.json();
+
+        if (data.available) {
+          hideError(errorDiv);
+        } else {
+          showError(errorDiv, data.message);
+        }
+      } catch (error) {
+        showError(errorDiv, "Error checking username availability.");
+      }
+    });
+  }
+
+  // Password validation
+  if (passwordInput) {
+    passwordInput.addEventListener('input', function() {
+      const password = this.value;
+      const errorDiv = document.querySelector("#password-error");
+
+      if (!validatePassword(password)) {
+        showError(errorDiv, "Password must be at least 8 characters long and contain at least one symbol (!@#$%^&*)");
+      } else {
+        hideError(errorDiv);
+      }
+    });
+  }
+
+  // Password confirmation validation
+  if (password2Input) {
+    password2Input.addEventListener('input', function() {
+      const password = passwordInput.value;
+      const password2 = this.value;
+      const errorDiv = document.querySelector("#password2-error");
+
+      if (password !== password2) {
+        showError(errorDiv, "Passwords do not match.");
+      } else {
+        hideError(errorDiv);
+      }
+    });
+  }
+
+  // Password info tooltip
+  if (passwordInfoTrigger && passwordRequirements) {
+    passwordInfoTrigger.addEventListener('click', function() {
+      passwordRequirements.style.display = passwordRequirements.style.display === 'none' ? 'block' : 'none';
+    });
+  }
+});
+
+// Helper functions
+function showError(errorDiv, message) {
+  errorDiv.textContent = message;
+  errorDiv.style.display = 'block';
+  errorDiv.style.color = 'red';
+}
+
+function hideError(errorDiv) {
+  errorDiv.style.display = 'none';
+}
+
+function validatePassword(password) {
+  const hasMinLength = password.length >= 8;
+  const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  return hasMinLength && hasSymbol;
+}
+
+// Use the global togglePasswordVisibility function
+function togglePasswordVisibility(id, button) {
+  if (window.Utils) {
+    window.Utils.togglePasswordVisibility(id, button);
+  } else {
+    // Fallback implementation
+    var passwordInput = document.getElementById(id);
+    if (passwordInput.type === "password") {
+      passwordInput.type = "text";
+      button.textContent = "Hide";
+    } else {
+      passwordInput.type = "password";
+      button.textContent = "Show";
+    }
+  }
+}
+</script>
 {% endblock %}

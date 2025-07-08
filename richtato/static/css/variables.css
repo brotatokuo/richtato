@@ -1,0 +1,54 @@
+/* CSS Custom Properties (Variables) - Restored Original Design */
+:root {
+  /* Colors - Original values */
+  --white-color: #fff;
+  --red-color: red;
+  --main-color: #f1f5f9;
+  --secondary-color: #f6f6f6;
+  --third-color: #888;
+  --blue-color: #0075ff;
+  --orange-color: #f59e0b;
+  --green-color: #98cc2c;
+  --darker-green-color: #81af26;
+  --eee-color: #eee;
+  --ccc-color: #ccc;
+
+  /* Spacing - Original values */
+  --main-margin: 30px;
+  --secondary-margin: 20px;
+  --third-margin: 15px;
+  --fourth-margin: 10px;
+  --fifth-margin: 6px;
+  --main-padding: 30px;
+  --secondary-padding: 20px;
+  --third-padding: 15px;
+  --fourth-padding: 10px;
+  --fifth-padding: 6px;
+
+  /* Border Radius - Original values */
+  --main-radius: 50px;
+  --first-radius: 10px;
+  --secondary-radius: 6px;
+}
+
+/* Light Mode - Inverted to show dark theme */
+@media (prefers-color-scheme: light) {
+  :root {
+    --text-color: #fffffff6;
+    --main-color: #212121;
+    --secondary-color: #303030;
+    --third-color: #111111;
+    --title-color: #b4b4b4;
+  }
+}
+
+/* Dark Mode - Inverted to show dark theme */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-color: #fffffff6;
+    --main-color: #212121;
+    --secondary-color: #303030;
+    --third-color: #111111;
+    --title-color: #b4b4b4;
+  }
+}

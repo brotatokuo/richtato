@@ -301,14 +301,14 @@ class RichTable {
 
   showEntryModal({ title, columns, initialData = {}, onSubmit }) {
     const modal = $(`
-      <div class="custom-modal-overlay">
-        <div class="custom-modal">
-          <div class="custom-modal-header">
+      <div class="rich-form-overlay">
+        <div class="rich-form">
+          <div class="rich-form-header">
             <h3>${title}</h3>
             <span class="close-button">&times;</span>
           </div>
-          <div class="custom-modal-body"></div>
-          <div class="custom-modal-footer">
+          <div class="rich-form-body"></div>
+          <div class="rich-form-footer">
             <button type="submit" class="save-button">Save</button>
           </div>
         </div>
@@ -322,7 +322,7 @@ class RichTable {
       this.selectFields
     );
     const form = formBuilder.generate();
-    modal.find(".custom-modal-body").append(form);
+    modal.find(".rich-form-body").append(form);
 
     $("body").append(modal);
 
@@ -376,7 +376,7 @@ class RichForm {
   generate() {
     console.log("Form selectFields:", this.selectFields);
     console.log("Form columns:", this.columns);
-    const form = $('<form class="custom-modal-form"></form>');
+    const form = $('<form class="rich-form-form"></form>');
 
     this.columns.forEach((col) => {
       const fieldGroup = $('<div class="form-group"></div>');
@@ -412,7 +412,7 @@ class RichForm {
     // Handle select fields from the selectFields object
     if (this.selectFields[key]) {
       const select = $(
-        `<select id="${fieldName}" name="${fieldName}" class="form-control"></select>`
+        `<select id="${fieldName}" name="${fieldName}" </select>`
       );
       const options = this.selectFields[key];
 
@@ -462,7 +462,7 @@ class RichForm {
     const safeValue = String(value).replace(/"/g, "&quot;");
 
     return $(
-      `<input type="${type}" id="${fieldName}" name="${fieldName}" class="form-control" value="${safeValue}" />`
+      `<input type="${type}" id="${fieldName}" name="${fieldName}" value="${safeValue}" />`
     );
   }
 

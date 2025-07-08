@@ -25,18 +25,6 @@ Array.from(currencyInputs).forEach((currencyInput) => {
 const descriptionInput = document.getElementById("expense-description");
 
 document.addEventListener("DOMContentLoaded", () => {
-  const expenseGraph = new SimpleTimeseriesGraph(
-    expenseLineChart,
-    "/api/expenses/graph"
-  );
-  expenseGraph.init();
-
-  const incomeGraph = new SimpleTimeseriesGraph(
-    incomeLineChart,
-    "/api/incomes/graph"
-  );
-  incomeGraph.init();
-
   const expenseTable = new RichTable(
     "#expenseTable",
     "/api/expenses/",

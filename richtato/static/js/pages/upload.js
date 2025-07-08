@@ -105,7 +105,7 @@ class File {
   createRemoveButton() {
     const removeButton = document.createElement("button");
     removeButton.innerHTML = "&times;";
-    removeButton.classList.add("remove-button");
+    removeButton.classList.add("files-main-content-remove-button");
 
     // Use the callback provided by FileManager
     removeButton.addEventListener("click", (e) => {

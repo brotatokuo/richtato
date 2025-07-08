@@ -1,17 +1,17 @@
-{% extends "base.html" %} {% load static %}
+{% extends "welcome_base.html" %} {% load static %}
 
 <!-- prettier-ignore-start -->
 {% block title %} Richtato {% endblock %}
-<!-- prettier-ignore-start -->
+<!-- prettier-ignore-end -->
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'home.css' %}" />
 <script>
   var staticImagePath = "{% static 'media/moneytree.png' %}";
 </script>
+<script src="{% static 'js/utils/common.js' %}"></script>
 
-<div class="home-page">
-  <div class="home-container">
+<div class="welcome-page">
+  <div class="welcome-center">
     <div class="gif-container">
       <img
         src="{% static 'media/moneytree.gif' %}"
@@ -20,10 +20,47 @@
         id="growth-gif"
       />
     </div>
+
     <div class="typewriter">
-      <div class="typewriter-text">Save with Richtato!</div>
+      <div class="typewriter-text welcome-title">Save with Richtato!</div>
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <i class="fa-solid fa-cloud-arrow-up feature-icon"></i>
+        <h3>Smart Upload</h3>
+        <p>
+          Upload bank statements from your bank. Our AI automatically
+          categorizes your transactions.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <i class="fa-solid fa-chart-line feature-icon"></i>
+        <h3>Advanced Analytics</h3>
+        <p>
+          Get powerful insights into with interactive
+          charts and detailed breakdowns.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <i class="fa-solid fa-piggy-bank feature-icon"></i>
+        <h3>Budget Management</h3>
+        <p>
+          Set budgets, track your progress, and understand your money.
+        </p>
+      </div>
+    </div>
+
+    <div class="cta-buttons">
+      <a href="{% url 'register' %}" class="cta-button primary"
+        >Get Started Free</a
+      >
+      <a href="{% url 'login' %}" class="cta-button secondary">Sign In</a>
     </div>
   </div>
 </div>
-<script src="{% static 'js/core.js' %}"></script>
+
+<script src="{% static 'js/pages/welcome.js' %}"></script>
 {% endblock %}
