@@ -212,7 +212,7 @@ div.loader h1 span {
 
 .rich-form select:focus {
   outline: none;
-  border-color: gold;
+  border-color: var(--green-color);
   box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.3); /* soft gold glow */
 }
 
