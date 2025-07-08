@@ -22,8 +22,8 @@ class SelfPingMiddleware:
             except requests.RequestException as e:
                 print(f"Failed to ping self: {e}")
 
-            # Wait for 15 minutes (900 seconds) before pinging again
-            time.sleep(10)
+            # Wait for 2 minutes (120 seconds) before pinging again
+            time.sleep(120)
 
     def __call__(self, request):
         response = self.get_response(request)
