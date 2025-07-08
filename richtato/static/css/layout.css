@@ -47,10 +47,7 @@
     width: 220px;
   }
 
-  /* Show hamburger menu on mobile */
-  .sidebar-toggle {
-    display: none !important;
-  }
+  /* Mobile hamburger menu behavior */
 
   /* Ensure brand name is always visible on mobile */
   .sidebar-brand-name {
@@ -196,47 +193,19 @@
   opacity: 1;
 }
 
-/* Toggle button */
-.sidebar-toggle {
-  position: fixed;
-  top: 50%;
-  left: 45px;
-  transform: translateY(-50%);
-  width: 30px;
-  height: 30px;
-  background: var(--green-color);
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease, left 0.3s ease;
-  z-index: 1001;
+/* Hover-based sidebar expansion */
+.sidebar:hover {
+  width: 220px;
+  padding: var(--third-padding);
+  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.2);
 }
 
-.sidebar-toggle:hover {
-  background: #7fb800;
-  transform: translateY(-50%) scale(1.1);
+.sidebar:hover .sidebar-brand-name {
+  opacity: 1;
 }
 
-.sidebar-toggle i {
-  color: #000;
-  font-size: 0.9rem;
-  transition: transform 0.3s ease;
-}
-
-.sidebar.expanded .sidebar-toggle {
-  left: 205px;
-  transform: translateY(-50%);
-}
-
-.sidebar.expanded .sidebar-toggle:hover {
-  transform: translateY(-50%) scale(1.1);
-}
-
-.sidebar.expanded .sidebar-toggle i {
-  transform: rotate(180deg);
+.sidebar:hover ul li a span {
+  opacity: 1;
 }
 
 @media (max-width: 767px) {
