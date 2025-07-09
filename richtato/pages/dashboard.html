@@ -16,7 +16,11 @@
         <i class="fa-solid fa-chart-line kpi-icon"></i>
       </div>
       <div class="kpi-value currency">{{ networth }}</div>
-      <div class="kpi-change positive">+5.2% this month</div>
+      <div
+        class="kpi-change {% if networth_growth_class %}{{ networth_growth_class }}{% endif %}"
+      >
+        {{ networth_growth }}
+      </div>
     </div>
 
     <div class="kpi-card">
@@ -25,7 +29,11 @@
         <i class="fa-solid fa-piggy-bank kpi-icon"></i>
       </div>
       <div class="kpi-value">{{ savings_rate }}</div>
-      <div class="kpi-change positive">Above average</div>
+      <div
+        class="kpi-change {% if savings_rate_class %}{{ savings_rate_class }}{% endif %}"
+      >
+        {{ savings_rate_context }}
+      </div>
     </div>
 
     <div class="kpi-card">

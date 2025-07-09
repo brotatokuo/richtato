@@ -72,7 +72,7 @@
 .welcome-center {
   text-align: center;
   padding: var(--main-padding);
-  background-color: var(--primary-color);
+  background-color: var(--main-color);
   border-radius: var(--first-radius);
   max-width: 800px;
   width: 100%;
@@ -316,6 +316,10 @@
 
 .kpi-change.positive {
   color: var(--green-color);
+}
+
+.kpi-change.negative {
+  color: var(--red-color);
 }
 
 .kpi-progress {
