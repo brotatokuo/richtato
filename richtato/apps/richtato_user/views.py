@@ -1,6 +1,6 @@
 # views/auth_views.py
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytz
 from django.contrib.auth import authenticate, login, logout
@@ -20,6 +20,7 @@ from rest_framework.views import APIView
 
 from richtato.apps.account.models import (
     Account,
+    AccountTransaction,
     account_types,
     supported_asset_accounts,
 )
@@ -55,6 +56,18 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
             if accounts
             else 0.0
         )
+
+        # Calculate networth growth percentage
+        networth_growth = calculate_networth_growth(request.user)
+        # Calculate networth growth CSS class
+        networth_growth_class = (
+            "positive"
+            if networth_growth.startswith("+")
+            else "negative"
+            if networth_growth.startswith("-")
+            else ""
+        )
+
         # Calculate total income and total expense
         total_income = (
             Income.objects.filter(user=request.user).aggregate(total=Sum("amount"))[
@@ -77,6 +90,12 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
         else:
             savings_rate = 0
 
+        # Calculate savings rate context
+        savings_rate_str = f"{savings_rate}%"
+        savings_rate_context, savings_rate_class = calculate_savings_rate_context(
+            savings_rate_str
+        )
+
         # pg_client = PostgresClient()
         # expense_df = pg_client.get_expense_df(request.user.pk)
 
@@ -86,9 +105,13 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
 
         context = {
             "networth": format_currency(networth, 0),
+            "networth_growth": networth_growth,
+            "networth_growth_class": networth_growth_class,
             "expense_sum": format_currency(expense_sum),
             "income_sum": format_currency(income_sum),
-            "savings_rate": f"{savings_rate}%",
+            "savings_rate": savings_rate_str,
+            "savings_rate_context": savings_rate_context,
+            "savings_rate_class": savings_rate_class,
             "sankey_cash_flow": sankey_cash_flow_html,
         }
 
@@ -97,6 +120,89 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
 
     else:
         return render(request, "welcome.html")
+
+
+def calculate_networth_growth(user):
+    """
+    Calculate networth growth percentage for the current month compared to previous month.
+    Returns a formatted string like "+5.2% this month" or "-2.1% this month"
+    """
+    try:
+        # Get current date and calculate previous month
+        current_date = datetime.now().date()
+        current_month_start = current_date.replace(day=1)
+        previous_month_end = current_month_start - timedelta(days=1)
+        previous_month_start = previous_month_end.replace(day=1)
+
+        # Get current networth (sum of all account latest balances)
+        current_accounts = Account.objects.filter(user=user)
+        current_networth = (
+            sum(account.latest_balance for account in current_accounts)
+            if current_accounts
+            else 0
+        )
+
+        # Get previous month's networth from account transactions
+        previous_networth = 0
+        for account in current_accounts:
+            # Get the latest transaction for this account before the current month
+            latest_transaction = (
+                AccountTransaction.objects.filter(
+                    account=account, date__lt=current_month_start
+                )
+                .order_by("-date")
+                .first()
+            )
+
+            if latest_transaction:
+                previous_networth += latest_transaction.amount
+            else:
+                # If no previous transaction, assume balance was 0
+                previous_networth += 0
+
+        # Calculate growth percentage
+        if previous_networth > 0:
+            growth_percentage = (
+                (current_networth - previous_networth) / previous_networth
+            ) * 100
+            growth_percentage = round(growth_percentage, 1)
+
+            # Format the result
+            if growth_percentage >= 0:
+                return f"+{growth_percentage}% this month"
+            else:
+                return f"{growth_percentage}% this month"
+        else:
+            # If no previous networth data, return a default message
+            return "New this month"
+
+    except Exception as e:
+        logger.error(f"Error calculating networth growth: {e}")
+        return "N/A"
+
+
+def calculate_savings_rate_context(savings_rate):
+    """
+    Calculate savings rate context based on percentage ranges.
+    Returns a tuple of (context_text, css_class)
+    """
+    try:
+        # Extract the numeric value from savings_rate (remove '%' and convert to float)
+        rate_value = float(savings_rate.replace("%", ""))
+
+        if rate_value < 10:
+            return "Below average", "negative"
+        elif rate_value >= 10 and rate_value <= 20:
+            return "Average", ""
+        elif rate_value > 30:
+            return "Above average", "positive"
+        else:
+            # Between 20-30%
+            return "Good", "positive"
+
+    except (ValueError, AttributeError):
+        # If we can't parse the savings rate, return a default
+        return "N/A", ""
 
 
 def dashboard(request: HttpRequest) -> HttpResponse:

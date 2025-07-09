@@ -49,14 +49,18 @@ function initCashFlowChart() {
               legend: {
                 position: "top",
                 labels: {
-                  color: "#ffffff",
+                  color: getComputedStyle(
+                    document.documentElement
+                  ).getPropertyValue("--text-color"),
                 },
               },
             },
             scales: {
               x: {
                 ticks: {
-                  color: "#ffffff",
+                  color: getComputedStyle(
+                    document.documentElement
+                  ).getPropertyValue("--text-color"),
                 },
                 grid: {
                   color: "rgba(255, 255, 255, 0.1)",
@@ -65,7 +69,9 @@ function initCashFlowChart() {
               y: {
                 beginAtZero: true,
                 ticks: {
-                  color: "#ffffff",
+                  color: getComputedStyle(
+                    document.documentElement
+                  ).getPropertyValue("--text-color"),
                   callback: function (value) {
                     return "$" + value.toLocaleString();
                   },
@@ -152,7 +158,9 @@ function initExpensePieChart() {
                 labels: {
                   padding: 20,
                   usePointStyle: true,
-                  color: "#ffffff",
+                  color: getComputedStyle(
+                    document.documentElement
+                  ).getPropertyValue("--text-color"),
                 },
               },
               tooltip: {
@@ -236,14 +244,18 @@ function initIncomeExpenseChart() {
             legend: {
               position: "top",
               labels: {
-                color: "#ffffff",
+                color: getComputedStyle(
+                  document.documentElement
+                ).getPropertyValue("--text-color"),
               },
             },
           },
           scales: {
             x: {
               ticks: {
-                color: "#ffffff",
+                color: getComputedStyle(
+                  document.documentElement
+                ).getPropertyValue("--text-color"),
               },
               grid: {
                 color: "rgba(255, 255, 255, 0.1)",
@@ -252,7 +264,9 @@ function initIncomeExpenseChart() {
             y: {
               beginAtZero: true,
               ticks: {
-                color: "#ffffff",
+                color: getComputedStyle(
+                  document.documentElement
+                ).getPropertyValue("--text-color"),
                 callback: function (value) {
                   return "$" + value.toLocaleString();
                 },
@@ -294,14 +308,18 @@ function initSavingsChart() {
             legend: {
               position: "top",
               labels: {
-                color: "#ffffff",
+                color: getComputedStyle(
+                  document.documentElement
+                ).getPropertyValue("--text-color"),
               },
             },
           },
           scales: {
             x: {
               ticks: {
-                color: "#ffffff",
+                color: getComputedStyle(
+                  document.documentElement
+                ).getPropertyValue("--text-color"),
               },
               grid: {
                 color: "rgba(255, 255, 255, 0.1)",
@@ -310,7 +328,9 @@ function initSavingsChart() {
             y: {
               beginAtZero: true,
               ticks: {
-                color: "#ffffff",
+                color: getComputedStyle(
+                  document.documentElement
+                ).getPropertyValue("--text-color"),
                 callback: function (value) {
                   return "$" + value.toLocaleString();
                 },

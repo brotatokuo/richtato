@@ -15,7 +15,7 @@
 }
 
 .dt-button {
-  color: var(--primary-color) !important;
+  color: var(--text-color) !important;
   border: none !important;
   padding: 10px 16px !important;
   border-radius: var(--first-radius) !important;
@@ -72,7 +72,7 @@
 .welcome-center {
   text-align: center;
   padding: var(--main-padding);
-  background-color: var(--primary-color);
+  background-color: var(--main-color);
   border-radius: var(--first-radius);
   max-width: 800px;
   width: 100%;
@@ -190,7 +190,7 @@
   display: inline-block;
   overflow: hidden;
   white-space: nowrap;
-  color: rgb(228, 228, 228);
+  color: var(--text-color);
 }
 
 /* GIF container styles */
@@ -224,7 +224,7 @@
 }
 
 .stat-card {
-  background-color: var(--white-color);
+  background-color: var(--primary-color);
   padding: var(--secondary-padding);
   border-radius: var(--first-radius);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -316,6 +316,10 @@
 
 .kpi-change.positive {
   color: var(--green-color);
+}
+
+.kpi-change.negative {
+  color: var(--red-color);
 }
 
 .kpi-progress {
@@ -426,7 +430,7 @@
   width: 90px;
   height: 90px;
   border-radius: 50%;
-  background: var(--white-color);
+  background: var(--primary-color);
   position: absolute;
 }
 
@@ -519,6 +523,11 @@
 /* Top Merchants */
 .merchant-list {
   padding: 20px;
+}
+
+/* Categories Container */
+.categories-container {
+  margin: 10px;
 }
 
 /* Heatmap */

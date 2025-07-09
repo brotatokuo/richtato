@@ -12,6 +12,9 @@
   --darker-green-color: #81af26;
   --eee-color: #eee;
   --ccc-color: #ccc;
+  --text-color: #fffffff6;
+  --title-color: #b4b4b4;
+  --primary-color: #2d2d2d;
 
   /* Spacing - Original values */
   --main-margin: 30px;
@@ -29,26 +32,4 @@
   --main-radius: 50px;
   --first-radius: 10px;
   --secondary-radius: 6px;
-}
-
-/* Light Mode - Inverted to show dark theme */
-@media (prefers-color-scheme: light) {
-  :root {
-    --text-color: #fffffff6;
-    --main-color: #212121;
-    --secondary-color: #303030;
-    --third-color: #111111;
-    --title-color: #b4b4b4;
-  }
-}
-
-/* Dark Mode - Inverted to show dark theme */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text-color: #fffffff6;
-    --main-color: black;
-    --secondary-color: #0d0d0d;
-    --third-color: #111111;
-    --title-color: #b4b4b4;
-  }
 }
