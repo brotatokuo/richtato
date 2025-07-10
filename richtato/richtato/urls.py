@@ -18,6 +18,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+from richtato.apps.richtato_user import views as user_views
+
 urlpatterns = [
     # Admin Panel URL
     path("admin/", admin.site.urls),
@@ -30,4 +32,5 @@ urlpatterns = [
     path("", include("richtato.apps.expense.urls")),
     path("dashboard/", include("richtato.apps.dashboard.urls")),
     path("", include("apps.settings.urls")),
+    path("demo-login/", user_views.demo_login, name="demo_login"),
 ]

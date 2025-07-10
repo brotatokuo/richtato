@@ -103,17 +103,39 @@ class Category(models.Model):
     def create_default_categories_for_user(cls, user):
         """Create all supported categories for a user"""
         categories_to_create = []
+        category_essentials = {
+            "Travel": "nonessential",
+            "Shopping": "nonessential",
+            "Online Shopping": "nonessential",
+            "Groceries": "essential",
+            "Entertainment": "nonessential",
+            "Utilities": "essential",
+            "Housing": "essential",
+            "Medical": "essential",
+            "Education": "essential",
+            "Savings": "essential",
+            "Gifts": "nonessential",
+            "Dining": "nonessential",
+            "Investments": "essential",
+            "Subscriptions": "nonessential",
+            "Charity": "nonessential",
+            "Pet": "nonessential",
+            "Wholesale": "essential",
+            "Car": "essential",
+            "Phone": "essential",
+            "Miscellaneous": "nonessential",
+            "Payments": "essential",
+        }
 
         for category_key, category_display in cls.supported_categories:
             # Check if category already exists for this user
             if not cls.objects.filter(user=user, name=category_key).exists():
                 # You might want to set different defaults based on category
-                category_type = "essential"  # or determine based on category_key
                 categories_to_create.append(
                     cls(
                         user=user,
                         name=category_key,
-                        type=category_type,
+                        type=category_essentials.get(category_key),
                     )
                 )
 

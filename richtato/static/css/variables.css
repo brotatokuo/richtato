@@ -4,7 +4,7 @@
   --white-color: #fff;
   --red-color: red;
   --main-color: black;
-  --secondary-color: #f6f6f6;
+  --secondary-color: #0f0f0f;
   --third-color: #888;
   --blue-color: #0075ff;
   --orange-color: #f59e0b;
@@ -32,4 +32,20 @@
   --main-radius: 50px;
   --first-radius: 10px;
   --secondary-radius: 6px;
+}
+
+/* Hide and make scrollbars transparent for all elements */
+/* For Webkit browsers (Chrome, Safari, Edge) */
+*::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: none;
+  scrollbar-color: transparent transparent;
 }

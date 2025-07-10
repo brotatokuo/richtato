@@ -31,6 +31,7 @@
     width: 220px;
     padding: var(--third-padding);
     box-shadow: 2px 0 20px rgba(0, 0, 0, 0.2);
+    background: var(--main-color);
   }
   .sidebar:hover .sidebar-brand-name,
   .sidebar.hover-enabled:hover .sidebar-brand-name {
@@ -428,8 +429,8 @@ body.dark-mode .card-controls select {
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  background-color: var(--third-color);
-  color: white;
+  background-color: var(--secondary-color);
+  color: var(--text-color);
   box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
   z-index: 1000;
   list-style: none;
@@ -445,10 +446,6 @@ body.dark-mode .card-controls select {
 .dropdown ul li {
   padding: 8px 16px;
   cursor: pointer;
-}
-
-.dropdown ul li a {
-  color: var(--white-color);
 }
 
 .hidden {
