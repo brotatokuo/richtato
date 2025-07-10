@@ -16,12 +16,28 @@ function initSidebar() {
   // Check if mobile
   const isMobile = () => window.innerWidth <= 767;
 
-  // Desktop behavior - pure hover-based expansion
-  if (!isMobile()) {
-    // No persistent expanded state needed for hover-based behavior
-    // The sidebar will expand on hover and collapse when mouse leaves
-    // CSS handles the hover expansion automatically
+  // Remove hover-based expansion on mobile
+  function disableSidebarHoverOnMobile() {
+    if (isMobile()) {
+      sidebar.classList.remove("expanded");
+      sidebar.classList.remove("hover-enabled");
+      // Remove any hover event listeners if present
+      sidebar.onmouseenter = null;
+      sidebar.onmouseleave = null;
+    } else {
+      // Enable hover-based expansion on desktop
+      sidebar.classList.add("hover-enabled");
+      sidebar.onmouseenter = function () {
+        sidebar.classList.add("expanded");
+      };
+      sidebar.onmouseleave = function () {
+        sidebar.classList.remove("expanded");
+      };
+    }
   }
+
+  // Initial setup
+  disableSidebarHoverOnMobile();
 
   // Mobile hamburger menu behavior
   if (hamburgerBtn) {
@@ -50,6 +66,7 @@ function initSidebar() {
 
   // Handle window resize
   window.addEventListener("resize", function () {
+    disableSidebarHoverOnMobile();
     if (isMobile()) {
       // On mobile, remove desktop states
       sidebar.classList.remove("expanded");
