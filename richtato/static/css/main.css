@@ -42,6 +42,12 @@
   margin-bottom: 15px;
 }
 
+/* Highlight selected DataTable row with green background */
+table.dataTable tbody tr.selected > * {
+  box-shadow: inset 0 0 0 9999px var(--green-color) !important;
+  color: #fff !important;
+}
+
 /* RichTable modal styling adjustments */
 .rich-table-modal {
   z-index: 10000 !important;
@@ -355,7 +361,7 @@
 }
 
 .analytics-card {
-  background: var(--primary-color);
+  background: var(--main-color);
   border-radius: var(--first-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;

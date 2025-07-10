@@ -592,7 +592,7 @@ class PetCategory(BaseCategory):
 class WholesaleCategory(BaseCategory):
     @property
     def name(self):
-        return "Costco"
+        return "Wholesale"
 
     def generate_keywords(self):
         wholesale = [
@@ -718,7 +718,6 @@ def register_categories():
     PhoneCategory()
     MiscellaneousCategory()
     PaymentsCategory()
-    UnknownCategory()
 
 
 register_categories()
