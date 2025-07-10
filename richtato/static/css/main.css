@@ -169,6 +169,16 @@
   color: #000;
 }
 
+.cta-button.demo {
+  background-color: transparent;
+  border-color: gold;
+}
+
+.cta-button.demo:hover {
+  background-color: gold;
+  color: #000;
+}
+
 .welcome-title {
   font-size: 3rem;
   font-weight: 600;

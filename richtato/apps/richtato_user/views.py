@@ -1,14 +1,16 @@
 # views/auth_views.py
 import os
+import random
+import string
 from datetime import datetime, timedelta
 
 import pytz
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -24,6 +26,7 @@ from richtato.apps.account.models import (
     account_types,
     supported_asset_accounts,
 )
+from richtato.apps.budget.models import Budget
 from richtato.apps.expense.models import Expense
 from richtato.apps.expense.utils import (
     convert_plotly_fig_to_html,
@@ -538,3 +541,87 @@ def check_username_availability(request):
         return JsonResponse(
             {"available": False, "message": "Error checking username availability."}
         )
+
+
+def generate_demo_username():
+    return "demo_" + "".join(
+        random.choices(string.ascii_lowercase + string.digits, k=8)
+    )
+
+
+@transaction.atomic
+def demo_login(request):
+    template_user = User.objects.get(username="demo")
+    demo_username = generate_demo_username()
+    demo_user = User.objects.create(
+        username=demo_username,
+        # add other fields as needed
+    )
+    demo_user.set_unusable_password()
+    demo_user.save()
+
+    # Clone Categories
+    category_map = {}
+    for category in Category.objects.filter(user=template_user):
+        old_id = category.id
+        category.pk = None
+        category.user = demo_user
+        category.save()
+        category_map[old_id] = category
+
+    # Clone Accounts
+    account_map = {}
+    for account in Account.objects.filter(user=template_user):
+        old_id = account.id
+        account.pk = None
+        account.user = demo_user
+        account.save()
+        account_map[old_id] = account
+
+    # Clone CardAccounts
+    cardaccount_map = {}
+    for card in CardAccount.objects.filter(user=template_user):
+        old_id = card.id
+        card.pk = None
+        card.user = demo_user
+        card.save()
+        cardaccount_map[old_id] = card
+
+    # Clone Budgets
+    for budget in Budget.objects.filter(user=template_user):
+        budget.pk = None
+        budget.user = demo_user
+        # update category FK
+        if budget.category_id in category_map:
+            budget.category = category_map[budget.category_id]
+        budget.save()
+
+    # Clone Expenses
+    for expense in Expense.objects.filter(user=template_user):
+        expense.pk = None
+        expense.user = demo_user
+        # update FKs
+        if expense.account_name_id in cardaccount_map:
+            expense.account_name = cardaccount_map[expense.account_name_id]
+        if expense.category_id in category_map:
+            expense.category = category_map[expense.category_id]
+        expense.save()
+
+    # Clone Incomes
+    for income in Income.objects.filter(user=template_user):
+        income.pk = None
+        income.user = demo_user
+        if income.account_name_id in account_map:
+            income.account_name = account_map[income.account_name_id]
+        income.save()
+
+    # Clone AccountTransactions
+    for tx in AccountTransaction.objects.filter(account__user=template_user):
+        tx.pk = None
+        if tx.account_id in account_map:
+            tx.account = account_map[tx.account_id]
+        tx.save()
+
+    login(request, demo_user)
+    request.session["is_demo_user"] = True
+    return redirect("index")
