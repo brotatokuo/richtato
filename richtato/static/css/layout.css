@@ -31,6 +31,7 @@
     width: 220px;
     padding: var(--third-padding);
     box-shadow: 2px 0 20px rgba(0, 0, 0, 0.2);
+    background: var(--secondary-color);
   }
   .sidebar:hover .sidebar-brand-name,
   .sidebar.hover-enabled:hover .sidebar-brand-name {
