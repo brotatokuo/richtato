@@ -2,13 +2,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
   const userAuthenticated = "{{ user.is_authenticated|yesno:'true,false' }}";
   console.log("user auth: ", userAuthenticated);
 
-  var gif = document.getElementById("growth-gif");
-  if (gif) {
-    setTimeout(function () {
-      document.querySelector(".typewriter-text").style.borderRight = "none";
-      gif.src = staticImagePath;
-    }, 2000);
-  }
+  // Removed moneytree.gif animation/swap code
 
   const hamburger = document.querySelector("#hamburger");
   function updateHamburgerDisplay() {
