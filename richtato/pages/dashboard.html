@@ -47,16 +47,11 @@
 
     <div class="kpi-card">
       <div class="kpi-header">
-        <h3>Financial Health</h3>
-        <i class="fa-solid fa-percentage kpi-icon"></i>
+        <h3>Non-Essential Spending</h3>
+        <i class="fa-solid fa-percent kpi-icon"></i>
       </div>
-      <div class="kpi-value">{{ budget_utilization }}%</div>
-      <div class="kpi-progress">
-        <div
-          class="progress-bar"
-          style="width: {{ budget_utilization }}%"
-        ></div>
-      </div>
+      <div class="kpi-value">{{ nonessential_spending_pct }}%</div>
+      <div class="kpi-change">of total spending</div>
     </div>
   </div>
 

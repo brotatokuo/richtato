@@ -10,6 +10,7 @@ from richtato.apps.richtato_user.models import CardAccount, User
 
 class DemoUserFactory:
     username = "demo"
+    email = "demo@richtato.com"
     password = "demopassword123!"
 
     def __init__(self):
@@ -31,7 +32,7 @@ class DemoUserFactory:
 
     def _create_user(self):
         self.user = User.objects.create_user(
-            username=self.username, password=self.password
+            username=self.username, email=self.email, password=self.password
         )
 
     def _create_credit_cards(self):

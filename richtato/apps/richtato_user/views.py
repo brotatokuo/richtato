@@ -100,6 +100,19 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
             savings_rate_str
         )
 
+        # Calculate % of non-essential spending
+        nonessential_expense = (
+            Expense.objects.filter(
+                user=request.user, category__type="nonessential"
+            ).aggregate(total=Sum("amount"))["total"]
+            or 0
+        )
+        nonessential_spending_pct = (
+            round((nonessential_expense / total_expense) * 100, 1)
+            if total_expense > 0
+            else 0
+        )
+
         # pg_client = PostgresClient()
         # expense_df = pg_client.get_expense_df(request.user.pk)
 
@@ -117,6 +130,7 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
             "savings_rate_context": savings_rate_context,
             "savings_rate_class": savings_rate_class,
             "sankey_cash_flow": sankey_cash_flow_html,
+            "nonessential_spending_pct": nonessential_spending_pct,
         }
 
         # Render the response with the context
