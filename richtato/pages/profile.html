@@ -11,44 +11,21 @@
   <div class="profile-box">
     <div class="profile-info">
       <img src="{% static 'images/avatar.png' %}" alt="" />
-      <h3>Richtato User</h3>
+      <h3>{{ username }}</h3>
     </div>
     <div class="profile-info-section2">
       <div class="row">
         <div class="general-information">
           <h4>User-Information</h4>
-          <div>
-            <h5>Full Name:&nbsp;</h5>
-            <span>{{ full_name }}</span>
-          </div>
-          <span></span>
-        </div>
-        <div>
-          <h5>Username:&nbsp;</h5>
-          <span>{{ username }}</span>
-        </div>
-        <div>
-          <h5>User:&nbsp;</h5>
-          <span>{{ user_number }}</span>
-        </div>
-      </div>
-      <div class="row">
-        <div class="general-information">
-          <h4>Billing Information</h4>
-          <div>
-            <h5>Payment Method:&nbsp;</h5>
-            <span>Paypal</span>
-          </div>
-          <div class="toggle left"></div>
           <span></span>
         </div>
         <div>
           <h5>Email:&nbsp;</h5>
-          <span>email@richtato.com</span>
+          <span>{{ email }}</span>
         </div>
         <div>
-          <h5>Subscription:&nbsp;</h5>
-          <span>Monthly</span>
+          <h5>User:&nbsp;</h5>
+          <span>{{ user_number }}</span>
         </div>
       </div>
     </div>

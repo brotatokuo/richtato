@@ -34,3 +34,6 @@ urlpatterns = [
     path("", include("apps.settings.urls")),
     path("demo-login/", user_views.demo_login, name="demo_login"),
 ]
+
+handler404 = "richtato.richtato.views.custom_404_view"
+handler500 = "richtato.richtato.views.custom_500_view"
