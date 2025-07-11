@@ -7,11 +7,12 @@ from datetime import datetime, timedelta
 import pytz
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import PasswordResetConfirmView, PasswordResetView
 from django.db import IntegrityError, transaction
 from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import redirect, render
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -469,6 +470,7 @@ class RegisterView(View):
 
     def post(self, request: HttpRequest):
         username = request.POST.get("username")
+        email = request.POST.get("email")
         password = request.POST.get("password")
         confirmation = request.POST.get("password2")
 
@@ -492,12 +494,16 @@ class RegisterView(View):
             )
 
         try:
-            user = User.objects.create_user(username=username, password=password)
+            user = User.objects.create_user(
+                username=username, email=email, password=password
+            )
             user.save()
 
         except IntegrityError:
             return render(
-                request, "register.html", {"message": "Username already taken."}
+                request,
+                "register.html",
+                {"message": "Username or email already taken."},
             )
 
         login(request, user)
@@ -625,3 +631,15 @@ def demo_login(request):
     login(request, demo_user)
     request.session["is_demo_user"] = True
     return redirect("index")
+
+
+class CustomPasswordResetView(PasswordResetView):
+    template_name = "password_reset.html"
+    email_template_name = "password_reset_email.html"
+    subject_template_name = "password_reset_subject.txt"
+    success_url = reverse_lazy("password_reset_done")
+
+
+class CustomPasswordResetConfirmView(PasswordResetConfirmView):
+    template_name = "password_reset_confirm.html"
+    success_url = reverse_lazy("password_reset_complete")

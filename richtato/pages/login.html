@@ -1,10 +1,8 @@
 {% extends "auth_base.html" %} {% load static %}
 <!-- prettier-ignore-start -->
 {% block title %} Login {% endblock %}
-{% block auth_title %} Sign In {% endblock %}
-<!-- prettier-ignore-start -->
-
-{% block content %}
+<!-- prettier-ignore-end -->
+{% block auth_title %} Sign In {% endblock %} {% block content %}
 <div class="login-container">
   <div class="form-container">
     <div class="login-header">
@@ -55,38 +53,40 @@
 
     <div class="login-footer">
       Not on Richtato? <a href="{% url 'register' %}">Create an account</a>
+      <br />
+      <a href="{% url 'password_reset' %}">Forgot password?</a>
     </div>
   </div>
 </div>
 
 <script>
-// Login page specific JavaScript
-document.addEventListener('DOMContentLoaded', () => {
-  const loginButton = document.querySelector("#login-button");
-  if (loginButton) {
-    loginButton.addEventListener("keypress", (event) => {
-      if (event.key === "Enter") {
-        loginButton.click();
-      }
-    });
-  }
-});
+  // Login page specific JavaScript
+  document.addEventListener("DOMContentLoaded", () => {
+    const loginButton = document.querySelector("#login-button");
+    if (loginButton) {
+      loginButton.addEventListener("keypress", (event) => {
+        if (event.key === "Enter") {
+          loginButton.click();
+        }
+      });
+    }
+  });
 
-// Use the global togglePasswordVisibility function
-function togglePasswordVisibility(id, button) {
-  if (window.Utils) {
-    window.Utils.togglePasswordVisibility(id, button);
-  } else {
-    // Fallback implementation
-    var passwordInput = document.getElementById(id);
-    if (passwordInput.type === "password") {
-      passwordInput.type = "text";
-      button.textContent = "Hide";
+  // Use the global togglePasswordVisibility function
+  function togglePasswordVisibility(id, button) {
+    if (window.Utils) {
+      window.Utils.togglePasswordVisibility(id, button);
     } else {
-      passwordInput.type = "password";
-      button.textContent = "Show";
+      // Fallback implementation
+      var passwordInput = document.getElementById(id);
+      if (passwordInput.type === "password") {
+        passwordInput.type = "text";
+        button.textContent = "Hide";
+      } else {
+        passwordInput.type = "password";
+        button.textContent = "Show";
+      }
     }
   }
-}
 </script>
 {% endblock %}

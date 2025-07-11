@@ -45,6 +45,7 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.AutoField(primary_key=True)
+    email = models.EmailField(max_length=255, unique=True, blank=True, null=True)
     username = models.CharField(max_length=150, unique=True)
     date_joined = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
