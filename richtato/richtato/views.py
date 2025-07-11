@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+from django.shortcuts import render
 from rest_framework.views import APIView
 
 
@@ -55,3 +56,11 @@ class BaseAPIView(APIView, ABC):
         Handle DELETE requests.
         """
         pass
+
+
+def custom_404_view(request, exception):
+    return render(request, "404.html", status=404)
+
+
+def custom_500_view(request):
+    return render(request, "500.html", status=500)
