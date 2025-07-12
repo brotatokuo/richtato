@@ -72,25 +72,29 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
             else ""
         )
 
-        # Calculate total income and total expense
-        total_income = (
-            Income.objects.filter(user=request.user).aggregate(total=Sum("amount"))[
-                "total"
-            ]
+        # Calculate cash flow for the past 30 days
+        thirty_days_ago = datetime.now().date() - timedelta(days=30)
+
+        income_30_days = (
+            Income.objects.filter(
+                user=request.user, date__gte=thirty_days_ago
+            ).aggregate(total=Sum("amount"))["total"]
             or 0
         )
-        total_expense = (
-            Expense.objects.filter(user=request.user).aggregate(total=Sum("amount"))[
-                "total"
-            ]
+        expense_30_days = (
+            Expense.objects.filter(
+                user=request.user, date__gte=thirty_days_ago
+            ).aggregate(total=Sum("amount"))["total"]
             or 0
         )
-        expense_sum = total_expense
-        income_sum = total_income
-        if total_income > 0:
-            print("Total income: ", total_income)
-            print("Total expense: ", total_expense)
-            savings_rate = round((total_income - total_expense) / total_income * 100, 1)
+
+        cash_flow_30_days = income_30_days - expense_30_days
+        expense_sum = expense_30_days
+        income_sum = income_30_days
+
+        # Calculate savings rate based on 30-day cash flow
+        if income_30_days > 0:
+            savings_rate = round((cash_flow_30_days / income_30_days) * 100, 1)
         else:
             savings_rate = 0
 
@@ -100,16 +104,18 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
             savings_rate_str
         )
 
-        # Calculate % of non-essential spending
+        # Calculate % of non-essential spending for past 30 days
         nonessential_expense = (
             Expense.objects.filter(
-                user=request.user, category__type="nonessential"
+                user=request.user,
+                category__type="nonessential",
+                date__gte=thirty_days_ago,
             ).aggregate(total=Sum("amount"))["total"]
             or 0
         )
         nonessential_spending_pct = (
-            round((nonessential_expense / total_expense) * 100, 1)
-            if total_expense > 0
+            round((nonessential_expense / expense_30_days) * 100, 1)
+            if expense_30_days > 0
             else 0
         )
 
@@ -126,6 +132,10 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
             "networth_growth_class": networth_growth_class,
             "expense_sum": format_currency(expense_sum),
             "income_sum": format_currency(income_sum),
+            "cash_flow_30_days": format_currency(cash_flow_30_days),
+            "cash_flow_30_days_class": "positive"
+            if cash_flow_30_days >= 0
+            else "negative",
             "savings_rate": savings_rate_str,
             "savings_rate_context": savings_rate_context,
             "savings_rate_class": savings_rate_class,
