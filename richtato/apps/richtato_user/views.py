@@ -612,9 +612,13 @@ def demo_login(request):
     for budget in Budget.objects.filter(user=template_user):
         budget.pk = None
         budget.user = demo_user
-        # update category FK
-        if budget.category_id in category_map:
-            budget.category = category_map[budget.category_id]
+        # update category FK - use existing category if available
+        if budget.category:
+            existing_category = Category.objects.filter(
+                user=demo_user, name=budget.category.name
+            ).first()
+            if existing_category:
+                budget.category = existing_category
         budget.save()
 
     # Clone Expenses
@@ -624,8 +628,12 @@ def demo_login(request):
         # update FKs
         if expense.account_name_id in cardaccount_map:
             expense.account_name = cardaccount_map[expense.account_name_id]
-        if expense.category_id in category_map:
-            expense.category = category_map[expense.category_id]
+        if expense.category:
+            existing_category = Category.objects.filter(
+                user=demo_user, name=expense.category.name
+            ).first()
+            if existing_category:
+                expense.category = existing_category
         expense.save()
 
     # Clone Incomes
