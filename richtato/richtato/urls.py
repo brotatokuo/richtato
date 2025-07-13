@@ -15,6 +15,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
@@ -34,6 +36,12 @@ urlpatterns = [
     path("", include("apps.settings.urls")),
     path("demo-login/", user_views.demo_login, name="demo_login"),
 ]
+
+# Serve static files during development
+if settings.DEBUG:
+    urlpatterns += static(
+        settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0]
+    )
 
 handler404 = "richtato.richtato.views.custom_404_view"
 handler500 = "richtato.richtato.views.custom_500_view"
