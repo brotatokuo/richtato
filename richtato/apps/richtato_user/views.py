@@ -590,15 +590,6 @@ def demo_login(request):
     demo_user.set_unusable_password()
     demo_user.save()
 
-    # Clone Categories
-    category_map = {}
-    for category in Category.objects.filter(user=template_user):
-        old_id = category.id
-        category.pk = None
-        category.user = demo_user
-        category.save()
-        category_map[old_id] = category
-
     # Clone Accounts
     account_map = {}
     for account in Account.objects.filter(user=template_user):
