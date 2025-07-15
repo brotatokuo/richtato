@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from django.db import transaction
 
-from richtato.apps.account.models import Account
+from richtato.apps.account.models import Account, AccountTransaction
 from richtato.apps.expense.models import Expense
 from richtato.apps.income.models import Income
 from richtato.apps.richtato_user.models import CardAccount, Category, User
@@ -29,6 +29,7 @@ class DemoUserFactory:
         self._create_accounts()
         self._create_income_transactions()
         self._create_expense_transactions()
+        self._create_account_transactions()
         return self.user
 
     def get_previous_friday(self, d):
@@ -68,10 +69,10 @@ class DemoUserFactory:
             asset_entity_name="bank_of_america",
             name="Checking",
         )
-        Account.objects.create(
+        self.savings_account = Account.objects.create(
             user=self.user,
             type="savings",
-            asset_entity_name="bank_of_america",
+            asset_entity_name="chase",
             name="Savings",
         )
 
@@ -83,16 +84,26 @@ class DemoUserFactory:
             current_friday -= timedelta(days=14)
         pay_dates.reverse()
 
-        income_entries = [
-            Income(
-                user=self.user,
-                account_name=self.checking_account,
-                description="Bi-weekly Salary",
-                date=pay_date,
-                amount=Decimal("3000.00"),
+        income_entries = []
+        for pay_date in pay_dates:
+            income_entries.extend(
+                [
+                    Income(
+                        user=self.user,
+                        account_name=self.checking_account,
+                        description="Bi-weekly Salary",
+                        date=pay_date,
+                        amount=Decimal("3000.00"),
+                    ),
+                    Income(
+                        user=self.user,
+                        account_name=self.savings_account,
+                        description="Bi-weekly Salary",
+                        date=pay_date,
+                        amount=Decimal("500.00"),
+                    ),
+                ]
             )
-            for pay_date in pay_dates
-        ]
         Income.objects.bulk_create(income_entries, ignore_conflicts=True)
 
     def _create_expense_transactions(self):
@@ -319,3 +330,166 @@ class DemoUserFactory:
 
         # Bulk create all expense entries
         Expense.objects.bulk_create(expense_entries, ignore_conflicts=True)
+
+    def _create_account_transactions(self):
+        """Create account transactions showing steadily rising balances"""
+        # Starting balances
+        checking_balance = Decimal("5000.00")  # Starting with $5,000
+        savings_balance = Decimal("10000.00")  # Starting with $10,000
+
+        # Generate transactions for the past year
+        current_date = self.one_year_ago
+        checking_transactions = []
+        savings_transactions = []
+
+        while current_date <= self.today:
+            # Bi-weekly salary deposits (every 2 weeks on Friday)
+            if (
+                current_date.weekday() == 4
+                and (current_date - self.one_year_ago).days % 14 < 7
+            ):
+                # Checking account gets $3,000 bi-weekly
+                checking_balance += Decimal("3000.00")
+                checking_transactions.append(
+                    AccountTransaction(
+                        account=self.checking_account,
+                        amount=checking_balance,
+                        date=current_date,
+                    )
+                )
+
+                # Savings account gets $500 bi-weekly
+                savings_balance += Decimal("500.00")
+                savings_transactions.append(
+                    AccountTransaction(
+                        account=self.savings_account,
+                        amount=savings_balance,
+                        date=current_date,
+                    )
+                )
+
+            # Monthly rent payment from checking (1st of each month)
+            if current_date.day == 1:
+                checking_balance -= Decimal("2200.00")
+                checking_transactions.append(
+                    AccountTransaction(
+                        account=self.checking_account,
+                        amount=checking_balance,
+                        date=current_date,
+                    )
+                )
+
+            # Monthly utility payments from checking (1st of each month)
+            if current_date.day == 1:
+                utilities_total = Decimal("245.49")  # Sum of all utilities
+                checking_balance -= utilities_total
+                checking_transactions.append(
+                    AccountTransaction(
+                        account=self.checking_account,
+                        amount=checking_balance,
+                        date=current_date,
+                    )
+                )
+
+            # Grocery expenses from checking (weekly on Monday)
+            if current_date.weekday() == 0:
+                checking_balance -= Decimal("120.50")
+                checking_transactions.append(
+                    AccountTransaction(
+                        account=self.checking_account,
+                        amount=checking_balance,
+                        date=current_date,
+                    )
+                )
+
+            # Gas expenses from checking (every 2 weeks on Wednesday)
+            if (
+                current_date.weekday() == 2
+                and (current_date - self.one_year_ago).days % 14 < 7
+            ):
+                checking_balance -= Decimal("45.00")
+                checking_transactions.append(
+                    AccountTransaction(
+                        account=self.checking_account,
+                        amount=checking_balance,
+                        date=current_date,
+                    )
+                )
+
+            # Medical expenses from checking (every 3 months on 10th)
+            if current_date.month % 3 == 0 and current_date.day == 10:
+                medical_amount = Decimal("73.75")  # Average medical expense
+                checking_balance -= medical_amount
+                checking_transactions.append(
+                    AccountTransaction(
+                        account=self.checking_account,
+                        amount=checking_balance,
+                        date=current_date,
+                    )
+                )
+
+            # Monthly shopping expenses from checking (15th of each month)
+            if current_date.day == 15:
+                shopping_amount = Decimal("100.68")  # Average shopping expense
+                checking_balance -= shopping_amount
+                checking_transactions.append(
+                    AccountTransaction(
+                        account=self.checking_account,
+                        amount=checking_balance,
+                        date=current_date,
+                    )
+                )
+
+            # Monthly entertainment expenses from checking (20th of each month)
+            if current_date.day == 20:
+                entertainment_amount = Decimal("40.25")  # Average entertainment expense
+                checking_balance -= entertainment_amount
+                checking_transactions.append(
+                    AccountTransaction(
+                        account=self.checking_account,
+                        amount=checking_balance,
+                        date=current_date,
+                    )
+                )
+
+            # Monthly subscription expenses from checking (15th of each month)
+            if current_date.day == 15:
+                subscription_amount = Decimal("30.00")  # Average subscription expense
+                checking_balance -= subscription_amount
+                checking_transactions.append(
+                    AccountTransaction(
+                        account=self.checking_account,
+                        amount=checking_balance,
+                        date=current_date,
+                    )
+                )
+
+            # Weekend dining expenses from checking (randomly 2-3 times per week)
+            if current_date.weekday() in [4, 5, 6] and current_date.day % 7 < 3:
+                dining_amount = Decimal("14.56")  # Average dining expense
+                checking_balance -= dining_amount
+                checking_transactions.append(
+                    AccountTransaction(
+                        account=self.checking_account,
+                        amount=checking_balance,
+                        date=current_date,
+                    )
+                )
+
+            # Quarterly travel expenses from checking (1st of March, June, September, December)
+            if current_date.month in [3, 6, 9, 12] and current_date.day == 1:
+                travel_amount = Decimal("259.13")  # Average travel expense
+                checking_balance -= travel_amount
+                checking_transactions.append(
+                    AccountTransaction(
+                        account=self.checking_account,
+                        amount=checking_balance,
+                        date=current_date,
+                    )
+                )
+
+            current_date += timedelta(days=1)
+
+        # Bulk create all account transactions
+        all_transactions = checking_transactions + savings_transactions
+        AccountTransaction.objects.bulk_create(all_transactions, ignore_conflicts=True)
