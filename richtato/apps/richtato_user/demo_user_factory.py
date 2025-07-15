@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.db import transaction
 
 from richtato.apps.account.models import Account, AccountTransaction
+from richtato.apps.budget.models import Budget
 from richtato.apps.expense.models import Expense
 from richtato.apps.income.models import Income
 from richtato.apps.richtato_user.models import CardAccount, Category, User
@@ -30,6 +31,7 @@ class DemoUserFactory:
         self._create_income_transactions()
         self._create_expense_transactions()
         self._create_account_transactions()
+        self._create_budgets()
         return self.user
 
     def get_previous_friday(self, d):
@@ -493,3 +495,26 @@ class DemoUserFactory:
         # Bulk create all account transactions
         all_transactions = checking_transactions + savings_transactions
         AccountTransaction.objects.bulk_create(all_transactions, ignore_conflicts=True)
+
+    def _create_budgets(self):
+        """Create some basic budgets for the demo user."""
+        categories = {c.name: c for c in Category.objects.filter(user=self.user)}
+        today = self.today
+        start_date = today.replace(day=1)
+        # Set budgets for the current month
+        budget_data = [
+            ("Groceries", 600),
+            ("Dining", 300),
+            ("Travel", 400),
+            ("Shopping", 250),
+            ("Utilities", 200),
+        ]
+        for cat_name, amount in budget_data:
+            category = categories.get(cat_name)
+            if category:
+                Budget.objects.create(
+                    user=self.user,
+                    category=category,
+                    start_date=start_date,
+                    amount=amount,
+                )

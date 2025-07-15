@@ -439,16 +439,12 @@ function initBudgetProgress() {
 
       let progressHTML = "";
       budgets.forEach((item, index) => {
-        const percentage =
-          typeof item.percentage === "number" && !isNaN(item.percentage)
-            ? item.percentage
-            : 0;
+        const percentage = Number(item.percentage);
         const status =
           percentage > 90 ? "warning" : percentage > 100 ? "over" : "good";
         const color = colors[index % colors.length];
 
-        const safePercentage =
-          typeof percentage === "number" && !isNaN(percentage) ? percentage : 0;
+        const safePercentage = isNaN(percentage) ? 0 : percentage;
         progressHTML += `
                     <div class="budget-item">
                         <div class="budget-header">
