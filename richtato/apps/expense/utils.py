@@ -320,7 +320,6 @@ def sankey_cash_flow_overview(user_id: int) -> go.Figure:
     )
 
     fig.update_layout(
-        title_text="Cash Flow Overview - Income Sources to Savings, Investments & Expenses",
         title_font=dict(size=16, color="#ffffff", family="Open Sans, sans-serif"),
         font=dict(size=12, color="#ffffff", family="Open Sans, sans-serif"),
         paper_bgcolor="rgba(0,0,0,0)",

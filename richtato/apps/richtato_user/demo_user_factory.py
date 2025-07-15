@@ -496,6 +496,19 @@ class DemoUserFactory:
         all_transactions = checking_transactions + savings_transactions
         AccountTransaction.objects.bulk_create(all_transactions, ignore_conflicts=True)
 
+        if checking_transactions:
+            self.checking_account.latest_balance = checking_transactions[-1].amount
+            self.checking_account.latest_balance_date = checking_transactions[-1].date
+            self.checking_account.save(
+                update_fields=["latest_balance", "latest_balance_date"]
+            )
+        if savings_transactions:
+            self.savings_account.latest_balance = savings_transactions[-1].amount
+            self.savings_account.latest_balance_date = savings_transactions[-1].date
+            self.savings_account.save(
+                update_fields=["latest_balance", "latest_balance_date"]
+            )
+
     def _create_budgets(self):
         """Create some basic budgets for the demo user."""
         categories = {c.name: c for c in Category.objects.filter(user=self.user)}

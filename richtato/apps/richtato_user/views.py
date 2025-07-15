@@ -3,6 +3,7 @@ import os
 import random
 import string
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 import pytz
 from django.contrib.auth import authenticate, login, logout
@@ -119,6 +120,38 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
             else 0
         )
 
+        # Calculate budget utilization for the past 30 days (average per category)
+        from django.db.models import Q
+
+        today = datetime.now().date()
+        month_start = today.replace(day=1)
+        month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(
+            days=1
+        )
+        budgets = Budget.objects.filter(
+            user=request.user, start_date__lte=month_end
+        ).filter(Q(end_date__isnull=True) | Q(end_date__gte=month_start))
+
+        utilizations = []
+        for budget in budgets:
+            cat_expense = (
+                Expense.objects.filter(
+                    user=request.user,
+                    category=budget.category,
+                    date__gte=thirty_days_ago,
+                ).aggregate(total=Sum("amount"))["total"]
+                or 0
+            )
+            if budget.amount > 0:
+                utilization = (Decimal(cat_expense) / budget.amount) * Decimal(100)
+                utilizations.append(float(utilization))
+
+        if utilizations:
+            avg_utilization = round(sum(utilizations) / len(utilizations), 1)
+            budget_utilization_30_days_str = f"{avg_utilization}%"
+        else:
+            budget_utilization_30_days_str = "N/A"
+
         # pg_client = PostgresClient()
         # expense_df = pg_client.get_expense_df(request.user.pk)
 
@@ -132,10 +165,7 @@ def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
             "networth_growth_class": networth_growth_class,
             "expense_sum": format_currency(expense_sum),
             "income_sum": format_currency(income_sum),
-            "cash_flow_30_days": format_currency(cash_flow_30_days),
-            "cash_flow_30_days_class": "positive"
-            if cash_flow_30_days >= 0
-            else "negative",
+            "budget_utilization_30_days": budget_utilization_30_days_str,
             "savings_rate": savings_rate_str,
             "savings_rate_context": savings_rate_context,
             "savings_rate_class": savings_rate_class,
