@@ -52,6 +52,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     import_path = models.CharField(max_length=100, default="", blank=True, null=True)
+    is_demo = models.BooleanField(default=False)
+    demo_expires_at = models.DateTimeField(null=True, blank=True)
     objects = UserManager()
 
     USERNAME_FIELD = "username"  # Only username is used for login

@@ -2,6 +2,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.db import transaction
+from django.utils import timezone
 
 from richtato.apps.account.models import Account, AccountTransaction
 from richtato.apps.budget.models import Budget
@@ -42,7 +43,11 @@ class DemoUserFactory:
 
     def _create_user(self):
         self.user = User.objects.create_user(
-            username=self.username, email=self.email, password=self.password
+            username=self.username,
+            email=self.email,
+            password=self.password,
+            is_demo=True,
+            demo_expires_at=timezone.now() + timedelta(hours=1),
         )
 
     def _create_credit_cards(self):
