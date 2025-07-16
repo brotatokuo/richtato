@@ -1,6 +1,7 @@
 import threading
 import time
 
+from django.db import close_old_connections
 from django.utils import timezone
 
 from richtato.apps.richtato_user.models import User
@@ -17,6 +18,7 @@ class CleanupDemoUsersMiddleware:
     def cleanup_periodically(self):
         while self.keep_running:
             try:
+                close_old_connections()  # Ensure DB connection is usable in this thread
                 now = timezone.now()
                 expired_users = User.objects.filter(
                     is_demo=True, demo_expires_at__lt=now
