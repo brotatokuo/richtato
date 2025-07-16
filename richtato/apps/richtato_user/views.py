@@ -617,8 +617,7 @@ def demo_login(request):
     demo_user = User.objects.create(
         username=demo_username,
         is_demo=True,
-        demo_expires_at=timezone.now() + timedelta(seconds=10),
-        # demo_expires_at=timezone.now() + timedelta(hours=1),
+        demo_expires_at=timezone.now() + timedelta(hours=1),
         # add other fields as needed
     )
     demo_user.set_unusable_password()
