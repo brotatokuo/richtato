@@ -1,10 +1,8 @@
 import os
-from abc import ABC, abstractmethod
 import re
+from abc import ABC, abstractmethod
 
-import google.generativeai as genai
 import pandas as pd
-from fuzzywuzzy import fuzz
 from loguru import logger
 
 # Optional imports
@@ -80,7 +78,9 @@ class OpenAI(BaseAI):
         # Parse LLM response
         predicted = self._parse_batch_response(response, descriptions)
         df["Category"] = predicted
-        logger.info(f"Categorization Completed: {len(predicted)} transactions categorized.")
+        logger.info(
+            f"Categorization Completed: {len(predicted)} transactions categorized."
+        )
         logger.debug(df)
         return df
 
@@ -103,43 +103,8 @@ class OpenAI(BaseAI):
             ...
             """
         return prompt
-    
+
     def _parse_batch_response(self, response: str, batch: list[str]) -> list[str]:
         matches = re.findall(r"(\d+):\s*(.+)", response)
         mapping = {int(i): cat.strip() for i, cat in matches}
         return [mapping.get(i + 1, "Unknown") for i in range(len(batch))]
-
-
-class GeminiAI(BaseAI):
-    def __init__(self):
-        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-        self.model = genai.GenerativeModel("gemini-1.5-flash-8b")
-
-    def _ask(self, prompt: str) -> str:
-        response = self.model.generate_content([prompt])
-        return response.text.strip()
-
-    def simplify_description(self, input: str) -> str:
-        prompt = f"""Simplify this transaction description: "{input}", into a more concise description."""
-        return self._ask(prompt)
-
-    def categorize_transaction(self, user: User, input: str) -> str:
-        category_list = Category.objects.exclude(name="Unknown").values_list(
-            "name", flat=True
-        )
-        category_string = ", ".join(category_list)
-        prompt = f"""
-        Given the following categories: {category_string}
-        Which category best matches the input text: "{input}"?
-        Please choose only from the given categories.
-        """
-
-        response = self._ask(prompt)
-        if response in category_list:
-            return response
-
-        best_match = max(category_list, key=lambda x: fuzz.ratio(x, response))
-        logger.info(
-            f'Input: "{input}" | AI Response: "{response}" | Best Match: "{best_match}"'
-        )
-        return best_match
