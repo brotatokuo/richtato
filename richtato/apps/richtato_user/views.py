@@ -14,6 +14,7 @@ from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -615,6 +616,9 @@ def demo_login(request):
     demo_username = generate_demo_username()
     demo_user = User.objects.create(
         username=demo_username,
+        is_demo=True,
+        demo_expires_at=timezone.now() + timedelta(seconds=10),
+        # demo_expires_at=timezone.now() + timedelta(hours=1),
         # add other fields as needed
     )
     demo_user.set_unusable_password()

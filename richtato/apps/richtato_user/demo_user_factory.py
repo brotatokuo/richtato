@@ -46,8 +46,7 @@ class DemoUserFactory:
             username=self.username,
             email=self.email,
             password=self.password,
-            is_demo=True,
-            demo_expires_at=timezone.now() + timedelta(hours=1),
+            is_demo=False,
         )
 
     def _create_credit_cards(self):

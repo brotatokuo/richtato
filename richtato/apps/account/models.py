@@ -62,9 +62,6 @@ class AccountTransaction(models.Model):
             ).date()
         else:
             latest_balance_date = self.account.latest_balance_date
-
-        print(f"Transaction Date: {transaction_date}", type(transaction_date))
-        print(f"Latest Balance Date: {latest_balance_date}", type(latest_balance_date))
         # Compare if the transaction date is later than the latest balance date
         if latest_balance_date is None or transaction_date >= latest_balance_date:
             # Save the transaction first
