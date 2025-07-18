@@ -24,10 +24,15 @@ class CleanupDemoUsersMiddleware:
                     is_demo=True, demo_expires_at__lt=now
                 )
                 count = expired_users.count()
-                expired_users.delete()
-                print(
-                    f"[CleanupDemoUsersMiddleware] Deleted {count} expired demo users at {now}."
-                )
+                if count:
+                    expired_users.delete()
+                    print(
+                        f"[CleanupDemoUsersMiddleware] Deleted {count} expired demo users at {now}."
+                    )
+                else:
+                    print(
+                        f"[CleanupDemoUsersMiddleware] No expired demo users at {now}."
+                    )
             except Exception as e:
                 print(f"[CleanupDemoUsersMiddleware] Error during cleanup: {e}")
             # Wait for 10 minutes (600 seconds) before next cleanup

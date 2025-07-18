@@ -1,8 +1,8 @@
+import random
 from datetime import date, timedelta
 from decimal import Decimal
 
 from django.db import transaction
-from django.utils import timezone
 
 from richtato.apps.account.models import Account, AccountTransaction
 from richtato.apps.budget.models import Budget
@@ -189,17 +189,19 @@ class DemoUserFactory:
                     )
                 )
 
-            # Shopping (monthly)
-            if current_date.day == 15:
+            # Shopping (every ~3 days, random amount $50-$200)
+            if (current_date - self.one_year_ago).days % 3 == 0:
                 shopping_items = [
-                    ("Amazon.com", Decimal("89.99")),
-                    ("Target", Decimal("67.50")),
-                    ("Walmart", Decimal("45.25")),
-                    ("Best Buy", Decimal("199.99")),
+                    "Amazon.com",
+                    "Target",
+                    "Walmart",
+                    "Best Buy",
+                    "eBay",
+                    "Macy's",
+                    "Costco",
                 ]
-                item, amount = shopping_items[
-                    (current_date.month - 1) % len(shopping_items)
-                ]
+                item = random.choice(shopping_items)
+                amount = Decimal(str(random.randint(50, 200)))
                 expense_entries.append(
                     Expense(
                         user=self.user,

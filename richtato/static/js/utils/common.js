@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
       hamburger.style.display = "none";
     }
   }
-  updateHamburgerDisplay();
+  updateHamburgerDisplay(); // FIXME silen failure at login and register
   window.addEventListener("resize", updateHamburgerDisplay);
 
   const loginButton = document.querySelector("#login-button");

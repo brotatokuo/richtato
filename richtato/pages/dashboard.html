@@ -161,9 +161,9 @@
       <div class="card-header">
         <h2>Budget Progress</h2>
       </div>
-      <div class="budget-progress-container" id="budget-progress">
-        <!-- Budget progress bars will be inserted here -->
-      </div>
+    <div class="budget-categories-container" id="categories-container">
+        <!-- Categories will be inserted here dynamically -->
+    </div>
     </div>
 
     <!-- Cash Flow -->
@@ -175,47 +175,6 @@
         {{ sankey_cash_flow|safe }}
       </div>
     </div>
-
-    <!-- Expense Stream by Account -->
-    <!-- <div class="analytics-card large">
-      <div class="card-header">
-        <h2>Expense Stream by Account</h2>
-      </div>
-      <div class="chart-container sankey-container" id="sankey-account">
-        {{ sankey_by_account|safe }}
-      </div>
-    </div> -->
-
-    <!-- AI Insights -->
-    <!-- <div class="analytics-card insights large">
-      <div class="card-header">
-        <h2>AI Insights</h2>
-        <i class="fa-solid fa-brain ai-icon"></i>
-      </div>
-      <div class="insights-container">
-        <div class="insight-item">
-          <i class="fa-solid fa-lightbulb insight-icon"></i>
-          <div class="insight-text">
-            <strong>Optimization Opportunity:</strong> You spent 23% more on
-            dining out this month. Consider meal planning to save $200.
-          </div>
-        </div>
-        <div class="insight-item">
-          <i class="fa-solid fa-trend-up insight-icon"></i>
-          <div class="insight-text">
-            <strong>Positive Trend:</strong> Your savings rate has improved by
-            12% over the last quarter.
-          </div>
-        </div>
-        <div class="insight-item">
-          <i class="fa-solid fa-exclamation-triangle insight-icon warning"></i>
-          <div class="insight-text">
-            <strong>Budget Alert:</strong> You're 85% through your entertainment
-            budget with 10 days left in the month.
-          </div>
-        </div>
-      </div>
-    </div> -->
   </div>
 </div>
 
@@ -228,5 +187,4 @@
 <script src="{% static 'js/components/budgetRenderer.js' %}"></script>
 <script src="{% static 'js/components/timeseriesGraph.js' %}"></script>
 <script src="{% static 'js/pages/dashboard.js' %}"></script>
-<script src="{% static 'js/pages/bi-dashboard.js' %}"></script>
 {% endblock %}

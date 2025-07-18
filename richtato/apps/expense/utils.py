@@ -355,25 +355,4 @@ def convert_plotly_fig_to_html(fig) -> str:
     )
 
     # Add custom CSS to remove scrollbars and improve styling
-    custom_css = """
-    <style>
-        .plotly-graph-div {
-            overflow: hidden !important;
-            border-radius: 8px;
-        }
-        .plotly-graph-div .svg-container {
-            overflow: hidden !important;
-        }
-        .plotly-graph-div .main-svg {
-            border-radius: 8px;
-        }
-        .js-plotly-plot .plotly .modebar {
-            display: none !important;
-        }
-        .js-plotly-plot .plotly .modebar-group {
-            display: none !important;
-        }
-    </style>
-    """
-
-    return custom_css + html
+    return html
