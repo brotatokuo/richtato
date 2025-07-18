@@ -382,6 +382,7 @@ def generate_demo_username():
 
 @transaction.atomic
 def demo_login(request):
+    logger.debug("Duplicating demo user")
     template_user = User.objects.get(username="demo")
     demo_username = generate_demo_username()
     demo_user = User.objects.create(
@@ -453,10 +454,10 @@ def demo_login(request):
         if tx.account_id in account_map:
             tx.account = account_map[tx.account_id]
         tx.save()
-
+    logger.debug("Successfully duplicated demo user, logging in")
     login(request, demo_user)
     request.session["is_demo_user"] = True
-    return redirect("index")
+    return redirect("dashboard")
 
 
 class CustomPasswordResetView(PasswordResetView):
