@@ -3,14 +3,12 @@ import os
 import random
 import string
 from datetime import datetime, timedelta
-from decimal import Decimal
 
 import pytz
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import PasswordResetConfirmView, PasswordResetView
 from django.db import IntegrityError, transaction
-from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
@@ -31,12 +29,6 @@ from richtato.apps.account.models import (
 )
 from richtato.apps.budget.models import Budget
 from richtato.apps.expense.models import Expense
-from richtato.apps.expense.utils import (
-    convert_plotly_fig_to_html,
-    sankey_by_account,
-    sankey_by_category,
-    sankey_cash_flow_overview,
-)
 from richtato.apps.income.models import Income
 from richtato.apps.richtato_user.models import (
     CardAccount,
@@ -45,227 +37,23 @@ from richtato.apps.richtato_user.models import (
     supported_card_banks,
 )
 from richtato.apps.richtato_user.serializers import CategorySerializer
-from richtato.apps.richtato_user.utils import _get_line_graph_data_by_month
-from richtato.utilities.postgres.pg_client import PostgresClient
-from richtato.utilities.tools import format_currency
+from richtato.apps.richtato_user.utils import (
+    _get_line_graph_data_by_month,
+    generate_dashboard_context,
+)
 
 pst = pytz.timezone("US/Pacific")
 
 
 # Main view function
-def index(request: HttpRequest) -> HttpResponseRedirect | HttpResponse:
-    if request.user.is_authenticated:
-        logger.debug(f"User {request.user} is authenticated.")
-        accounts = Account.objects.filter(user=request.user)
-        networth = (
-            round(sum(account.latest_balance for account in accounts))
-            if accounts
-            else 0.0
-        )
-
-        # Calculate networth growth percentage
-        networth_growth = calculate_networth_growth(request.user)
-        # Calculate networth growth CSS class
-        networth_growth_class = (
-            "positive"
-            if networth_growth.startswith("+")
-            else "negative"
-            if networth_growth.startswith("-")
-            else ""
-        )
-
-        # Calculate cash flow for the past 30 days
-        thirty_days_ago = datetime.now().date() - timedelta(days=30)
-
-        income_30_days = (
-            Income.objects.filter(
-                user=request.user, date__gte=thirty_days_ago
-            ).aggregate(total=Sum("amount"))["total"]
-            or 0
-        )
-        expense_30_days = (
-            Expense.objects.filter(
-                user=request.user, date__gte=thirty_days_ago
-            ).aggregate(total=Sum("amount"))["total"]
-            or 0
-        )
-
-        cash_flow_30_days = income_30_days - expense_30_days
-        expense_sum = expense_30_days
-        income_sum = income_30_days
-
-        # Calculate savings rate based on 30-day cash flow
-        if income_30_days > 0:
-            savings_rate = round((cash_flow_30_days / income_30_days) * 100, 1)
-        else:
-            savings_rate = 0
-
-        # Calculate savings rate context
-        savings_rate_str = f"{savings_rate}%"
-        savings_rate_context, savings_rate_class = calculate_savings_rate_context(
-            savings_rate_str
-        )
-
-        # Calculate % of non-essential spending for past 30 days
-        nonessential_expense = (
-            Expense.objects.filter(
-                user=request.user,
-                category__type="nonessential",
-                date__gte=thirty_days_ago,
-            ).aggregate(total=Sum("amount"))["total"]
-            or 0
-        )
-        nonessential_spending_pct = (
-            round((nonessential_expense / expense_30_days) * 100, 1)
-            if expense_30_days > 0
-            else 0
-        )
-
-        # Calculate budget utilization for the past 30 days (average per category)
-        from django.db.models import Q
-
-        today = datetime.now().date()
-        month_start = today.replace(day=1)
-        month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(
-            days=1
-        )
-        budgets = Budget.objects.filter(
-            user=request.user, start_date__lte=month_end
-        ).filter(Q(end_date__isnull=True) | Q(end_date__gte=month_start))
-
-        utilizations = []
-        for budget in budgets:
-            cat_expense = (
-                Expense.objects.filter(
-                    user=request.user,
-                    category=budget.category,
-                    date__gte=thirty_days_ago,
-                ).aggregate(total=Sum("amount"))["total"]
-                or 0
-            )
-            if budget.amount > 0:
-                utilization = (Decimal(cat_expense) / budget.amount) * Decimal(100)
-                utilizations.append(float(utilization))
-
-        if utilizations:
-            avg_utilization = round(sum(utilizations) / len(utilizations), 1)
-            budget_utilization_30_days_str = f"{avg_utilization}%"
-        else:
-            budget_utilization_30_days_str = "N/A"
-
-        # pg_client = PostgresClient()
-        # expense_df = pg_client.get_expense_df(request.user.pk)
-
-        # Create comprehensive cash flow Sankey diagram
-        sankey_cash_flow_fig = sankey_cash_flow_overview(request.user.pk)
-        sankey_cash_flow_html = convert_plotly_fig_to_html(sankey_cash_flow_fig)
-
-        context = {
-            "networth": format_currency(networth, 0),
-            "networth_growth": networth_growth,
-            "networth_growth_class": networth_growth_class,
-            "expense_sum": format_currency(expense_sum),
-            "income_sum": format_currency(income_sum),
-            "budget_utilization_30_days": budget_utilization_30_days_str,
-            "savings_rate": savings_rate_str,
-            "savings_rate_context": savings_rate_context,
-            "savings_rate_class": savings_rate_class,
-            "sankey_cash_flow": sankey_cash_flow_html,
-            "nonessential_spending_pct": nonessential_spending_pct,
-        }
-
-        # Render the response with the context
-        return render(request, "dashboard.html", context)
-
-    else:
-        return render(request, "welcome.html")
+def index(request: HttpRequest) -> HttpResponse:
+    return render(request, "welcome.html")
 
 
-def calculate_networth_growth(user):
-    """
-    Calculate networth growth percentage for the current month compared to previous month.
-    Returns a formatted string like "+5.2% this month" or "-2.1% this month"
-    """
-    try:
-        # Get current date and calculate previous month
-        current_date = datetime.now().date()
-        current_month_start = current_date.replace(day=1)
-        previous_month_end = current_month_start - timedelta(days=1)
-        previous_month_start = previous_month_end.replace(day=1)
-
-        # Get current networth (sum of all account latest balances)
-        current_accounts = Account.objects.filter(user=user)
-        current_networth = (
-            sum(account.latest_balance for account in current_accounts)
-            if current_accounts
-            else 0
-        )
-
-        # Get previous month's networth from account transactions
-        previous_networth = 0
-        for account in current_accounts:
-            # Get the latest transaction for this account before the current month
-            latest_transaction = (
-                AccountTransaction.objects.filter(
-                    account=account, date__lt=current_month_start
-                )
-                .order_by("-date")
-                .first()
-            )
-
-            if latest_transaction:
-                previous_networth += latest_transaction.amount
-            else:
-                # If no previous transaction, assume balance was 0
-                previous_networth += 0
-
-        # Calculate growth percentage
-        if previous_networth > 0:
-            growth_percentage = (
-                (current_networth - previous_networth) / previous_networth
-            ) * 100
-            growth_percentage = round(growth_percentage, 1)
-
-            # Format the result
-            if growth_percentage >= 0:
-                return f"+{growth_percentage}% this month"
-            else:
-                return f"{growth_percentage}% this month"
-        else:
-            # If no previous networth data, return a default message
-            return "New this month"
-
-    except Exception as e:
-        logger.error(f"Error calculating networth growth: {e}")
-        return "N/A"
-
-
-def calculate_savings_rate_context(savings_rate):
-    """
-    Calculate savings rate context based on percentage ranges.
-    Returns a tuple of (context_text, css_class)
-    """
-    try:
-        # Extract the numeric value from savings_rate (remove '%' and convert to float)
-        rate_value = float(savings_rate.replace("%", ""))
-
-        if rate_value < 10:
-            return "Below average", "negative"
-        elif rate_value >= 10 and rate_value <= 20:
-            return "Average", ""
-        elif rate_value > 30:
-            return "Above average", "positive"
-        else:
-            # Between 20-30%
-            return "Good", "positive"
-
-    except (ValueError, AttributeError):
-        # If we can't parse the savings rate, return a default
-        return "N/A", ""
-
-
+@login_required
 def dashboard(request: HttpRequest) -> HttpResponse:
-    return render(request, "dashboard.html", {"user_tier": "Alpha User"})
+    context = generate_dashboard_context(request)
+    return render(request, "dashboard.html", context)
 
 
 @login_required
@@ -273,6 +61,7 @@ def get_user_id(request: HttpRequest):
     return JsonResponse({"userID": request.user.pk})
 
 
+@login_required
 def assets(request: HttpRequest):
     logger.debug(f"User {request.user} is authenticated.")
     assets = Account.objects.filter(user=request.user)
@@ -280,22 +69,17 @@ def assets(request: HttpRequest):
     return render(request, "assets.html", {"assets": assets})
 
 
-def friends(request: HttpRequest):
-    return render(request, "friends.html")
-
-
+@login_required
 def upload(request: HttpRequest):
     return render(request, "upload.html")
 
 
-def goals(request: HttpRequest):
-    return render(request, "goals.html")
-
-
+@login_required
 def profile(request: HttpRequest):
     return render(request, "profile.html")
 
 
+@login_required
 def input(request: HttpRequest):
     transaction_accounts = (
         CardAccount.objects.filter(user=request.user)
@@ -320,10 +104,12 @@ def input(request: HttpRequest):
     )
 
 
+@login_required
 def user_settings(request: HttpRequest):
     return render(request, "user_settings.html")
 
 
+@login_required
 def account_settings(request: HttpRequest):
     return render(
         request,
@@ -336,25 +122,9 @@ def account_settings(request: HttpRequest):
     )
 
 
+@login_required
 def table(request: HttpRequest):
     return render(request, "table.html")
-
-
-def timeseries_graph(request: HttpRequest):
-    pg_client = PostgresClient()
-    expense_df = pg_client.get_expense_df(request.user.pk)
-    sankey_by_account_fig = sankey_by_account(expense_df)
-    sankey_by_account_html = convert_plotly_fig_to_html(sankey_by_account_fig)
-    sankey_by_category_fig = sankey_by_category(expense_df)
-    sankey_by_category_html = convert_plotly_fig_to_html(sankey_by_category_fig)
-    return render(
-        request,
-        "graph.html",
-        {
-            "sankey_by_account": sankey_by_account_html,
-            "sankey_by_category": sankey_by_category_html,
-        },
-    )
 
 
 class CardBanksAPIView(APIView):
@@ -499,7 +269,7 @@ class LoginView(View):
 
         if user is not None:
             login(request, user)
-            return HttpResponseRedirect(reverse("index"))
+            return HttpResponseRedirect(reverse("dashboard"))
         else:
             return render(
                 request,
