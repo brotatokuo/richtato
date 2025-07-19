@@ -194,11 +194,14 @@ table.dataTable tbody tr.selected > * {
 
 .table-option {
   margin-bottom: 3%;
-  color: var(--text-color);
+  color: var(--green-color);
   background-color: var(--main-color);
   border: var(--secondary-color);
   border-radius: var(--first-radius);
   padding: 10px;
+  width: 100%;
+  text-align: center;
+  font-size: large;
 }
 
 /* Typewriter animation styles */

@@ -1,19 +1,20 @@
 {% extends 'base.html' %} {% load static %}
 <!-- prettier-ignore-start -->
-{% block title %} Table {%endblock %}
+{% block title %} Data {%endblock %}
 <!-- prettier-ignore-start -->
 {% block content %}
 <script src="{% static 'js/pages/table.js' %}"></script>
 
 <div class="main-content">
     <div class="title">
-        <h1>Table Data</h1>
+        <h1>Data</h1>
     </div>
     <div class="main-content-boxes wide">
         <div class="box">
             <select id="tableOption" class="table-option">
                 <option value="expense">Expense</option>
                 <option value="income">Income</option>
+                <option value="assets">Assets</option>
             </select>
 
             <div class="table-responsive">

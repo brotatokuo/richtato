@@ -156,14 +156,30 @@
       <div class="chart-legend" id="expense-legend"></div>
     </div>
 
+    <div class="analytics-card large">
+      <div class="card-header">
+        <h2>Accounts</h2>
+      </div>
+      <div class="categories-table-container" id="assets-container">
+        <!-- Assets list view -->
+        <div class="categories-list" id="assets-list">
+          <!-- Assets list will be populated here -->
+        </div>
+        <!-- Assets table view -->
+        <div class="categories-table-container" id="assets-table">
+          <!-- Assets table will be populated here -->
+        </div>
+      </div>
+    </div>
+
     <!-- Budget Progress -->
     <div class="analytics-card large">
       <div class="card-header">
         <h2>Budget Progress</h2>
       </div>
-    <div class="budget-categories-container" id="categories-container">
+      <div class="budget-categories-container" id="categories-container">
         <!-- Categories will be inserted here dynamically -->
-    </div>
+      </div>
     </div>
 
     <!-- Cash Flow -->
@@ -175,16 +191,16 @@
         {{ sankey_cash_flow|safe }}
       </div>
     </div>
+
+    <!-- Include Chart.js and plugins -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+    <!-- Dashboard Scripts -->
+    <script src="{% static 'js/components/budgetRenderer.js' %}"></script>
+    <script src="{% static 'js/components/timeseriesGraph.js' %}"></script>
+    <script src="{% static 'js/pages/dashboard.js' %}"></script>
+    {% endblock %}
   </div>
 </div>
-
-<!-- Include Chart.js and plugins -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-
-<!-- Dashboard Scripts -->
-<script src="{% static 'js/components/budgetRenderer.js' %}"></script>
-<script src="{% static 'js/components/timeseriesGraph.js' %}"></script>
-<script src="{% static 'js/pages/dashboard.js' %}"></script>
-{% endblock %}

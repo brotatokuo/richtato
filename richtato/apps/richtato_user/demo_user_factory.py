@@ -73,13 +73,13 @@ class DemoUserFactory:
             user=self.user,
             type="checking",
             asset_entity_name="bank_of_america",
-            name="Checking",
+            name="BofA Checking",
         )
         self.savings_account = Account.objects.create(
             user=self.user,
             type="savings",
             asset_entity_name="chase",
-            name="Savings",
+            name="Chase Savings",
         )
 
     def _create_income_transactions(self):

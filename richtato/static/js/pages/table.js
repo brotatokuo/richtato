@@ -25,6 +25,14 @@ document.addEventListener("DOMContentLoaded", () => {
         null,
         tableConfig
       );
+    } else if (tableDropdown.value == "assets") {
+      new RichTable(
+        "#fullTable",
+        "/api/accounts/details/",
+        ["Date", "Account", "Amount"],
+        10,
+        tableConfig
+      );
     } else {
       console.error("Invalid table option selected.");
     }

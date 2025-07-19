@@ -12,6 +12,7 @@ function initializeDashboard() {
   initTopCategories();
   initExpensePieChart();
   initBudgetProgress();
+  initAssetsSection();
 }
 
 function initCashFlowChart() {
@@ -359,8 +360,47 @@ function initBudgetProgress() {
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
   }
-  console.log(year, month)
+  console.log(year, month);
   dashboardBudgetRenderer.fetchAndRender({ year, month });
+}
+
+function initAssetsSection() {
+  const tableContainer = document.getElementById("assets-table");
+  if (!tableContainer) return;
+
+  function fetchAndRenderAssets() {
+    fetch("/api/accounts/")
+      .then((response) => response.json())
+      .then((data) => {
+        const assets = data.rows || [];
+        let tableHTML = '<table class="categories-table">';
+        if (data.columns && data.columns.length) {
+          tableHTML += "<thead><tr>";
+          data.columns.forEach((col) => {
+            if (col.field !== "id") {
+              tableHTML += `<th>${col.title}</th>`;
+            }
+          });
+          tableHTML += "</tr></thead>";
+        }
+        tableHTML += "<tbody>";
+        assets.forEach((asset) => {
+          tableHTML += '<tr class="category-row">';
+          data.columns.forEach((col) => {
+            if (col.field !== "id") {
+              tableHTML += `<td>${asset[col.field] ?? ""}</td>`;
+            }
+          });
+          tableHTML += "</tr>";
+        });
+        tableHTML += "</tbody></table>";
+        tableContainer.innerHTML = tableHTML;
+      })
+      .catch((error) => {
+        console.error("Error fetching assets data:", error);
+      });
+  }
+  fetchAndRenderAssets();
 }
 
 // 5. Top Categories List
@@ -647,70 +687,3 @@ function initTopCategories() {
     });
   });
 }
-
-// function addDashboardBudgetControls() {
-//   const container = document.getElementById("dashboard-budget-categories");
-//   if (!container) return;
-
-//   // Create controls wrapper
-//   const controls = document.createElement("div");
-//   controls.className = "budget-controls";
-
-//   // Year dropdown
-//   const yearSelect = document.createElement("select");
-//   yearSelect.className = "budget-dropdown";
-//   yearSelect.id = "dashboard-budget-year";
-
-//   // Month dropdown
-//   const monthSelect = document.createElement("select");
-//   monthSelect.className = "budget-dropdown";
-//   monthSelect.id = "dashboard-budget-month";
-
-//   // Populate months
-//   const months = [
-//     "January",
-//     "February",
-//     "March",
-//     "April",
-//     "May",
-//     "June",
-//     "July",
-//     "August",
-//     "September",
-//     "October",
-//     "November",
-//     "December",
-//   ];
-//   months.forEach((month, idx) => {
-//     const opt = document.createElement("option");
-//     opt.value = idx + 1;
-//     opt.textContent = month;
-//     monthSelect.appendChild(opt);
-//   });
-
-//   controls.appendChild(yearSelect);
-//   controls.appendChild(monthSelect);
-//   container.parentNode.insertBefore(controls, container);
-
-//   // Fetch years from backend
-//   fetch("/dashboard/api/expense-years/")
-//     .then((response) => response.json())
-//     .then((data) => {
-//       if (data.years && data.years.length > 0) {
-//         yearSelect.innerHTML = data.years
-//           .map((year) => `<option value="${year}">${year}</option>`)
-//           .join("");
-//         // Default to latest year
-//         yearSelect.value = data.years[0];
-//         // Set month to current month
-//         const now = new Date();
-//         monthSelect.value = (now.getMonth() + 1).toString();
-//         // Initial render
-//         window.initBudgetProgress();
-//       }
-//     });
-
-//   // Add event listeners
-//   yearSelect.addEventListener("change", window.initBudgetProgress);
-//   monthSelect.addEventListener("change", window.initBudgetProgress);
-// }
