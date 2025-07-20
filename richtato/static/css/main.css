@@ -415,7 +415,6 @@ table.dataTable tbody tr.selected > * {
 .chart-container {
   padding: 20px;
   position: relative;
-  height: 300px;
 }
 
 .chart-legend {
@@ -548,6 +547,18 @@ table.dataTable tbody tr.selected > * {
 /* Categories Container */
 .categories-container {
   margin: 10px;
+}
+
+#categories-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  #categories-container {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Heatmap */
@@ -697,14 +708,13 @@ table.dataTable tbody tr.selected > * {
   display: flex;
   flex-direction: column;
   gap: var(--fourth-padding);
+  margin-top: var(--third-margin);
 }
 
 .budget-category-item {
-  margin-top: var(--secondary-margin);
   display: flex;
   align-items: center;
   gap: var(--secondary-padding);
-  padding: 15px;
   background-color: var(--main-color);
   border-radius: var(--first-radius);
   transition: background-color 0.3s ease, transform 0.2s ease;
@@ -849,7 +859,7 @@ table.dataTable tbody tr.selected > * {
   width: 100% !important;
   height: 80vh !important;
   max-width: 100vw !important;
-  min-height: 500px;
+  min-height: 350px;
   min-width: 0 !important;
   height: auto !important;
   box-sizing: border-box;
@@ -1069,4 +1079,39 @@ table.dataTable tbody tr.selected > * {
 
 #sankey-cash-flow {
   min-height: 80vh;
+}
+
+.sidebar-bottom-actions {
+  margin-top: auto;
+  width: 100%;
+}
+
+.sidebar-bottom-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (max-width: 900px) {
+  .sidebar-bottom-list {
+    gap: 4px;
+  }
+}
+
+.header {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .header {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    height: 56px;
+    width: 100%;
+    z-index: 100;
+  }
 }

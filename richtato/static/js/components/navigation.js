@@ -10,8 +10,6 @@ class NavigationManager {
       toggles: document.querySelectorAll(".toggle"),
       heart: document.querySelector(".heart"),
       sidebarLinks: document.querySelectorAll(".sidebar-link"),
-      navbarProfile: document.querySelector("#navbar-profile"),
-      profileDropdown: document.querySelector("#profileDropdown")
     };
 
     this.activePage = window.location.pathname;
@@ -27,32 +25,34 @@ class NavigationManager {
   }
 
   bindEvents() {
-    const { barItem, xmark, navbarProfile, heart, toggles } = this.elements;
+    const { barItem, xmark, heart, toggles } = this.elements;
 
     if (barItem) {
-      barItem.addEventListener('click', () => this.openSidebar());
+      barItem.addEventListener("click", () => this.openSidebar());
     }
 
     if (xmark) {
-      xmark.addEventListener('click', () => this.closeSidebar());
-    }
-
-    if (navbarProfile) {
-      navbarProfile.addEventListener('click', () => this.toggleProfileDropdown());
+      xmark.addEventListener("click", () => this.closeSidebar());
     }
 
     if (heart) {
-      heart.addEventListener('click', (e) => this.toggleHeart(e));
+      heart.addEventListener("click", (e) => this.toggleHeart(e));
     }
 
-    toggles.forEach(toggle => {
-      toggle.addEventListener('click', () => this.handleToggle(toggle));
+    toggles.forEach((toggle) => {
+      toggle.addEventListener("click", () => this.handleToggle(toggle));
     });
 
     // Window events
-    window.addEventListener('resize', Utils.throttle((e) => this.handleResize(e), 250));
-    window.addEventListener('scroll', Utils.throttle(() => this.handleScroll(), 100));
-    document.addEventListener('click', (e) => this.handleOutsideClick(e));
+    window.addEventListener(
+      "resize",
+      Utils.throttle((e) => this.handleResize(e), 250)
+    );
+    window.addEventListener(
+      "scroll",
+      Utils.throttle(() => this.handleScroll(), 100)
+    );
+    document.addEventListener("click", (e) => this.handleOutsideClick(e));
   }
 
   openSidebar() {
@@ -67,16 +67,10 @@ class NavigationManager {
   closeSidebar() {
     const { sidebar } = this.elements;
     if (sidebar) {
-      sidebar.style = "transform: translateX(-220px);width:220px;box-shadow:none;";
+      sidebar.style =
+        "transform: translateX(-220px);width:220px;box-shadow:none;";
       sidebar.classList.remove("sidebar-active");
       this.sidebarOpen = false;
-    }
-  }
-
-  toggleProfileDropdown() {
-    const { profileDropdown } = this.elements;
-    if (profileDropdown) {
-      profileDropdown.classList.toggle("hidden");
     }
   }
 
@@ -100,7 +94,8 @@ class NavigationManager {
       if (event.target.innerWidth > 768) {
         this.elements.sidebar.style = "transform: translateX(0px);width:220px";
       } else {
-        this.elements.sidebar.style = "transform: translateX(-220px);width:220px;box-shadow:none;";
+        this.elements.sidebar.style =
+          "transform: translateX(-220px);width:220px;box-shadow:none;";
       }
     }
   }
@@ -112,7 +107,7 @@ class NavigationManager {
   }
 
   handleOutsideClick(event) {
-    const { sidebar, profileDropdown } = this.elements;
+    const { sidebar } = this.elements;
 
     // Close sidebar when clicking outside
     if (sidebar && sidebar.classList.contains("sidebar-active")) {
@@ -125,22 +120,17 @@ class NavigationManager {
         this.closeSidebar();
       }
     }
-
-    // Close profile dropdown when clicking outside
-    if (profileDropdown && !profileDropdown.classList.contains("hidden")) {
-      const clickedProfile = event.target.closest(".profile");
-      if (!clickedProfile) {
-        profileDropdown.classList.add("hidden");
-      }
-    }
   }
 
   setActiveLink() {
     const { sidebarLinks } = this.elements;
-    sidebarLinks.forEach(link => {
+    sidebarLinks.forEach((link) => {
       link.classList.remove("active");
-      if (link.href.includes(this.activePage) ||
-          (this.activePage === "/" && link.href.includes("index"))) {
+      if (
+        link.href &&
+        (link.href.includes(this.activePage) ||
+          (this.activePage === "/" && link.href.includes("index")))
+      ) {
         link.classList.add("active");
       }
     });
@@ -164,10 +154,10 @@ class NavigationManager {
 
 // Legacy function for backward compatibility
 function getCSRFToken() {
-  return window.apiClient ? window.apiClient.getCSRFToken() : '';
+  return window.apiClient ? window.apiClient.getCSRFToken() : "";
 }
 
 // Initialize navigation when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
   window.navigationManager = new NavigationManager();
 });

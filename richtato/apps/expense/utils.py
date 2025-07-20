@@ -62,7 +62,6 @@ def get_color_by_name(color_name: str) -> str:
 
 
 class SankeyDiagramBuilder:
-    
     def __init__(self, df: pd.DataFrame, group_column: str, title: str | None = None):
         self.df = df
         self.group_column = group_column
@@ -200,16 +199,20 @@ def sankey_cash_flow_overview(user_id: int) -> go.Figure:
     # Step 1: Income sources to account types
     income_df = pd.DataFrame(income_data)
     if not income_df.empty:
-        income_totals = income_df.groupby("description")["amount"].sum()
-        account_type_totals = income_df.groupby("account_name__type")["amount"].sum()
+        # Merge by both description and account type
+        merged_income = (
+            income_df.groupby(["description", "account_name__type"])
+            .agg({"amount": "sum"})
+            .reset_index()
+        )
 
         # Add income source labels
-        income_sources = income_totals.index.tolist()
+        income_sources = merged_income["description"].unique().tolist()
         for source_name in income_sources:
             labels.append(f"💰 {source_name}")
 
         # Add account type labels
-        account_types = account_type_totals.index.tolist()
+        account_types = merged_income["account_name__type"].unique().tolist()
         account_type_labels = []
         for acc_type in account_types:
             if acc_type == "savings":
@@ -223,12 +226,11 @@ def sankey_cash_flow_overview(user_id: int) -> go.Figure:
 
         labels.extend(account_type_labels)
 
-        # Create flows from income sources to account types
-        for _, row in income_df.iterrows():
+        # Create flows from income sources to account types (merged)
+        for _, row in merged_income.iterrows():
             source_idx = labels.index(f"💰 {row['description']}")
 
             # Find target account type
-            target_label = None
             if row["account_name__type"] == "savings":
                 target_label = "🏦 Savings"
             elif row["account_name__type"] == "investment":
@@ -259,7 +261,6 @@ def sankey_cash_flow_overview(user_id: int) -> go.Figure:
         # Estimate flows from account types to expenses
         # For simplicity, we'll assume expenses come proportionally from checking accounts
         # and some from savings if checking is insufficient
-        total_expenses = expense_df["amount"].sum()
 
         # Get checking account balance to determine flow
         checking_accounts = [acc for acc in accounts if acc["type"] == "checking"]
@@ -347,7 +348,6 @@ def sankey_cash_flow_overview(user_id: int) -> go.Figure:
                     )  # Show 10% of balance as flow
 
     # Enhanced color palette for different flow types
-    total_value = sum(values) if values else 1
     link_colors = []
 
     # Get all category names to identify expense categories

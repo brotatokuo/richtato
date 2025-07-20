@@ -237,16 +237,31 @@
 /* Header - Simplified without brand */
 .header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   background-color: var(--main-color);
   padding: var(--third-padding);
   min-height: 65px;
+  gap: 12px;
 }
 
 /* Mobile brand in header - hidden by default */
 .mobile-brand {
   display: none;
+  align-items: center;
+  margin-left: 0;
+}
+
+@media (max-width: 767px) {
+  .mobile-brand {
+    display: flex !important;
+    margin-left: 0;
+    order: 1;
+  }
+  .header {
+    justify-content: flex-start;
+    gap: 12px;
+  }
 }
 
 .mobile-brand-link {
@@ -420,7 +435,6 @@ body.dark-mode .card-controls select {
 .header .bar-item {
   cursor: pointer;
   font-size: 1.2rem;
-  padding-right: 15px;
 }
 
 /* Dropdown */

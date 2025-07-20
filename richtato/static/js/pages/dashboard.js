@@ -496,6 +496,25 @@ function initSankeyChart() {
             margin: { l: 20, r: 20, t: 60, b: 20 },
           };
 
+          // Calculate node-local percentages for each link
+          const sankeyData = data.data.data[0];
+          const values = sankeyData.link.value;
+          const sources = sankeyData.link.source;
+          // Sum outgoing values for each source node
+          const sourceTotals = {};
+          sources.forEach((src, i) => {
+            sourceTotals[src] = (sourceTotals[src] || 0) + values[i];
+          });
+          // Calculate percentage for each link relative to its source node
+          sankeyData.link.customdata = values.map((v, i) => {
+            const pct = sourceTotals[sources[i]]
+              ? (v / sourceTotals[sources[i]]) * 100
+              : 0;
+            return pct.toFixed(1) + "%";
+          });
+          sankeyData.link.hovertemplate =
+            "%{source.label} → %{target.label}<br>Value: %{value}<br>Percent: %{customdata}<extra></extra>";
+
           // Render the chart
           Plotly.newPlot("sankey-cash-flow", data.data.data, layout, {
             responsive: true,
@@ -506,6 +525,36 @@ function initSankeyChart() {
             showTips: false,
             displaylogo: false,
             autosize: true,
+          }).then((gd) => {
+            // Add persistent percentage labels as annotations
+            const nodeX = gd._fullData[0].node.x;
+            const nodeY = gd._fullData[0].node.y;
+            const sources = sankeyData.link.source;
+            const targets = sankeyData.link.target;
+            const percentages = sankeyData.link.customdata;
+            const annotations = [];
+            for (let i = 0; i < sources.length; i++) {
+              const x0 = nodeX[sources[i]];
+              const x1 = nodeX[targets[i]];
+              const y0 = nodeY[sources[i]];
+              const y1 = nodeY[targets[i]];
+              // Midpoint for annotation
+              const x = (x0 + x1) / 2;
+              const y = (y0 + y1) / 2;
+              annotations.push({
+                x: x,
+                y: y,
+                xref: "x domain",
+                yref: "y domain",
+                text: percentages[i],
+                showarrow: false,
+                font: { color: "#fff", size: 12 },
+                align: "center",
+                bgcolor: "rgba(0,0,0,0.5)",
+                opacity: 0.8,
+              });
+            }
+            Plotly.relayout(gd, { annotations: annotations });
           });
 
           // Handle window resize for responsiveness

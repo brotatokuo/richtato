@@ -92,16 +92,35 @@
           </li>
         </ul>
 
-        <!-- Theme Toggle at bottom of sidebar -->
-        <div class="sidebar-theme-toggle">
-          <button
-            id="theme-toggle-btn"
-            class="sidebar-theme-toggle-btn"
-            title="Toggle Dark/Light Mode"
-          >
-            <i class="fa-solid fa-moon" id="theme-icon"></i>
-            <span>Dark mode</span>
-          </button>
+        <!-- Sticky bottom section for profile, logout, and dark mode -->
+        <div class="sidebar-bottom-actions">
+          <ul class="sidebar-bottom-list">
+            {% if user.is_authenticated %}
+            <li>
+              <a href="{% url 'profile' %}" class="sidebar-link">
+                <i class="fa-regular fa-user fa-fw"></i>
+                <span>Profile</span>
+              </a>
+            </li>
+            <li>
+              <a href="{% url 'logout' %}" class="sidebar-link">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Logout</span>
+              </a>
+            </li>
+            {% endif %}
+            <li>
+              <button
+                id="theme-toggle-btn"
+                class="sidebar-link sidebar-theme-toggle-btn"
+                title="Toggle Dark/Light Mode"
+                type="button"
+              >
+                <i class="fa-solid fa-moon" id="theme-icon"></i>
+                <span>Dark mode</span>
+              </button>
+            </li>
+          </ul>
         </div>
       </div>
       <main id="main">
@@ -118,35 +137,6 @@
               />
               <span class="mobile-brand-name">Richtato</span>
             </a>
-          </div>
-
-          <div class="profile">
-            <img
-              src="{% static 'images/avatar.png' %}"
-              id="navbar-profile"
-              alt="No Image"
-            />
-            <div id="profileDropdown" class="dropdown hidden">
-              <ul>
-                {% if user.is_authenticated %}
-                <!-- Display if the user is logged in -->
-                <li>
-                  <a href="{% url 'profile' %}">
-                    <i class="fa-regular fa-user fa-fw"></i>{{ username }}</a
-                  >
-                </li>
-                <li>
-                  <a href="{% url 'logout' %}"
-                    ><i class="fa-solid fa-right-from-bracket"></i>Logout</a
-                  >
-                </li>
-                {% else %}
-                <!-- Display if the user is not logged in -->
-                <li><a href="{% url 'login' %}">Login</a></li>
-                <li><a href="{% url 'register' %}">Sign Up</a></li>
-                {% endif %}
-              </ul>
-            </div>
           </div>
         </div>
         {% block content %}
