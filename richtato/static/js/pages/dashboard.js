@@ -465,7 +465,7 @@ function initSankeyChart() {
   // Load Plotly.js if not already loaded
   if (typeof Plotly === 'undefined') {
     const script = document.createElement('script');
-    script.src = 'https://cdn.plot.ly/plotly-latest.min.js';
+    script.src = 'https://cdn.plot.ly/plotly-2.27.0.min.js';
     script.onload = function () {
       fetchAndRenderSankey();
     };

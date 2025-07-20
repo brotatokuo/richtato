@@ -2,14 +2,67 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.io as pio
 
 from richtato.apps.account.models import Account
 from richtato.apps.expense.models import Expense
 from richtato.apps.income.models import Income
+from richtato.categories.categories import BaseCategory
+
+
+def get_category_icon(category_name: str) -> str:
+    """Get the icon for a category by name."""
+    try:
+        # Get all registered categories
+        categories = BaseCategory.get_registered_categories()
+
+        # Find the category by name
+        for category in categories:
+            if category.name == category_name:
+                return category.icon
+
+        # Return default icon if category not found
+        return "🛒"
+    except Exception:
+        # Return default icon if any error occurs
+        return "🛒"
+
+
+def get_category_color(category_name: str) -> str:
+    """Get the color for a category by name."""
+    try:
+        # Get all registered categories
+        categories = BaseCategory.get_registered_categories()
+
+        # Find the category by name
+        for category in categories:
+            if category.name == category_name:
+                return category.color
+
+        # Return default color if category not found
+        return "rgba(244, 67, 54, 0.6)"  # Default red
+    except Exception:
+        # Return default color if any error occurs
+        return "rgba(244, 67, 54, 0.6)"  # Default red
+
+
+def get_color_by_name(color_name: str) -> str:
+    """Convert color name to rgba format."""
+    color_map = {
+        "red": "rgba(244, 67, 54, 0.6)",
+        "blue": "rgba(33, 150, 243, 0.6)",
+        "green": "rgba(76, 175, 80, 0.6)",
+        "yellow": "rgba(255, 193, 7, 0.6)",
+        "purple": "rgba(156, 39, 176, 0.6)",
+        "orange": "rgba(255, 152, 0, 0.6)",
+        "pink": "rgba(233, 30, 99, 0.6)",
+        "brown": "rgba(121, 85, 72, 0.6)",
+        "gray": "rgba(158, 158, 158, 0.6)",
+    }
+    return color_map.get(color_name.lower(), "rgba(244, 67, 54, 0.6)")
 
 
 class SankeyDiagramBuilder:
+    
     def __init__(self, df: pd.DataFrame, group_column: str, title: str | None = None):
         self.df = df
         self.group_column = group_column
@@ -19,27 +72,52 @@ class SankeyDiagramBuilder:
     def build(self) -> go.Figure:
         grouped = self.df.groupby(self.group_column)["amount"].sum().reset_index()
 
-        labels = [self.source_label] + grouped[self.group_column].tolist()
+        # Add icons to labels if this is a category-based diagram
+        if self.group_column == "category_name":
+            labels = [self.source_label]
+            for _, row in grouped.iterrows():
+                category_name = str(row[self.group_column])
+                if (
+                    category_name
+                    and category_name.strip()
+                    and category_name.lower() != "nan"
+                ):
+                    icon = get_category_icon(category_name)
+                    labels.append(f"{icon} {category_name}")
+                else:
+                    labels.append("❓ Unknown")
+        else:
+            labels = [self.source_label] + grouped[self.group_column].tolist()
+
         source = [0] * len(grouped)
         target = list(range(1, len(labels)))
         values = grouped["amount"].tolist()
 
-        # Modern color palette matching dashboard theme with transparency
-        color_palette = [
-            "rgba(152, 204, 44, 0.7)",  # Primary green
-            "rgba(76, 175, 80, 0.7)",  # Green variant
-            "rgba(129, 199, 132, 0.7)",  # Light green
-            "rgba(165, 214, 167, 0.7)",  # Lighter green
-            "rgba(200, 230, 201, 0.7)",  # Very light green
-            "rgba(102, 187, 106, 0.7)",  # Medium green
-            "rgba(139, 195, 74, 0.7)",  # Lime green
-            "rgba(156, 204, 101, 0.7)",  # Light lime
-            "rgba(220, 237, 200, 0.7)",  # Pale green
-            "rgba(241, 248, 233, 0.7)",  # Very pale green
-        ]
-        link_colors = [
-            color_palette[i % len(color_palette)] for i in range(len(values))
-        ]
+        # Generate unique colors for each category
+        link_colors = []
+        for i, value in enumerate(values):
+            if self.group_column == "category_name":
+                # Get the category name from the label (remove icon)
+                category_label = labels[i + 1]  # +1 because labels[0] is "Expenses"
+                category_name = (
+                    category_label.split(" ", 1)[1]
+                    if " " in category_label
+                    else category_label
+                )
+
+                # Get the category color
+                category_color = get_category_color(category_name)
+                link_colors.append(get_color_by_name(category_color))
+            else:
+                # For non-category diagrams, use a default color palette
+                color_palette = [
+                    "rgba(152, 204, 44, 0.7)",  # Primary green
+                    "rgba(76, 175, 80, 0.7)",  # Green variant
+                    "rgba(129, 199, 132, 0.7)",  # Light green
+                    "rgba(165, 214, 167, 0.7)",  # Lighter green
+                    "rgba(200, 230, 201, 0.7)",  # Very light green
+                ]
+                link_colors.append(color_palette[i % len(color_palette)])
 
         fig = go.Figure(
             go.Sankey(
@@ -94,14 +172,14 @@ def sankey_cash_flow_overview(user_id: int) -> go.Figure:
 
     # Get user's income data
     income_data = (
-        Income.objects.filter(user_id=user_id, date__gte=start_date, date__lte=end_date)
+        Income.objects.filter(user_id=user_id, date__gte=start_date, date__lte=end_date)  # type: ignore
         .select_related("account_name")
         .values("description", "amount", "account_name__type")
     )
 
     # Get user's expense data
     expense_data = (
-        Expense.objects.filter(
+        Expense.objects.filter(  # type: ignore
             user_id=user_id, date__gte=start_date, date__lte=end_date
         )
         .select_related("category")
@@ -109,7 +187,7 @@ def sankey_cash_flow_overview(user_id: int) -> go.Figure:
     )
 
     # Get user's account balances to determine savings vs spending
-    accounts = Account.objects.filter(user_id=user_id).values(
+    accounts = Account.objects.filter(user_id=user_id).values(  # type: ignore
         "type", "latest_balance", "name"
     )
 
@@ -141,7 +219,7 @@ def sankey_cash_flow_overview(user_id: int) -> go.Figure:
             elif acc_type == "retirement":
                 account_type_labels.append("🏛️ Retirement")
             else:
-                account_type_labels.append(f"💳 {acc_type.title()}")
+                account_type_labels.append(f"💳 {str(acc_type).title()}")
 
         labels.extend(account_type_labels)
 
@@ -158,7 +236,7 @@ def sankey_cash_flow_overview(user_id: int) -> go.Figure:
             elif row["account_name__type"] == "retirement":
                 target_label = "🏛️ Retirement"
             else:
-                target_label = f"💳 {row['account_name__type'].title()}"
+                target_label = f"💳 {str(row['account_name__type']).title()}"
 
             target_idx = labels.index(target_label)
 
@@ -175,7 +253,8 @@ def sankey_cash_flow_overview(user_id: int) -> go.Figure:
         expense_categories = expense_totals.index.tolist()
         for category in expense_categories:
             if category:
-                labels.append(f"🛒 {category}")
+                icon = get_category_icon(str(category))
+                labels.append(f"{icon} {category}")
 
         # Estimate flows from account types to expenses
         # For simplicity, we'll assume expenses come proportionally from checking accounts
@@ -196,7 +275,8 @@ def sankey_cash_flow_overview(user_id: int) -> go.Figure:
 
                 for category, amount in expense_totals.items():
                     if category:
-                        category_label = f"🛒 {category}"
+                        icon = get_category_icon(str(category))
+                        category_label = f"{icon} {category}"
                         if category_label in labels:
                             category_idx = labels.index(category_label)
                             source.append(checking_idx)
@@ -270,10 +350,25 @@ def sankey_cash_flow_overview(user_id: int) -> go.Figure:
     total_value = sum(values) if values else 1
     link_colors = []
 
+    # Get all category names to identify expense categories
+    category_names = []
+    categories = BaseCategory.get_registered_categories()
+    # Exclude "savings" and "investments" as they are account types, not expense categories
+    category_names = [
+        category.name.lower()
+        for category in categories
+        if category.name.lower() not in ["savings", "investments"]
+    ]
+
     for i, value in enumerate(values):
         # Color based on flow type
         source_label = labels[source[i]] if source else ""
         target_label = labels[target[i]] if target else ""
+
+        # Check if target is an expense category (contains any category name)
+        is_expense_category = any(
+            category_name in target_label.lower() for category_name in category_names
+        )
 
         if "💰" in source_label and "🏦" in target_label:
             # Income to savings - green
@@ -284,16 +379,28 @@ def sankey_cash_flow_overview(user_id: int) -> go.Figure:
         elif "💰" in source_label and "🏛️" in target_label:
             # Income to retirement - purple
             link_colors.append("rgba(103, 58, 183, 0.6)")
-        elif "💳" in source_label and "🛒" in target_label:
-            # Checking to expenses - red
-            link_colors.append("rgba(244, 67, 54, 0.6)")
-        elif "🏦" in source_label:
+        elif "💰" in source_label and "💳" in target_label:
+            # Income to checking - green
+            link_colors.append("rgba(76, 175, 80, 0.6)")
+        elif is_expense_category:
+            # Get unique color for each expense category
+            category_color = "rgba(244, 67, 54, 0.6)"  # Default red
+            for category_name in category_names:
+                if category_name in target_label.lower():
+                    # Find the category and get its color
+                    for category in categories:
+                        if category.name.lower() == category_name:
+                            category_color = get_color_by_name(category.color)
+                            break
+                    break
+            link_colors.append(category_color)
+        elif "🏦" in source_label or "savings" in source_label.lower():
             # Savings flows - light green
             link_colors.append("rgba(129, 199, 132, 0.6)")
-        elif "📈" in source_label:
+        elif "📈" in source_label or "investment" in source_label.lower():
             # Investment flows - light blue
             link_colors.append("rgba(100, 181, 246, 0.6)")
-        elif "🏛️" in source_label:
+        elif "🏛️" in source_label or "retirement" in source_label.lower():
             # Retirement flows - light purple
             link_colors.append("rgba(149, 117, 205, 0.6)")
         else:

@@ -16,6 +16,18 @@ class BaseCategory(ABC):
         """Get the name of the category."""
         raise NotImplementedError("Subclasses should implement this method.")
 
+    @property
+    @abstractmethod
+    def icon(self):
+        """Get the icon for the category."""
+        raise NotImplementedError("Subclasses should implement this method.")
+
+    @property
+    @abstractmethod
+    def color(self):
+        """Get the color for the category."""
+        raise NotImplementedError("Subclasses should implement this method.")
+
     @abstractmethod
     def generate_keywords(self):
         """Generate keywords for the category."""
@@ -35,6 +47,14 @@ class TravelCategory(BaseCategory):
     @property
     def name(self):
         return "Travel"
+
+    @property
+    def icon(self):
+        return "✈️"
+
+    @property
+    def color(self):
+        return "blue"
 
     def generate_keywords(self):
         air_travel = [
@@ -199,6 +219,14 @@ class ShoppingCategory(BaseCategory):
     def name(self):
         return "Shopping"
 
+    @property
+    def icon(self):
+        return "🛍️"
+
+    @property
+    def color(self):
+        return "purple"
+
     def generate_keywords(self):
         physical_stores = [
             "shopping",
@@ -220,6 +248,14 @@ class OnlineShopping(BaseCategory):
     def name(self):
         return "Online Shopping"
 
+    @property
+    def icon(self):
+        return "🛒"
+
+    @property
+    def color(self):
+        return "orange"
+
     def generate_keywords(self):
         online_stores = [
             "online shopping",
@@ -239,6 +275,14 @@ class GroceriesCategory(BaseCategory):
     @property
     def name(self):
         return "Groceries"
+
+    @property
+    def icon(self):
+        return "🥬"
+
+    @property
+    def color(self):
+        return "green"
 
     def generate_keywords(self):
         groceries = [
@@ -271,6 +315,14 @@ class EntertainmentCategory(BaseCategory):
     def name(self):
         return "Entertainment"
 
+    @property
+    def icon(self):
+        return "🎬"
+
+    @property
+    def color(self):
+        return "red"
+
     def generate_keywords(self):
         entertainment = [
             "cinemarksports basement",
@@ -296,6 +348,14 @@ class UtilitiesCategory(BaseCategory):
     def name(self):
         return "Utilities"
 
+    @property
+    def icon(self):
+        return "⚡"
+
+    @property
+    def color(self):
+        return "yellow"
+
     def generate_keywords(self):
         utilities = [
             "electricity",
@@ -319,6 +379,14 @@ class HousingCategory(BaseCategory):
     @property
     def name(self):
         return "Housing"
+
+    @property
+    def icon(self):
+        return "🏠"
+
+    @property
+    def color(self):
+        return "brown"
 
     def generate_keywords(self):
         housing = [
@@ -345,6 +413,14 @@ class MedicalCategory(BaseCategory):
     def name(self):
         return "Medical"
 
+    @property
+    def icon(self):
+        return "🏥"
+
+    @property
+    def color(self):
+        return "pink"
+
     def generate_keywords(self):
         medical = [
             "doctor",
@@ -365,6 +441,14 @@ class EducationCategory(BaseCategory):
     @property
     def name(self):
         return "Education"
+
+    @property
+    def icon(self):
+        return "📚"
+
+    @property
+    def color(self):
+        return "blue"
 
     def generate_keywords(self):
         education = [
@@ -388,6 +472,14 @@ class SavingsCategory(BaseCategory):
     def name(self):
         return "Savings"
 
+    @property
+    def icon(self):
+        return "💰"
+
+    @property
+    def color(self):
+        return "green"
+
     def generate_keywords(self):
         savings = [
             "savings account",
@@ -407,6 +499,14 @@ class GiftsCategory(BaseCategory):
     def name(self):
         return "Gifts"
 
+    @property
+    def icon(self):
+        return "🎁"
+
+    @property
+    def color(self):
+        return "purple"
+
     def generate_keywords(self):
         gifts = [
             "gift",
@@ -421,6 +521,14 @@ class DiningCategory(BaseCategory):
     @property
     def name(self):
         return "Dining"
+
+    @property
+    def icon(self):
+        return "🍽️"
+
+    @property
+    def color(self):
+        return "red"
 
     def generate_keywords(self):
         restaurants = [
@@ -486,6 +594,14 @@ class InvestmentsCategory(BaseCategory):
     def name(self):
         return "Investments"
 
+    @property
+    def icon(self):
+        return "📈"
+
+    @property
+    def color(self):
+        return "orange"
+
     def generate_keywords(self):
         investments = [
             "stocks",
@@ -507,6 +623,14 @@ class SubscriptionsCategory(BaseCategory):
     @property
     def name(self):
         return "Subscriptions"
+
+    @property
+    def icon(self):
+        return "📱"
+
+    @property
+    def color(self):
+        return "purple"
 
     def generate_keywords(self):
         subscriptions = [
@@ -544,6 +668,14 @@ class CharityCategory(BaseCategory):
     def name(self):
         return "Charity"
 
+    @property
+    def icon(self):
+        return "❤️"
+
+    @property
+    def color(self):
+        return "pink"
+
     def generate_keywords(self):
         charity = [
             "donation",
@@ -566,6 +698,14 @@ class PetCategory(BaseCategory):
     @property
     def name(self):
         return "Pet"
+
+    @property
+    def icon(self):
+        return "🐾"
+
+    @property
+    def color(self):
+        return "brown"
 
     def generate_keywords(self):
         pet = [
@@ -594,6 +734,14 @@ class WholesaleCategory(BaseCategory):
     def name(self):
         return "Wholesale"
 
+    @property
+    def icon(self):
+        return "📦"
+
+    @property
+    def color(self):
+        return "green"
+
     def generate_keywords(self):
         wholesale = [
             "wholesale",
@@ -609,6 +757,14 @@ class CardCategory(BaseCategory):
     @property
     def name(self):
         return "Car"
+
+    @property
+    def icon(self):
+        return "🚗"
+
+    @property
+    def color(self):
+        return "blue"
 
     def generate_keywords(self):
         car = [
@@ -636,6 +792,14 @@ class PhoneCategory(BaseCategory):
     def name(self):
         return "Phone"
 
+    @property
+    def icon(self):
+        return "📞"
+
+    @property
+    def color(self):
+        return "yellow"
+
     def generate_keywords(self):
         phone = [
             "phone bill",
@@ -660,6 +824,14 @@ class MiscellaneousCategory(BaseCategory):
     def name(self):
         return "Miscellaneous"
 
+    @property
+    def icon(self):
+        return "🔧"
+
+    @property
+    def color(self):
+        return "gray"
+
     def generate_keywords(self):
         miscellaneous = [
             "miscellaneous",
@@ -675,6 +847,14 @@ class PaymentsCategory(BaseCategory):
     def name(self):
         return "Payments"
 
+    @property
+    def icon(self):
+        return "💳"
+
+    @property
+    def color(self):
+        return "orange"
+
     def generate_keywords(self):
         payments = [
             "mobile payment",
@@ -689,6 +869,14 @@ class UnknownCategory(BaseCategory):
     @property
     def name(self):
         return "Unknown"
+
+    @property
+    def icon(self):
+        return "❓"
+
+    @property
+    def color(self):
+        return "gray"
 
     def generate_keywords(self):
         return []
@@ -718,6 +906,7 @@ def register_categories():
     PhoneCategory()
     MiscellaneousCategory()
     PaymentsCategory()
+    UnknownCategory()
 
 
 register_categories()
