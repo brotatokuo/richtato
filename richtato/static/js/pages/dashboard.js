@@ -171,8 +171,9 @@ function initExpensePieChart() {
                       0
                     );
                     const percentage = ((value / total) * 100).toFixed(1);
-                    return `${context.label
-                      }: $${value.toLocaleString()} (${percentage}%)`;
+                    return `${
+                      context.label
+                    }: $${value.toLocaleString()} (${percentage}%)`;
                   },
                 },
               },
@@ -433,8 +434,9 @@ function initTopCategories() {
               </div>
               <div class="category-stats">
                 <div class="category-amount">$${category.amount.toLocaleString()}</div>
-                <div class="category-count">${category.transactions
-            } transactions</div>
+                <div class="category-count">${
+                  category.transactions
+                } transactions</div>
               </div>
             </div>
           `;
@@ -462,10 +464,12 @@ function initSankeyChart() {
   const container = document.getElementById("sankey-cash-flow");
   if (!container) return;
 
+  // Ensure container height is set to 80vh for responsive design
+  container.style.height = "80vh";
   // Load Plotly.js if not already loaded
-  if (typeof Plotly === 'undefined') {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.plot.ly/plotly-2.27.0.min.js';
+  if (typeof Plotly === "undefined") {
+    const script = document.createElement("script");
+    script.src = "https://cdn.plot.ly/plotly-2.27.0.min.js";
     script.onload = function () {
       fetchAndRenderSankey();
     };
@@ -475,9 +479,9 @@ function initSankeyChart() {
   }
 
   function fetchAndRenderSankey() {
-    fetch('/dashboard/api/sankey-data/')
-      .then(response => response.json())
-      .then(data => {
+    fetch("/dashboard/api/sankey-data/")
+      .then((response) => response.json())
+      .then((data) => {
         if (data.success) {
           // Get container dimensions for responsive sizing
           const containerWidth = container.clientWidth;
@@ -489,11 +493,11 @@ function initSankeyChart() {
             width: containerWidth, // Use full container width
             height: containerHeight, // Use full container height
             autosize: true,
-            margin: { l: 20, r: 20, t: 60, b: 20 }
+            margin: { l: 20, r: 20, t: 60, b: 20 },
           };
 
           // Render the chart
-          Plotly.newPlot('sankey-cash-flow', data.data.data, layout, {
+          Plotly.newPlot("sankey-cash-flow", data.data.data, layout, {
             responsive: true,
             displayModeBar: false,
             staticPlot: false,
@@ -501,27 +505,27 @@ function initSankeyChart() {
             doubleClick: false,
             showTips: false,
             displaylogo: false,
-            autosize: true
+            autosize: true,
           });
 
           // Handle window resize for responsiveness
-          window.addEventListener('resize', function () {
+          window.addEventListener("resize", function () {
             const newWidth = container.clientWidth;
             const newHeight = container.clientHeight;
 
-            Plotly.relayout('sankey-cash-flow', {
+            Plotly.relayout("sankey-cash-flow", {
               width: newWidth,
-              height: newHeight
+              height: newHeight,
             });
           });
         } else {
-          console.error('Failed to load Sankey data:', data.error);
-          container.innerHTML = '<p>Failed to load cash flow chart</p>';
+          console.error("Failed to load Sankey data:", data.error);
+          container.innerHTML = "<p>Failed to load cash flow chart</p>";
         }
       })
-      .catch(error => {
-        console.error('Error fetching Sankey data:', error);
-        container.innerHTML = '<p>Error loading cash flow chart</p>';
+      .catch((error) => {
+        console.error("Error fetching Sankey data:", error);
+        container.innerHTML = "<p>Error loading cash flow chart</p>";
       });
   }
 
