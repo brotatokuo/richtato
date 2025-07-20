@@ -13,6 +13,7 @@ function initializeDashboard() {
   initExpensePieChart();
   initBudgetProgress();
   initAssetsSection();
+  initSankeyChart();
 }
 
 function initCashFlowChart() {
@@ -453,6 +454,75 @@ function initTopCategories() {
   const tableContainer = document.getElementById("categories-table");
   if (tableContainer) {
     tableContainer.style.display = "none";
+  }
+}
+
+// 6. Sankey Chart
+function initSankeyChart() {
+  const container = document.getElementById("sankey-cash-flow");
+  if (!container) return;
+
+  // Load Plotly.js if not already loaded
+  if (typeof Plotly === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.plot.ly/plotly-latest.min.js';
+    script.onload = function () {
+      fetchAndRenderSankey();
+    };
+    document.head.appendChild(script);
+  } else {
+    fetchAndRenderSankey();
+  }
+
+  function fetchAndRenderSankey() {
+    fetch('/dashboard/api/sankey-data/')
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Get container dimensions for responsive sizing
+          const containerWidth = container.clientWidth;
+          const containerHeight = container.clientHeight || 500;
+
+          // Update the layout to be responsive
+          const layout = {
+            ...data.data.layout,
+            width: containerWidth, // Use full container width
+            height: containerHeight, // Use full container height
+            autosize: true,
+            margin: { l: 20, r: 20, t: 60, b: 20 }
+          };
+
+          // Render the chart
+          Plotly.newPlot('sankey-cash-flow', data.data.data, layout, {
+            responsive: true,
+            displayModeBar: false,
+            staticPlot: false,
+            scrollZoom: false,
+            doubleClick: false,
+            showTips: false,
+            displaylogo: false,
+            autosize: true
+          });
+
+          // Handle window resize for responsiveness
+          window.addEventListener('resize', function () {
+            const newWidth = container.clientWidth;
+            const newHeight = container.clientHeight;
+
+            Plotly.relayout('sankey-cash-flow', {
+              width: newWidth,
+              height: newHeight
+            });
+          });
+        } else {
+          console.error('Failed to load Sankey data:', data.error);
+          container.innerHTML = '<p>Failed to load cash flow chart</p>';
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching Sankey data:', error);
+        container.innerHTML = '<p>Error loading cash flow chart</p>';
+      });
   }
 
   // Add event listener for period dropdown

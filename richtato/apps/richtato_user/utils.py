@@ -183,10 +183,6 @@ def generate_dashboard_context(request):
     from richtato.apps.account.models import Account
     from richtato.apps.budget.models import Budget
     from richtato.apps.expense.models import Expense
-    from richtato.apps.expense.utils import (
-        convert_plotly_fig_to_html,
-        sankey_cash_flow_overview,
-    )
     from richtato.apps.income.models import Income
     from richtato.utilities.tools import format_currency
 
@@ -280,10 +276,6 @@ def generate_dashboard_context(request):
     else:
         budget_utilization_30_days_str = "N/A"
 
-    # Create comprehensive cash flow Sankey diagram
-    sankey_cash_flow_fig = sankey_cash_flow_overview(request.user.pk)
-    sankey_cash_flow_html = convert_plotly_fig_to_html(sankey_cash_flow_fig)
-
     context = {
         "networth": format_currency(networth, 0),
         "networth_growth": networth_growth,
@@ -294,7 +286,6 @@ def generate_dashboard_context(request):
         "savings_rate": savings_rate_str,
         "savings_rate_context": savings_rate_context,
         "savings_rate_class": savings_rate_class,
-        "sankey_cash_flow": sankey_cash_flow_html,
         "nonessential_spending_pct": nonessential_spending_pct,
     }
 

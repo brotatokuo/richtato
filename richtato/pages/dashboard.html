@@ -16,9 +16,7 @@
         <i class="fa-solid fa-chart-line kpi-icon"></i>
       </div>
       <div class="kpi-value currency">{{ networth }}</div>
-      <div
-        class="kpi-change {% if networth_growth_class %}{{ networth_growth_class }}{% endif %}"
-      >
+      <div class="kpi-change {% if networth_growth_class %}{{ networth_growth_class }}{% endif %}">
         {{ networth_growth }}
       </div>
     </div>
@@ -29,9 +27,7 @@
         <i class="fa-solid fa-piggy-bank kpi-icon"></i>
       </div>
       <div class="kpi-value">{{ savings_rate }}</div>
-      <div
-        class="kpi-change {% if savings_rate_class %}{{ savings_rate_class }}{% endif %}"
-      >
+      <div class="kpi-change {% if savings_rate_class %}{{ savings_rate_class }}{% endif %}">
         {{ savings_rate_context }}
       </div>
     </div>
@@ -119,7 +115,7 @@
     <!-- Expense Breakdown Pie Chart -->
     <div class="analytics-card">
       <div class="card-header">
-        <h2>Expense Breakdownb</h2>
+        <h2>Expense Breakdown</h2>
         <div class="card-controls">
           <select id="expense-categories-year"></select>
           <select id="expense-categories-month">
@@ -175,15 +171,16 @@
       <div class="card-header">
         <h2>Cash Flow</h2>
       </div>
-      <div class="chart-container sankey-container" id="sankey-category">
-        {{ sankey_cash_flow|safe }}
+      <div class="chart-container sankey-container" id="sankey-cash-flow">
+        <!-- Sankey chart will be rendered here by JavaScript -->
       </div>
     </div>
 
     <!-- Include Chart.js and plugins -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 
     <!-- Dashboard Scripts -->
     <script src="{% static 'js/components/budgetRenderer.js' %}"></script>

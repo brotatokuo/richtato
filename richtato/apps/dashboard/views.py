@@ -10,15 +10,10 @@ from django.utils import timezone
 from loguru import logger
 from utilities.postgres.pg_client import PostgresClient
 
-from richtato.apps.account.models import (
-    Account,
-)
+from richtato.apps.account.models import Account
 from richtato.apps.budget.models import Budget
 from richtato.apps.expense.models import Expense
-from richtato.apps.expense.utils import (
-    convert_plotly_fig_to_html,
-    sankey_cash_flow_overview,
-)
+from richtato.apps.expense.utils import sankey_cash_flow_overview
 from richtato.apps.income.models import Income
 from richtato.utilities.postgres.pg_client import PostgresClient
 from richtato.utilities.tools import format_currency
@@ -538,10 +533,6 @@ def generate_dashboard_context(request: HttpRequest) -> dict:
     # pg_client = PostgresClient()
     # expense_df = pg_client.get_expense_df(request.user.pk)
 
-    # Create comprehensive cash flow Sankey diagram
-    sankey_cash_flow_fig = sankey_cash_flow_overview(request.user.pk)
-    sankey_cash_flow_html = convert_plotly_fig_to_html(sankey_cash_flow_fig)
-
     context = {
         "networth": format_currency(networth, 0),
         "networth_growth": networth_growth,
@@ -552,7 +543,6 @@ def generate_dashboard_context(request: HttpRequest) -> dict:
         "savings_rate": savings_rate_str,
         "savings_rate_context": savings_rate_context,
         "savings_rate_class": savings_rate_class,
-        "sankey_cash_flow": sankey_cash_flow_html,
         "nonessential_spending_pct": nonessential_spending_pct,
     }
     return context
@@ -639,3 +629,21 @@ def calculate_savings_rate_context(savings_rate):
     except (ValueError, AttributeError):
         # If we can't parse the savings rate, return a default
         return "N/A", ""
+
+
+@login_required
+def sankey_data(request):
+    """API endpoint to return Sankey diagram data as JSON for client-side rendering."""
+    try:
+        sankey_fig = sankey_cash_flow_overview(request.user.pk)
+
+        # Convert the figure to a dictionary for JSON serialization
+        sankey_data = sankey_fig.to_dict()
+
+        return JsonResponse({"success": True, "data": sankey_data})
+    except Exception as e:
+        logger.error(f"Error generating Sankey data: {e}")
+        return JsonResponse(
+            {"success": False, "error": "Failed to generate Sankey diagram data"},
+            status=500,
+        )

@@ -18,4 +18,5 @@ urlpatterns = [
     ),
     path("api/top-categories/", views.top_categories_data, name="top_categories_data"),
     path("api/expense-years/", views.expense_years, name="expense_years"),
+    path("api/sankey-data/", views.sankey_data, name="sankey_data"),
 ]

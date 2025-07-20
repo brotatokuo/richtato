@@ -326,33 +326,6 @@ def sankey_cash_flow_overview(user_id: int) -> go.Figure:
         plot_bgcolor="rgba(0,0,0,0)",
         autosize=True,
         margin=dict(l=20, r=20, t=60, b=20),
-        height=500,
     )
 
     return fig
-
-
-def convert_plotly_fig_to_html(fig) -> str:
-    """
-    Convert a Plotly figure to HTML with modern styling.
-    """
-    config = {
-        "responsive": True,
-        "displayModeBar": False,  # Hide the toolbar
-        "staticPlot": False,
-        "scrollZoom": False,  # Disable scroll zoom
-        "doubleClick": False,  # Disable double click actions
-        "showTips": False,  # Hide tips
-        "displaylogo": False,  # Hide Plotly logo
-    }
-
-    html = pio.to_html(
-        fig,
-        full_html=False,
-        include_plotlyjs="cdn",
-        config=config,
-        div_id=None,
-    )
-
-    # Add custom CSS to remove scrollbars and improve styling
-    return html

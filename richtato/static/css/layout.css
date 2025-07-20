@@ -483,8 +483,7 @@ main,
 main .main-content {
   flex: 1;
   width: 100%;
-  max-width: 1200px;
-  padding: var(--third-padding);
+  padding: var(--main-padding);
   margin: 0 auto;
 }
 
