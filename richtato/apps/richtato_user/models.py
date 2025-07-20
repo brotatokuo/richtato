@@ -128,6 +128,7 @@ class Category(models.Model):
             "Phone": "essential",
             "Miscellaneous": "nonessential",
             "Payments": "essential",
+            "Unknown": "nonessential",
         }
 
         for category_key, category_display in cls.supported_categories:
