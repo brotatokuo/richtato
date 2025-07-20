@@ -380,7 +380,7 @@ table.dataTable tbody tr.selected > * {
 }
 
 .card-header {
-  padding: 20px 20px 10px;
+  padding: 0px 0px 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
