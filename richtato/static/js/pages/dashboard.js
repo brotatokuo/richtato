@@ -525,36 +525,6 @@ function initSankeyChart() {
             showTips: false,
             displaylogo: false,
             autosize: true,
-          }).then((gd) => {
-            // Add persistent percentage labels as annotations
-            const nodeX = gd._fullData[0].node.x;
-            const nodeY = gd._fullData[0].node.y;
-            const sources = sankeyData.link.source;
-            const targets = sankeyData.link.target;
-            const percentages = sankeyData.link.customdata;
-            const annotations = [];
-            for (let i = 0; i < sources.length; i++) {
-              const x0 = nodeX[sources[i]];
-              const x1 = nodeX[targets[i]];
-              const y0 = nodeY[sources[i]];
-              const y1 = nodeY[targets[i]];
-              // Midpoint for annotation
-              const x = (x0 + x1) / 2;
-              const y = (y0 + y1) / 2;
-              annotations.push({
-                x: x,
-                y: y,
-                xref: "x domain",
-                yref: "y domain",
-                text: percentages[i],
-                showarrow: false,
-                font: { color: "#fff", size: 12 },
-                align: "center",
-                bgcolor: "rgba(0,0,0,0.5)",
-                opacity: 0.8,
-              });
-            }
-            Plotly.relayout(gd, { annotations: annotations });
           });
 
           // Handle window resize for responsiveness
