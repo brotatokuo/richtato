@@ -43,7 +43,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: gold;
+  background-color: var(--green-color);
 }
 
 input[type="date"] {
