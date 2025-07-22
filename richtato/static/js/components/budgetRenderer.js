@@ -86,7 +86,8 @@ class BudgetRenderer {
     bgCircle.setAttribute("cy", size / 2);
     bgCircle.setAttribute("r", radius);
     bgCircle.setAttribute("fill", "none");
-    bgCircle.setAttribute("stroke", "#eee");
+    const strokeColor = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+    bgCircle.setAttribute("stroke", strokeColor.trim());
     bgCircle.setAttribute("stroke-width", stroke);
     svg.appendChild(bgCircle);
 
@@ -101,6 +102,7 @@ class BudgetRenderer {
     fgCircle.setAttribute("stroke-dasharray", circumference);
     fgCircle.setAttribute("stroke-dashoffset", offset);
     fgCircle.setAttribute("stroke-linecap", "round");
+    fgCircle.setAttribute("transform", `rotate(-90 ${size / 2} ${size / 2})`);
     svg.appendChild(fgCircle);
 
     // Centered icon and text inside the ring
@@ -115,14 +117,26 @@ class BudgetRenderer {
     // Amount left and percent
     const amountDiv = document.createElement("div");
     amountDiv.className = "progress-ring-amount";
-    
+
     const numericBudget = parseFloat(category.budget.replace(/[^0-9.]/g, ""));
     const amountLeft = numericBudget * (1 - percent / 100);
-    amountDiv.textContent = `$${amountLeft.toFixed(2)} left`;
+
+    // Format the label and color based on amountLeft
+    if (amountLeft > 0) {
+      amountDiv.textContent = `$${amountLeft.toFixed(2)}`;
+      amountDiv.style.color = "var(--green-color)";
+    } else if (amountLeft === 0) {
+      amountDiv.textContent = `0 left`;
+      amountDiv.style.color = "#888"; // Gray
+    } else {
+      amountDiv.textContent = `$${Math.abs(amountLeft).toFixed(2)}`;
+      amountDiv.style.color = "var(--red-color)";
+    }
 
     // Stack icon, name, amount
     centerDiv.appendChild(iconDiv);
-    centerDiv.appendChild(amountDiv); 
+    centerDiv.appendChild(nameDiv);
+    centerDiv.appendChild(amountDiv);
 
     // Wrap SVG and centerDiv in a container
     const ringContainer = this._createDiv("progress-ring-container");
