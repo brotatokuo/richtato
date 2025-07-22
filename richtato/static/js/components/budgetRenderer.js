@@ -37,15 +37,122 @@ class BudgetRenderer {
   }
 
   _createCategoryElement(category, index) {
-    const wrapper = this._createDiv("budget-category-item");
+    // Create a squarish widget with a circular progress ring
+    const wrapper = this._createDiv("budget-category-item square-widget");
 
-    const iconDiv = this._createIconElement(category.name);
-    const infoDiv = this._createInfoElement(category, index);
-
-    wrapper.appendChild(iconDiv);
-    wrapper.appendChild(infoDiv);
+    // Create the circular progress ring with icon and text inside
+    const ringDiv = this._createProgressRing(category, index);
+    wrapper.appendChild(ringDiv);
 
     return wrapper;
+  }
+
+  _createProgressRing(category, index) {
+    // SVG circular progress ring
+    let percent = Math.abs(category.percent);
+    const displayPercent = percent > 100 ? 100 : percent;
+    const size = 130; // px, diameter of SVG (matches CSS)
+    const stroke = 8; // px, thickness of ring
+    const radius = (size - stroke) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference * (1 - displayPercent / 100);
+
+    // Dynamic color: interpolate between green (0%) and red (100%)
+    let color;
+    if (percent <= 0) {
+      color = "var(--green-color)";
+    } else if (percent >= 100) {
+      color = "var(--red-color)";
+    } else {
+      const greenHSL = { h: 88, s: 63, l: 48 };
+      const redHSL = { h: 0, s: 100, l: 50 };
+      const hue = greenHSL.h + (redHSL.h - greenHSL.h) * (displayPercent / 100);
+      const sat = greenHSL.s + (redHSL.s - greenHSL.s) * (displayPercent / 100);
+      const light = greenHSL.l + (redHSL.l - greenHSL.l) * (displayPercent / 100);
+      color = `hsl(${hue}, ${sat}%, ${light}%)`;
+    }
+
+    // Create SVG
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("width", size);
+    svg.setAttribute("height", size);
+    svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
+    svg.classList.add("progress-ring-svg");
+
+    // Background circle
+    const bgCircle = document.createElementNS(svgNS, "circle");
+    bgCircle.setAttribute("cx", size / 2);
+    bgCircle.setAttribute("cy", size / 2);
+    bgCircle.setAttribute("r", radius);
+    bgCircle.setAttribute("fill", "none");
+    bgCircle.setAttribute("stroke", "#eee");
+    bgCircle.setAttribute("stroke-width", stroke);
+    svg.appendChild(bgCircle);
+
+    // Progress circle
+    const fgCircle = document.createElementNS(svgNS, "circle");
+    fgCircle.setAttribute("cx", size / 2);
+    fgCircle.setAttribute("cy", size / 2);
+    fgCircle.setAttribute("r", radius);
+    fgCircle.setAttribute("fill", "none");
+    fgCircle.setAttribute("stroke", color);
+    fgCircle.setAttribute("stroke-width", stroke);
+    fgCircle.setAttribute("stroke-dasharray", circumference);
+    fgCircle.setAttribute("stroke-dashoffset", offset);
+    fgCircle.setAttribute("stroke-linecap", "round");
+    svg.appendChild(fgCircle);
+
+    // Centered icon and text inside the ring
+    const centerDiv = this._createDiv("progress-ring-center");
+    // Icon
+    const iconDiv = this._createIconElement(category.name);
+    iconDiv.classList.add("progress-ring-icon");
+    // Name
+    const nameDiv = document.createElement("div");
+    nameDiv.className = "progress-ring-name";
+    nameDiv.textContent = category.name;
+    // Amount left and percent
+    const amountDiv = document.createElement("div");
+    amountDiv.className = "progress-ring-amount";
+    console.log("budget", category.budget)
+    const numericBudget = parseFloat(category.budget.replace(/[^0-9.]/g, ""));
+    const amountLeft = numericBudget * (1 - percent / 100);
+    amountDiv.textContent = `$${amountLeft.toFixed(2)} left`;
+
+    // Stack icon, name, amount
+    centerDiv.appendChild(iconDiv);
+    centerDiv.appendChild(amountDiv); 
+
+    // Wrap SVG and centerDiv in a container
+    const ringContainer = this._createDiv("progress-ring-container");
+    ringContainer.appendChild(svg);
+    ringContainer.appendChild(centerDiv);
+    return ringContainer;
+  }
+
+  _createInfoElement(category, index, compact = false) {
+    const infoDiv = this._createDiv("budget-category-info");
+    if (compact) {
+      // Only show name and message in compact mode
+      const nameDiv = document.createElement("div");
+      nameDiv.className = "budget-category-name";
+      nameDiv.textContent = category.name;
+      const messageDiv = document.createElement("div");
+      messageDiv.className = "budget-category-message";
+      messageDiv.textContent = category.message;
+      infoDiv.appendChild(nameDiv);
+      infoDiv.appendChild(messageDiv);
+    } else {
+      const ul = document.createElement("ul");
+      ["name", "budget", "message"].forEach((key) => {
+        const li = document.createElement("li");
+        li.textContent = category[key];
+        ul.appendChild(li);
+      });
+      infoDiv.appendChild(ul);
+    }
+    return infoDiv;
   }
 
   _createIconElement(categoryName) {
@@ -60,57 +167,6 @@ class BudgetRenderer {
 
     iconDiv.appendChild(icon);
     return iconDiv;
-  }
-
-  _createInfoElement(category, index) {
-    const infoDiv = this._createDiv("budget-category-info");
-
-    const ul = document.createElement("ul");
-    ["name", "budget", "message"].forEach((key) => {
-      const li = document.createElement("li");
-      li.textContent = category[key];
-      ul.appendChild(li);
-    });
-
-    const percentageBar = this._createPercentageBar(
-      index + 1,
-      category.percent
-    );
-
-    infoDiv.appendChild(ul);
-    infoDiv.appendChild(percentageBar);
-
-    return infoDiv;
-  }
-
-  _createPercentageBar(id, percent) {
-    const barWrapper = this._createDiv("budget-progress-bar");
-    const bar = this._createDiv("budget-progress-fill");
-    bar.id = `percentage-${id}`;
-    bar.style.width = Math.abs(percent) + "%";
-
-    // Dynamic color: interpolate between green (0%) and red (100%)
-    // Use HSL: green (88, 63%, 48%) to red (0, 100%, 50%)
-    // Or use CSS variables for --green-color and --red-color
-    // We'll use a simple linear interpolation for hue (88 to 0)
-    let color;
-    if (percent <= 0) {
-      color = "var(--green-color)";
-    } else if (percent >= 100) {
-      color = "var(--red-color)";
-    } else {
-      // Interpolate hue from green (88) to red (0)
-      const greenHSL = { h: 88, s: 63, l: 48 }; // #98cc2c
-      const redHSL = { h: 0, s: 100, l: 50 }; // red
-      const hue = greenHSL.h + (redHSL.h - greenHSL.h) * (percent / 100);
-      const sat = greenHSL.s + (redHSL.s - greenHSL.s) * (percent / 100);
-      const light = greenHSL.l + (redHSL.l - greenHSL.l) * (percent / 100);
-      color = `hsl(${hue}, ${sat}%, ${light}%)`;
-    }
-    bar.style.backgroundColor = color;
-
-    barWrapper.appendChild(bar);
-    return barWrapper;
   }
 
   _createDiv(className) {
