@@ -195,7 +195,9 @@ class BudgetRenderer {
       shopping: "fa-shopping-cart",
       groceries: "fa-shopping-basket",
       entertainment: "fa-tv",
+      fun: "fa-face-smile",
       utilities: "fa-plug",
+      utility: "fa-plug",
       housing: "fa-home",
       medical: "fa-hospital",
       education: "fa-graduation-cap",
@@ -209,7 +211,11 @@ class BudgetRenderer {
       wholesale: "fa-warehouse",
       car: "fa-car",
       phone: "fa-phone",
+      internet: "fa-wifi",
+      personal: "fa-user",
+      transportation: "fa-bus",
       miscellaneous: "fa-ellipsis",
     };
+
   }
 }

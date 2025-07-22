@@ -723,7 +723,7 @@ table.dataTable tbody tr.selected>* {
   transform: scale(1.05);
 }
 
-.budget-category-item:nth-child(2) .budget-category-icon {
+/* .budget-category-item:nth-child(2) .budget-category-icon {
   background-color: rgb(245 158 11 / 20%);
   color: var(--orange-color);
 }
@@ -731,7 +731,7 @@ table.dataTable tbody tr.selected>* {
 .budget-category-item:nth-child(3) .budget-category-icon {
   background-color: rgb(34 197 94 / 20%);
   color: var(--green-color);
-}
+} */
 
 .budget-category-info {
   display: flex;
@@ -1148,7 +1148,6 @@ table.dataTable tbody tr.selected>* {
 .progress-ring-icon {
   font-size: 1.3em;
   margin-bottom: 2px;
-  color: #ffb300;
   background: none !important;
   box-shadow: none !important;
 }
