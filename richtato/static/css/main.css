@@ -549,20 +549,8 @@ table.dataTable tbody tr.selected>* {
 
 #categories-container {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-}
-
-@media (max-width: 900px) {
-  #categories-container {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Heatmap */
-.heatmap-container {
-  padding: 20px;
-  min-height: 200px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px; /* Optional: spacing between items */
 }
 
 /* Sankey Diagrams */

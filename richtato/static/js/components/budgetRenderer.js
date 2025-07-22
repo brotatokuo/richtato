@@ -115,7 +115,7 @@ class BudgetRenderer {
     // Amount left and percent
     const amountDiv = document.createElement("div");
     amountDiv.className = "progress-ring-amount";
-    console.log("budget", category.budget)
+    
     const numericBudget = parseFloat(category.budget.replace(/[^0-9.]/g, ""));
     const amountLeft = numericBudget * (1 - percent / 100);
     amountDiv.textContent = `$${amountLeft.toFixed(2)} left`;
