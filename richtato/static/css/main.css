@@ -550,7 +550,7 @@ table.dataTable tbody tr.selected>* {
 #categories-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px; /* Optional: spacing between items */
+  place-items: center;
 }
 
 /* Sankey Diagrams */
