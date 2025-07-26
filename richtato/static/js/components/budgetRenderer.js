@@ -57,19 +57,16 @@ class BudgetRenderer {
     const circumference = 2 * Math.PI * radius;
     const offset = circumference * (1 - displayPercent / 100);
 
-    // Dynamic color: interpolate between green (0%) and red (100%)
+    // Dynamic color: green under 100%, yellow at exactly 100%, red over 100%
     let color;
     if (percent <= 0) {
       color = "var(--green-color)";
-    } else if (percent >= 100) {
+    } else if (percent === 100) {
+      color = "#FFD700"; // Yellow for exactly 100%
+    } else if (percent > 100) {
       color = "var(--red-color)";
     } else {
-      const greenHSL = { h: 88, s: 63, l: 48 };
-      const redHSL = { h: 0, s: 100, l: 50 };
-      const hue = greenHSL.h + (redHSL.h - greenHSL.h) * (displayPercent / 100);
-      const sat = greenHSL.s + (redHSL.s - greenHSL.s) * (displayPercent / 100);
-      const light = greenHSL.l + (redHSL.l - greenHSL.l) * (displayPercent / 100);
-      color = `hsl(${hue}, ${sat}%, ${light}%)`;
+      color = "var(--green-color)"; // Static green for under 100%
     }
 
     // Create SVG

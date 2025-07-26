@@ -1,5 +1,15 @@
 // Dashboard JavaScript - Common Personal Finance Graphs
 
+function getAccountTypeIcon(typeCode) {
+  const typeIcons = {
+    'checking': 'fas fa-university',
+    'savings': 'fas fa-piggy-bank',
+    'retirement': 'fas fa-chart-line',
+    'investment': 'fas fa-chart-pie'
+  };
+  return typeIcons[typeCode] || 'fas fa-university';
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   initializeDashboard();
 });
@@ -393,8 +403,22 @@ function initBudgetProgress() {
 }
 
 function initAssetsSection() {
-  const tilesContainer = document.getElementById("assets-container");
-  if (!tilesContainer) return;
+  const containers = {
+    checking: document.getElementById("checking-accounts-dashboard"),
+    savings: document.getElementById("savings-accounts-dashboard"),
+    investment: document.getElementById("investment-accounts-dashboard"),
+    retirement: document.getElementById("retirement-accounts-dashboard")
+  };
+
+  // Check if containers exist
+  const missingContainers = Object.entries(containers)
+    .filter(([type, container]) => !container)
+    .map(([type]) => type);
+
+  if (missingContainers.length > 0) {
+    console.error('Dashboard account containers not found:', missingContainers);
+    return;
+  }
 
   function fetchAndRenderAssets() {
     fetch("/api/accounts/")
@@ -402,8 +426,14 @@ function initAssetsSection() {
       .then((data) => {
         const assets = data.rows || [];
 
+        // Clear all containers first
+        Object.values(containers).forEach(container => {
+          container.innerHTML = '';
+        });
+
         if (assets.length === 0) {
-          tilesContainer.innerHTML = `
+          // Show "no accounts" message in the first container
+          containers.checking.innerHTML = `
             <div class="no-data-message">
               <i class="fa-solid fa-university" style="font-size: 2rem; color: var(--title-color); opacity: 0.5; margin-bottom: 10px;"></i>
               <p style="color: var(--title-color); text-align: center; margin: 0; font-size: 14px;">
@@ -417,43 +447,76 @@ function initAssetsSection() {
           return;
         }
 
-        let tilesHTML = '';
-        assets.forEach((asset) => {
-          const accountType = asset.account_type?.toLowerCase() || 'bank';
-          const isCard = accountType.includes('card') || accountType.includes('credit');
-          const tileClass = isCard ? 'account-tile card-account-tile' : 'account-tile';
-          const iconClass = isCard ? 'card' : 'bank';
-          const icon = isCard ? 'fa-credit-card' : 'fa-university';
+        // Group accounts by type
+        const groupedAssets = {
+          checking: [],
+          savings: [],
+          investment: [],
+          retirement: []
+        };
 
-          tilesHTML += `
-            <div class="${tileClass}" data-account-id="${asset.id || ''}">
-              <div class="account-tile-header">
-                <div class="account-tile-icon ${iconClass}">
-                  <i class="fa-solid ${icon}"></i>
-                </div>
-                <div class="account-tile-info">
-                  <h3>${asset.account_name || 'Unknown Account'}</h3>
-                  <p>${asset.account_type || 'Account'}</p>
-                </div>
-              </div>
-              <div class="account-tile-body">
-                <div class="account-tile-balance">${asset.balance || '$0.00'}</div>
-                <div class="account-tile-type">${asset.institution || 'Financial Institution'}</div>
-              </div>
-              <div class="account-tile-footer">
-                <div class="account-tile-status">
-                  Last updated: ${asset.last_updated || 'Never'}
-                </div>
-              </div>
-            </div>
-          `;
+        assets.forEach(asset => {
+          const type = asset.type?.toLowerCase();
+          if (groupedAssets[type]) {
+            groupedAssets[type].push(asset);
+          } else {
+            // Default to checking if type is unknown
+            groupedAssets.checking.push(asset);
+          }
         });
 
-        tilesContainer.innerHTML = tilesHTML;
+        // Render accounts in each group
+        Object.entries(groupedAssets).forEach(([type, typeAssets]) => {
+          const container = containers[type];
+
+          if (typeAssets.length === 0) {
+            container.innerHTML = `
+              <div class="no-accounts-message" style="text-align: center; padding: 20px; color: var(--title-color); opacity: 0.6;">
+                <p style="margin: 0; font-size: 14px;">No ${type} accounts</p>
+              </div>
+            `;
+            return;
+          }
+
+          let tilesHTML = '';
+          typeAssets.forEach((asset) => {
+            const accountType = asset.type?.toLowerCase() || 'bank';
+            const isCard = accountType.includes('card') || accountType.includes('credit');
+            const tileClass = isCard ? 'account-tile card-account-tile' : 'account-tile';
+            const iconClass = isCard ? 'card' : 'bank';
+            const icon = isCard ? 'fa-credit-card' : getAccountTypeIcon(accountType);
+
+            const balance = asset.balance && asset.balance !== '$0.00' ? asset.balance : 'No balance';
+
+            tilesHTML += `
+              <div class="${tileClass}" data-account-id="${asset.id || ''}">
+                <div class="account-tile-header">
+                  <div class="account-tile-icon ${iconClass}">
+                    <i class="fa-solid ${icon}"></i>
+                  </div>
+                  <div class="account-tile-info">
+                    <h3>${asset.name || 'Unknown Account'}</h3>
+                    <p>${asset.entity || 'Financial Institution'}</p>
+                  </div>
+                </div>
+                <div class="account-tile-body">
+                  <div class="account-tile-balance">${balance}</div>
+                  <div class="account-tile-type">${asset.type || 'Account'}</div>
+                </div>
+                <div class="account-tile-footer">
+                  <div class="account-tile-status">${asset.date ? `Updated ${asset.date}` : 'No recent update'}</div>
+                </div>
+              </div>
+            `;
+          });
+
+          container.innerHTML = tilesHTML;
+        });
       })
       .catch((error) => {
         console.error("Error fetching assets data:", error);
-        tilesContainer.innerHTML = `
+        // Show error in first container
+        containers.checking.innerHTML = `
           <div class="no-data-message">
             <i class="fa-solid fa-exclamation-triangle" style="font-size: 2rem; color: var(--red-color); opacity: 0.7; margin-bottom: 10px;"></i>
             <p style="color: var(--title-color); text-align: center; margin: 0; font-size: 14px;">

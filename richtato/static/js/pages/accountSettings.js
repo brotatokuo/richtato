@@ -3,7 +3,10 @@ class AccountTilesManager {
   constructor() {
     console.log('Initializing AccountTilesManager...');
     this.cardAccountsContainer = document.getElementById('card-accounts-tiles');
-    this.accountsContainer = document.getElementById('accounts-tiles');
+    this.checkingAccountsContainer = document.getElementById('checking-accounts-tiles');
+    this.savingsAccountsContainer = document.getElementById('savings-accounts-tiles');
+    this.investmentAccountsContainer = document.getElementById('investment-accounts-tiles');
+    this.retirementAccountsContainer = document.getElementById('retirement-accounts-tiles');
     this.essentialCategoriesContainer = document.getElementById('essential-categories-tiles');
     this.nonessentialCategoriesContainer = document.getElementById('nonessential-categories-tiles');
     this.modal = document.getElementById('account-modal');
@@ -11,7 +14,10 @@ class AccountTilesManager {
     this.currentAccountType = null;
 
     console.log('Card accounts container found:', !!this.cardAccountsContainer);
-    console.log('Accounts container found:', !!this.accountsContainer);
+    console.log('Checking accounts container found:', !!this.checkingAccountsContainer);
+    console.log('Savings accounts container found:', !!this.savingsAccountsContainer);
+    console.log('Investment accounts container found:', !!this.investmentAccountsContainer);
+    console.log('Retirement accounts container found:', !!this.retirementAccountsContainer);
     console.log('Essential categories container found:', !!this.essentialCategoriesContainer);
     console.log('Non-essential categories container found:', !!this.nonessentialCategoriesContainer);
 
@@ -114,29 +120,66 @@ class AccountTilesManager {
   }
 
   renderAccountTiles(accounts) {
-    console.log('Rendering account tiles, container found:', !!this.accountsContainer);
+    console.log('Rendering grouped account tiles');
     console.log('Accounts to render:', accounts);
 
-    if (!this.accountsContainer) {
-      console.error('Accounts container not found!');
+    const containers = {
+      checking: this.checkingAccountsContainer,
+      savings: this.savingsAccountsContainer,
+      investment: this.investmentAccountsContainer,
+      retirement: this.retirementAccountsContainer
+    };
+
+    // Check if all containers exist
+    const missingContainers = Object.entries(containers)
+      .filter(([type, container]) => !container)
+      .map(([type]) => type);
+
+    if (missingContainers.length > 0) {
+      console.error('Account containers not found:', missingContainers);
       return;
     }
 
-    // Clear existing content
-    this.accountsContainer.innerHTML = '';
-
-    // Add existing accounts
-    accounts.forEach(account => {
-      console.log('Creating tile for account:', account);
-      const tile = this.createAccountTile(account);
-      this.accountsContainer.appendChild(tile);
+    // Clear existing content in all containers
+    Object.values(containers).forEach(container => {
+      container.innerHTML = '';
     });
 
-    // Add "Add New" tile
-    const addTile = this.createAddAccountTile('account');
-    this.accountsContainer.appendChild(addTile);
+    // Group accounts by type
+    const groupedAccounts = {
+      checking: [],
+      savings: [],
+      investment: [],
+      retirement: []
+    };
 
-    console.log('Finished rendering account tiles');
+    accounts.forEach(account => {
+      const type = account.type?.toLowerCase();
+      if (groupedAccounts[type]) {
+        groupedAccounts[type].push(account);
+      } else {
+        // Default to checking if type is unknown
+        groupedAccounts.checking.push(account);
+      }
+    });
+
+    // Render accounts in each group
+    Object.entries(groupedAccounts).forEach(([type, typeAccounts]) => {
+      const container = containers[type];
+
+      // Add existing accounts for this type
+      typeAccounts.forEach(account => {
+        console.log(`Creating tile for ${type} account:`, account);
+        const tile = this.createAccountTile(account);
+        container.appendChild(tile);
+      });
+
+      // Add "Add New" tile for each type
+      const addTile = this.createAddAccountTile('account', type);
+      container.appendChild(addTile);
+    });
+
+    console.log('Finished rendering grouped account tiles');
   }
 
   renderCategoryTiles(categories) {
@@ -240,7 +283,7 @@ class AccountTilesManager {
     return tile;
   }
 
-  createAddAccountTile(type) {
+  createAddAccountTile(type, accountType = null) {
     const tile = document.createElement('div');
     tile.className = 'add-account-tile';
 
@@ -250,6 +293,21 @@ class AccountTilesManager {
         <i class="fas fa-plus"></i>
         <h3>Add Card Account</h3>
         <p>Add a new credit card</p>
+      `;
+    } else if (accountType) {
+      const typeInfo = {
+        checking: { icon: 'fas fa-university', title: 'Add Checking', desc: 'Add a checking account' },
+        savings: { icon: 'fas fa-piggy-bank', title: 'Add Savings', desc: 'Add a savings account' },
+        investment: { icon: 'fas fa-chart-pie', title: 'Add Investment', desc: 'Add an investment account' },
+        retirement: { icon: 'fas fa-chart-line', title: 'Add Retirement', desc: 'Add a retirement account' }
+      };
+
+      const info = typeInfo[accountType] || typeInfo.checking;
+      tile.onclick = () => this.showAddAccountModal(accountType);
+      tile.innerHTML = `
+        <i class="${info.icon}"></i>
+        <h3>${info.title}</h3>
+        <p>${info.desc}</p>
       `;
     } else {
       tile.onclick = () => this.showAddAccountModal();
@@ -440,8 +498,8 @@ class AccountTilesManager {
     console.log('Show add card account modal');
   }
 
-  showAddAccountModal() {
-    console.log('Show add account modal');
+  showAddAccountModal(accountType = null) {
+    console.log('Show add account modal for type:', accountType);
   }
 
   showAddCategoryModal(type = 'category') {

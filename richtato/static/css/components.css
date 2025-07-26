@@ -525,6 +525,50 @@ table.dataTable tbody td.custom-checkbox::before {
   margin-bottom: 30px;
 }
 
+/* Account Groups Container */
+.account-groups-container {
+  padding-left: 15px;
+}
+
+/* Account Group Styling */
+.account-group {
+  margin-bottom: 30px;
+  padding-bottom: 25px;
+  border-bottom: 2px dashed rgba(152, 204, 44, 0.3);
+}
+
+.account-group:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.account-group-header {
+  margin-bottom: 15px;
+}
+
+.account-group-header h3 {
+  margin: 0 0 5px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account-group-header h3 i {
+  color: var(--green-color);
+  font-size: 16px;
+}
+
+.account-group-header p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--title-color);
+  opacity: 0.7;
+}
+
 /* Modern Account Tiles */
 .account-tiles-container {
   display: grid;
