@@ -8,69 +8,178 @@
     <h1>Settings</h1>
   </div>
 
-  <div class="main-content-boxes">
-    <div class="box">
-      <div class="box-section1">
-        <div class="box-title">
-          <h2>Card Accounts</h2>
+  <!-- Full width Card Accounts section -->
+  <div class="box full-width-section">
+    <div class="box-section1">
+      <div class="box-title">
+        <h2>Card Accounts</h2>
+      </div>
+    </div>
+    <div class="general-info-section2">
+      <div id="card-accounts-tiles" class="account-tiles-container full-width-tiles">
+        <!-- Card account tiles will be dynamically generated here -->
+      </div>
+      <div class="table-responsive" style="display: none;">
+        <table class="data-table" id="settings-card-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full width Accounts section -->
+  <div class="box full-width-section">
+    <div class="box-section1">
+      <div class="box-title">
+        <h2>Accounts</h2>
+      </div>
+    </div>
+    <div class="general-info-section2">
+      <div id="accounts-tiles" class="account-tiles-container full-width-tiles">
+        <!-- Account tiles will be dynamically generated here -->
+      </div>
+      <div class="table-responsive" style="display: none;">
+        <table class="data-table" id="settings-accounts-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full width Categories section -->
+  <div class="box full-width-section">
+    <div class="box-section1">
+      <div class="box-title">
+        <h2>Categories</h2>
+      </div>
+    </div>
+    <div class="general-info-section2">
+      <!-- Essential Categories -->
+      <div class="category-group">
+        <div class="category-group-header">
+          <h3><i class="fas fa-star"></i> Essential Categories</h3>
+          <p>Core expenses necessary for daily life</p>
+        </div>
+        <div id="essential-categories-tiles" class="account-tiles-container full-width-tiles">
+          <!-- Essential category tiles will be dynamically generated here -->
         </div>
       </div>
-      <div class="general-info-section2">
-        <div class="table-responsive">
-          <table class="data-table" id="settings-card-table">
-            <thead></thead>
-            <tbody></tbody>
-          </table>
+
+      <!-- Non-Essential Categories -->
+      <div class="category-group">
+        <div class="category-group-header">
+          <h3><i class="fas fa-heart"></i> Non-Essential Categories</h3>
+          <p>Discretionary spending and lifestyle choices</p>
         </div>
+        <div id="nonessential-categories-tiles" class="account-tiles-container full-width-tiles">
+          <!-- Non-essential category tiles will be dynamically generated here -->
+        </div>
+      </div>
+
+      <div class="table-responsive" style="display: none;">
+        <table class="data-table" id="settings-categories-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full Width Budget Management Section -->
+  <div class="full-width-section">
+    <div class="box-title">
+      <h2>Budget Management</h2>
+      <p class="section-description">Set and manage your category budgets to track spending goals</p>
+    </div>
+    <div class="budget-controls">
+      <select id="settings-budget-year" class="budget-dropdown">
+        <!-- Years will be populated dynamically -->
+      </select>
+      <select id="settings-budget-month" class="budget-dropdown">
+        <option value="1">January</option>
+        <option value="2">February</option>
+        <option value="3">March</option>
+        <option value="4">April</option>
+        <option value="5">May</option>
+        <option value="6">June</option>
+        <option value="7">July</option>
+        <option value="8">August</option>
+        <option value="9">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
+      </select>
+      <button id="add-budget-btn" class="primary-btn">
+        <i class="fa-solid fa-plus"></i> Add Budget
+      </button>
+    </div>
+
+    <!-- Budget Overview Cards -->
+    <div id="budget-overview" class="budget-overview-container">
+      <!-- Budget overview will be populated here -->
+    </div>
+
+    <!-- Active Budgets - Tiles -->
+    <div class="budget-section">
+      <h3 class="budget-section-title">
+        <i class="fa-solid fa-clock"></i> Active Budgets
+      </h3>
+      <div class="budget-tiles-container" id="active-budget-tiles">
+        <!-- Active budget tiles will be populated here -->
       </div>
     </div>
 
-    <div class="box">
-      <div class="box-section1">
-        <div class="box-title">
-          <h2>Accounts</h2>
-        </div>
-      </div>
-      <div class="general-info-section2">
-        <div class="table-responsive">
-          <table class="data-table" id="settings-accounts-table">
-            <thead></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div class="box">
-      <div class="box-section1">
-        <div class="box-title">
-          <h2>Categories</h2>
-        </div>
-      </div>
-      <div class="general-info-section2">
-        <div class="table-responsive">
-          <table class="data-table" id="settings-categories-table">
-            <thead></thead>
-            <tbody></tbody>
-          </table>
-        </div>
+    <!-- Past Budgets - Table -->
+    <div class="budget-section">
+      <h3 class="budget-section-title">
+        <i class="fa-solid fa-history"></i> Past Budgets
+      </h3>
+      <div class="table-responsive">
+        <table class="data-table enhanced-budget-table" id="past-budgets-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Amount</th>
+              <th>Start Date</th>
+              <th>End Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Past budget rows will be populated here -->
+          </tbody>
+        </table>
       </div>
     </div>
+  </div>
+</div>
 
-    <div class="box">
-      <div class="box-section1">
-        <div class="box-title">
-          <h2>Budget</h2>
-        </div>
+<!-- Account Modal -->
+<div id="account-modal" class="account-modal">
+  <div class="account-modal-content">
+    <button class="account-modal-close" id="modal-close">
+      <i class="fas fa-times"></i>
+    </button>
+    <div class="account-modal-header">
+      <div class="account-modal-icon" id="modal-icon">
+        <i class="fas fa-credit-card"></i>
       </div>
-      <div class="general-info-section2">
-        <div class="table-responsive">
-          <table class="data-table" id="settings-budget-table">
-            <thead></thead>
-            <tbody></tbody>
-          </table>
-        </div>
+      <div class="account-modal-title">
+        <h3 id="modal-title">Account Name</h3>
+        <p id="modal-subtitle">Bank Name</p>
       </div>
+    </div>
+    <div class="account-modal-actions">
+      <button class="account-modal-btn edit" id="modal-edit">
+        <i class="fas fa-edit"></i>
+        Edit
+      </button>
+      <button class="account-modal-btn delete" id="modal-delete">
+        <i class="fas fa-trash"></i>
+        Delete
+      </button>
     </div>
   </div>
 </div>

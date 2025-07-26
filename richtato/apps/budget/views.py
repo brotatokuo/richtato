@@ -127,8 +127,8 @@ def get_budget_rankings(request):
     category_data = [
         {
             "name": ranking["category_name"],
-            "budget": format_currency(ranking["budget"]),
-            "spent": format_currency(ranking["expense"]),
+            "budget": ranking["budget"],
+            "spent": ranking["expense"],
             "percent": ranking["percent_budget"],
             "message": f"{calculate_budget_diff(ranking['difference'])} ({ranking['percent_budget']}%)",
         }
@@ -173,7 +173,7 @@ class BudgetAPIView(BaseAPIView):
             {
                 "id": b["id"],
                 "category": b["category_name"],
-                "amount": format_currency(b["amount"]),
+                "amount": b["amount"],
                 "start_date": b["start_date"],
                 "end_date": b["end_date"],
             }

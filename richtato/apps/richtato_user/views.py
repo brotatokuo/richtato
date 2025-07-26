@@ -76,7 +76,43 @@ def upload(request: HttpRequest):
 
 @login_required
 def profile(request: HttpRequest):
-    return render(request, "profile.html")
+    from datetime import datetime, timedelta
+    from django.db.models import Sum, Count
+    from richtato.utilities.tools import format_currency
+
+    user = request.user
+
+    # Calculate statistics
+    total_transactions = (
+        Expense.objects.filter(user=user).count()
+        + Income.objects.filter(user=user).count()
+    )
+
+    total_accounts = Account.objects.filter(user=user).count()
+
+    # Calculate days active (days since first transaction)
+    first_expense = Expense.objects.filter(user=user).order_by("date").first()
+    first_income = Income.objects.filter(user=user).order_by("date").first()
+
+    if first_expense and first_income:
+        first_activity = min(first_expense.date, first_income.date)
+    elif first_expense:
+        first_activity = first_expense.date
+    elif first_income:
+        first_activity = first_income.date
+    else:
+        first_activity = user.date_joined.date()
+
+    days_active = (datetime.now().date() - first_activity).days
+
+    context = {
+        "user": user,
+        "total_transactions": total_transactions,
+        "total_accounts": total_accounts,
+        "days_active": days_active,
+    }
+
+    return render(request, "profile.html", context)
 
 
 @login_required
@@ -470,3 +506,190 @@ class CustomPasswordResetView(PasswordResetView):
 class CustomPasswordResetConfirmView(PasswordResetConfirmView):
     template_name = "password_reset_confirm.html"
     success_url = reverse_lazy("password_reset_complete")
+
+
+# Profile API endpoints
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def update_username(request):
+    try:
+        import json
+
+        data = json.loads(request.body)
+        new_username = data.get("username", "").strip()
+
+        if not new_username:
+            return JsonResponse({"success": False, "error": "Username cannot be empty"})
+
+        if len(new_username) < 3:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "Username must be at least 3 characters long",
+                }
+            )
+
+        if len(new_username) > 30:
+            return JsonResponse(
+                {"success": False, "error": "Username must be less than 30 characters"}
+            )
+
+        # Check if username is already taken by another user
+        if (
+            User.objects.filter(username=new_username)
+            .exclude(id=request.user.id)
+            .exists()
+        ):
+            return JsonResponse(
+                {"success": False, "error": "This username is already taken"}
+            )
+
+        # Update username
+        request.user.username = new_username
+        request.user.save()
+
+        return JsonResponse({"success": True})
+
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "Invalid request data"})
+    except Exception as e:
+        logger.error(f"Error updating username: {e}")
+        return JsonResponse(
+            {"success": False, "error": "An error occurred while updating username"}
+        )
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def change_password(request):
+    try:
+        import json
+        from django.contrib.auth import authenticate
+
+        data = json.loads(request.body)
+        current_password = data.get("current_password", "")
+        new_password = data.get("new_password", "")
+
+        if not current_password:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "field": "current-password",
+                    "error": "Current password is required",
+                }
+            )
+
+        if not new_password:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "field": "new-password",
+                    "error": "New password is required",
+                }
+            )
+
+        # Verify current password
+        user = authenticate(username=request.user.username, password=current_password)
+        if not user:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "field": "current-password",
+                    "error": "Current password is incorrect",
+                }
+            )
+
+        if len(new_password) < 8:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "field": "new-password",
+                    "error": "Password must be at least 8 characters long",
+                }
+            )
+
+        if current_password == new_password:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "field": "new-password",
+                    "error": "New password must be different from current password",
+                }
+            )
+
+        # Update password
+        request.user.set_password(new_password)
+        request.user.save()
+
+        return JsonResponse({"success": True})
+
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "Invalid request data"})
+    except Exception as e:
+        logger.error(f"Error changing password: {e}")
+        return JsonResponse(
+            {"success": False, "error": "An error occurred while changing password"}
+        )
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def update_preferences(request):
+    try:
+        import json
+
+        data = json.loads(request.body)
+
+        # Update user preferences (you may need to add these fields to your User model)
+        for key, value in data.items():
+            if key in ["email_notifications", "data_insights"]:
+                setattr(request.user, key, value)
+            elif key == "preferred_currency":
+                setattr(request.user, key, value)
+
+        request.user.save()
+        return JsonResponse({"success": True})
+
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "Invalid request data"})
+    except Exception as e:
+        logger.error(f"Error updating preferences: {e}")
+        return JsonResponse(
+            {"success": False, "error": "An error occurred while updating preferences"}
+        )
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_account(request):
+    try:
+        # Don't allow demo users to delete their accounts
+        if getattr(request.user, "is_demo", False):
+            return JsonResponse(
+                {"success": False, "error": "Demo accounts cannot be deleted"}
+            )
+
+        # Delete all user data
+        user = request.user
+
+        # Delete related data
+        Expense.objects.filter(user=user).delete()
+        Income.objects.filter(user=user).delete()
+        Account.objects.filter(user=user).delete()
+        Budget.objects.filter(user=user).delete()
+        Category.objects.filter(user=user).delete()
+
+        # Delete the user
+        user.delete()
+
+        return JsonResponse({"success": True})
+
+    except Exception as e:
+        logger.error(f"Error deleting account: {e}")
+        return JsonResponse(
+            {"success": False, "error": "An error occurred while deleting account"}
+        )

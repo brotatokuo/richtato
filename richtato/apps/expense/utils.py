@@ -108,13 +108,16 @@ class SankeyDiagramBuilder:
                 category_color = get_category_color(category_name)
                 link_colors.append(get_color_by_name(category_color))
             else:
-                # For non-category diagrams, use a default color palette
+                # Modern color palette matching dashboard theme
                 color_palette = [
-                    "rgba(152, 204, 44, 0.7)",  # Primary green
-                    "rgba(76, 175, 80, 0.7)",  # Green variant
-                    "rgba(129, 199, 132, 0.7)",  # Light green
-                    "rgba(165, 214, 167, 0.7)",  # Lighter green
-                    "rgba(200, 230, 201, 0.7)",  # Very light green
+                    "rgba(152, 204, 44, 0.8)",  # Primary green (--green-color)
+                    "rgba(129, 175, 38, 0.8)",  # Darker green (--darker-green-color)
+                    "rgba(0, 117, 255, 0.8)",  # Blue (--blue-color)
+                    "rgba(245, 158, 11, 0.8)",  # Orange (--orange-color)
+                    "rgba(99, 102, 241, 0.8)",  # Modern purple
+                    "rgba(236, 72, 153, 0.8)",  # Modern pink
+                    "rgba(6, 182, 212, 0.8)",  # Modern cyan
+                    "rgba(251, 146, 60, 0.8)",  # Modern orange
                 ]
                 link_colors.append(color_palette[i % len(color_palette)])
 
@@ -122,29 +125,43 @@ class SankeyDiagramBuilder:
             go.Sankey(
                 node=dict(
                     label=labels,
-                    pad=20,
-                    thickness=25,
-                    color="#4a5568",  # Dark gray matching dashboard
-                    line=dict(color="#2d3748", width=1),
+                    pad=15,  # Reduced padding to fit better
+                    thickness=20,  # Reduced thickness for better fit
+                    color="#2d2d2d",  # Match --primary-color from theme
+                    line=dict(
+                        color="#98cc2c", width=1.5
+                    ),  # Green border matching theme
                 ),
                 link=dict(
                     source=source,
                     target=target,
                     value=values,
                     color=link_colors,
+                    hoverlabel=dict(
+                        bgcolor="#2d2d2d",
+                        bordercolor="#98cc2c",
+                        font=dict(color="#ffffff", family="Open Sans, sans-serif"),
+                    ),
                 ),
             )
         )
 
         fig.update_layout(
             title_text=self.title,
-            title_font=dict(size=16, color="#ffffff", family="Open Sans, sans-serif"),
-            font=dict(size=12, color="#ffffff", family="Open Sans, sans-serif"),
-            paper_bgcolor="rgba(0,0,0,0)",  # Transparent background
+            title_font=dict(
+                size=18, color="#ffffff", family="Open Sans, sans-serif", weight="bold"
+            ),
+            font=dict(size=13, color="#ffffff", family="Open Sans, sans-serif"),
+            paper_bgcolor="rgba(0,0,0,0)",  # Transparent to match dashboard
             plot_bgcolor="rgba(0,0,0,0)",  # Transparent plot area
             autosize=True,
-            margin=dict(l=20, r=20, t=40, b=20),
-            height=350,
+            margin=dict(l=10, r=10, t=30, b=10),  # Minimal margins to fit container
+            height=350,  # Reduced height to fit better
+            hoverlabel=dict(
+                bgcolor="#2d2d2d",
+                bordercolor="#98cc2c",
+                font=dict(color="#ffffff", family="Open Sans, sans-serif"),
+            ),
         )
 
         return fig
@@ -371,17 +388,17 @@ def sankey_cash_flow_overview(user_id: int) -> go.Figure:
         )
 
         if "💰" in source_label and "🏦" in target_label:
-            # Income to savings - green
-            link_colors.append("rgba(76, 175, 80, 0.6)")
+            # Income to savings - primary green
+            link_colors.append("rgba(152, 204, 44, 0.8)")
         elif "💰" in source_label and "📈" in target_label:
-            # Income to investment - blue
-            link_colors.append("rgba(33, 150, 243, 0.6)")
+            # Income to investment - theme blue
+            link_colors.append("rgba(0, 117, 255, 0.8)")
         elif "💰" in source_label and "🏛️" in target_label:
-            # Income to retirement - purple
-            link_colors.append("rgba(103, 58, 183, 0.6)")
+            # Income to retirement - modern purple
+            link_colors.append("rgba(99, 102, 241, 0.8)")
         elif "💰" in source_label and "💳" in target_label:
-            # Income to checking - green
-            link_colors.append("rgba(76, 175, 80, 0.6)")
+            # Income to checking - darker green
+            link_colors.append("rgba(129, 175, 38, 0.8)")
         elif is_expense_category:
             # Get unique color for each expense category
             category_color = "rgba(244, 67, 54, 0.6)"  # Default red
@@ -395,44 +412,56 @@ def sankey_cash_flow_overview(user_id: int) -> go.Figure:
                     break
             link_colors.append(category_color)
         elif "🏦" in source_label or "savings" in source_label.lower():
-            # Savings flows - light green
-            link_colors.append("rgba(129, 199, 132, 0.6)")
+            # Savings flows - modern green variant
+            link_colors.append("rgba(34, 197, 94, 0.8)")
         elif "📈" in source_label or "investment" in source_label.lower():
-            # Investment flows - light blue
-            link_colors.append("rgba(100, 181, 246, 0.6)")
+            # Investment flows - modern cyan
+            link_colors.append("rgba(6, 182, 212, 0.8)")
         elif "🏛️" in source_label or "retirement" in source_label.lower():
-            # Retirement flows - light purple
-            link_colors.append("rgba(149, 117, 205, 0.6)")
+            # Retirement flows - modern indigo
+            link_colors.append("rgba(79, 70, 229, 0.8)")
         else:
-            # Default - primary green
-            link_colors.append("rgba(152, 204, 44, 0.6)")
+            # Default - primary theme green
+            link_colors.append("rgba(152, 204, 44, 0.8)")
 
-    # Create the figure
+    # Create the figure with modern styling
     fig = go.Figure(
         go.Sankey(
             node=dict(
                 label=labels,
-                pad=20,
-                thickness=25,
-                color="#4a5568",
-                line=dict(color="#2d3748", width=1),
+                pad=15,  # Reduced padding for better container fit
+                thickness=20,  # Reduced thickness
+                color="#2d2d2d",  # Match --primary-color from theme
+                line=dict(color="#98cc2c", width=1.5),  # Green border matching theme
             ),
             link=dict(
                 source=source,
                 target=target,
                 value=values,
                 color=link_colors,
+                hoverlabel=dict(
+                    bgcolor="#2d2d2d",
+                    bordercolor="#98cc2c",
+                    font=dict(color="#ffffff", family="Open Sans, sans-serif"),
+                ),
             ),
         )
     )
 
     fig.update_layout(
-        title_font=dict(size=16, color="#ffffff", family="Open Sans, sans-serif"),
-        font=dict(size=12, color="#ffffff", family="Open Sans, sans-serif"),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
+        title_font=dict(
+            size=20, color="#ffffff", family="Open Sans, sans-serif", weight="bold"
+        ),
+        font=dict(size=14, color="#ffffff", family="Open Sans, sans-serif"),
+        paper_bgcolor="rgba(0,0,0,0)",  # Transparent to match dashboard background
+        plot_bgcolor="rgba(0,0,0,0)",  # Transparent plot area
         autosize=True,
-        margin=dict(l=20, r=20, t=60, b=20),
+        margin=dict(l=20, r=20, t=40, b=20),  # Reduced margins to fit container
+        hoverlabel=dict(
+            bgcolor="#2d2d2d",
+            bordercolor="#98cc2c",
+            font=dict(color="#ffffff", family="Open Sans, sans-serif"),
+        ),
     )
 
     return fig

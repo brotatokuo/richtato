@@ -131,14 +131,18 @@ function initExpensePieChart() {
             expensePieChart.destroy();
             expensePieChart = null;
           }
-          // Show message
+          // Show consistent no-data message
           const msg = document.createElement("div");
           msg.className = "no-data-message";
-          msg.textContent = "No data for Year and Month";
-          msg.style.textAlign = "center";
-          msg.style.padding = "40px 0";
-          msg.style.color = "#aaa";
-          msg.style.fontSize = "1.1rem";
+          msg.innerHTML = `
+            <i class="fa-solid fa-chart-pie" style="font-size: 2rem; color: var(--title-color); opacity: 0.5; margin-bottom: 10px;"></i>
+            <p style="color: var(--title-color); text-align: center; margin: 0; font-size: 14px;">
+              No expense data for selected period
+            </p>
+            <p style="color: var(--title-color); text-align: center; margin: 5px 0 0 0; font-size: 12px; opacity: 0.7;">
+              Try selecting a different month or year
+            </p>
+          `;
           chartContainer.appendChild(msg);
           return;
         }
@@ -183,6 +187,29 @@ function initExpensePieChart() {
       })
       .catch((error) => {
         console.error("Error fetching expense categories data:", error);
+        const chartContainer = ctx.parentElement;
+        // Remove previous message if any
+        const prevMsg = chartContainer.querySelector(".no-data-message");
+        if (prevMsg) prevMsg.remove();
+
+        if (expensePieChart) {
+          expensePieChart.destroy();
+          expensePieChart = null;
+        }
+
+        // Show error message
+        const msg = document.createElement("div");
+        msg.className = "no-data-message";
+        msg.innerHTML = `
+          <i class="fa-solid fa-exclamation-triangle" style="font-size: 2rem; color: var(--red-color); opacity: 0.7; margin-bottom: 10px;"></i>
+          <p style="color: var(--title-color); text-align: center; margin: 0; font-size: 14px;">
+            Unable to load expense breakdown
+          </p>
+          <p style="color: var(--title-color); text-align: center; margin: 5px 0 0 0; font-size: 12px; opacity: 0.7;">
+            Please try refreshing the page
+          </p>
+        `;
+        chartContainer.appendChild(msg);
       });
   }
 
@@ -366,39 +393,77 @@ function initBudgetProgress() {
 }
 
 function initAssetsSection() {
-  const tableContainer = document.getElementById("assets-table");
-  if (!tableContainer) return;
+  const tilesContainer = document.getElementById("assets-container");
+  if (!tilesContainer) return;
 
   function fetchAndRenderAssets() {
     fetch("/api/accounts/")
       .then((response) => response.json())
       .then((data) => {
         const assets = data.rows || [];
-        let tableHTML = '<table class="categories-table">';
-        if (data.columns && data.columns.length) {
-          tableHTML += "<thead><tr>";
-          data.columns.forEach((col) => {
-            if (col.field !== "id" && !col.field.includes("entity")) {
-              tableHTML += `<th>${col.title}</th>`;
-            }
-          });
-          tableHTML += "</tr></thead>";
+
+        if (assets.length === 0) {
+          tilesContainer.innerHTML = `
+            <div class="no-data-message">
+              <i class="fa-solid fa-university" style="font-size: 2rem; color: var(--title-color); opacity: 0.5; margin-bottom: 10px;"></i>
+              <p style="color: var(--title-color); text-align: center; margin: 0; font-size: 14px;">
+                No accounts found
+              </p>
+              <p style="color: var(--title-color); text-align: center; margin: 5px 0 0 0; font-size: 12px; opacity: 0.7;">
+                Add your first account to get started
+              </p>
+            </div>
+          `;
+          return;
         }
-        tableHTML += "<tbody>";
+
+        let tilesHTML = '';
         assets.forEach((asset) => {
-          tableHTML += '<tr class="category-row">';
-          data.columns.forEach((col) => {
-            if (col.field !== "id" && !col.field.includes("entity")) {
-              tableHTML += `<td>${asset[col.field] ?? ""}</td>`;
-            }
-          });
-          tableHTML += "</tr>";
+          const accountType = asset.account_type?.toLowerCase() || 'bank';
+          const isCard = accountType.includes('card') || accountType.includes('credit');
+          const tileClass = isCard ? 'account-tile card-account-tile' : 'account-tile';
+          const iconClass = isCard ? 'card' : 'bank';
+          const icon = isCard ? 'fa-credit-card' : 'fa-university';
+
+          tilesHTML += `
+            <div class="${tileClass}" data-account-id="${asset.id || ''}">
+              <div class="account-tile-header">
+                <div class="account-tile-icon ${iconClass}">
+                  <i class="fa-solid ${icon}"></i>
+                </div>
+                <div class="account-tile-info">
+                  <h3>${asset.account_name || 'Unknown Account'}</h3>
+                  <p>${asset.account_type || 'Account'}</p>
+                </div>
+              </div>
+              <div class="account-tile-body">
+                <div class="account-tile-balance">${asset.balance || '$0.00'}</div>
+                <div class="account-tile-type">${asset.institution || 'Financial Institution'}</div>
+              </div>
+              <div class="account-tile-footer">
+                <div class="account-tile-status">
+                  Last updated: ${asset.last_updated || 'Never'}
+                </div>
+              </div>
+            </div>
+          `;
         });
-        tableHTML += "</tbody></table>";
-        tableContainer.innerHTML = tableHTML;
+
+        tilesContainer.innerHTML = tilesHTML;
       })
       .catch((error) => {
         console.error("Error fetching assets data:", error);
+        tilesContainer.innerHTML = `
+          <div class="no-data-message">
+            <i class="fa-solid fa-exclamation-triangle" style="font-size: 2rem; color: var(--red-color); opacity: 0.7; margin-bottom: 10px;"></i>
+            <p style="color: var(--title-color); text-align: center; margin: 0; font-size: 14px;">
+              Unable to load accounts
+            </p>
+            <p style="color: var(--title-color); text-align: center; margin: 5px 0 0 0; font-size: 12px; opacity: 0.7;">
+              Please try refreshing the page
+            </p>
+          </div>
+        `;
       });
   }
   fetchAndRenderAssets();
@@ -418,10 +483,37 @@ function initTopCategories() {
       .then((data) => {
         if (data.error) {
           console.error("Error fetching top categories data:", data.error);
+          container.innerHTML = `
+            <div class="no-data-message">
+              <i class="fa-solid fa-exclamation-triangle" style="font-size: 2rem; color: var(--red-color); opacity: 0.7; margin-bottom: 10px;"></i>
+              <p style="color: var(--title-color); text-align: center; margin: 0; font-size: 14px;">
+                Unable to load spending categories
+              </p>
+              <p style="color: var(--title-color); text-align: center; margin: 5px 0 0 0; font-size: 12px; opacity: 0.7;">
+                Please try refreshing the page
+              </p>
+            </div>
+          `;
           return;
         }
 
         const categories = data.categories || [];
+
+        // Check if there are no categories
+        if (categories.length === 0) {
+          container.innerHTML = `
+            <div class="no-data-message">
+              <i class="fa-solid fa-chart-line" style="font-size: 2rem; color: var(--title-color); opacity: 0.5; margin-bottom: 10px;"></i>
+              <p style="color: var(--title-color); text-align: center; margin: 0; font-size: 14px;">
+                No spending data for the selected period
+              </p>
+              <p style="color: var(--title-color); text-align: center; margin: 5px 0 0 0; font-size: 12px; opacity: 0.7;">
+                Add some expenses to see your top categories
+              </p>
+            </div>
+          `;
+          return;
+        }
 
         // Render list view
         let categoryHTML = "";
@@ -446,6 +538,17 @@ function initTopCategories() {
       })
       .catch((error) => {
         console.error("Error fetching top categories data:", error);
+        container.innerHTML = `
+          <div class="no-data-message">
+            <i class="fa-solid fa-wifi" style="font-size: 2rem; color: var(--red-color); opacity: 0.7; margin-bottom: 10px;"></i>
+            <p style="color: var(--title-color); text-align: center; margin: 0; font-size: 14px;">
+              Connection error
+            </p>
+            <p style="color: var(--title-color); text-align: center; margin: 5px 0 0 0; font-size: 12px; opacity: 0.7;">
+              Check your internet connection and try again
+            </p>
+          </div>
+        `;
       });
   }
 
@@ -464,8 +567,11 @@ function initSankeyChart() {
   const container = document.getElementById("sankey-cash-flow");
   if (!container) return;
 
-  // Ensure container height is set to 80vh for responsive design
-  container.style.height = "80vh";
+  // Set container dimensions for proper containment
+  container.style.width = "100%";
+  container.style.height = "500px";
+  container.style.position = "relative";
+  container.style.overflow = "hidden";
   // Load Plotly.js if not already loaded
   if (typeof Plotly === "undefined") {
     const script = document.createElement("script");
@@ -483,17 +589,29 @@ function initSankeyChart() {
       .then((response) => response.json())
       .then((data) => {
         if (data.success) {
-          // Get container dimensions for responsive sizing
-          const containerWidth = container.clientWidth;
-          const containerHeight = container.clientHeight || 500;
+          // Get container dimensions with padding adjustment
+          const containerWidth = container.clientWidth - 20; // Account for padding
+          const containerHeight = container.clientHeight - 20; // Account for padding
 
-          // Update the layout to be responsive
+          // Update the layout to be properly contained
           const layout = {
             ...data.data.layout,
-            width: containerWidth, // Use full container width
-            height: containerHeight, // Use full container height
-            autosize: true,
-            margin: { l: 20, r: 20, t: 60, b: 20 },
+            width: containerWidth,
+            height: containerHeight,
+            autosize: false, // Disable autosize to prevent overflow
+            margin: { l: 20, r: 20, t: 40, b: 20 }, // Reduced margins
+            paper_bgcolor: "rgba(0,0,0,0)",
+            plot_bgcolor: "rgba(0,0,0,0)",
+            font: {
+              size: 12,
+              color: "#ffffff",
+              family: "Open Sans, sans-serif"
+            },
+            hoverlabel: {
+              bgcolor: "#2d2d2d",
+              bordercolor: "#98cc2c",
+              font: { color: "#ffffff", family: "Open Sans, sans-serif" }
+            },
           };
 
           // Calculate node-local percentages for each link
@@ -515,27 +633,34 @@ function initSankeyChart() {
           sankeyData.link.hovertemplate =
             "%{source.label} → %{target.label}<br>Value: %{value}<br>Percent: %{customdata}<extra></extra>";
 
-          // Render the chart
+          // Render the chart with proper containment
           Plotly.newPlot("sankey-cash-flow", data.data.data, layout, {
-            responsive: true,
+            responsive: false, // Disable responsive to prevent overflow
             displayModeBar: false,
             staticPlot: false,
             scrollZoom: false,
             doubleClick: false,
             showTips: false,
             displaylogo: false,
-            autosize: true,
+            autosize: false, // Disable autosize
+            modeBarButtonsToRemove: ['zoom2d', 'pan2d', 'select2d', 'lasso2d', 'autoScale2d'],
           });
 
           // Handle window resize for responsiveness
+          let resizeTimeout;
           window.addEventListener("resize", function () {
-            const newWidth = container.clientWidth;
-            const newHeight = container.clientHeight;
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+              const newWidth = container.clientWidth - 20;
+              const newHeight = container.clientHeight - 20;
 
-            Plotly.relayout("sankey-cash-flow", {
-              width: newWidth,
-              height: newHeight,
-            });
+              if (newWidth > 0 && newHeight > 0) {
+                Plotly.relayout("sankey-cash-flow", {
+                  width: newWidth,
+                  height: newHeight,
+                });
+              }
+            }, 250); // Debounce the resize event
           });
         } else {
           console.error("Failed to load Sankey data:", data.error);

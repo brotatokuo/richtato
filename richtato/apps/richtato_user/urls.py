@@ -37,6 +37,12 @@ urlpatterns = [
     path(
         "api/check-username/", views.check_username_availability, name="check_username"
     ),
+    path("api/update-username/", views.update_username, name="update_username"),
+    path("api/change-password/", views.change_password, name="change_password"),
+    path(
+        "api/update-preferences/", views.update_preferences, name="update_preferences"
+    ),
+    path("api/delete-account/", views.delete_account, name="delete_account"),
 ]
 
 urlpatterns += [
