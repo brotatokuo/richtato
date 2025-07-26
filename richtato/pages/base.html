@@ -99,7 +99,10 @@
             <li>
               <a href="{% url 'profile' %}" class="sidebar-link">
                 <i class="fa-regular fa-user fa-fw"></i>
-                <span>Profile</span>
+                <span class="user-info">
+                  <span class="user-label">Profile</span>
+                  <span class="username">{{ user.username }}</span>
+                </span>
               </a>
             </li>
             <li>

@@ -2201,6 +2201,29 @@ table.dataTable tbody td.custom-checkbox::before {
   gap: 12px;
 }
 
+/* Categories List */
+.categories-list {
+  width: 100%;
+}
+
+/* Sidebar User Info */
+.user-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.user-label {
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.username {
+  font-size: 0.75em;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .profile-header {

@@ -154,8 +154,8 @@ class AccountTilesManager {
     this.essentialCategoriesContainer.innerHTML = '';
     this.nonessentialCategoriesContainer.innerHTML = '';
 
-    // Separate categories by type
-    const essentialCategories = categories.filter(cat => cat.type.toLowerCase().includes('essential'));
+    // Separate categories by type - be more specific to avoid cross-matching
+    const essentialCategories = categories.filter(cat => cat.type.toLowerCase() === 'essential');
     const nonessentialCategories = categories.filter(cat => cat.type.toLowerCase().includes('non'));
 
     console.log('Essential categories:', essentialCategories);
@@ -280,7 +280,6 @@ class AccountTilesManager {
       <div class="category-tile-body">
         <div class="category-tile-info">
           <h3>${category.name}</h3>
-          <p>${category.type}</p>
         </div>
       </div>
     `;

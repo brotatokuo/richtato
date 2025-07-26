@@ -214,7 +214,10 @@ class CategoryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request) -> Response:
-        categories = Category.objects.filter(user=request.user)
+        # Only return categories that have been used in expenses (have transactions)
+        categories = Category.objects.filter(
+            user=request.user, transactions__isnull=False
+        ).distinct()
         rows = []
         for category in categories:
             rows.append(

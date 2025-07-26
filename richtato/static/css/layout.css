@@ -623,10 +623,10 @@ main .main-content .title::after {
 
 .general-info-section2 {
   display: flex;
-  justify-content: center;
-  /* Centers horizontally */
-  align-items: center;
-  /* Centers vertically */
+  justify-content: flex-start;
+  /* Aligns left horizontally */
+  align-items: flex-start;
+  /* Aligns top vertically */
   flex-direction: column;
   /* Stacks the elements vertically */
 }
