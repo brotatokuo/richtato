@@ -637,11 +637,15 @@ function loadBudgetOverview() {
   if (!yearSelect || !monthSelect || !overviewContainer) return;
 
   const year = yearSelect.value;
-  const month = monthSelect.value;
+  const monthNum = monthSelect.value;
 
-  if (!year || !month) return;
+  if (!year || !monthNum) return;
 
-  const url = `/get-budget-rankings/?year=${year}&month=${month}`;
+  // Convert numeric month to month abbreviation
+  const monthAbbr = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][parseInt(monthNum)];
+
+  const url = `/get-budget-rankings/?year=${year}&month=${monthAbbr}`;
 
   fetch(url)
     .then(response => response.json())
@@ -1022,13 +1026,136 @@ function renderBudgetTiles(budgets, container) {
 }
 
 function showAddBudgetForm() {
-  // This could open a modal or redirect to budget creation
-  // For now, we'll scroll to the active budget tiles container
-  const tilesContainer = document.getElementById('active-budget-tiles');
-  if (tilesContainer) {
-    tilesContainer.scrollIntoView({ behavior: 'smooth' });
-    // You could also open an add budget modal here
+  const modal = document.getElementById('budget-modal');
+  if (modal) {
+    // Load categories for the dropdown
+    loadBudgetCategories();
+
+    // Set default start date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('budget-start-date').value = today;
+
+    // Show the modal
+    modal.style.display = 'block';
+
+    // Set up event listeners if not already done
+    setupBudgetModalEventListeners();
   }
+}
+
+function loadBudgetCategories() {
+  const categorySelect = document.getElementById('budget-category');
+  if (!categorySelect) return;
+
+  // Fetch categories from the API
+  fetch('/api/budget/field-choices/')
+    .then(response => response.json())
+    .then(data => {
+      categorySelect.innerHTML = '<option value="">Select a category</option>';
+      if (data.category) {
+        data.category.forEach(cat => {
+          const option = document.createElement('option');
+          option.value = cat.value;
+          option.textContent = cat.label;
+          categorySelect.appendChild(option);
+        });
+      }
+    })
+    .catch(error => {
+      console.error('Error loading categories:', error);
+    });
+}
+
+function setupBudgetModalEventListeners() {
+  const modal = document.getElementById('budget-modal');
+  const closeBtn = document.getElementById('budget-modal-close');
+  const cancelBtn = document.getElementById('budget-cancel');
+  const form = document.getElementById('budget-form');
+
+  // Close modal events
+  if (closeBtn) {
+    closeBtn.onclick = () => closeBudgetModal();
+  }
+  if (cancelBtn) {
+    cancelBtn.onclick = () => closeBudgetModal();
+  }
+
+  // Close on outside click
+  if (modal) {
+    modal.onclick = (e) => {
+      if (e.target === modal) closeBudgetModal();
+    };
+  }
+
+  // Form submission
+  if (form) {
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      submitBudgetForm();
+    };
+  }
+}
+
+function closeBudgetModal() {
+  const modal = document.getElementById('budget-modal');
+  if (modal) {
+    modal.style.display = 'none';
+    // Reset form
+    const form = document.getElementById('budget-form');
+    if (form) form.reset();
+  }
+}
+
+function submitBudgetForm() {
+  const form = document.getElementById('budget-form');
+  if (!form) return;
+
+  const formData = new FormData(form);
+  const budgetData = {
+    category: formData.get('category'),
+    amount: parseFloat(formData.get('amount')),
+    start_date: formData.get('start_date'),
+    end_date: formData.get('end_date') || null
+  };
+
+  // Validate required fields
+  if (!budgetData.category || !budgetData.amount || !budgetData.start_date) {
+    alert('Please fill in all required fields');
+    return;
+  }
+
+  // Submit to API
+  fetch('/api/budget/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrfToken()
+    },
+    body: JSON.stringify(budgetData)
+  })
+  .then(response => {
+    if (response.ok) {
+      return response.json();
+    }
+    throw new Error('Failed to create budget');
+  })
+  .then(data => {
+    console.log('Budget created successfully:', data);
+    closeBudgetModal();
+    // Refresh budget displays
+    loadBudgetOverview();
+    loadBudgetTiles();
+    loadPastBudgetsTable();
+  })
+  .catch(error => {
+    console.error('Error creating budget:', error);
+    alert('Failed to create budget. Please try again.');
+  });
+}
+
+function getCsrfToken() {
+  const token = document.querySelector('[name=csrfmiddlewaretoken]');
+  return token ? token.value : '';
 }
 
 function getCategoryIcons() {

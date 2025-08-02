@@ -489,7 +489,7 @@ function initAssetsSection() {
             const balance = asset.balance && asset.balance !== '$0.00' ? asset.balance : 'No balance';
 
             tilesHTML += `
-              <div class="${tileClass}" data-account-id="${asset.id || ''}">
+              <div class="${tileClass}" data-account-id="${asset.id || ''}" onclick="openAccountChart(${asset.id})" style="cursor: pointer;">
                 <div class="account-tile-header">
                   <div class="account-tile-icon ${iconClass}">
                     <i class="fa-solid ${icon}"></i>
@@ -530,6 +530,13 @@ function initAssetsSection() {
       });
   }
   fetchAndRenderAssets();
+}
+
+// Function to open account transaction chart
+function openAccountChart(accountId) {
+  if (accountId) {
+    window.location.href = `/accounts/${accountId}/chart/`;
+  }
 }
 
 // 5. Top Categories List

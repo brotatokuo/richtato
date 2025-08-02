@@ -6,6 +6,7 @@ from .views import (
     AccountDetailFieldChoicesAPIView,
     AccountFieldChoicesAPIView,
     AccountTransactionsAPIView,
+    AccountTransactionChartView,
 )
 
 page_name = "accounts"
@@ -25,4 +26,9 @@ urlpatterns = [
     path(
         f"api/{page_name}/<int:pk>/transactions/", AccountTransactionsAPIView.as_view()
     ),  # GET, POST, PATCH, DELETE
+    path(
+        f"{page_name}/<int:account_id>/chart/",
+        AccountTransactionChartView.as_view(),
+        name="account_transaction_chart",
+    ),
 ]

@@ -1,5 +1,6 @@
 from django.db.models import F
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
+from django.views.generic import TemplateView
 from loguru import logger
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
@@ -207,3 +208,17 @@ class AccountDetailFieldChoicesAPIView(APIView):
     def _get_user_accounts(self, user) -> list[dict]:
         user_accounts = Account.objects.filter(user=user).values("id", "name")
         return [{"value": acc["id"], "label": acc["name"]} for acc in user_accounts]
+
+
+class AccountTransactionChartView(TemplateView):
+    template_name = "account_transaction_chart.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        account_id = kwargs["account_id"]
+
+        account = get_object_or_404(Account, pk=account_id, user=self.request.user)
+        context["account"] = account
+        context["account_id"] = account_id
+
+        return context
