@@ -927,13 +927,13 @@ table.dataTable tbody td.custom-checkbox::before {
 }
 
 .budget-overview-card {
-  background: linear-gradient(135deg, var(--secondary-color) 0%, rgba(45, 45, 45, 0.8) 100%);
   border: 1px solid rgba(152, 204, 44, 0.2);
   border-radius: 12px;
   padding: 20px;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  width: 300px;
 }
 
 .budget-overview-card:hover {

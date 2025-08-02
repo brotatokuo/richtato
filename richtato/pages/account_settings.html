@@ -157,10 +157,6 @@
       </button>
     </div>
 
-    <!-- Budget Overview Cards -->
-    <div id="budget-overview" class="budget-overview-container">
-      <!-- Budget overview will be populated here -->
-    </div>
 
     <!-- Active Budgets - Tiles -->
     <div class="budget-section">
@@ -226,7 +222,7 @@
 </div>
 
 <!-- Budget Modal -->
-<div id="budget-modal" class="account-modal" style="display: none;">
+<div id="budget-modal" class="account-modal budget-modal-centered" style="display: none;">
   <div class="account-modal-content">
     <button class="account-modal-close" id="budget-modal-close">
       <i class="fas fa-times"></i>
@@ -244,7 +240,7 @@
       <form id="budget-form">
         <div class="form-group">
           <label for="budget-category">Category</label>
-          <select id="budget-category" name="category" required>
+          <select id="budget-category" name="category" class="modal-dropdown" required>
             <option value="">Select a category</option>
           </select>
         </div>
@@ -271,6 +267,299 @@
     </div>
   </div>
 </div>
+
+<!-- Add Account Modal -->
+<div id="add-account-modal" class="account-modal budget-modal-centered" style="display: none;">
+  <div class="account-modal-content">
+    <button class="account-modal-close" id="add-account-modal-close">
+      <i class="fas fa-times"></i>
+    </button>
+    <div class="account-modal-header">
+      <div class="account-modal-icon">
+        <i class="fas fa-university"></i>
+      </div>
+      <div class="account-modal-title">
+        <h3>Add Account</h3>
+        <p>Create a new bank account</p>
+      </div>
+    </div>
+    <div class="account-modal-form">
+      <form id="add-account-form">
+        <div class="form-group">
+          <label for="account-name">Account Name</label>
+          <input type="text" id="account-name" name="name" required placeholder="e.g. Main Checking">
+        </div>
+        <div class="form-group">
+          <label for="account-type">Account Type</label>
+          <select id="account-type" name="type" class="modal-dropdown" required>
+            <option value="">Select account type</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="account-entity">Bank/Institution</label>
+          <input type="text" id="account-entity" name="entity" required placeholder="e.g. Chase Bank">
+        </div>
+        <div class="form-group">
+          <label for="account-balance">Current Balance ($)</label>
+          <input type="number" id="account-balance" name="balance" step="0.01" placeholder="0.00">
+        </div>
+        <div class="account-modal-actions">
+          <button type="button" class="account-modal-btn cancel" id="add-account-cancel">Cancel</button>
+          <button type="submit" class="account-modal-btn edit">
+            <i class="fas fa-plus"></i>
+            Create Account
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add Card Account Modal -->
+<div id="add-card-modal" class="account-modal budget-modal-centered" style="display: none;">
+  <div class="account-modal-content">
+    <button class="account-modal-close" id="add-card-modal-close">
+      <i class="fas fa-times"></i>
+    </button>
+    <div class="account-modal-header">
+      <div class="account-modal-icon">
+        <i class="fas fa-credit-card"></i>
+      </div>
+      <div class="account-modal-title">
+        <h3>Add Card Account</h3>
+        <p>Create a new credit card account</p>
+      </div>
+    </div>
+    <div class="account-modal-form">
+      <form id="add-card-form">
+        <div class="form-group">
+          <label for="card-name">Card Name</label>
+          <input type="text" id="card-name" name="name" required placeholder="e.g. Chase Sapphire Preferred">
+        </div>
+        <div class="form-group">
+          <label for="card-bank">Bank/Issuer</label>
+          <select id="card-bank" name="bank" class="modal-dropdown" required>
+            <option value="">Select bank</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="card-last-four">Last 4 Digits (Optional)</label>
+          <input type="text" id="card-last-four" name="last_four" maxlength="4" pattern="[0-9]{4}" placeholder="1234">
+        </div>
+        <div class="account-modal-actions">
+          <button type="button" class="account-modal-btn cancel" id="add-card-cancel">Cancel</button>
+          <button type="submit" class="account-modal-btn edit">
+            <i class="fas fa-plus"></i>
+            Create Card
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add Category Modal -->
+<div id="add-category-modal" class="account-modal budget-modal-centered" style="display: none;">
+  <div class="account-modal-content">
+    <button class="account-modal-close" id="add-category-modal-close">
+      <i class="fas fa-times"></i>
+    </button>
+    <div class="account-modal-header">
+      <div class="account-modal-icon">
+        <i class="fas fa-tag"></i>
+      </div>
+      <div class="account-modal-title">
+        <h3>Add Category</h3>
+        <p>Create a new expense category</p>
+      </div>
+    </div>
+    <div class="account-modal-form">
+      <form id="add-category-form">
+        <div class="form-group">
+          <label for="category-name">Category Name</label>
+          <input type="text" id="category-name" name="name" required placeholder="e.g. Online Shopping">
+        </div>
+        <div class="form-group">
+          <label for="category-type">Category Type</label>
+          <select id="category-type" name="type" class="modal-dropdown" required>
+            <option value="">Select category type</option>
+            <option value="essential">Essential</option>
+            <option value="nonessential">Non-Essential</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="category-icon">Icon (Font Awesome class)</label>
+          <input type="text" id="category-icon" name="icon" placeholder="e.g. fas fa-shopping-bag">
+        </div>
+        <div class="form-group">
+          <label for="category-color">Color (Hex code)</label>
+          <input type="text" id="category-color" name="color" pattern="^#[0-9A-Fa-f]{6}$" placeholder="#98cc2c">
+        </div>
+        <div class="account-modal-actions">
+          <button type="button" class="account-modal-btn cancel" id="add-category-cancel">Cancel</button>
+          <button type="submit" class="account-modal-btn edit">
+            <i class="fas fa-plus"></i>
+            Create Category
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+.budget-modal-centered {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  justify-content: center !important;
+  align-items: center !important;
+  z-index: 1000 !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+.budget-modal-centered[style*="flex"] {
+  display: flex !important;
+}
+
+.budget-modal-centered .account-modal-content {
+  position: relative !important;
+  max-width: 500px !important;
+  width: 90% !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+  margin: 0 !important;
+}
+
+/* Budget form styling to match existing design */
+#budget-form .form-group {
+  position: relative;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+}
+
+#budget-form .form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--title-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+#budget-form .form-group input,
+#budget-form .form-group select {
+  width: 100%;
+  padding: 12px;
+  background: var(--primary-color);
+  border: 1px solid rgba(152, 204, 44, 0.3);
+  border-radius: var(--secondary-radius);
+  color: var(--text-color);
+  font-size: 14px;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+#budget-form .form-group input:focus,
+#budget-form .form-group select:focus {
+  outline: none;
+  border-color: var(--green-color);
+  box-shadow: 0 0 0 2px rgba(152, 204, 44, 0.2);
+}
+
+#budget-form .form-group select:hover {
+  border-color: var(--green-color);
+}
+
+/* Style the dropdown arrow - Apply to all modal form selects */
+.modal-dropdown {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fffffff6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px;
+}
+
+/* Legacy support for existing budget form */
+#budget-form .form-group select {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fffffff6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px;
+}
+
+/* Enhanced Add Budget button */
+.primary-btn {
+  padding: 12px 20px;
+  background: var(--green-color);
+  color: #000;
+  border: none;
+  border-radius: var(--secondary-radius);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.primary-btn:hover {
+  background: var(--darker-green-color, #81af26);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(152, 204, 44, 0.3);
+}
+
+.primary-btn:active {
+  transform: translateY(0);
+}
+
+/* Modal button improvements */
+#budget-form .account-modal-btn.edit {
+  background: var(--green-color);
+  color: #000;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+#budget-form .account-modal-btn.edit:hover {
+  background: var(--darker-green-color, #81af26);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(152, 204, 44, 0.3);
+}
+
+#budget-form .account-modal-btn.cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+#budget-form .account-modal-btn.cancel:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Make active budget cards 3 times wider */
+#active-budget-tiles .budget-category-item {
+  width: 300% !important;
+  max-width: none !important;
+}
+
+/* Alternative selector in case the class name is different */
+#active-budget-tiles .square-widget {
+  width: 300% !important;
+  max-width: none !important;
+}
+</style>
 
 <script src="{% static 'js/pages/accountSettings.js' %}"></script>
 

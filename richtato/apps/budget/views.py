@@ -143,10 +143,17 @@ class BudgetAPIView(BaseAPIView):
     def field_remap(self):
         return {}
 
-    def get(self, request):
+    def get(self, request, pk=None):
         """
-        Get budget entries for the user.
+        Get budget entries for the user, or a specific budget if pk is provided.
         """
+        if pk:
+            # Get specific budget
+            budget = get_object_or_404(Budget, pk=pk, user=request.user)
+            serializer = BudgetSerializer(budget)
+            return Response(serializer.data)
+
+        # Get all budgets
         limit_param = request.GET.get("limit", None)
         try:
             limit = int(limit_param) if limit_param else None

@@ -495,15 +495,52 @@ class AccountTilesManager {
   }
 
   showAddCardAccountModal() {
-    console.log('Show add card account modal');
+    const modal = document.getElementById('add-card-modal');
+    if (modal) {
+      // Load bank options for the dropdown
+      this.loadCardBankOptions();
+
+      // Set up event listeners if not already done
+      this.setupAddCardModalEventListeners();
+      modal.style.display = 'flex';
+    }
   }
 
   showAddAccountModal(accountType = null) {
-    console.log('Show add account modal for type:', accountType);
+    const modal = document.getElementById('add-account-modal');
+    if (modal) {
+      // Load account type options for the dropdown
+      this.loadAccountTypeOptions().then(() => {
+        // Pre-select account type if provided after options are loaded
+        if (accountType) {
+          const typeSelect = document.getElementById('account-type');
+          if (typeSelect) {
+            typeSelect.value = accountType;
+          }
+        }
+      });
+
+      // Set up event listeners if not already done
+      this.setupAddAccountModalEventListeners();
+      modal.style.display = 'flex';
+    }
   }
 
   showAddCategoryModal(type = 'category') {
-    console.log('Show add category modal for type:', type);
+    const modal = document.getElementById('add-category-modal');
+    if (modal) {
+      // Pre-select category type if provided
+      if (type === 'essential' || type === 'nonessential') {
+        const typeSelect = document.getElementById('category-type');
+        if (typeSelect) {
+          typeSelect.value = type;
+        }
+      }
+
+      // Set up event listeners if not already done
+      this.setupAddCategoryModalEventListeners();
+      modal.style.display = 'flex';
+    }
   }
 
   editCardAccount(id) {
@@ -528,6 +565,278 @@ class AccountTilesManager {
       console.log('Delete account:', id);
       // TODO: Implement delete functionality
     }
+  }
+
+  setupAddAccountModalEventListeners() {
+    if (this.addAccountListenersSetup) return;
+
+    const modal = document.getElementById('add-account-modal');
+    const closeBtn = document.getElementById('add-account-modal-close');
+    const cancelBtn = document.getElementById('add-account-cancel');
+    const form = document.getElementById('add-account-form');
+
+    // Close modal events
+    closeBtn?.addEventListener('click', () => this.closeAddAccountModal());
+    cancelBtn?.addEventListener('click', () => this.closeAddAccountModal());
+
+    // Close on outside click
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) this.closeAddAccountModal();
+    });
+
+    // Form submission
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.submitAddAccountForm();
+    });
+
+    this.addAccountListenersSetup = true;
+  }
+
+  setupAddCardModalEventListeners() {
+    if (this.addCardListenersSetup) return;
+
+    const modal = document.getElementById('add-card-modal');
+    const closeBtn = document.getElementById('add-card-modal-close');
+    const cancelBtn = document.getElementById('add-card-cancel');
+    const form = document.getElementById('add-card-form');
+
+    // Close modal events
+    closeBtn?.addEventListener('click', () => this.closeAddCardModal());
+    cancelBtn?.addEventListener('click', () => this.closeAddCardModal());
+
+    // Close on outside click
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) this.closeAddCardModal();
+    });
+
+    // Form submission
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.submitAddCardForm();
+    });
+
+    this.addCardListenersSetup = true;
+  }
+
+  setupAddCategoryModalEventListeners() {
+    if (this.addCategoryListenersSetup) return;
+
+    const modal = document.getElementById('add-category-modal');
+    const closeBtn = document.getElementById('add-category-modal-close');
+    const cancelBtn = document.getElementById('add-category-cancel');
+    const form = document.getElementById('add-category-form');
+
+    // Close modal events
+    closeBtn?.addEventListener('click', () => this.closeAddCategoryModal());
+    cancelBtn?.addEventListener('click', () => this.closeAddCategoryModal());
+
+    // Close on outside click
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) this.closeAddCategoryModal();
+    });
+
+    // Form submission
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.submitAddCategoryForm();
+    });
+
+    this.addCategoryListenersSetup = true;
+  }
+
+  closeAddAccountModal() {
+    const modal = document.getElementById('add-account-modal');
+    const form = document.getElementById('add-account-form');
+    if (modal) modal.style.display = 'none';
+    if (form) form.reset();
+  }
+
+  closeAddCardModal() {
+    const modal = document.getElementById('add-card-modal');
+    const form = document.getElementById('add-card-form');
+    if (modal) modal.style.display = 'none';
+    if (form) form.reset();
+  }
+
+  closeAddCategoryModal() {
+    const modal = document.getElementById('add-category-modal');
+    const form = document.getElementById('add-category-form');
+    if (modal) modal.style.display = 'none';
+    if (form) form.reset();
+  }
+
+  async submitAddAccountForm() {
+    const form = document.getElementById('add-account-form');
+    if (!form) return;
+
+    const formData = new FormData(form);
+    const accountData = {
+      name: formData.get('name'),
+      type: formData.get('type'),
+      entity: formData.get('entity'),
+      balance: parseFloat(formData.get('balance')) || 0
+    };
+
+    // Validate required fields
+    if (!accountData.name || !accountData.type || !accountData.entity) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/accounts/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': this.getCsrfToken()
+        },
+        body: JSON.stringify(accountData)
+      });
+
+      if (response.ok) {
+        console.log('Account created successfully');
+        this.closeAddAccountModal();
+        await this.loadAccounts(); // Refresh accounts display
+      } else {
+        throw new Error('Failed to create account');
+      }
+    } catch (error) {
+      console.error('Error creating account:', error);
+      alert('Failed to create account. Please try again.');
+    }
+  }
+
+  async submitAddCardForm() {
+    const form = document.getElementById('add-card-form');
+    if (!form) return;
+
+    const formData = new FormData(form);
+    const cardData = {
+      name: formData.get('name'),
+      bank: formData.get('bank'),
+      last_four: formData.get('last_four') || null
+    };
+
+    // Validate required fields
+    if (!cardData.name || !cardData.bank) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/card-accounts/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': this.getCsrfToken()
+        },
+        body: JSON.stringify(cardData)
+      });
+
+      if (response.ok) {
+        console.log('Card account created successfully');
+        this.closeAddCardModal();
+        await this.loadCardAccounts(); // Refresh card accounts display
+      } else {
+        throw new Error('Failed to create card account');
+      }
+    } catch (error) {
+      console.error('Error creating card account:', error);
+      alert('Failed to create card account. Please try again.');
+    }
+  }
+
+  async submitAddCategoryForm() {
+    const form = document.getElementById('add-category-form');
+    if (!form) return;
+
+    const formData = new FormData(form);
+    const categoryData = {
+      name: formData.get('name'),
+      type: formData.get('type'),
+      icon: formData.get('icon') || 'fas fa-tag',
+      color: formData.get('color') || '#98cc2c'
+    };
+
+    // Validate required fields
+    if (!categoryData.name || !categoryData.type) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/categories/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': this.getCsrfToken()
+        },
+        body: JSON.stringify(categoryData)
+      });
+
+      if (response.ok) {
+        console.log('Category created successfully');
+        this.closeAddCategoryModal();
+        await this.loadCategories(); // Refresh categories display
+      } else {
+        throw new Error('Failed to create category');
+      }
+    } catch (error) {
+      console.error('Error creating category:', error);
+      alert('Failed to create category. Please try again.');
+    }
+  }
+
+  loadCardBankOptions() {
+    const bankSelect = document.getElementById('card-bank');
+    if (!bankSelect) return;
+
+    // Fetch bank options from the API
+    fetch('/api/card-accounts/field-choices/')
+      .then(response => response.json())
+      .then(data => {
+        bankSelect.innerHTML = '<option value="">Select bank</option>';
+        if (data.bank) {
+          data.bank.forEach(bank => {
+            const option = document.createElement('option');
+            option.value = bank.value;
+            option.textContent = bank.label;
+            bankSelect.appendChild(option);
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Error loading bank options:', error);
+      });
+  }
+
+  async loadAccountTypeOptions() {
+    const typeSelect = document.getElementById('account-type');
+    if (!typeSelect) return;
+
+    try {
+      // Fetch account type options from the API
+      const response = await fetch('/api/accounts/field-choices/');
+      const data = await response.json();
+
+      typeSelect.innerHTML = '<option value="">Select account type</option>';
+      if (data.type) {
+        data.type.forEach(type => {
+          const option = document.createElement('option');
+          option.value = type.value;
+          option.textContent = type.label;
+          typeSelect.appendChild(option);
+        });
+      }
+    } catch (error) {
+      console.error('Error loading account type options:', error);
+    }
+  }
+
+  getCsrfToken() {
+    const token = document.querySelector('[name=csrfmiddlewaretoken]');
+    return token ? token.value : '';
   }
 }
 
@@ -632,9 +941,9 @@ function initBudgetOverview() {
 function loadBudgetOverview() {
   const yearSelect = document.getElementById('settings-budget-year');
   const monthSelect = document.getElementById('settings-budget-month');
-  const overviewContainer = document.getElementById('budget-overview');
+  const activeBudgetsContainer = document.getElementById('active-budget-tiles');
 
-  if (!yearSelect || !monthSelect || !overviewContainer) return;
+  if (!yearSelect || !monthSelect || !activeBudgetsContainer) return;
 
   const year = yearSelect.value;
   const monthNum = monthSelect.value;
@@ -645,16 +954,34 @@ function loadBudgetOverview() {
   const monthAbbr = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][parseInt(monthNum)];
 
-  const url = `/get-budget-rankings/?year=${year}&month=${monthAbbr}`;
+  // Fetch both budget rankings and budget list to get IDs
+  const rankingsUrl = `/get-budget-rankings/?year=${year}&month=${monthAbbr}`;
+  const budgetsUrl = `/api/budget/`;
 
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      renderBudgetOverview(data.category_rankings || [], overviewContainer);
+  Promise.all([
+    fetch(rankingsUrl).then(response => response.json()),
+    fetch(budgetsUrl).then(response => response.json())
+  ])
+    .then(([rankingsData, budgetsData]) => {
+      const rankings = rankingsData.category_rankings || [];
+      const budgets = budgetsData.rows || [];
+
+      // Merge the data to include IDs
+      const mergedBudgets = rankings.map(ranking => {
+        const matchingBudget = budgets.find(b =>
+          (b.category_name || b.category) === ranking.name
+        );
+        return {
+          ...ranking,
+          id: matchingBudget ? matchingBudget.id : null
+        };
+      });
+
+      renderBudgetOverview(mergedBudgets, activeBudgetsContainer);
     })
     .catch(error => {
       console.error('Error loading budget overview:', error);
-      overviewContainer.innerHTML = `
+      activeBudgetsContainer.innerHTML = `
         <div class="no-data-message">
           <i class="fa-solid fa-exclamation-triangle" style="font-size: 2rem; color: var(--red-color); opacity: 0.7; margin-bottom: 10px;"></i>
           <p style="color: var(--title-color); text-align: center; margin: 0; font-size: 14px;">
@@ -700,7 +1027,7 @@ function renderBudgetOverview(budgets, container) {
     else if (percentage >= 80) statusClass = 'warning';
 
     return `
-      <div class="budget-overview-card">
+      <div class="budget-overview-card" onclick="editBudget(${budget.id || 'null'})" style="cursor: pointer;">
         <div class="budget-overview-header">
           <div class="budget-overview-icon">
             <i class="${icon}"></i>
@@ -745,35 +1072,9 @@ function initBudgetTiles() {
 }
 
 function loadBudgetTiles() {
-  const tilesContainer = document.getElementById('active-budget-tiles');
-  if (!tilesContainer) return;
-
-  // Load all budgets and filter for active ones
-  const url = `/api/budget/`;
-
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      const allBudgets = data.rows || [];
-      const activeBudgets = filterActiveBudgets(allBudgets);
-      renderActiveBudgetTiles(activeBudgets, tilesContainer);
-    })
-    .catch(error => {
-      console.error('Error loading budget tiles:', error);
-      tilesContainer.innerHTML = `
-        <div class="budget-tile" style="width: 100%; text-align: center; padding: 40px;">
-          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <i class="fa-solid fa-exclamation-triangle" style="font-size: 2rem; color: var(--red-color); opacity: 0.7; margin-bottom: 15px;"></i>
-            <p style="color: var(--title-color); margin: 0; font-size: 16px; font-weight: 500;">
-              Unable to load active budgets
-            </p>
-            <p style="color: var(--title-color); margin: 8px 0 0 0; font-size: 14px; opacity: 0.7;">
-              Please try refreshing the page
-            </p>
-          </div>
-        </div>
-      `;
-    });
+  // This function is now handled by loadBudgetOverview()
+  // which renders the budget data directly in the active-budget-tiles container
+  loadBudgetOverview();
 }
 
 function filterActiveBudgets(budgets) {
@@ -928,7 +1229,7 @@ function renderPastBudgetsTable(budgets, tableBody) {
     const icon = categoryIcons[categoryName] || 'fa-solid fa-folder';
 
     return `
-      <tr>
+      <tr onclick="editBudget(${budget.id})" style="cursor: pointer;" onmouseover="this.style.backgroundColor='var(--secondary-color)'" onmouseout="this.style.backgroundColor=''">
         <td>
           <div style="display: flex; align-items: center; gap: 10px;">
             <div style="width: 30px; height: 30px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: var(--green-color); color: white; font-size: 14px;">
@@ -1025,6 +1326,8 @@ function renderBudgetTiles(budgets, container) {
   }).join('');
 }
 
+let budgetModalListenersSetup = false;
+
 function showAddBudgetForm() {
   const modal = document.getElementById('budget-modal');
   if (modal) {
@@ -1033,22 +1336,28 @@ function showAddBudgetForm() {
 
     // Set default start date to today
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('budget-start-date').value = today;
+    const startDateInput = document.getElementById('budget-start-date');
+    if (startDateInput) {
+      startDateInput.value = today;
+    }
+
+    // Set up event listeners only once
+    if (!budgetModalListenersSetup) {
+      setupBudgetModalEventListeners();
+      budgetModalListenersSetup = true;
+    }
 
     // Show the modal
-    modal.style.display = 'block';
-
-    // Set up event listeners if not already done
-    setupBudgetModalEventListeners();
+    modal.style.display = 'flex';  // Use flex since we have flexbox centering
   }
 }
 
 function loadBudgetCategories() {
   const categorySelect = document.getElementById('budget-category');
-  if (!categorySelect) return;
+  if (!categorySelect) return Promise.resolve();
 
   // Fetch categories from the API
-  fetch('/api/budget/field-choices/')
+  return fetch('/api/budget/field-choices/')
     .then(response => response.json())
     .then(data => {
       categorySelect.innerHTML = '<option value="">Select a category</option>';
@@ -1074,36 +1383,148 @@ function setupBudgetModalEventListeners() {
 
   // Close modal events
   if (closeBtn) {
-    closeBtn.onclick = () => closeBudgetModal();
+    closeBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      closeBudgetModal();
+    });
   }
   if (cancelBtn) {
-    cancelBtn.onclick = () => closeBudgetModal();
+    cancelBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      closeBudgetModal();
+    });
   }
 
   // Close on outside click
   if (modal) {
-    modal.onclick = (e) => {
-      if (e.target === modal) closeBudgetModal();
-    };
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        closeBudgetModal();
+      }
+    });
   }
 
   // Form submission
   if (form) {
-    form.onsubmit = (e) => {
+    form.addEventListener('submit', function(e) {
       e.preventDefault();
       submitBudgetForm();
-    };
+    });
   }
 }
 
-function closeBudgetModal() {
-  const modal = document.getElementById('budget-modal');
-  if (modal) {
-    modal.style.display = 'none';
-    // Reset form
-    const form = document.getElementById('budget-form');
-    if (form) form.reset();
+
+function getCsrfToken() {
+  const token = document.querySelector('[name=csrfmiddlewaretoken]');
+  return token ? token.value : '';
+}
+
+function editBudget(budgetId) {
+  if (!budgetId || budgetId === 'null' || budgetId === null) {
+    console.log('No budget ID provided - this budget may not be editable');
+    alert('This budget cannot be edited. Please try creating a new budget instead.');
+    return;
   }
+
+  // Fetch budget details
+  fetch(`/api/budget/${budgetId}/`)
+    .then(response => response.json())
+    .then(budget => {
+      showEditBudgetForm(budget);
+    })
+    .catch(error => {
+      console.error('Error loading budget for editing:', error);
+      alert('Failed to load budget details');
+    });
+}
+
+function showEditBudgetForm(budget) {
+  const modal = document.getElementById('budget-modal');
+  if (!modal) return;
+
+  // Remove any existing category displays immediately to prevent duplicates
+  const existingCategoryDisplay = modal.querySelector('.budget-category-display');
+  if (existingCategoryDisplay) {
+    existingCategoryDisplay.remove();
+  }
+
+  // Load categories for the dropdown and wait for them to load
+  loadBudgetCategories().then(() => {
+    // Populate form with existing budget data after categories are loaded
+    const categorySelect = document.getElementById('budget-category');
+    const categoryFormGroup = categorySelect ? categorySelect.closest('.form-group') : null;
+    const amountInput = document.getElementById('budget-amount');
+    const startDateInput = document.getElementById('budget-start-date');
+    const endDateInput = document.getElementById('budget-end-date');
+    const form = document.getElementById('budget-form');
+
+    // Get category name from budget data
+    let categoryName = '';
+    if (budget.category) {
+      // If budget.category is an ID, we need to get the name from the select options
+      if (categorySelect) {
+        const option = categorySelect.querySelector(`option[value="${budget.category}"]`);
+        categoryName = option ? option.textContent : 'Unknown Category';
+      }
+    }
+
+    // Hide the category dropdown and create a visual category display
+    if (categoryFormGroup) {
+      categoryFormGroup.style.display = 'none';
+
+      // Create category display element
+      const categoryDisplay = document.createElement('div');
+      categoryDisplay.className = 'budget-category-display';
+      categoryDisplay.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 12px; padding: 15px; background: var(--secondary-color); border-radius: 8px; margin-bottom: 20px;">
+          <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--green-color); display: flex; align-items: center; justify-content: center; font-size: 18px; color: #000;">
+            <i class="${getCategoryIcon(categoryName)}"></i>
+          </div>
+          <div>
+            <div style="font-weight: 600; color: var(--title-color); font-size: 16px;">${categoryName}</div>
+            <div style="font-size: 12px; color: var(--text-color); opacity: 0.7;">Budget Category</div>
+          </div>
+        </div>
+      `;
+
+      // Insert the category display before the amount input
+      const amountFormGroup = amountInput ? amountInput.closest('.form-group') : null;
+      if (amountFormGroup) {
+        amountFormGroup.parentNode.insertBefore(categoryDisplay, amountFormGroup);
+      }
+    }
+
+    if (amountInput) amountInput.value = budget.amount;
+    if (startDateInput) startDateInput.value = budget.start_date;
+    if (endDateInput) endDateInput.value = budget.end_date || '';
+
+    // Update modal title and subtitle
+    const modalTitle = modal.querySelector('.account-modal-title h3');
+    const modalSubtitle = modal.querySelector('.account-modal-title p');
+    if (modalTitle) modalTitle.textContent = 'Edit Budget';
+    if (modalSubtitle) modalSubtitle.textContent = `Update budget settings for ${categoryName}`;
+
+    // Update submit button text
+    const submitBtn = modal.querySelector('.account-modal-btn.edit');
+    if (submitBtn) {
+      submitBtn.innerHTML = '<i class="fas fa-save"></i> Update Budget';
+    }
+
+    // Store budget ID and category on form for submission
+    if (form) {
+      form.dataset.budgetId = budget.id;
+      form.dataset.budgetCategory = budget.category;
+    }
+
+    // Set up event listeners only once
+    if (!budgetModalListenersSetup) {
+      setupBudgetModalEventListeners();
+      budgetModalListenersSetup = true;
+    }
+
+    // Show the modal
+    modal.style.display = 'flex';
+  });
 }
 
 function submitBudgetForm() {
@@ -1111,8 +1532,11 @@ function submitBudgetForm() {
   if (!form) return;
 
   const formData = new FormData(form);
+  const budgetId = form.dataset.budgetId;
+  const isEditing = budgetId && budgetId !== 'undefined';
+
   const budgetData = {
-    category: formData.get('category'),
+    category: isEditing ? form.dataset.budgetCategory : formData.get('category'),
     amount: parseFloat(formData.get('amount')),
     start_date: formData.get('start_date'),
     end_date: formData.get('end_date') || null
@@ -1124,9 +1548,12 @@ function submitBudgetForm() {
     return;
   }
 
+  const url = isEditing ? `/api/budget/${budgetId}/` : '/api/budget/';
+  const method = isEditing ? 'PATCH' : 'POST';
+
   // Submit to API
-  fetch('/api/budget/', {
-    method: 'POST',
+  fetch(url, {
+    method: method,
     headers: {
       'Content-Type': 'application/json',
       'X-CSRFToken': getCsrfToken()
@@ -1137,10 +1564,10 @@ function submitBudgetForm() {
     if (response.ok) {
       return response.json();
     }
-    throw new Error('Failed to create budget');
+    throw new Error(`Failed to ${isEditing ? 'update' : 'create'} budget`);
   })
   .then(data => {
-    console.log('Budget created successfully:', data);
+    console.log(`Budget ${isEditing ? 'updated' : 'created'} successfully:`, data);
     closeBudgetModal();
     // Refresh budget displays
     loadBudgetOverview();
@@ -1148,14 +1575,52 @@ function submitBudgetForm() {
     loadPastBudgetsTable();
   })
   .catch(error => {
-    console.error('Error creating budget:', error);
-    alert('Failed to create budget. Please try again.');
+    console.error(`Error ${isEditing ? 'updating' : 'creating'} budget:`, error);
+    alert(`Failed to ${isEditing ? 'update' : 'create'} budget. Please try again.`);
   });
 }
 
-function getCsrfToken() {
-  const token = document.querySelector('[name=csrfmiddlewaretoken]');
-  return token ? token.value : '';
+function closeBudgetModal() {
+  const modal = document.getElementById('budget-modal');
+  if (modal) {
+    modal.style.display = 'none';
+    // Reset form
+    const form = document.getElementById('budget-form');
+    if (form) {
+      form.reset();
+      delete form.dataset.budgetId;
+      delete form.dataset.budgetCategory;
+    }
+
+    // Remove category display if it exists
+    const categoryDisplay = modal.querySelector('.budget-category-display');
+    if (categoryDisplay) {
+      categoryDisplay.remove();
+    }
+
+    // Show category dropdown again
+    const categoryFormGroup = modal.querySelector('#budget-category')?.closest('.form-group');
+    if (categoryFormGroup) {
+      categoryFormGroup.style.display = '';
+    }
+
+    // Reset modal title and subtitle
+    const modalTitle = modal.querySelector('.account-modal-title h3');
+    const modalSubtitle = modal.querySelector('.account-modal-title p');
+    if (modalTitle) modalTitle.textContent = 'Add Budget';
+    if (modalSubtitle) modalSubtitle.textContent = 'Create a new budget for a category';
+
+    const submitBtn = modal.querySelector('.account-modal-btn.edit');
+    if (submitBtn) {
+      submitBtn.innerHTML = '<i class="fas fa-plus"></i> Create Budget';
+    }
+  }
+}
+
+function getCategoryIcon(categoryName) {
+  const icons = getCategoryIcons();
+  const normalized = categoryName.toLowerCase().trim();
+  return icons[normalized] || 'fa-folder';
 }
 
 function getCategoryIcons() {
