@@ -397,6 +397,33 @@ input[type="password"]:focus {
   border-color: #888;
 }
 
+/* Modern Dropdown Styling */
+.modern-dropdown {
+  width: 100%;
+  padding: 12px;
+  background: var(--primary-color);
+  border: 1px solid rgba(152, 204, 44, 0.3);
+  border-radius: var(--secondary-radius);
+  color: var(--text-color);
+  font-size: 14px;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.modern-dropdown:focus {
+  outline: none;
+  border-color: var(--green-color);
+  box-shadow: 0 0 0 2px rgba(152, 204, 44, 0.2);
+}
+
+.modern-dropdown:hover {
+  border-color: rgba(152, 204, 44, 0.6);
+}
+
 .page-title {
   justify-content: center;
   text-align: center;

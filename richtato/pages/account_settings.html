@@ -3,6 +3,10 @@
 {% block title %} Settings {% endblock %}
 <!-- prettier-ignore-start -->
 {% block content %}
+<!-- Hidden form for CSRF token -->
+<form style="display: none;">
+  {% csrf_token %}
+</form>
 <div class="main-content">
   <div class="title">
     <h1>Settings</h1>
@@ -135,10 +139,10 @@
       <p class="section-description">Set and manage your category budgets to track spending goals</p>
     </div>
     <div class="budget-controls">
-      <select id="settings-budget-year" class="budget-dropdown">
+      <select id="settings-budget-year" class="budget-dropdown modern-dropdown">
         <!-- Years will be populated dynamically -->
       </select>
-      <select id="settings-budget-month" class="budget-dropdown">
+      <select id="settings-budget-month" class="budget-dropdown modern-dropdown">
         <option value="1">January</option>
         <option value="2">February</option>
         <option value="3">March</option>
@@ -240,7 +244,7 @@
       <form id="budget-form">
         <div class="form-group">
           <label for="budget-category">Category</label>
-          <select id="budget-category" name="category" class="modal-dropdown" required>
+          <select id="budget-category" name="category" class="modal-dropdown custom-dropdown modern-dropdown" required>
             <option value="">Select a category</option>
           </select>
         </div>
@@ -291,7 +295,7 @@
         </div>
         <div class="form-group">
           <label for="account-type">Account Type</label>
-          <select id="account-type" name="type" class="modal-dropdown" required>
+          <select id="account-type" name="type" class="modal-dropdown custom-dropdown modern-dropdown" required>
             <option value="">Select account type</option>
           </select>
         </div>
@@ -338,7 +342,7 @@
         </div>
         <div class="form-group">
           <label for="card-bank">Bank/Issuer</label>
-          <select id="card-bank" name="bank" class="modal-dropdown" required>
+          <select id="card-bank" name="bank" class="modal-dropdown custom-dropdown modern-dropdown" required>
             <option value="">Select bank</option>
           </select>
         </div>
@@ -381,19 +385,11 @@
         </div>
         <div class="form-group">
           <label for="category-type">Category Type</label>
-          <select id="category-type" name="type" class="modal-dropdown" required>
+          <select id="category-type" name="type" class="modal-dropdown custom-dropdown modern-dropdown" required>
             <option value="">Select category type</option>
             <option value="essential">Essential</option>
             <option value="nonessential">Non-Essential</option>
           </select>
-        </div>
-        <div class="form-group">
-          <label for="category-icon">Icon (Font Awesome class)</label>
-          <input type="text" id="category-icon" name="icon" placeholder="e.g. fas fa-shopping-bag">
-        </div>
-        <div class="form-group">
-          <label for="category-color">Color (Hex code)</label>
-          <input type="text" id="category-color" name="color" pattern="^#[0-9A-Fa-f]{6}$" placeholder="#98cc2c">
         </div>
         <div class="account-modal-actions">
           <button type="button" class="account-modal-btn cancel" id="add-category-cancel">Cancel</button>
@@ -476,8 +472,8 @@
   border-color: var(--green-color);
 }
 
-/* Style the dropdown arrow - Apply to all modal form selects */
-.modal-dropdown {
+/* Custom dropdown styling class */
+.custom-dropdown {
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fffffff6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 12px center;
@@ -561,6 +557,7 @@
 }
 </style>
 
+<script src="{% static 'js/utils/common.js' %}"></script>
 <script src="{% static 'js/pages/accountSettings.js' %}"></script>
 
 {% endblock %}

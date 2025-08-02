@@ -689,7 +689,7 @@ class AccountTilesManager {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': this.getCsrfToken()
+          'X-CSRFToken': getCSRFToken()
         },
         body: JSON.stringify(accountData)
       });
@@ -729,7 +729,7 @@ class AccountTilesManager {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': this.getCsrfToken()
+          'X-CSRFToken': getCSRFToken()
         },
         body: JSON.stringify(cardData)
       });
@@ -770,7 +770,7 @@ class AccountTilesManager {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': this.getCsrfToken()
+          'X-CSRFToken': getCSRFToken()
         },
         body: JSON.stringify(categoryData)
       });
@@ -834,10 +834,6 @@ class AccountTilesManager {
     }
   }
 
-  getCsrfToken() {
-    const token = document.querySelector('[name=csrfmiddlewaretoken]');
-    return token ? token.value : '';
-  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -1414,11 +1410,6 @@ function setupBudgetModalEventListeners() {
 }
 
 
-function getCsrfToken() {
-  const token = document.querySelector('[name=csrfmiddlewaretoken]');
-  return token ? token.value : '';
-}
-
 function editBudget(budgetId) {
   if (!budgetId || budgetId === 'null' || budgetId === null) {
     console.log('No budget ID provided - this budget may not be editable');
@@ -1471,6 +1462,11 @@ function showEditBudgetForm(budget) {
     // Hide the category dropdown and create a visual category display
     if (categoryFormGroup) {
       categoryFormGroup.style.display = 'none';
+
+      // Remove required attribute to prevent validation errors
+      if (categorySelect) {
+        categorySelect.removeAttribute('required');
+      }
 
       // Create category display element
       const categoryDisplay = document.createElement('div');
@@ -1556,7 +1552,7 @@ function submitBudgetForm() {
     method: method,
     headers: {
       'Content-Type': 'application/json',
-      'X-CSRFToken': getCsrfToken()
+      'X-CSRFToken': getCSRFToken()
     },
     body: JSON.stringify(budgetData)
   })
@@ -1598,10 +1594,14 @@ function closeBudgetModal() {
       categoryDisplay.remove();
     }
 
-    // Show category dropdown again
+    // Show category dropdown again and restore required attribute
     const categoryFormGroup = modal.querySelector('#budget-category')?.closest('.form-group');
+    const categorySelect = document.getElementById('budget-category');
     if (categoryFormGroup) {
       categoryFormGroup.style.display = '';
+    }
+    if (categorySelect) {
+      categorySelect.setAttribute('required', '');
     }
 
     // Reset modal title and subtitle
