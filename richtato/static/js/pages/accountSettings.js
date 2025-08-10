@@ -1,4 +1,4 @@
-a// Modern Account Tiles Manager
+// Modern Account Tiles Manager
 class AccountTilesManager {
   constructor() {
     console.log('Initializing AccountTilesManager...');
