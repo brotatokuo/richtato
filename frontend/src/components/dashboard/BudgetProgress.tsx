@@ -174,10 +174,7 @@ export function BudgetProgress() {
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-semibold text-foreground">
-                    ${category.spent.toLocaleString()}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    of ${category.budget.toLocaleString()}
+                    ${category.spent.toLocaleString()}/${category.budget.toLocaleString()}
                   </div>
                   <div
                     className={`text-xs font-medium ${
