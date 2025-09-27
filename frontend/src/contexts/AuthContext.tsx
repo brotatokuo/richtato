@@ -18,21 +18,41 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const isAuthenticated = !!user;
 
   const login = async (username: string, password: string) => {
-    // TODO: Implement actual login API call
-    // For now, just set a mock user
-    console.log('Login attempt:', username, password); // Use password parameter
-    setUser({
-      id: 1,
-      username,
-      email: 'user@example.com',
-      first_name: 'User',
-      last_name: 'Name',
-      is_staff: false,
-      is_superuser: false,
-      is_active: true,
-      date_joined: new Date().toISOString(),
-      last_login: new Date().toISOString(),
-    } as User);
+    try {
+      console.log('Login attempt:', username, password);
+      const response = await authApi.login({ username, password });
+
+      if (response.success) {
+        setUser(response.user);
+        setOrganization(response.organization || null);
+        console.log('Login successful:', response.user);
+      } else {
+        console.error('Login failed:', response.message);
+        throw new Error(response.message);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  };
+
+  const demoLogin = async () => {
+    try {
+      console.log('Demo login attempt');
+      const response = await authApi.demoLogin();
+
+      if (response.success) {
+        setUser(response.user);
+        setOrganization(response.organization || null);
+        console.log('Demo login successful:', response.user);
+      } else {
+        console.error('Demo login failed:', response.message);
+        throw new Error(response.message);
+      }
+    } catch (error) {
+      console.error('Demo login error:', error);
+      throw error;
+    }
   };
 
   const register = async (data: RegisterRequest) => {
@@ -107,6 +127,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAuthenticated,
     isLoading,
     login,
+    demoLogin,
     register,
     logout,
     refreshUser,

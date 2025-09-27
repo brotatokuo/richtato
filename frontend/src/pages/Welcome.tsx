@@ -1,13 +1,29 @@
-import { ArrowRight, Shield, Sparkles, TrendingUp, Zap } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ArrowRight, Shield, TrendingUp, Zap } from 'lucide-react';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 export function Welcome() {
-  const { login } = useAuth();
+  const { demoLogin } = useAuth();
+  const navigate = useNavigate();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
-  const handleDemoLogin = () => {
-    // Demo login functionality
-    login('demo', 'demopassword123!');
+  const handleDemoLogin = async () => {
+    try {
+      setIsLoggingIn(true);
+      setLoginError(null);
+      await demoLogin();
+      // Navigate to dashboard after successful login
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Demo login failed:', error);
+      setLoginError(
+        error instanceof Error ? error.message : 'Demo login failed'
+      );
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   return (
@@ -51,11 +67,14 @@ export function Welcome() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <button
                 onClick={handleDemoLogin}
-                className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:shadow-blue-500/25"
+                disabled={isLoggingIn}
+                className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 <span className="flex items-center gap-2">
-                  Try Demo
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  {isLoggingIn ? 'Logging in...' : 'Try Demo'}
+                  {!isLoggingIn && (
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  )}
                 </span>
               </button>
 
@@ -66,6 +85,15 @@ export function Welcome() {
                 Sign In
               </Link>
             </div>
+
+            {/* Error Message */}
+            {loginError && (
+              <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                <p className="text-red-600 dark:text-red-400 text-center">
+                  {loginError}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Features Grid */}

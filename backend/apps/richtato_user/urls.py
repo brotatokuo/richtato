@@ -44,6 +44,11 @@ urlpatterns = [
         "api/update-preferences/", views.update_preferences, name="update_preferences"
     ),
     path("api/delete-account/", views.delete_account, name="delete_account"),
+    # API Authentication endpoints
+    path("api/login/", views.APILoginView.as_view(), name="api_login"),
+    path("api/logout/", views.APILogoutView.as_view(), name="api_logout"),
+    path("api/profile/", views.APIProfileView.as_view(), name="api_profile"),
+    path("api/demo-login/", views.APIDemoLoginView.as_view(), name="api_demo_login"),
 ]
 
 urlpatterns += [

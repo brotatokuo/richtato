@@ -73,7 +73,7 @@ class AuthApiService {
   constructor() {
     // Use environment variable or default to localhost
     this.baseUrl =
-      import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+      import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
     // Load token from localStorage on initialization
     this.token = this.getStoredToken();
@@ -140,10 +140,11 @@ class AuthApiService {
    * Login with username/email and password
    */
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const response = await fetch(`${this.baseUrl}/auth/login/`, {
+    const response = await fetch(`${this.baseUrl}/auth/api/login/`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify(credentials),
+      credentials: 'include', // Include cookies for session authentication
     });
 
     const data = await this.handleResponse<LoginResponse>(response);
@@ -165,9 +166,10 @@ class AuthApiService {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/auth/logout/`, {
+      const response = await fetch(`${this.baseUrl}/auth/api/logout/`, {
         method: 'POST',
         headers: this.getHeaders(),
+        credentials: 'include', // Include cookies for session authentication
       });
 
       const data = await this.handleResponse<{
@@ -209,9 +211,10 @@ class AuthApiService {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(`${this.baseUrl}/auth/profile/`, {
+    const response = await fetch(`${this.baseUrl}/auth/api/profile/`, {
       method: 'GET',
       headers: this.getHeaders(),
+      credentials: 'include', // Include cookies for session authentication
     });
 
     return this.handleResponse<UserProfileResponse>(response);
@@ -272,6 +275,26 @@ class AuthApiService {
     } else {
       localStorage.removeItem('auth_token');
     }
+  }
+
+  /**
+   * Demo login - creates a temporary demo user
+   */
+  async demoLogin(): Promise<LoginResponse> {
+    const response = await fetch(`${this.baseUrl}/auth/api/demo-login/`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      credentials: 'include', // Include cookies for session authentication
+    });
+
+    const data = await this.handleResponse<LoginResponse>(response);
+
+    if (data.success) {
+      this.token = data.token;
+      this.setStoredToken(data.token);
+    }
+
+    return data;
   }
 }
 

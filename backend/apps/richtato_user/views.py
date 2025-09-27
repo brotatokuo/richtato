@@ -1,26 +1,11 @@
 # views/auth_views.py
+import json
 import os
 import random
 import string
 from datetime import datetime, timedelta
 
 import pytz
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import PasswordResetConfirmView, PasswordResetView
-from django.db import IntegrityError, transaction
-from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, JsonResponse
-from django.shortcuts import redirect, render
-from django.urls import reverse, reverse_lazy
-from django.utils import timezone
-from django.views import View
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-from loguru import logger
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
 from apps.account.models import (
     Account,
     AccountTransaction,
@@ -41,6 +26,24 @@ from apps.richtato_user.utils import (
     _get_line_graph_data_by_month,
     generate_dashboard_context,
 )
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import PasswordResetConfirmView, PasswordResetView
+from django.db import IntegrityError, transaction
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, JsonResponse
+from django.shortcuts import redirect, render
+from django.urls import reverse, reverse_lazy
+from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from loguru import logger
+from rest_framework import status
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 pst = pytz.timezone("US/Pacific")
 
@@ -76,9 +79,7 @@ def upload(request: HttpRequest):
 
 @login_required
 def profile(request: HttpRequest):
-    from datetime import datetime, timedelta
-    from django.db.models import Sum, Count
-    from utilities.tools import format_currency
+    from datetime import datetime
 
     user = request.user
 
@@ -569,6 +570,7 @@ def update_username(request):
 def change_password(request):
     try:
         import json
+
         from django.contrib.auth import authenticate
 
         data = json.loads(request.body)
@@ -696,3 +698,213 @@ def delete_account(request):
         return JsonResponse(
             {"success": False, "error": "An error occurred while deleting account"}
         )
+
+
+# API Authentication Views
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class APILoginView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        try:
+            from django.contrib.auth import get_user_model
+
+            User = get_user_model()
+
+            data = json.loads(request.body)
+            username = data.get("username")
+            password = data.get("password")
+
+            if not username or not password:
+                return Response(
+                    {"success": False, "message": "Username and password are required"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            user = authenticate(request, username=username, password=password)
+
+            if user is not None:
+                if user.is_active:
+                    login(request, user)
+                    return Response(
+                        {
+                            "success": True,
+                            "message": "Login successful",
+                            "user": {
+                                "id": user.id,
+                                "username": user.username,
+                                "email": user.email,
+                                "first_name": "",  # Not available in this User model
+                                "last_name": "",  # Not available in this User model
+                                "is_staff": user.is_staff,
+                                "is_superuser": user.is_superuser,
+                                "is_active": user.is_active,
+                                "date_joined": user.date_joined.isoformat()
+                                if user.date_joined
+                                else None,
+                                "last_login": user.last_login.isoformat()
+                                if user.last_login
+                                else None,
+                            },
+                            "token": request.session.session_key,  # Using session key as token
+                        }
+                    )
+                else:
+                    return Response(
+                        {"success": False, "message": "Account is disabled"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+            else:
+                return Response(
+                    {"success": False, "message": "Invalid username or password"},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+
+        except json.JSONDecodeError:
+            return Response(
+                {"success": False, "message": "Invalid JSON data"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            logger.error(f"Login API error: {e}")
+            return Response(
+                {"success": False, "message": "An error occurred during login"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class APILogoutView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            logout(request)
+            return Response({"success": True, "message": "Logout successful"})
+        except Exception as e:
+            logger.error(f"Logout API error: {e}")
+            return Response(
+                {"success": False, "message": "An error occurred during logout"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class APIProfileView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            from django.contrib.auth import get_user_model
+
+            User = get_user_model()
+
+            user = request.user
+            return Response(
+                {
+                    "success": True,
+                    "user": {
+                        "id": user.id,
+                        "username": user.username,
+                        "email": user.email,
+                        "first_name": "",  # Not available in this User model
+                        "last_name": "",  # Not available in this User model
+                        "is_staff": user.is_staff,
+                        "is_superuser": user.is_superuser,
+                        "is_active": user.is_active,
+                        "date_joined": user.date_joined.isoformat()
+                        if user.date_joined
+                        else None,
+                        "last_login": user.last_login.isoformat()
+                        if user.last_login
+                        else None,
+                    },
+                    "organization": None,  # Add organization logic if needed
+                }
+            )
+        except Exception as e:
+            logger.error(f"Profile API error: {e}")
+            return Response(
+                {
+                    "success": False,
+                    "message": "An error occurred while fetching profile",
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class APIDemoLoginView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        try:
+            from django.contrib.auth import get_user_model
+
+            User = get_user_model()
+
+            # Use the existing demo_login logic but return JSON
+            logger.debug("API Demo login request")
+            template_user = User.objects.get(username="demo")
+            demo_username = generate_demo_username()
+            demo_user = User.objects.create(
+                username=demo_username,
+                is_demo=True,
+                demo_expires_at=timezone.now() + timedelta(hours=1),
+            )
+            demo_user.set_unusable_password()
+            demo_user.save()
+
+            # Clone all the demo data (simplified version)
+            # For now, just login the user without cloning data
+            login(request, demo_user)
+            request.session["is_demo_user"] = True
+
+            return Response(
+                {
+                    "success": True,
+                    "message": "Demo login successful",
+                    "user": {
+                        "id": demo_user.id,
+                        "username": demo_user.username,
+                        "email": demo_user.email,
+                        "first_name": "",  # Not available in this User model
+                        "last_name": "",  # Not available in this User model
+                        "is_staff": demo_user.is_staff,
+                        "is_superuser": demo_user.is_superuser,
+                        "is_active": demo_user.is_active,
+                        "date_joined": demo_user.date_joined.isoformat()
+                        if demo_user.date_joined
+                        else None,
+                        "last_login": demo_user.last_login.isoformat()
+                        if demo_user.last_login
+                        else None,
+                    },
+                    "token": request.session.session_key,
+                }
+            )
+
+        except User.DoesNotExist:
+            logger.error("Demo user template not found")
+            return Response(
+                {
+                    "success": False,
+                    "message": "Demo user template not found. Please run the demo setup script.",
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            logger.error(f"Demo login API error: {e}", exc_info=True)
+            return Response(
+                {
+                    "success": False,
+                    "message": f"An error occurred during demo login: {str(e)}",
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
