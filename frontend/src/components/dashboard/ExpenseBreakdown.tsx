@@ -69,10 +69,15 @@ export function ExpenseBreakdown() {
           ],
           emphasis: {
             itemStyle: {
-              shadowBlur: 10,
+              shadowBlur: 8,
               shadowOffsetX: 0,
+              shadowOffsetY: 2,
               shadowColor: `hsl(${foregroundColor} / 0.2)`,
             },
+            scale: true,
+            scaleSize: 2,
+            focus: 'self',
+            blurScope: 'coordinateSystem',
           },
         },
       ],
@@ -90,6 +95,29 @@ export function ExpenseBreakdown() {
           return params.name + ': ' + params.value + '%';
         },
       },
+      label: {
+        show: true,
+        position: 'outside',
+        formatter: '{b}',
+        color: `hsl(${foregroundColor})`,
+        fontSize: 11,
+      },
+      labelLine: {
+        show: true,
+        lineStyle: {
+          color: `hsl(${borderColor})`,
+        },
+      },
+      // Clean hover behavior
+      itemStyle: {
+        borderWidth: 0,
+        borderColor: 'transparent',
+      },
+      // Simple, clean animations
+      animation: true,
+      animationType: 'scale',
+      animationEasing: 'cubicOut',
+      animationDuration: 300,
     };
 
     setChartData(data);
