@@ -837,16 +837,6 @@ export function DataTable() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-12">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 dark:from-white dark:via-slate-200 dark:to-white bg-clip-text text-transparent mb-4">
-            Transaction Management
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Track your income and expenses separately
-          </p>
-        </div>
-
         {/* Income Table */}
         <TransactionTable
           type="income"
