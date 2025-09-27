@@ -1,7 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ReactECharts from 'echarts-for-react';
-import { DollarSign, TrendingDown, TrendingUp } from 'lucide-react';
+import { TrendingDown, TrendingUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
+
+// Function to get computed CSS values
+const getCSSValue = (property: string) => {
+  if (typeof window === 'undefined') return '';
+  return getComputedStyle(document.documentElement)
+    .getPropertyValue(property)
+    .trim();
+};
 
 interface CashflowData {
   income: number;
@@ -25,6 +33,7 @@ export function Cashflow() {
   });
 
   const [loading, setLoading] = useState(true);
+  const [themeKey, setThemeKey] = useState(0); // Force re-render when theme changes
 
   // Mock data - replace with actual API call
   useEffect(() => {
@@ -32,25 +41,34 @@ export function Cashflow() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
 
+      // Get theme-aware colors
+      const chart1 = getCSSValue('--chart-1');
+      const chart2 = getCSSValue('--chart-2');
+      const chart3 = getCSSValue('--chart-3');
+      const chart4 = getCSSValue('--chart-4');
+      const chart5 = getCSSValue('--chart-5');
+      const chart6 = getCSSValue('--chart-6');
+      const chart7 = getCSSValue('--chart-7');
+
       const mockData: CashflowData = {
         income: 8500,
         expenses: 7200,
         netFlow: 1300,
         categories: {
           income: [
-            { name: 'Salary', value: 6000, color: '#10b981' },
-            { name: 'Freelance', value: 1500, color: '#059669' },
-            { name: 'Investments', value: 800, color: '#047857' },
-            { name: 'Other', value: 200, color: '#065f46' },
+            { name: 'Salary', value: 6000, color: `hsl(${chart1})` },
+            { name: 'Freelance', value: 1500, color: `hsl(${chart2})` },
+            { name: 'Investments', value: 800, color: `hsl(${chart3})` },
+            { name: 'Other', value: 200, color: `hsl(${chart4})` },
           ],
           expenses: [
-            { name: 'Housing', value: 2500, color: '#ef4444' },
-            { name: 'Food', value: 1200, color: '#dc2626' },
-            { name: 'Transportation', value: 800, color: '#b91c1c' },
-            { name: 'Entertainment', value: 600, color: '#991b1b' },
-            { name: 'Utilities', value: 400, color: '#7f1d1d' },
-            { name: 'Healthcare', value: 300, color: '#450a0a' },
-            { name: 'Savings', value: 1400, color: '#3b82f6' },
+            { name: 'Housing', value: 2500, color: `hsl(${chart5})` },
+            { name: 'Food', value: 1200, color: `hsl(${chart6})` },
+            { name: 'Transportation', value: 800, color: `hsl(${chart7})` },
+            { name: 'Entertainment', value: 600, color: `hsl(${chart1})` },
+            { name: 'Utilities', value: 400, color: `hsl(${chart2})` },
+            { name: 'Healthcare', value: 300, color: `hsl(${chart3})` },
+            { name: 'Savings', value: 1400, color: `hsl(${chart4})` },
           ],
         },
       };
@@ -62,9 +80,42 @@ export function Cashflow() {
     fetchCashflowData();
   }, []);
 
+  // Listen for theme changes
+  useEffect(() => {
+    const handleThemeChange = () => {
+      setThemeKey(prev => prev + 1); // Force re-render with new colors
+    };
+
+    // Listen for theme changes by watching for class changes on document
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        if (
+          mutation.type === 'attributes' &&
+          mutation.attributeName === 'class'
+        ) {
+          handleThemeChange();
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   const getSankeyOption = () => {
+    // Get theme-aware colors
+    const sankeyNode = getCSSValue('--sankey-node');
+    const sankeyLink = getCSSValue('--sankey-link');
+    const sankeyText = getCSSValue('--sankey-text');
+    const sankeyBg = getCSSValue('--sankey-bg');
+    const sankeyBorder = getCSSValue('--sankey-border');
+
     const nodes = [
-      { name: 'Total Income', itemStyle: { color: '#10b981' } },
+      { name: 'Total Income', itemStyle: { color: `hsl(${sankeyNode})` } },
       ...cashflowData.categories.income.map(cat => ({
         name: cat.name,
         itemStyle: { color: cat.color },
@@ -73,7 +124,7 @@ export function Cashflow() {
         name: cat.name,
         itemStyle: { color: cat.color },
       })),
-      { name: 'Total Expenses', itemStyle: { color: '#ef4444' } },
+      { name: 'Total Expenses', itemStyle: { color: `hsl(${sankeyNode})` } },
     ];
 
     const links = [
@@ -92,9 +143,15 @@ export function Cashflow() {
     ];
 
     return {
+      backgroundColor: 'transparent',
       tooltip: {
         trigger: 'item',
         triggerOn: 'mousemove',
+        backgroundColor: `hsl(${sankeyBg})`,
+        borderColor: `hsl(${sankeyBorder})`,
+        textStyle: {
+          color: `hsl(${sankeyText})`,
+        },
         formatter: (params: any) => {
           if (params.dataType === 'node') {
             return `${params.data.name}<br/>Value: $${params.data.value?.toLocaleString() || '0'}`;
@@ -118,10 +175,10 @@ export function Cashflow() {
           },
           itemStyle: {
             borderWidth: 1,
-            borderColor: '#aaa',
+            borderColor: `hsl(${sankeyBorder})`,
           },
           label: {
-            color: '#374151',
+            color: `hsl(${sankeyText})`,
             fontSize: 12,
           },
         },
@@ -148,6 +205,7 @@ export function Cashflow() {
           <CardContent>
             <div className="h-96">
               <ReactECharts
+                key={themeKey} // Force re-render when theme changes
                 option={getSankeyOption()}
                 style={{ height: '100%', width: '100%' }}
                 opts={{ renderer: 'canvas' }}

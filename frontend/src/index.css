@@ -40,6 +40,13 @@
     --chart-10: 280 100% 70%; /* Light Purple */
     --chart-11: 120 60% 50%; /* Forest Green */
     --chart-12: 30 100% 50%; /* Bright Orange */
+
+    /* Additional theme-aware colors */
+    --sankey-node: 217 91% 60%; /* Blue for nodes */
+    --sankey-link: 217 91% 60%; /* Blue for links */
+    --sankey-text: 0 0% 3.9%; /* Dark text for light mode */
+    --sankey-bg: 0 0% 100%; /* White background */
+    --sankey-border: 0 0% 89.8%; /* Light border */
   }
 
   .dark {
@@ -78,6 +85,13 @@
     --chart-10: 280 100% 80%; /* Brighter Light Purple */
     --chart-11: 120 60% 60%; /* Brighter Forest Green */
     --chart-12: 30 100% 65%; /* Brighter Bright Orange */
+
+    /* Additional theme-aware colors - Dark Mode */
+    --sankey-node: 217 91% 70%; /* Brighter blue for nodes */
+    --sankey-link: 217 91% 70%; /* Brighter blue for links */
+    --sankey-text: 0 0% 98%; /* Light text for dark mode */
+    --sankey-bg: 0 0% 3.9%; /* Dark background */
+    --sankey-border: 0 0% 14.9%; /* Dark border */
   }
 }
 

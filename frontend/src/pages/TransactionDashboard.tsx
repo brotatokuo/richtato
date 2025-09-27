@@ -140,7 +140,7 @@ export function Dashboard() {
         </div>
 
         {/* Expense Breakdown */}
-        <div>
+        <div className="lg:col-span-2">
           <ExpenseBreakdown />
         </div>
       </div>

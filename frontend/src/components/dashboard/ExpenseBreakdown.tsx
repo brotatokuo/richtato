@@ -67,18 +67,6 @@ export function ExpenseBreakdown() {
               itemStyle: { color: `hsl(${chart6})` },
             },
           ],
-          emphasis: {
-            itemStyle: {
-              shadowBlur: 8,
-              shadowOffsetX: 0,
-              shadowOffsetY: 2,
-              shadowColor: `hsl(${foregroundColor} / 0.2)`,
-            },
-            scale: true,
-            scaleSize: 2,
-            focus: 'self',
-            blurScope: 'coordinateSystem',
-          },
         },
       ],
     };
@@ -108,16 +96,6 @@ export function ExpenseBreakdown() {
           color: `hsl(${borderColor})`,
         },
       },
-      // Clean hover behavior
-      itemStyle: {
-        borderWidth: 0,
-        borderColor: 'transparent',
-      },
-      // Simple, clean animations
-      animation: true,
-      animationType: 'scale',
-      animationEasing: 'cubicOut',
-      animationDuration: 300,
     };
 
     setChartData(data);
