@@ -1,0 +1,22 @@
+# Override file for local development
+# This file is automatically loaded by docker-compose
+version: '3.8'
+
+services:
+  backend:
+    environment:
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - DEBUG=True
+      - DEPLOY_STAGE=DEV
+      - DEV_DATABASE_URL=postgresql://richtato:richtato_password@db:5432/richtato
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+      - /app/.pytest_cache
+
+  frontend:
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000/api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
