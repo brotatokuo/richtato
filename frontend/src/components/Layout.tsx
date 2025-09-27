@@ -22,7 +22,6 @@ const routeConfig: Record<
   '/upload': { title: 'Upload', icon: CloudUpload },
   '/profile': { title: 'Profile', icon: User },
   '/settings': { title: 'Settings', icon: Settings },
-  '/file-management': { title: 'File Management', icon: FileText },
 };
 
 export function Layout() {

@@ -52,11 +52,6 @@ const navigationItems = [
     href: '/settings',
     icon: Settings,
   },
-  {
-    name: 'File Management',
-    href: '/file-management',
-    icon: FileText,
-  },
 ];
 
 export function Sidebar({ className }: SidebarProps) {
