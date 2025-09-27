@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
+import { Cashflow } from './pages/Cashflow';
 import { Dashboard } from './pages/Dashboard';
 import { DataTable } from './pages/DataTable';
 import { FileManagement } from './pages/FileManagement';
@@ -31,6 +32,7 @@ function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="data" element={<DataTable />} />
+            <Route path="cashflow" element={<Cashflow />} />
             <Route path="upload" element={<Upload />} />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />

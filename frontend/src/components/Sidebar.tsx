@@ -11,6 +11,7 @@ import {
   LogOut,
   Settings,
   Table,
+  TrendingUp,
   User,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -30,6 +31,11 @@ const navigationItems = [
     name: 'Data',
     href: '/data',
     icon: Table,
+  },
+  {
+    name: 'Cashflow',
+    href: '/cashflow',
+    icon: TrendingUp,
   },
   {
     name: 'Upload',

@@ -5,6 +5,7 @@ import {
   Home,
   Settings,
   Table,
+  TrendingUp,
   User,
 } from 'lucide-react';
 import { Outlet, useLocation } from 'react-router-dom';
@@ -17,6 +18,7 @@ const routeConfig: Record<
 > = {
   '/dashboard': { title: 'Dashboard', icon: Home },
   '/data': { title: 'Data', icon: Table },
+  '/cashflow': { title: 'Cashflow', icon: TrendingUp },
   '/upload': { title: 'Upload', icon: CloudUpload },
   '/profile': { title: 'Profile', icon: User },
   '/settings': { title: 'Settings', icon: Settings },
