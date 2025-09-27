@@ -90,14 +90,6 @@ export function ExpenseBreakdown() {
           return params.name + ': ' + params.value + '%';
         },
       },
-
-      grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '15%',
-        top: '3%',
-        containLabel: true,
-      },
     };
 
     setChartData(data);

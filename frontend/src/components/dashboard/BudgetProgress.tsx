@@ -120,13 +120,6 @@ const chartOptions = {
   legend: {
     show: false,
   },
-  grid: {
-    left: '3%',
-    right: '4%',
-    bottom: '3%',
-    top: '3%',
-    containLabel: true,
-  },
 };
 
 export function BudgetProgress() {
