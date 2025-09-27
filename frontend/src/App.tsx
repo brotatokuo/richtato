@@ -10,12 +10,14 @@ import { Profile } from './pages/Profile';
 import { Register } from './pages/Register';
 import { Settings } from './pages/Settings';
 import { Upload } from './pages/Upload';
+import { Welcome } from './pages/Welcome';
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          <Route path="/welcome" element={<Welcome />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route

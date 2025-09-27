@@ -101,6 +101,11 @@ export function Login() {
               Forgot password?
             </Link>
           </p>
+          <p className="text-sm text-muted-foreground">
+            <Link to="/welcome" className="text-primary hover:underline">
+              ← Back to Welcome
+            </Link>
+          </p>
         </div>
       </div>
     </div>

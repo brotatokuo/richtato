@@ -177,11 +177,16 @@ export function Register() {
           </Button>
         </form>
 
-        <div className="text-center">
+        <div className="text-center space-y-2">
           <p className="text-sm text-muted-foreground">
             Already have an account?{' '}
             <Link to="/login" className="text-primary hover:underline">
               Sign in
+            </Link>
+          </p>
+          <p className="text-sm text-muted-foreground">
+            <Link to="/welcome" className="text-primary hover:underline">
+              ← Back to Welcome
             </Link>
           </p>
         </div>
