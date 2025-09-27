@@ -84,13 +84,6 @@ export function Settings() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your account preferences and application settings
-        </p>
-      </div>
-
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Notifications */}
         <Card>

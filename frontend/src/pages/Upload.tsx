@@ -98,13 +98,6 @@ export function Upload() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Upload Files</h1>
-        <p className="text-muted-foreground">
-          Upload bank statements, receipts, or other financial documents
-        </p>
-      </div>
-
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Upload Area */}
         <Card>
