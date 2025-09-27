@@ -42,7 +42,7 @@ export function Register() {
 
     try {
       await register(formData);
-      navigate('/dashboard');
+      navigate('/budget');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {

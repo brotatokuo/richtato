@@ -1,7 +1,6 @@
 import { BudgetProgress } from '@/components/dashboard/BudgetProgress';
 import { ExpenseBreakdown } from '@/components/dashboard/ExpenseBreakdown';
 import { MetricCard } from '@/components/dashboard/MetricCard';
-import { TopCategories } from '@/components/dashboard/TopCategories';
 import {
   AlertTriangle,
   Gauge,
@@ -143,11 +142,6 @@ export function Dashboard() {
         {/* Expense Breakdown */}
         <div>
           <ExpenseBreakdown />
-        </div>
-
-        {/* Top Categories */}
-        <div>
-          <TopCategories />
         </div>
       </div>
     </div>

@@ -26,6 +26,20 @@
     --input: 0 0% 89.8%;
     --ring: 195 100% 30%;
     --radius: 0.5rem;
+
+    /* Chart Color Palette - Light Mode */
+    --chart-1: 217 91% 60%; /* Blue */
+    --chart-2: 142 76% 36%; /* Green */
+    --chart-3: 45 93% 47%; /* Yellow/Orange */
+    --chart-4: 262 83% 58%; /* Purple */
+    --chart-5: 0 84% 60%; /* Red */
+    --chart-6: 330 81% 60%; /* Pink */
+    --chart-7: 195 100% 30%; /* Teal */
+    --chart-8: 25 95% 53%; /* Orange */
+    --chart-9: 200 98% 39%; /* Cyan */
+    --chart-10: 280 100% 70%; /* Light Purple */
+    --chart-11: 120 60% 50%; /* Forest Green */
+    --chart-12: 30 100% 50%; /* Bright Orange */
   }
 
   .dark {
@@ -50,6 +64,20 @@
     --border-dashed: 0 0% 50%;
     --input: 0 0% 14.9%;
     --ring: 195 100% 30%;
+
+    /* Chart Color Palette - Dark Mode */
+    --chart-1: 217 91% 70%; /* Brighter Blue */
+    --chart-2: 142 76% 50%; /* Brighter Green */
+    --chart-3: 45 93% 60%; /* Brighter Yellow/Orange */
+    --chart-4: 262 83% 70%; /* Brighter Purple */
+    --chart-5: 0 84% 70%; /* Brighter Red */
+    --chart-6: 330 81% 70%; /* Brighter Pink */
+    --chart-7: 195 100% 50%; /* Brighter Teal */
+    --chart-8: 25 95% 65%; /* Brighter Orange */
+    --chart-9: 200 98% 55%; /* Brighter Cyan */
+    --chart-10: 280 100% 80%; /* Brighter Light Purple */
+    --chart-11: 120 60% 60%; /* Brighter Forest Green */
+    --chart-12: 30 100% 65%; /* Brighter Bright Orange */
   }
 }
 
