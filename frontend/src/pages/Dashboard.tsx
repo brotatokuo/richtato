@@ -154,11 +154,6 @@ export function Dashboard() {
           <SavingsChart />
         </div>
 
-        {/* Top Categories */}
-        <div>
-          <TopCategories />
-        </div>
-
         {/* Expense Breakdown */}
         <div>
           <ExpenseBreakdown />
@@ -167,11 +162,6 @@ export function Dashboard() {
         {/* Accounts */}
         <div className="lg:col-span-2">
           <AccountsSection />
-        </div>
-
-        {/* Cash Flow */}
-        <div className="lg:col-span-2">
-          <CashFlowChart />
         </div>
       </div>
     </div>

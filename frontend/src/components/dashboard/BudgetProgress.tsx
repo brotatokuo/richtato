@@ -1,4 +1,5 @@
 import { BaseChart } from '@/components/dashboard/BaseChart';
+import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface BudgetCategory {
@@ -157,46 +158,7 @@ export function BudgetProgress() {
           </div>
 
           {/* Category Breakdown */}
-          <div className="space-y-3 h-80 overflow-y-auto">
-            {mockCategories.map(category => (
-              <div
-                key={category.name}
-                className="flex items-center justify-between p-3 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
-              >
-                <div className="flex items-center space-x-3">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: category.color }}
-                  />
-                  <span className="text-sm font-medium text-foreground">
-                    {category.name}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-semibold text-foreground">
-                    ${category.spent.toLocaleString()}/${category.budget.toLocaleString()}
-                  </div>
-                  <div
-                    className={`text-xs font-medium ${
-                      category.percentage > 100
-                        ? 'text-destructive'
-                        : category.percentage > 80
-                          ? 'text-yellow-600'
-                          : 'text-green-600'
-                    }`}
-                  >
-                    {category.percentage}%
-                    {category.remaining < 0 && (
-                      <span className="ml-1">
-                        (Over by $
-                        {Math.abs(category.remaining).toLocaleString()})
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <CategoryBreakdown categories={mockCategories} />
         </div>
       </CardContent>
     </Card>
