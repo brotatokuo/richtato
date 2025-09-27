@@ -26,11 +26,8 @@ export function Welcome() {
                 <img
                   src="/richtato.png"
                   alt="Richtato Logo"
-                  className="w-20 h-20 mx-auto mb-6 rounded-2xl shadow-lg"
+                  className="w-40 h-40 mx-auto rounded-2xl shadow-lg"
                 />
-                <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-3 h-3 text-white" />
-                </div>
               </div>
             </div>
 
@@ -121,7 +118,6 @@ export function Welcome() {
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </div>
