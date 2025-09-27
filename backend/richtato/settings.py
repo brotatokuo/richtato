@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "corsheaders",
+    "drf_yasg",
 ]
 
 MIDDLEWARE = [
@@ -85,7 +86,7 @@ ROOT_URLCONF = "richtato.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "pages"],
+        "DIRS": [],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -93,8 +94,6 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "richtato.context_processors.user_info",
-                "richtato.context_processors.date",
             ],
         },
     },
@@ -151,9 +150,9 @@ def configure_database_for_stage(deploy_stage: str) -> dict:
         case "PROD" | "DEV":
             PG_DB_URL = f"{deploy_stage}_DATABASE_URL"
             db_url = os.getenv(PG_DB_URL)
-            assert (
-                db_url
-            ), f"Missing {PG_DB_URL} environment variable for {deploy_stage}"
+            assert db_url, (
+                f"Missing {PG_DB_URL} environment variable for {deploy_stage}"
+            )
             tmpPostgres = urlparse(db_url)
             db_name = tmpPostgres.path.replace("/", "")
             return {
@@ -216,10 +215,6 @@ INTERNAL_IPS = [
 
 STATIC_URL = "/static/"
 
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "static"),
-]
-
 # Static files collection directory for production
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
@@ -228,7 +223,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# CORS Configuration
+# CORS Configuration for React frontend
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -250,4 +245,26 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
+    "DEFAULT_FILTER_BACKENDS": [
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ],
+}
+
+# Swagger Documentation Settings
+SWAGGER_SETTINGS = {
+    "SECURITY_DEFINITIONS": {
+        "Session": {"type": "apiKey", "in": "cookie", "name": "sessionid"}
+    },
+    "USE_SESSION_AUTH": True,
+    "JSON_EDITOR": True,
+    "SUPPORTED_SUBMIT_METHODS": ["get", "post", "put", "patch", "delete"],
+    "OPERATIONS_SORTER": "alpha",
+    "TAGS_SORTER": "alpha",
+    "DOC_EXPANSION": "list",
+    "DEEP_LINKING": True,
+    "SHOW_EXTENSIONS": True,
+    "SHOW_COMMON_EXTENSIONS": True,
 }

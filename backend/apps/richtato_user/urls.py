@@ -1,75 +1,35 @@
-from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from . import views
-from .views import CustomPasswordResetConfirmView, CustomPasswordResetView
 
 urlpatterns = [
-    # Removed empty path - this is now API-only
-    # path("", views.index, name="index"),
-    # path("dashboard/", views.dashboard, name="dashboard"),
+    # Authentication endpoints
     path("login/", views.LoginView.as_view(), name="login"),
     path("register/", views.RegisterView.as_view(), name="register"),
     path("logout/", views.LogoutView.as_view(), name="logout"),
+    # User management endpoints
     path("get-user-id/", views.get_user_id, name="get_user_id"),
-    path("upload/", views.upload, name="upload"),
-    path("profile/", views.profile, name="profile"),
-    path("input/", views.input, name="input"),
-    path("user_settings/", views.user_settings, name="user_settings"),
-    path("account-settings/", views.account_settings, name="account_settings"),
-    path("table/", views.table, name="table"),
-    path("assets/", views.assets, name="assets"),
+    path("profile/", views.APIProfileView.as_view(), name="profile"),
+    path("check-username/", views.check_username_availability, name="check_username"),
+    path("update-username/", views.update_username, name="update_username"),
+    path("change-password/", views.change_password, name="change_password"),
+    path("update-preferences/", views.update_preferences, name="update_preferences"),
+    path("delete-account/", views.delete_account, name="delete_account"),
+    # Data endpoints
     path(
-        "api/timeseries-data/",
-        views.CombinedGraphAPIView.as_view(),
-        name="timeseries_data_api",
+        "timeseries-data/", views.CombinedGraphAPIView.as_view(), name="timeseries_data"
     ),
-    path("api/categories/", views.CategoryView.as_view(), name="categories_api"),
+    path("categories/", views.CategoryView.as_view(), name="categories"),
+    path("categories/<int:pk>/", views.CategoryView.as_view(), name="category_detail"),
     path(
-        "api/categories/<int:pk>/",
-        views.CategoryView.as_view(),
-        name="category_detail_api",
-    ),  # PUT, PATCH, DELETE
-    path(
-        "api/categories/field-choices/",
+        "categories/field-choices/",
         views.CategoryFieldChoicesAPIView.as_view(),
-        name="category_field_choices_api",
-    ),  # GET
-    path(
-        "api/check-username/", views.check_username_availability, name="check_username"
+        name="category_field_choices",
     ),
-    path("api/update-username/", views.update_username, name="update_username"),
-    path("api/change-password/", views.change_password, name="change_password"),
-    path(
-        "api/update-preferences/", views.update_preferences, name="update_preferences"
-    ),
-    path("api/delete-account/", views.delete_account, name="delete_account"),
+    path("card-accounts/", views.CardBanksAPIView.as_view(), name="card_accounts"),
     # API Authentication endpoints
     path("api/login/", views.APILoginView.as_view(), name="api_login"),
     path("api/logout/", views.APILogoutView.as_view(), name="api_logout"),
     path("api/profile/", views.APIProfileView.as_view(), name="api_profile"),
     path("api/demo-login/", views.APIDemoLoginView.as_view(), name="api_demo_login"),
-]
-
-urlpatterns += [
-    path("password-reset/", CustomPasswordResetView.as_view(), name="password_reset"),
-    path(
-        "password-reset/done/",
-        auth_views.PasswordResetDoneView.as_view(
-            template_name="password_reset_done.html"
-        ),
-        name="password_reset_done",
-    ),
-    path(
-        "reset/<uidb64>/<token>/",
-        CustomPasswordResetConfirmView.as_view(),
-        name="password_reset_confirm",
-    ),
-    path(
-        "reset/done/",
-        auth_views.PasswordResetCompleteView.as_view(
-            template_name="password_reset_complete.html"
-        ),
-        name="password_reset_complete",
-    ),
 ]

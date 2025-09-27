@@ -3,53 +3,25 @@ from datetime import datetime
 from decimal import Decimal
 
 import pytz
-from django.contrib.auth.decorators import login_required
+from apps.budget.models import Budget
+from apps.budget.serializers import BudgetSerializer
+from apps.expense.models import Expense
+from apps.richtato_user.models import Category
 from django.db.models import F, Q, Sum
 from django.db.models.functions import Coalesce
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 from loguru import logger
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from apps.budget.models import Budget
-from apps.budget.serializers import BudgetSerializer
-from apps.expense.models import Expense
-from apps.richtato_user.models import Category
-from utilities.tools import format_currency
 from richtato.views import BaseAPIView
+from utilities.tools import format_currency
 
-
-@login_required
-def main(request) -> HttpResponse:
-    """
-    Budget view that renders the budget.html template
-    """
-    expense_dates = (
-        Expense.objects.filter(user=request.user)
-        .exclude(date__isnull=True)
-        .values_list("date", flat=True)
-        .distinct()
-    )
-    years_list = sorted(list(set([date.year for date in expense_dates])), reverse=True)
-    unique_month_nums = sorted({date.month for date in expense_dates}, reverse=True)
-    months_list = [calendar.month_abbr[month] for month in unique_month_nums]
-
-    category_list = sorted(
-        list(Category.objects.filter(user=request.user).values_list("name", flat=True))
-    )
-
-    return render(
-        request,
-        "budget.html",
-        {
-            "years": years_list,
-            "months": months_list,
-            "categories": category_list,
-        },
-    )
+# Template-based views removed - API-only backend
 
 
 def calculate_budget_diff(diff: float):
@@ -59,6 +31,29 @@ def calculate_budget_diff(diff: float):
         return f"{format_currency(abs(diff))} over"
 
 
+@swagger_auto_schema(
+    operation_summary="Get budget rankings",
+    operation_description="Get budget rankings showing spending vs budget for each category",
+    manual_parameters=[
+        openapi.Parameter(
+            "count",
+            openapi.IN_QUERY,
+            description="Number of categories to return",
+            type=openapi.TYPE_INTEGER,
+        ),
+        openapi.Parameter(
+            "year",
+            openapi.IN_QUERY,
+            description="Year for budget calculations",
+            type=openapi.TYPE_INTEGER,
+        ),
+    ],
+    responses={
+        200: openapi.Response(
+            "Success", examples={"application/json": {"category_rankings": []}}
+        )
+    },
+)
 def get_budget_rankings(request):
     count = request.GET.get("count", None)
 
@@ -143,6 +138,24 @@ class BudgetAPIView(BaseAPIView):
     def field_remap(self):
         return {}
 
+    @swagger_auto_schema(
+        operation_summary="Get budget entries",
+        operation_description="Retrieve budget entries for the authenticated user or a specific budget by ID",
+        manual_parameters=[
+            openapi.Parameter(
+                "limit",
+                openapi.IN_QUERY,
+                description="Limit number of results",
+                type=openapi.TYPE_INTEGER,
+            ),
+        ],
+        responses={
+            200: openapi.Response(
+                "Success", examples={"application/json": {"columns": [], "rows": []}}
+            ),
+            404: openapi.Response("Not Found"),
+        },
+    )
     def get(self, request, pk=None):
         """
         Get budget entries for the user, or a specific budget if pk is provided.
@@ -200,6 +213,36 @@ class BudgetAPIView(BaseAPIView):
             }
         )
 
+    @swagger_auto_schema(
+        operation_summary="Create budget entry",
+        operation_description="Create a new budget entry for the authenticated user",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "category": openapi.Schema(
+                    type=openapi.TYPE_INTEGER, description="Category ID"
+                ),
+                "amount": openapi.Schema(
+                    type=openapi.TYPE_NUMBER, description="Budget amount"
+                ),
+                "start_date": openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_DATE,
+                    description="Start date",
+                ),
+                "end_date": openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_DATE,
+                    description="End date",
+                ),
+            },
+            required=["category", "amount", "start_date", "end_date"],
+        ),
+        responses={
+            201: openapi.Response("Created"),
+            400: openapi.Response("Bad Request"),
+        },
+    )
     def post(self, request):
         """
         Create a new Budget entry.
@@ -214,6 +257,36 @@ class BudgetAPIView(BaseAPIView):
         logger.error(f"POST error: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @swagger_auto_schema(
+        operation_summary="Update budget entry",
+        operation_description="Update an existing budget entry",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "category": openapi.Schema(
+                    type=openapi.TYPE_INTEGER, description="Category ID"
+                ),
+                "amount": openapi.Schema(
+                    type=openapi.TYPE_NUMBER, description="Budget amount"
+                ),
+                "start_date": openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_DATE,
+                    description="Start date",
+                ),
+                "end_date": openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_DATE,
+                    description="End date",
+                ),
+            },
+        ),
+        responses={
+            200: openapi.Response("Success"),
+            400: openapi.Response("Bad Request"),
+            404: openapi.Response("Not Found"),
+        },
+    )
     def patch(self, request, pk):
         """
         Update an existing Budget entry.
@@ -229,6 +302,14 @@ class BudgetAPIView(BaseAPIView):
         logger.error(f"PATCH error: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @swagger_auto_schema(
+        operation_summary="Delete budget entry",
+        operation_description="Delete an existing budget entry",
+        responses={
+            204: openapi.Response("No Content"),
+            404: openapi.Response("Not Found"),
+        },
+    )
     def delete(self, request, pk):
         """
         Delete an existing Budget entry.
@@ -242,6 +323,15 @@ class BudgetAPIView(BaseAPIView):
 class BudgetFieldChoicesView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary="Get budget field choices",
+        operation_description="Get available field choices for budget creation/editing",
+        responses={
+            200: openapi.Response(
+                "Success", examples={"application/json": {"category": []}}
+            )
+        },
+    )
     def get(self, request):
         """
         Get field choices for the Budget model.

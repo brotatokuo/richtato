@@ -58,7 +58,7 @@ richtato/
 
    ```bash
    cd richtato
-   pip install -r requirements.txt
+   pip install -e .
    python manage.py migrate
    python manage.py createsuperuser
    ```
@@ -179,7 +179,7 @@ Make sure all dependencies are installed:
 
 ```bash
 cd frontend && yarn install
-cd ../richtato && pip install -r requirements.txt
+cd ../backend && pip install -e .
 ```
 
 ### Database Issues

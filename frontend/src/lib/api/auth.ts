@@ -140,7 +140,7 @@ class AuthApiService {
    * Login with username/email and password
    */
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const response = await fetch(`${this.baseUrl}/auth/api/login/`, {
+    const response = await fetch(`${this.baseUrl}/auth/login/`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify(credentials),
@@ -166,7 +166,7 @@ class AuthApiService {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/auth/api/logout/`, {
+      const response = await fetch(`${this.baseUrl}/auth/logout/`, {
         method: 'POST',
         headers: this.getHeaders(),
         credentials: 'include', // Include cookies for session authentication
@@ -211,7 +211,7 @@ class AuthApiService {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(`${this.baseUrl}/auth/api/profile/`, {
+    const response = await fetch(`${this.baseUrl}/auth/profile/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include', // Include cookies for session authentication

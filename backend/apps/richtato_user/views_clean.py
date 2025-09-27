@@ -241,8 +241,6 @@ class CategoryFieldChoicesAPIView(APIView):
 
 # Authentication API Views
 class LoginView(APIView):
-    permission_classes = []  # Allow unauthenticated access for login
-
     @swagger_auto_schema(
         operation_summary="User login",
         operation_description="Authenticate user and return session information",
@@ -272,19 +270,9 @@ class LoginView(APIView):
             login(request, user)
             return Response(
                 {
-                    "success": True,
                     "message": "Login successful",
-                    "user": {
-                        "id": user.id,
-                        "username": user.username,
-                        "email": user.email,
-                        "is_staff": user.is_staff,
-                        "is_superuser": user.is_superuser,
-                        "is_active": user.is_active,
-                        "date_joined": user.date_joined,
-                        "last_login": user.last_login,
-                    },
-                    "token": "session-based",  # Using session authentication
+                    "user_id": user.id,
+                    "username": user.username,
                 }
             )
         else:
@@ -292,8 +280,6 @@ class LoginView(APIView):
 
 
 class RegisterView(APIView):
-    permission_classes = []  # Allow unauthenticated access for registration
-
     @swagger_auto_schema(
         operation_summary="User registration",
         operation_description="Register a new user account",
@@ -359,6 +345,7 @@ class LogoutView(APIView):
 
 # Additional API endpoints
 @swagger_auto_schema(
+    method="get",
     operation_summary="Get user ID",
     operation_description="Get the ID of the authenticated user",
     responses={
@@ -371,6 +358,7 @@ def get_user_id(request: HttpRequest):
 
 
 @swagger_auto_schema(
+    method="post",
     operation_summary="Check username availability",
     operation_description="Check if a username is available for registration",
     request_body=openapi.Schema(
@@ -402,6 +390,7 @@ def check_username_availability(request):
 
 
 @swagger_auto_schema(
+    method="post",
     operation_summary="Update username",
     operation_description="Update the username of the authenticated user",
     request_body=openapi.Schema(
@@ -434,6 +423,7 @@ def update_username(request):
 
 
 @swagger_auto_schema(
+    method="post",
     operation_summary="Change password",
     operation_description="Change the password of the authenticated user",
     request_body=openapi.Schema(
@@ -472,6 +462,7 @@ def change_password(request):
 
 
 @swagger_auto_schema(
+    method="post",
     operation_summary="Update user preferences",
     operation_description="Update user preferences and settings",
     request_body=openapi.Schema(
@@ -499,6 +490,7 @@ def update_preferences(request):
 
 
 @swagger_auto_schema(
+    method="post",
     operation_summary="Delete account",
     operation_description="Delete the authenticated user's account",
     responses={200: openapi.Response("Success"), 400: openapi.Response("Bad Request")},
@@ -513,11 +505,11 @@ def delete_account(request):
 
 # Demo login for development
 @swagger_auto_schema(
+    method="post",
     operation_summary="Demo login",
     operation_description="Login with demo user for development/testing",
     responses={200: openapi.Response("Success"), 400: openapi.Response("Bad Request")},
 )
-@csrf_exempt
 def demo_login(request):
     """Demo login for development purposes"""
     try:
@@ -547,8 +539,6 @@ def demo_login(request):
 
 # API Authentication endpoints
 class APILoginView(APIView):
-    permission_classes = []  # Allow unauthenticated access for API login
-
     @swagger_auto_schema(
         operation_summary="API Login",
         operation_description="Login via API and return authentication token",
@@ -627,8 +617,6 @@ class APIProfileView(APIView):
 
 
 class APIDemoLoginView(APIView):
-    permission_classes = []  # Allow unauthenticated access for demo login
-
     @swagger_auto_schema(
         operation_summary="API Demo Login",
         operation_description="Login with demo user via API",

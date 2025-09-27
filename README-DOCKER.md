@@ -218,7 +218,7 @@ richtato/
 ├── docker-compose.prod.yml     # Production compose file
 ├── docker-compose.override.yml # Local development overrides
 ├── Dockerfile.backend          # Django backend Dockerfile
-├── requirements.txt            # Python dependencies
+├── backend/pyproject.toml      # Python dependencies
 ├── backend/                    # Django project
 │   ├── manage.py
 │   ├── richtato/

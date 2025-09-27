@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
-from django.shortcuts import render
+from rest_framework import status
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
 
@@ -59,8 +60,17 @@ class BaseAPIView(APIView, ABC):
 
 
 def custom_404_view(request, exception):
-    return render(request, "404.html", status=404)
+    return Response(
+        {"error": "Not Found", "message": "The requested resource was not found."},
+        status=status.HTTP_404_NOT_FOUND,
+    )
 
 
 def custom_500_view(request):
-    return render(request, "500.html", status=500)
+    return Response(
+        {
+            "error": "Internal Server Error",
+            "message": "An internal server error occurred.",
+        },
+        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )

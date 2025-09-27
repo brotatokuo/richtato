@@ -1,14 +1,4 @@
 import pytz
-from django.db.models import F
-from django.shortcuts import get_object_or_404
-from loguru import logger
-from rest_framework import status
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
-from rest_framework.decorators import authentication_classes, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
 from apps.expense.imports import ExpenseManager
 from apps.richtato_user.utils import (
     _get_line_graph_data_by_day,
@@ -16,8 +6,19 @@ from apps.richtato_user.utils import (
 )
 from apps.settings.models import CardAccount, Category
 from artificial_intelligence.ai import OpenAI
-from statement_imports.cards.card_factory import CardStatement
+from django.db.models import F
+from django.shortcuts import get_object_or_404
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
+from loguru import logger
+from rest_framework import status
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+from rest_framework.decorators import authentication_classes, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from richtato.views import BaseAPIView
+from statement_imports.cards.card_factory import CardStatement
 
 from .models import Expense
 from .serializers import ExpenseSerializer
@@ -35,6 +36,23 @@ class ExpenseAPIView(BaseAPIView):
             "Category": "category__name",
         }
 
+    @swagger_auto_schema(
+        operation_summary="Get expense entries",
+        operation_description="Retrieve expense entries for the authenticated user",
+        manual_parameters=[
+            openapi.Parameter(
+                "limit",
+                openapi.IN_QUERY,
+                description="Limit number of results",
+                type=openapi.TYPE_INTEGER,
+            ),
+        ],
+        responses={
+            200: openapi.Response(
+                "Success", examples={"application/json": {"columns": [], "rows": []}}
+            )
+        },
+    )
     def get(self, request):
         """
         Get the most recent entries for the user.
@@ -80,6 +98,37 @@ class ExpenseAPIView(BaseAPIView):
         }
         return Response(data)
 
+    @swagger_auto_schema(
+        operation_summary="Create expense entry",
+        operation_description="Create a new expense entry for the authenticated user",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "amount": openapi.Schema(
+                    type=openapi.TYPE_NUMBER, description="Expense amount"
+                ),
+                "description": openapi.Schema(
+                    type=openapi.TYPE_STRING, description="Expense description"
+                ),
+                "date": openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_DATE,
+                    description="Expense date",
+                ),
+                "category": openapi.Schema(
+                    type=openapi.TYPE_INTEGER, description="Category ID"
+                ),
+                "account_name": openapi.Schema(
+                    type=openapi.TYPE_INTEGER, description="Account ID"
+                ),
+            },
+            required=["amount", "description", "date"],
+        ),
+        responses={
+            201: openapi.Response("Created"),
+            400: openapi.Response("Bad Request"),
+        },
+    )
     def post(self, request):
         """
         Create a new expense entry.
@@ -98,6 +147,37 @@ class ExpenseAPIView(BaseAPIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @swagger_auto_schema(
+        operation_summary="Update expense entry",
+        operation_description="Update an existing expense entry",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "amount": openapi.Schema(
+                    type=openapi.TYPE_NUMBER, description="Expense amount"
+                ),
+                "description": openapi.Schema(
+                    type=openapi.TYPE_STRING, description="Expense description"
+                ),
+                "date": openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_DATE,
+                    description="Expense date",
+                ),
+                "category": openapi.Schema(
+                    type=openapi.TYPE_INTEGER, description="Category ID"
+                ),
+                "account_name": openapi.Schema(
+                    type=openapi.TYPE_INTEGER, description="Account ID"
+                ),
+            },
+        ),
+        responses={
+            200: openapi.Response("Success"),
+            400: openapi.Response("Bad Request"),
+            404: openapi.Response("Not Found"),
+        },
+    )
     def patch(self, request, pk):
         """
         Update an existing expense entry.
@@ -115,6 +195,14 @@ class ExpenseAPIView(BaseAPIView):
             logger.error(f"Serializer errors: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @swagger_auto_schema(
+        operation_summary="Delete expense entry",
+        operation_description="Delete an existing expense entry",
+        responses={
+            204: openapi.Response("No Content"),
+            404: openapi.Response("Not Found"),
+        },
+    )
     def delete(self, request, pk):
         """
         Delete an existing expense entry.
@@ -129,6 +217,23 @@ class ExpenseAPIView(BaseAPIView):
 class ExpenseGraphAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary="Get expense graph data",
+        operation_description="Get expense data for chart visualization",
+        manual_parameters=[
+            openapi.Parameter(
+                "range",
+                openapi.IN_QUERY,
+                description="Date range: '30d' for last 30 days, 'all' for all time",
+                type=openapi.TYPE_STRING,
+            ),
+        ],
+        responses={
+            200: openapi.Response(
+                "Success", examples={"application/json": {"labels": [], "datasets": []}}
+            )
+        },
+    )
     def get(self, request):
         date_range = request.query_params.get("range", "all")
         logger.debug(f"Date range: {date_range}")
@@ -160,6 +265,16 @@ class ExpenseGraphAPIView(APIView):
 class ExpenseFieldChoicesView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary="Get expense field choices",
+        operation_description="Get available field choices for expense creation/editing",
+        responses={
+            200: openapi.Response(
+                "Success",
+                examples={"application/json": {"account": [], "category": []}},
+            )
+        },
+    )
     def get(self, request):
         user_card_accounts = CardAccount.objects.filter(user=request.user)
         user_categories = Category.objects.filter(user=request.user)
@@ -179,6 +294,23 @@ class ExpenseFieldChoicesView(APIView):
 class CategorizeTransactionView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary="Categorize transaction",
+        operation_description="Use AI to categorize a transaction based on its description",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "description": openapi.Schema(
+                    type=openapi.TYPE_STRING, description="Transaction description"
+                ),
+            },
+            required=["description"],
+        ),
+        responses={
+            200: openapi.Response("Success"),
+            400: openapi.Response("Bad Request"),
+        },
+    )
     def post(self, request):
         """
         Categorize a transaction based on the description.
@@ -198,6 +330,30 @@ class CategorizeTransactionView(APIView):
 class ImportStatementsView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_summary="Import statements",
+        operation_description="Import bank statements and categorize transactions",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "files": openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Schema(type=openapi.TYPE_FILE),
+                    description="Statement files",
+                ),
+                "card_accounts": openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Schema(type=openapi.TYPE_INTEGER),
+                    description="Card account IDs",
+                ),
+            },
+            required=["files", "card_accounts"],
+        ),
+        responses={
+            200: openapi.Response("Success"),
+            400: openapi.Response("Bad Request"),
+        },
+    )
     def post(self, request):
         """
         Import statements and categorize transactions.

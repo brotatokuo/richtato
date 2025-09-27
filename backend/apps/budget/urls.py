@@ -2,20 +2,16 @@ from django.urls import path
 
 from . import views
 
-page_name = "budget"
 urlpatterns = [
-    path(f"{page_name}", views.main, name=page_name),
+    # Budget API endpoints
+    path("", views.BudgetAPIView.as_view(), name="budget_list"),  # GET, POST
     path(
-        "get-budget-rankings/",
-        views.get_budget_rankings,
-        name=f"{page_name}_get_budget_rankings",
-    ),
-    path(f"api/{page_name}/", views.BudgetAPIView.as_view()),  # GET, POST
+        "<int:pk>/", views.BudgetAPIView.as_view(), name="budget_detail"
+    ),  # GET, PUT, PATCH, DELETE
     path(
-        f"api/{page_name}/<int:pk>/", views.BudgetAPIView.as_view()
-    ),  # PUT, PATCH, DELETE
-    path(
-        f"api/{page_name}/field-choices/",
+        "field-choices/",
         views.BudgetFieldChoicesView.as_view(),
-    ),  # GET, POST
+        name="budget_field_choices",
+    ),
+    path("rankings/", views.get_budget_rankings, name="budget_rankings"),
 ]
