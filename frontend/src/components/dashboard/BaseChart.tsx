@@ -29,53 +29,57 @@ export function BaseChart({
       // Create new chart instance
       chartInstanceRef.current = echarts.init(chartRef.current);
 
-      // Set chart option with default grid styling
+      // Set chart option with default styling
       const defaultOptions = {
         ...options,
         series: data.series || data,
-        // Add default grid styling for better visibility
+        // Always hide grid for all chart types
         grid: {
-          show: true,
-          borderColor: '#374151', // Darker grid border
+          show: false, // Hide exterior border for all charts
           ...options.grid,
         },
-        xAxis: {
-          axisLine: {
-            lineStyle: {
-              color: '#6b7280', // Darker axis line
-            },
-          },
-          axisTick: {
-            lineStyle: {
-              color: '#6b7280', // Darker tick lines
-            },
-          },
-          splitLine: {
-            show: false, // Hide vertical grid lines
-          },
-          ...options.xAxis,
-        },
-        yAxis: {
-          axisLine: {
-            lineStyle: {
-              color: '#6b7280', // Darker axis line
-            },
-          },
-          axisTick: {
-            lineStyle: {
-              color: '#6b7280', // Darker tick lines
-            },
-          },
-          splitLine: {
-            show: true,
-            lineStyle: {
-              color: '#374151', // Darker horizontal grid lines
-              type: 'solid',
-              width: 1,
-            },
-          },
-          ...options.yAxis,
-        },
+        // Only apply axis styling for non-pie charts
+        ...(type !== 'pie' && type !== 'doughnut'
+          ? {
+              xAxis: {
+                axisLine: {
+                  lineStyle: {
+                    color: '#6b7280', // Darker axis line
+                  },
+                },
+                axisTick: {
+                  lineStyle: {
+                    color: '#6b7280', // Darker tick lines
+                  },
+                },
+                splitLine: {
+                  show: false, // Hide vertical grid lines
+                },
+                ...options.xAxis,
+              },
+              yAxis: {
+                axisLine: {
+                  lineStyle: {
+                    color: '#6b7280', // Darker axis line
+                  },
+                },
+                axisTick: {
+                  lineStyle: {
+                    color: '#6b7280', // Darker tick lines
+                  },
+                },
+                splitLine: {
+                  show: true,
+                  lineStyle: {
+                    color: '#374151', // Darker horizontal grid lines
+                    type: 'solid',
+                    width: 1,
+                  },
+                },
+                ...options.yAxis,
+              },
+            }
+          : {}),
       };
 
       chartInstanceRef.current.setOption(defaultOptions);
