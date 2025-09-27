@@ -127,11 +127,11 @@
   }
 
   /* SVG theming for images */
-  .neuron-icon {
+  .richtato-icon {
     filter: brightness(0);
   }
 
-  .dark .neuron-icon {
+  .dark .richtato-icon {
     filter: brightness(0) saturate(100%) invert(100%);
   }
 
