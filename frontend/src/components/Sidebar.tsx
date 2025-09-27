@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import {
-  BarChart3,
   ChevronLeft,
   ChevronRight,
   CloudUpload,
@@ -80,19 +79,28 @@ export function Sidebar({ className }: SidebarProps) {
       )}
     >
       {/* Header */}
-      <div className="flex h-16 items-center border-b px-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <BarChart3 className="h-5 w-5" />
+      <div className="flex h-16 items-center border-b border-slate-200/50 dark:border-slate-700/50 px-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center">
+            <img
+              src="/richtato.png"
+              alt="Richtato Logo"
+              className="h-8 w-8 rounded-lg"
+            />
           </div>
           {!isCollapsed && (
-            <span className="text-lg font-bold text-foreground">Richtato</span>
+            <span className="text-lg font-bold bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 dark:from-white dark:via-slate-200 dark:to-white bg-clip-text text-transparent">
+              Richtato
+            </span>
           )}
         </div>
         <Button
           variant="ghost"
           size="icon"
-          className={cn('ml-auto h-8 w-8', isCollapsed && 'ml-0')}
+          className={cn(
+            'ml-auto h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity duration-200',
+            isCollapsed && 'ml-0'
+          )}
           onClick={toggleSidebar}
           aria-label="Toggle sidebar"
         >
