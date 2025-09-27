@@ -33,10 +33,6 @@ const mockData = {
 };
 
 const chartOptions = {
-  title: {
-    text: 'Savings Accumulation',
-    left: 'center',
-  },
   tooltip: {
     trigger: 'axis',
     formatter: function (params: any) {
@@ -49,10 +45,6 @@ const chartOptions = {
         param.value.toLocaleString()
       );
     },
-  },
-  legend: {
-    data: ['Savings'],
-    top: 'bottom',
   },
   xAxis: {
     type: 'category',
@@ -82,9 +74,7 @@ export function SavingsChart() {
         <CardTitle>Savings Accumulation</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-64">
           <BaseChart type="line" data={mockData} options={chartOptions} />
-        </div>
       </CardContent>
     </Card>
   );

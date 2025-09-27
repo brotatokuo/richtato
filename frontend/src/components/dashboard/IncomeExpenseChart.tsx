@@ -23,10 +23,6 @@ const mockData = {
 };
 
 const chartOptions = {
-  title: {
-    text: 'Income vs Expenses',
-    left: 'center',
-  },
   tooltip: {
     trigger: 'axis',
     axisPointer: {
@@ -40,10 +36,6 @@ const chartOptions = {
       });
       return result;
     },
-  },
-  legend: {
-    data: ['Income', 'Expenses'],
-    top: 'bottom',
   },
   xAxis: {
     type: 'category',
@@ -73,9 +65,7 @@ export function IncomeExpenseChart() {
         <CardTitle>Income vs Expenses</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-64">
           <BaseChart type="bar" data={mockData} options={chartOptions} />
-        </div>
       </CardContent>
     </Card>
   );
