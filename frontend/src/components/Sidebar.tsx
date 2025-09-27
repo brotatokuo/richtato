@@ -73,7 +73,7 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <div
       className={cn(
-        'relative flex h-screen flex-col border-r bg-background transition-all duration-300',
+        'group relative flex h-screen flex-col border-r',
         isCollapsed ? 'w-16' : 'w-64',
         className
       )}
@@ -89,27 +89,11 @@ export function Sidebar({ className }: SidebarProps) {
             />
           </div>
           {!isCollapsed && (
-            <span className="text-lg font-bold bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 dark:from-white dark:via-slate-200 dark:to-white bg-clip-text text-transparent">
+            <span className="text-lg font-bold text-slate-900 dark:text-white">
               Richtato
             </span>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(
-            'ml-auto h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity duration-200',
-            isCollapsed && 'ml-0'
-          )}
-          onClick={toggleSidebar}
-          aria-label="Toggle sidebar"
-        >
-          {isCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </Button>
       </div>
 
       {/* Navigation */}
@@ -125,7 +109,7 @@ export function Sidebar({ className }: SidebarProps) {
               className={cn(
                 'flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200 group',
                 isActive
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/25'
+                  ? 'bg-blue-600 text-white shadow-lg'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white',
                 isCollapsed && 'justify-center px-2'
               )}
@@ -145,7 +129,7 @@ export function Sidebar({ className }: SidebarProps) {
       {/* Footer */}
       <div className="border-t border-slate-200/50 dark:border-slate-700/50 p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-slate-500 to-slate-600 text-white text-sm font-medium shadow-lg">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-500 text-white text-sm font-medium shadow-lg">
             {user
               ? user.first_name?.charAt(0) ||
                 user.username.charAt(0).toUpperCase()
@@ -178,11 +162,34 @@ export function Sidebar({ className }: SidebarProps) {
               <LogOut className="h-4 w-4" />
               Logout
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2 w-full justify-start gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              onClick={toggleSidebar}
+              aria-label="Toggle sidebar"
+            >
+              {isCollapsed ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronLeft className="h-4 w-4" />
+              )}
+              {isCollapsed ? 'Expand' : 'Collapse'}
+            </Button>
           </>
         )}
         {isCollapsed && (
-          <div className="mt-3 flex justify-center">
+          <div className="mt-3 flex flex-col items-center gap-2">
             <ThemeToggle isCollapsed={true} />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              onClick={toggleSidebar}
+              aria-label="Toggle sidebar"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
         )}
       </div>
