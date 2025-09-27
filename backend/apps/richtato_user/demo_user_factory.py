@@ -14,7 +14,7 @@ from apps.richtato_user.models import CardAccount, Category, User
 class DemoUserFactory:
     username = "demo"
     email = "demo@richtato.com"
-    password = "demopassword123!"
+    password = "demopassword123"
 
     def __init__(self):
         self.user = None

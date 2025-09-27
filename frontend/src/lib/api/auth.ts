@@ -2,6 +2,8 @@
  * Authentication API service for handling login, logout, and user management
  */
 
+import { csrfService } from './csrf';
+
 export interface User {
   id: number;
   username: string;
@@ -140,9 +142,15 @@ class AuthApiService {
    * Login with username/email and password
    */
   async login(credentials: LoginRequest): Promise<LoginResponse> {
+    // Get CSRF token first
+    const csrfHeaders = await csrfService.getHeaders();
+
     const response = await fetch(`${this.baseUrl}/auth/login/`, {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers: {
+        ...this.getHeaders(),
+        ...csrfHeaders,
+      },
       body: JSON.stringify(credentials),
       credentials: 'include', // Include cookies for session authentication
     });

@@ -16,6 +16,7 @@ from apps.richtato_user.utils import (
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, JsonResponse
+from django.middleware.csrf import get_token
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from drf_yasg import openapi
@@ -237,6 +238,14 @@ class CategoryFieldChoicesAPIView(APIView):
             {"value": choice[0], "label": choice[1]} for choice in Category.TYPE_CHOICES
         ]
         return Response({"type_choices": type_choices})
+
+
+# CSRF Token endpoint
+@csrf_exempt
+def get_csrf_token(request):
+    """Get CSRF token for frontend"""
+    token = get_token(request)
+    return JsonResponse({"csrfToken": token})
 
 
 # Authentication API Views
