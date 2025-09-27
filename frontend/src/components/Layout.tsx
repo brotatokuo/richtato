@@ -1,13 +1,4 @@
-import { useAuth } from '@/hooks/useAuth';
-import {
-  CloudUpload,
-  FileText,
-  Home,
-  Settings,
-  Table,
-  TrendingUp,
-  User,
-} from 'lucide-react';
+import { CloudUpload, Home, Settings, Table, TrendingUp } from 'lucide-react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 
@@ -20,12 +11,10 @@ const routeConfig: Record<
   '/data': { title: 'Data', icon: Table },
   '/cashflow': { title: 'Cashflow', icon: TrendingUp },
   '/upload': { title: 'Upload', icon: CloudUpload },
-  '/profile': { title: 'Profile', icon: User },
   '/settings': { title: 'Settings', icon: Settings },
 };
 
 export function Layout() {
-  const { user } = useAuth();
   const location = useLocation();
 
   // Get the current page config based on the route
@@ -46,13 +35,6 @@ export function Layout() {
                 <h1 className="text-2xl font-semibold text-foreground">
                   {currentPageConfig.title}
                 </h1>
-              </div>
-
-              {/* User Info */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">
-                  Welcome, {user?.username || 'User'}
-                </span>
               </div>
             </div>
           </div>

@@ -5,7 +5,6 @@ import { AuthProvider } from './contexts/AuthContext';
 import { Cashflow } from './pages/Cashflow';
 import { Dashboard } from './pages/Dashboard';
 import { DataTable } from './pages/DataTable';
-import { FileManagement } from './pages/FileManagement';
 import { Login } from './pages/Login';
 import { Profile } from './pages/Profile';
 import { Register } from './pages/Register';
@@ -36,7 +35,6 @@ function App() {
             <Route path="upload" element={<Upload />} />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
-            <Route path="file-management" element={<FileManagement />} />
           </Route>
         </Routes>
       </BrowserRouter>

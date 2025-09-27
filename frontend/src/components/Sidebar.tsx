@@ -6,16 +6,14 @@ import {
   ChevronLeft,
   ChevronRight,
   CloudUpload,
-  FileText,
   Home,
   LogOut,
   Settings,
   Table,
   TrendingUp,
-  User,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 interface SidebarProps {
   className?: string;
@@ -43,11 +41,6 @@ const navigationItems = [
     icon: CloudUpload,
   },
   {
-    name: 'Profile',
-    href: '/profile',
-    icon: User,
-  },
-  {
     name: 'Settings',
     href: '/settings',
     icon: Settings,
@@ -57,6 +50,7 @@ const navigationItems = [
 export function Sidebar({ className }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
 
   const toggleSidebar = () => {
@@ -69,6 +63,10 @@ export function Sidebar({ className }: SidebarProps) {
     } catch (error) {
       console.error('Logout failed:', error);
     }
+  };
+
+  const handleProfileClick = () => {
+    navigate('/profile');
   };
 
   return (
@@ -130,22 +128,20 @@ export function Sidebar({ className }: SidebarProps) {
       {/* Footer */}
       <div className="border-t border-slate-200/50 dark:border-slate-700/50 p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-500 text-white text-sm font-medium shadow-lg">
+          <button
+            onClick={handleProfileClick}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-500 text-white text-sm font-medium shadow-lg hover:bg-slate-600 transition-colors cursor-pointer"
+            aria-label="Go to profile"
+          >
             {user
               ? user.first_name?.charAt(0) ||
                 user.username.charAt(0).toUpperCase()
               : 'U'}
-          </div>
+          </button>
           {!isCollapsed && (
             <div className="flex-1">
               <p className="text-sm font-medium text-slate-900 dark:text-white">
-                {user
-                  ? `${user.first_name} ${user.last_name}`.trim() ||
-                    user.username
-                  : 'User'}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Logged in as
+                {user ? user.username : 'User'}
               </p>
             </div>
           )}
