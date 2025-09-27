@@ -60,7 +60,7 @@ export function Login() {
                   <img
                     src="/richtato.png"
                     alt="Richtato Logo"
-                    className="w-16 h-16 mx-auto rounded-xl shadow-lg"
+                    className="w-16 h-16 mx-auto rounded-xl"
                   />
                 </div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 dark:from-white dark:via-slate-200 dark:to-white bg-clip-text text-transparent mb-2">

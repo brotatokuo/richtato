@@ -26,7 +26,7 @@ export function Welcome() {
                 <img
                   src="/richtato.png"
                   alt="Richtato Logo"
-                  className="w-40 h-40 mx-auto rounded-2xl shadow-lg"
+                  className="w-40 h-40 mx-auto rounded-2xl"
                 />
               </div>
             </div>
