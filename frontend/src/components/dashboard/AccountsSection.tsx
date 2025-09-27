@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, CreditCard, PiggyBank, TrendingUp } from 'lucide-react';
+import { Building2, PiggyBank, TrendingUp } from 'lucide-react';
 
 interface Account {
   id: string;
@@ -43,14 +43,6 @@ const mockAccounts: Account[] = [
     entity: 'Fidelity',
     lastUpdated: '2024-01-15',
   },
-  {
-    id: '5',
-    name: 'Credit Card',
-    type: 'credit',
-    balance: -1250.75,
-    entity: 'Chase',
-    lastUpdated: '2024-01-14',
-  },
 ];
 
 const getAccountIcon = (type: string) => {
@@ -63,8 +55,6 @@ const getAccountIcon = (type: string) => {
       return <TrendingUp className="h-5 w-5" />;
     case 'retirement':
       return <TrendingUp className="h-5 w-5" />;
-    case 'credit':
-      return <CreditCard className="h-5 w-5" />;
     default:
       return <Building2 className="h-5 w-5" />;
   }
@@ -80,8 +70,6 @@ const getAccountTypeColor = (type: string) => {
       return 'bg-purple-500';
     case 'retirement':
       return 'bg-orange-500';
-    case 'credit':
-      return 'bg-red-500';
     default:
       return 'bg-gray-500';
   }
@@ -104,7 +92,6 @@ export function AccountsSection() {
     savings: 'Savings',
     investment: 'Investments',
     retirement: 'Retirement',
-    credit: 'Credit Cards',
   };
 
   return (
