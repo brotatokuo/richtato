@@ -142,27 +142,56 @@ class AuthApiService {
    * Login with username/email and password
    */
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    // Get CSRF token first
-    const csrfHeaders = await csrfService.getHeaders();
+    try {
+      // Get CSRF token first
+      const csrfHeaders = await csrfService.getHeaders();
 
-    const response = await fetch(`${this.baseUrl}/auth/login/`, {
-      method: 'POST',
-      headers: {
-        ...this.getHeaders(),
-        ...csrfHeaders,
-      },
-      body: JSON.stringify(credentials),
-      credentials: 'include', // Include cookies for session authentication
-    });
+      const response = await fetch(`${this.baseUrl}/auth/login/`, {
+        method: 'POST',
+        headers: {
+          ...this.getHeaders(),
+          ...csrfHeaders,
+        },
+        body: JSON.stringify(credentials),
+        credentials: 'include', // Include cookies for session authentication
+      });
 
-    const data = await this.handleResponse<LoginResponse>(response);
+      // If CSRF token is invalid, try to refresh it and retry once
+      if (response.status === 403) {
+        console.log('CSRF token invalid, refreshing...');
+        const refreshedCsrfHeaders = await csrfService
+          .refreshToken()
+          .then(() => csrfService.getHeaders());
 
-    if (data.success) {
-      this.token = data.token;
-      this.setStoredToken(data.token);
+        const retryResponse = await fetch(`${this.baseUrl}/auth/login/`, {
+          method: 'POST',
+          headers: {
+            ...this.getHeaders(),
+            ...refreshedCsrfHeaders,
+          },
+          body: JSON.stringify(credentials),
+          credentials: 'include',
+        });
+
+        const data = await this.handleResponse<LoginResponse>(retryResponse);
+        if (data.success) {
+          this.token = data.token;
+          this.setStoredToken(data.token);
+        }
+        return data;
+      }
+
+      const data = await this.handleResponse<LoginResponse>(response);
+      if (data.success) {
+        this.token = data.token;
+        this.setStoredToken(data.token);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
     }
-
-    return data;
   }
 
   /**

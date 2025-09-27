@@ -14,7 +14,18 @@ class CSRFService {
     }
 
     try {
-      // First, get the CSRF token from Django
+      // First, try to get from cookie (Django sets this automatically)
+      const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+
+      if (cookieValue) {
+        this.token = cookieValue;
+        return this.token;
+      }
+
+      // If no cookie, try to get from Django endpoint
       const response = await fetch('http://localhost:8000/api/auth/csrf/', {
         method: 'GET',
         credentials: 'include',
@@ -29,17 +40,6 @@ class CSRFService {
       console.warn('Failed to get CSRF token:', error);
     }
 
-    // Fallback: try to get from cookie
-    const cookieValue = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('csrftoken='))
-      ?.split('=')[1];
-
-    if (cookieValue) {
-      this.token = cookieValue;
-      return this.token;
-    }
-
     throw new Error('Unable to obtain CSRF token');
   }
 
@@ -48,6 +48,14 @@ class CSRFService {
    */
   clearToken(): void {
     this.token = null;
+  }
+
+  /**
+   * Force refresh of CSRF token
+   */
+  async refreshToken(): Promise<string> {
+    this.token = null;
+    return this.getCSRFToken();
   }
 
   /**
