@@ -92,15 +92,6 @@ export function Cashflow() {
     ];
 
     return {
-      title: {
-        text: 'Cash Flow Visualization',
-        left: 'center',
-        textStyle: {
-          color: '#1f2937',
-          fontSize: 20,
-          fontWeight: 'bold',
-        },
-      },
       tooltip: {
         trigger: 'item',
         triggerOn: 'mousemove',
@@ -143,9 +134,7 @@ export function Cashflow() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600 dark:text-slate-400">
-            Loading cashflow data...
-          </p>
+          <p className="text-muted-foreground">Loading cashflow data...</p>
         </div>
       </div>
     );
@@ -154,21 +143,11 @@ export function Cashflow() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 dark:from-white dark:via-slate-200 dark:to-white bg-clip-text text-transparent mb-4">
-            Cash Flow Analysis
-          </h1>
-          <p className="text-slate-600 dark:text-slate-300 text-lg">
-            Visualize your income and expense flows
-          </p>
-        </div>
-
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200/50 dark:border-slate-700/50">
+          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Income
               </CardTitle>
               <TrendingUp className="h-4 w-4 text-green-600" />
@@ -180,9 +159,9 @@ export function Cashflow() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200/50 dark:border-slate-700/50">
+          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Expenses
               </CardTitle>
               <TrendingDown className="h-4 w-4 text-red-600" />
@@ -194,9 +173,9 @@ export function Cashflow() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200/50 dark:border-slate-700/50">
+          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 Net Flow
               </CardTitle>
               <DollarSign className="h-4 w-4 text-blue-600" />
@@ -212,9 +191,9 @@ export function Cashflow() {
         </div>
 
         {/* Sankey Diagram */}
-        <Card className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200/50 dark:border-slate-700/50">
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-slate-900 dark:text-white">
+            <CardTitle className="text-xl font-semibold text-card-foreground">
               Income & Expense Flow
             </CardTitle>
           </CardHeader>
@@ -232,7 +211,7 @@ export function Cashflow() {
         {/* Category Breakdown */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Income Categories */}
-          <Card className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200/50 dark:border-slate-700/50">
+          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-green-600 flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
@@ -251,11 +230,9 @@ export function Cashflow() {
                         className="w-4 h-4 rounded-full"
                         style={{ backgroundColor: category.color }}
                       />
-                      <span className="text-slate-700 dark:text-slate-300">
-                        {category.name}
-                      </span>
+                      <span className="text-foreground">{category.name}</span>
                     </div>
-                    <span className="font-semibold text-slate-900 dark:text-white">
+                    <span className="font-semibold text-foreground">
                       ${category.value.toLocaleString()}
                     </span>
                   </div>
@@ -265,7 +242,7 @@ export function Cashflow() {
           </Card>
 
           {/* Expense Categories */}
-          <Card className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200/50 dark:border-slate-700/50">
+          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-red-600 flex items-center gap-2">
                 <TrendingDown className="h-5 w-5" />
@@ -284,11 +261,9 @@ export function Cashflow() {
                         className="w-4 h-4 rounded-full"
                         style={{ backgroundColor: category.color }}
                       />
-                      <span className="text-slate-700 dark:text-slate-300">
-                        {category.name}
-                      </span>
+                      <span className="text-foreground">{category.name}</span>
                     </div>
-                    <span className="font-semibold text-slate-900 dark:text-white">
+                    <span className="font-semibold text-foreground">
                       ${category.value.toLocaleString()}
                     </span>
                   </div>
