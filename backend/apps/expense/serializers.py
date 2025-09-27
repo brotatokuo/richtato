@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
-from richtato.apps.expense.models import Expense
-from richtato.apps.richtato_user.models import CardAccount, Category, User
+from apps.expense.models import Expense
+from apps.richtato_user.models import CardAccount, Category, User
 
 
 class ExpenseSerializer(serializers.ModelSerializer):

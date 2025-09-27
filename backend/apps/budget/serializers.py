@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
-from richtato.apps.budget.models import Budget
-from richtato.apps.richtato_user.models import Category, User
+from apps.budget.models import Budget
+from apps.richtato_user.models import Category, User
 
 
 class BudgetSerializer(serializers.ModelSerializer):

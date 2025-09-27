@@ -4,7 +4,7 @@ import time
 from django.db import close_old_connections
 from django.utils import timezone
 
-from richtato.apps.richtato_user.models import User
+from apps.richtato_user.models import User
 
 
 class CleanupDemoUsersMiddleware:

@@ -2,8 +2,8 @@ import pandas as pd
 from django.db import models
 from loguru import logger
 
-from richtato.apps.expense.serializers import ExpenseSerializer
-from richtato.apps.richtato_user.models import CardAccount, Category
+from apps.expense.serializers import ExpenseSerializer
+from apps.richtato_user.models import CardAccount, Category
 
 
 class ExpenseManager(models.Manager):

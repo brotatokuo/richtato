@@ -21,23 +21,23 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from richtato.apps.account.models import (
+from apps.account.models import (
     Account,
     AccountTransaction,
     account_types,
     supported_asset_accounts,
 )
-from richtato.apps.budget.models import Budget
-from richtato.apps.expense.models import Expense
-from richtato.apps.income.models import Income
-from richtato.apps.richtato_user.models import (
+from apps.budget.models import Budget
+from apps.expense.models import Expense
+from apps.income.models import Income
+from apps.richtato_user.models import (
     CardAccount,
     Category,
     User,
     supported_card_banks,
 )
-from richtato.apps.richtato_user.serializers import CategorySerializer
-from richtato.apps.richtato_user.utils import (
+from apps.richtato_user.serializers import CategorySerializer
+from apps.richtato_user.utils import (
     _get_line_graph_data_by_month,
     generate_dashboard_context,
 )
@@ -78,7 +78,7 @@ def upload(request: HttpRequest):
 def profile(request: HttpRequest):
     from datetime import datetime, timedelta
     from django.db.models import Sum, Count
-    from richtato.utilities.tools import format_currency
+    from utilities.tools import format_currency
 
     user = request.user
 

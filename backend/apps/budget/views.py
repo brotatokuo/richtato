@@ -14,11 +14,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from richtato.apps.budget.models import Budget
-from richtato.apps.budget.serializers import BudgetSerializer
-from richtato.apps.expense.models import Expense
-from richtato.apps.richtato_user.models import Category
-from richtato.utilities.tools import format_currency
+from apps.budget.models import Budget
+from apps.budget.serializers import BudgetSerializer
+from apps.expense.models import Expense
+from apps.richtato_user.models import Category
+from utilities.tools import format_currency
 from richtato.views import BaseAPIView
 
 

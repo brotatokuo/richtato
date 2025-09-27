@@ -5,8 +5,8 @@ from dateutil.relativedelta import relativedelta
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from richtato.apps.account.models import Account, AccountTransaction
-from richtato.apps.richtato_user.views import (
+from apps.account.models import Account, AccountTransaction
+from apps.richtato_user.views import (
     calculate_networth_growth,
     calculate_savings_rate_context,
 )

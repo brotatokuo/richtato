@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from richtato.apps.richtato_user.models import Category, User
+from apps.richtato_user.models import Category, User
 
 
 # Create your models here.

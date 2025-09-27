@@ -10,13 +10,13 @@ from django.utils import timezone
 from loguru import logger
 from utilities.postgres.pg_client import PostgresClient
 
-from richtato.apps.account.models import Account
-from richtato.apps.budget.models import Budget
-from richtato.apps.expense.models import Expense
-from richtato.apps.expense.utils import sankey_cash_flow_overview
-from richtato.apps.income.models import Income
-from richtato.utilities.postgres.pg_client import PostgresClient
-from richtato.utilities.tools import format_currency
+from apps.account.models import Account
+from apps.budget.models import Budget
+from apps.expense.models import Expense
+from apps.expense.utils import sankey_cash_flow_overview
+from apps.income.models import Income
+from utilities.postgres.pg_client import PostgresClient
+from utilities.tools import format_currency
 
 
 @login_required

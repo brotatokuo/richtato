@@ -4,10 +4,10 @@ import pandas as pd
 from loguru import logger
 import re
 
-from richtato.apps.expense.models import Expense
-from richtato.apps.richtato_user.models import CardAccount, Category
-from richtato.artificial_intelligence.ai import OpenAI
-from richtato.categories.categories_manager import CategoriesManager
+from apps.expense.models import Expense
+from apps.richtato_user.models import CardAccount, Category
+from artificial_intelligence.ai import OpenAI
+from categories.categories_manager import CategoriesManager
 
 
 class CardCanonicalizer(ABC):

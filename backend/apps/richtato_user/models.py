@@ -8,7 +8,7 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from richtato.categories.categories import BaseCategory
+from categories.categories import BaseCategory
 
 supported_card_banks = [
     ("american_express", "American Express"),

@@ -46,13 +46,13 @@ CSRF_TRUSTED_ORIGINS = [
 # Application definition
 
 INSTALLED_APPS = [
-    "richtato.apps.richtato_user",
-    "richtato.apps.account",
-    "richtato.apps.budget",
-    "richtato.apps.income",
-    "richtato.apps.expense",
-    "richtato.apps.settings",
-    "richtato.apps.dashboard",
+    "apps.richtato_user",
+    "apps.account",
+    "apps.budget",
+    "apps.income",
+    "apps.expense",
+    "apps.settings",
+    "apps.dashboard",
     "django.contrib.humanize",
     "django.contrib.admin",
     "django.contrib.auth",

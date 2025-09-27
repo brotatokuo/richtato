@@ -8,7 +8,7 @@ from loguru import logger
 # Optional imports
 from openai import OpenAI as OpenAIClient
 
-from richtato.apps.richtato_user.models import Category, User
+from apps.richtato_user.models import Category, User
 
 
 class BaseAI(ABC):

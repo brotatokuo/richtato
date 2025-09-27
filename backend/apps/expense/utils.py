@@ -3,10 +3,10 @@ from datetime import datetime, timedelta
 import pandas as pd
 import plotly.graph_objects as go
 
-from richtato.apps.account.models import Account
-from richtato.apps.expense.models import Expense
-from richtato.apps.income.models import Income
-from richtato.categories.categories import BaseCategory
+from apps.account.models import Account
+from apps.expense.models import Expense
+from apps.income.models import Income
+from categories.categories import BaseCategory
 
 
 def get_category_icon(category_name: str) -> str:

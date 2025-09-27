@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from django.db import models
 
-from richtato.apps.richtato_user.models import User
+from apps.richtato_user.models import User
 
 supported_asset_accounts = [
     ("bank_of_america", "Bank of America"),

@@ -1,64 +1,67 @@
-import {
-  ArcElement,
-  BarElement,
-  CategoryScale,
-  Chart as ChartJS,
-  Filler,
-  Legend,
-  LinearScale,
-  LineElement,
-  PointElement,
-  Title,
-  Tooltip,
-} from 'chart.js';
+import * as echarts from 'echarts';
 import { useEffect, useRef } from 'react';
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
 
 interface BaseChartProps {
   type: 'line' | 'bar' | 'doughnut' | 'pie';
   data: any;
   options: any;
+  height?: string | number;
+  width?: string | number;
 }
 
-export function BaseChart({ type, data, options }: BaseChartProps) {
-  const chartRef = useRef<HTMLCanvasElement>(null);
-  const chartInstanceRef = useRef<ChartJS | null>(null);
+export function BaseChart({
+  type,
+  data,
+  options,
+  height = '400px',
+  width = '100%',
+}: BaseChartProps) {
+  const chartRef = useRef<HTMLDivElement>(null);
+  const chartInstanceRef = useRef<echarts.ECharts | null>(null);
 
   useEffect(() => {
     if (chartRef.current) {
       // Destroy existing chart if it exists
       if (chartInstanceRef.current) {
-        chartInstanceRef.current.destroy();
+        chartInstanceRef.current.dispose();
       }
 
-      // Create new chart
-      chartInstanceRef.current = new ChartJS(chartRef.current, {
-        type,
-        data,
-        options,
+      // Create new chart instance
+      chartInstanceRef.current = echarts.init(chartRef.current);
+
+      // Set chart option
+      chartInstanceRef.current.setOption({
+        ...options,
+        series: data.series || data,
       });
-    }
 
-    // Cleanup function
-    return () => {
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.destroy();
-        chartInstanceRef.current = null;
-      }
-    };
+      // Handle window resize
+      const handleResize = () => {
+        if (chartInstanceRef.current) {
+          chartInstanceRef.current.resize();
+        }
+      };
+
+      window.addEventListener('resize', handleResize);
+
+      // Cleanup function
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        if (chartInstanceRef.current) {
+          chartInstanceRef.current.dispose();
+          chartInstanceRef.current = null;
+        }
+      };
+    }
   }, [type, data, options]);
 
-  return <canvas ref={chartRef} />;
+  return (
+    <div
+      ref={chartRef}
+      style={{
+        height: typeof height === 'number' ? `${height}px` : height,
+        width: typeof width === 'number' ? `${width}px` : width,
+      }}
+    />
+  );
 }

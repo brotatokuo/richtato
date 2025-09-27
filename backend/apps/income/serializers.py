@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from richtato.apps.account.models import Account
+from apps.account.models import Account
 
 from .models import Income
 

@@ -54,6 +54,7 @@ show_help() {
     echo "  shell       Open Django shell"
     echo "  migrate     Run Django migrations"
     echo "  superuser   Create Django superuser"
+    echo "  demo        Create or reset demo user data"
     echo "  clean       Clean up containers and volumes"
     echo "  status      Show status of all services"
     echo "  help        Show this help message"
@@ -134,6 +135,16 @@ create_superuser() {
     docker-compose exec backend python manage.py createsuperuser
 }
 
+# Function to create demo user
+create_demo_user() {
+    print_status "Creating or resetting demo user data..."
+    docker-compose exec backend bash -c "cd /app && ./create_or_reset_demo.sh"
+    print_success "Demo user created successfully!"
+    print_status "Username: demo"
+    print_status "Password: demopassword123!"
+    print_status "Email: demo@richtato.com"
+}
+
 # Function to clean up
 clean_up() {
     print_warning "This will remove all containers, networks, and volumes. Are you sure? (y/N)"
@@ -157,7 +168,7 @@ show_status() {
 # Main script logic
 main() {
     check_docker
-    
+
     case "${1:-start}" in
         start)
             start_services
@@ -191,6 +202,9 @@ main() {
             ;;
         superuser)
             create_superuser
+            ;;
+        demo)
+            create_demo_user
             ;;
         clean)
             clean_up

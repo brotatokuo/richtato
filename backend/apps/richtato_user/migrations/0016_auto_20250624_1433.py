@@ -1,7 +1,7 @@
 from datetime import date
 
 from django.db import migrations
-from richtato.apps.richtato_user.models import Category
+from apps.richtato_user.models import Category
 
 
 def migrate_category_budgets(apps, schema_editor):

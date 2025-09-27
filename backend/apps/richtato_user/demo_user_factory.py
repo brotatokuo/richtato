@@ -4,11 +4,11 @@ from decimal import Decimal
 
 from django.db import transaction
 
-from richtato.apps.account.models import Account, AccountTransaction
-from richtato.apps.budget.models import Budget
-from richtato.apps.expense.models import Expense
-from richtato.apps.income.models import Income
-from richtato.apps.richtato_user.models import CardAccount, Category, User
+from apps.account.models import Account, AccountTransaction
+from apps.budget.models import Budget
+from apps.expense.models import Expense
+from apps.income.models import Income
+from apps.richtato_user.models import CardAccount, Category, User
 
 
 class DemoUserFactory:

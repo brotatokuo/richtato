@@ -15,25 +15,24 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from apps.richtato_user import views as user_views
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import TemplateView
 
-from richtato.apps.richtato_user import views as user_views
-
 urlpatterns = [
     # Admin Panel URL
     path("admin/", admin.site.urls),
-    # API URLs
-    path("api/", include("richtato.apps.richtato_user.urls")),
-    path("api/", include("richtato.apps.account.urls")),
-    path("api/", include("richtato.apps.budget.urls")),
-    path("api/", include("richtato.apps.income.urls")),
-    path("api/", include("richtato.apps.expense.urls")),
-    path("api/dashboard/", include("richtato.apps.dashboard.urls")),
-    path("api/", include("apps.settings.urls")),
+    # API URLs - more specific paths
+    path("api/auth/", include("apps.richtato_user.urls")),
+    path("api/accounts/", include("apps.account.urls")),
+    path("api/budget/", include("apps.budget.urls")),
+    path("api/income/", include("apps.income.urls")),
+    path("api/expense/", include("apps.expense.urls")),
+    path("api/dashboard/", include("apps.dashboard.urls")),
+    path("api/settings/", include("apps.settings.urls")),
     # Demo login for development
     path("demo-login/", user_views.demo_login, name="demo_login"),
     # Serve React app for all other routes
@@ -46,5 +45,5 @@ if settings.DEBUG:
         settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0]
     )
 
-handler404 = "richtato.richtato.views.custom_404_view"
-handler500 = "richtato.richtato.views.custom_500_view"
+handler404 = "richtato.views.custom_404_view"
+handler500 = "richtato.views.custom_500_view"

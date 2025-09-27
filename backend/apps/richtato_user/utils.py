@@ -4,9 +4,9 @@ import pytz
 from dateutil.relativedelta import relativedelta
 from loguru import logger
 
-from richtato.apps.expense.models import Expense
-from richtato.apps.income.models import Income
-from richtato.apps.richtato_user.models import User
+from apps.expense.models import Expense
+from apps.income.models import Income
+from apps.richtato_user.models import User
 
 # Set the timezone to US/Pacific
 pst = pytz.timezone("US/Pacific")
@@ -103,7 +103,7 @@ def calculate_networth_growth(user):
         previous_month_start = previous_month_end.replace(day=1)
 
         # Get current networth (sum of all account latest balances)
-        from richtato.apps.account.models import Account, AccountTransaction
+        from apps.account.models import Account, AccountTransaction
 
         current_accounts = Account.objects.filter(user=user)
         current_networth = (
@@ -180,11 +180,11 @@ def generate_dashboard_context(request):
 
     from django.db.models import Q, Sum
 
-    from richtato.apps.account.models import Account
-    from richtato.apps.budget.models import Budget
-    from richtato.apps.expense.models import Expense
-    from richtato.apps.income.models import Income
-    from richtato.utilities.tools import format_currency
+    from apps.account.models import Account
+    from apps.budget.models import Budget
+    from apps.expense.models import Expense
+    from apps.income.models import Income
+    from utilities.tools import format_currency
 
     accounts = Account.objects.filter(user=request.user)
     networth = (

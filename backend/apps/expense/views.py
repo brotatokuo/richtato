@@ -9,14 +9,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from richtato.apps.expense.imports import ExpenseManager
-from richtato.apps.richtato_user.utils import (
+from apps.expense.imports import ExpenseManager
+from apps.richtato_user.utils import (
     _get_line_graph_data_by_day,
     _get_line_graph_data_by_month,
 )
-from richtato.apps.settings.models import CardAccount, Category
-from richtato.artificial_intelligence.ai import OpenAI
-from richtato.statement_imports.cards.card_factory import CardStatement
+from apps.settings.models import CardAccount, Category
+from artificial_intelligence.ai import OpenAI
+from statement_imports.cards.card_factory import CardStatement
 from richtato.views import BaseAPIView
 
 from .models import Expense

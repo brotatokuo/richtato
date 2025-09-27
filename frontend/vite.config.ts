@@ -5,14 +5,9 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5927,
+    port: 3000,
     host: true,
-    allowedHosts: [
-      'localhost',
-      '127.0.0.1',
-      'staging.neuron.teserac.ai',
-      '72.13.82.3',
-    ],
+    allowedHosts: ['localhost', '127.0.0.1'],
   },
   build: {
     outDir: 'dist',

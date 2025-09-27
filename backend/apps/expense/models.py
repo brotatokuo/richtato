@@ -1,6 +1,6 @@
 from django.db import models
 
-from richtato.apps.richtato_user.models import CardAccount, Category, User
+from apps.richtato_user.models import CardAccount, Category, User
 
 
 # Create your models here.

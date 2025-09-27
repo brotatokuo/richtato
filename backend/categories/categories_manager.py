@@ -1,5 +1,5 @@
-from richtato.apps.richtato_user.models import Category
-from richtato.categories.categories import BaseCategory
+from apps.richtato_user.models import Category
+from categories.categories import BaseCategory
 
 
 class CategoriesManager:

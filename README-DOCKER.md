@@ -12,12 +12,14 @@ This document explains how to run the Richtato application using Docker Compose.
 ### Development Environment
 
 1. **Clone the repository** (if not already done):
+
    ```bash
    git clone <repository-url>
    cd richtato
    ```
 
 2. **Start all services**:
+
    ```bash
    docker-compose up --build
    ```
@@ -30,6 +32,7 @@ This document explains how to run the Richtato application using Docker Compose.
 ### Production Environment
 
 1. **Create environment file**:
+
    ```bash
    cp .env.example .env
    # Edit .env with your production values
@@ -43,18 +46,21 @@ This document explains how to run the Richtato application using Docker Compose.
 ## Services
 
 ### Database (PostgreSQL)
+
 - **Port**: 5432
 - **Database**: richtato
 - **Username**: richtato
 - **Password**: richtato_password (dev) / ${POSTGRES_PASSWORD} (prod)
 
 ### Backend (Django)
+
 - **Port**: 8000
 - **Framework**: Django 5.1 + DRF
 - **Database**: PostgreSQL
 - **Features**: API endpoints, admin panel, CORS enabled
 
 ### Frontend (React)
+
 - **Port**: 3000 (dev) / 80 (prod)
 - **Framework**: React 19 + TypeScript + Vite
 - **Features**: Hot reload (dev), optimized build (prod)
@@ -62,6 +68,7 @@ This document explains how to run the Richtato application using Docker Compose.
 ## Development Commands
 
 ### Start services
+
 ```bash
 # Start all services
 docker-compose up
@@ -74,6 +81,7 @@ docker-compose up --build
 ```
 
 ### Stop services
+
 ```bash
 # Stop all services
 docker-compose down
@@ -83,6 +91,7 @@ docker-compose down -v
 ```
 
 ### View logs
+
 ```bash
 # All services
 docker-compose logs
@@ -94,6 +103,7 @@ docker-compose logs db
 ```
 
 ### Execute commands
+
 ```bash
 # Django shell
 docker-compose exec backend python manage.py shell
@@ -109,6 +119,7 @@ docker-compose exec backend python manage.py collectstatic
 ```
 
 ### Database operations
+
 ```bash
 # Access PostgreSQL shell
 docker-compose exec db psql -U richtato -d richtato
@@ -123,6 +134,7 @@ docker-compose exec -T db psql -U richtato richtato < backup.sql
 ## Environment Variables
 
 ### Development (.env.example)
+
 ```env
 SECRET_KEY=your-super-secret-key-change-this-in-production
 DEBUG=True
@@ -132,6 +144,7 @@ CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://frontend
 ```
 
 ### Production
+
 ```env
 SECRET_KEY=your-production-secret-key
 DEBUG=False
@@ -147,6 +160,7 @@ CORS_ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 ### Common Issues
 
 1. **Port already in use**:
+
    ```bash
    # Check what's using the port
    lsof -i :3000
@@ -157,6 +171,7 @@ CORS_ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
    ```
 
 2. **Database connection issues**:
+
    ```bash
    # Check if database is running
    docker-compose ps
@@ -169,6 +184,7 @@ CORS_ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
    ```
 
 3. **Frontend not loading**:
+
    ```bash
    # Check frontend logs
    docker-compose logs frontend
@@ -182,6 +198,7 @@ CORS_ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
    - Check that the frontend is making requests to the correct backend URL
 
 ### Reset Everything
+
 ```bash
 # Stop and remove all containers, networks, and volumes
 docker-compose down -v --remove-orphans

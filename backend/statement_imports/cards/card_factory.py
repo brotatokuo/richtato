@@ -1,8 +1,8 @@
-from richtato.apps.richtato_user.models import User
-from richtato.statement_imports.cards.american_express import AmericanExpressCards
-from richtato.statement_imports.cards.bank_of_america import BankOfAmericaCards
-from richtato.statement_imports.cards.chase import ChaseCards
-from richtato.statement_imports.cards.citi import CitiCards
+from apps.richtato_user.models import User
+from statement_imports.cards.american_express import AmericanExpressCards
+from statement_imports.cards.bank_of_america import BankOfAmericaCards
+from statement_imports.cards.chase import ChaseCards
+from statement_imports.cards.citi import CitiCards
 from loguru import logger
 
 

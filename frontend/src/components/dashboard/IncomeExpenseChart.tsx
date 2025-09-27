@@ -2,42 +2,67 @@ import { BaseChart } from '@/components/dashboard/BaseChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const mockData = {
-  labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-  datasets: [
+  series: [
     {
-      label: 'Income',
+      name: 'Income',
+      type: 'bar',
       data: [3500, 3500, 3600, 3500, 3700, 3800],
-      backgroundColor: 'rgba(34, 197, 94, 0.2)',
-      borderColor: 'rgba(34, 197, 94, 1)',
-      borderWidth: 2,
+      itemStyle: {
+        color: '#22c55e',
+      },
     },
     {
-      label: 'Expenses',
+      name: 'Expenses',
+      type: 'bar',
       data: [2800, 3200, 2900, 3100, 3000, 3200],
-      backgroundColor: 'rgba(239, 68, 68, 0.2)',
-      borderColor: 'rgba(239, 68, 68, 1)',
-      borderWidth: 2,
+      itemStyle: {
+        color: '#ef4444',
+      },
     },
   ],
 };
 
 const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'top' as const,
+  title: {
+    text: 'Income vs Expenses',
+    left: 'center',
+  },
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: {
+      type: 'shadow',
+    },
+    formatter: function (params: any) {
+      let result = params[0].name + '<br/>';
+      params.forEach((param: any) => {
+        result +=
+          param.seriesName + ': $' + param.value.toLocaleString() + '<br/>';
+      });
+      return result;
     },
   },
-  scales: {
-    y: {
-      beginAtZero: true,
-      ticks: {
-        callback: function (value: any) {
-          return '$' + value.toLocaleString();
-        },
+  legend: {
+    data: ['Income', 'Expenses'],
+    top: 'bottom',
+  },
+  xAxis: {
+    type: 'category',
+    data: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+  },
+  yAxis: {
+    type: 'value',
+    axisLabel: {
+      formatter: function (value: number) {
+        return '$' + value.toLocaleString();
       },
     },
+  },
+  grid: {
+    left: '3%',
+    right: '4%',
+    bottom: '15%',
+    top: '10%',
+    containLabel: true,
   },
 };
 

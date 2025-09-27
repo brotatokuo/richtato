@@ -2,54 +2,59 @@ import { BaseChart } from '@/components/dashboard/BaseChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const mockData = {
-  labels: [
-    'Food & Dining',
-    'Shopping',
-    'Transportation',
-    'Entertainment',
-    'Utilities',
-    'Healthcare',
-  ],
-  datasets: [
+  series: [
     {
-      data: [28, 22, 15, 9, 8, 6],
-      backgroundColor: [
-        'rgba(59, 130, 246, 0.8)',
-        'rgba(16, 185, 129, 0.8)',
-        'rgba(245, 158, 11, 0.8)',
-        'rgba(139, 92, 246, 0.8)',
-        'rgba(239, 68, 68, 0.8)',
-        'rgba(236, 72, 153, 0.8)',
+      name: 'Expense Breakdown',
+      type: 'pie',
+      radius: ['40%', '70%'],
+      data: [
+        { value: 28, name: 'Food & Dining', itemStyle: { color: '#3b82f6' } },
+        { value: 22, name: 'Shopping', itemStyle: { color: '#10b981' } },
+        { value: 15, name: 'Transportation', itemStyle: { color: '#f59e0b' } },
+        { value: 9, name: 'Entertainment', itemStyle: { color: '#8b5cf6' } },
+        { value: 8, name: 'Utilities', itemStyle: { color: '#ef4444' } },
+        { value: 6, name: 'Healthcare', itemStyle: { color: '#ec4899' } },
       ],
-      borderColor: [
-        'rgba(59, 130, 246, 1)',
-        'rgba(16, 185, 129, 1)',
-        'rgba(245, 158, 11, 1)',
-        'rgba(139, 92, 246, 1)',
-        'rgba(239, 68, 68, 1)',
-        'rgba(236, 72, 153, 1)',
-      ],
-      borderWidth: 2,
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowOffsetX: 0,
+          shadowColor: 'rgba(0, 0, 0, 0.5)',
+        },
+      },
     },
   ],
 };
 
 const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'bottom' as const,
+  title: {
+    text: 'Expense Breakdown',
+    left: 'center',
+  },
+  tooltip: {
+    trigger: 'item',
+    formatter: function (params: any) {
+      return params.name + ': ' + params.value + '%';
     },
-    tooltip: {
-      callbacks: {
-        label: function (context: any) {
-          const label = context.label || '';
-          const value = context.parsed;
-          return `${label}: ${value}%`;
-        },
-      },
-    },
+  },
+  legend: {
+    orient: 'vertical',
+    left: 'left',
+    data: [
+      'Food & Dining',
+      'Shopping',
+      'Transportation',
+      'Entertainment',
+      'Utilities',
+      'Healthcare',
+    ],
+  },
+  grid: {
+    left: '3%',
+    right: '4%',
+    bottom: '3%',
+    top: '10%',
+    containLabel: true,
   },
 };
 

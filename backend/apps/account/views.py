@@ -1,5 +1,5 @@
 from django.db.models import F
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView
 from loguru import logger
 from rest_framework import status
@@ -8,9 +8,8 @@ from rest_framework.decorators import authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from richtato.utilities.tools import format_currency, format_date
 from richtato.views import BaseAPIView
+from utilities.tools import format_currency, format_date
 
 from .models import Account, AccountTransaction, account_types, supported_asset_accounts
 from .serializers import AccountSerializer, AccountTransactionSerializer

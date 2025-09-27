@@ -9,8 +9,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from richtato.apps.account.models import Account
-from richtato.apps.richtato_user.utils import (
+from apps.account.models import Account
+from apps.richtato_user.utils import (
     _get_line_graph_data_by_day,
     _get_line_graph_data_by_month,
 )
