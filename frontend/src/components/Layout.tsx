@@ -1,4 +1,11 @@
-import { CloudUpload, Home, Settings, Table, TrendingUp } from 'lucide-react';
+import {
+  CloudUpload,
+  PieChart,
+  Settings,
+  Table,
+  TrendingUp,
+  Wallet,
+} from 'lucide-react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 
@@ -7,7 +14,8 @@ const routeConfig: Record<
   string,
   { title: string; icon: React.ComponentType<{ className?: string }> }
 > = {
-  '/dashboard': { title: 'Dashboard', icon: Home },
+  '/budget': { title: 'Budget', icon: Wallet },
+  '/assets': { title: 'Assets', icon: PieChart },
   '/data': { title: 'Data', icon: Table },
   '/cashflow': { title: 'Cashflow', icon: TrendingUp },
   '/upload': { title: 'Upload', icon: CloudUpload },

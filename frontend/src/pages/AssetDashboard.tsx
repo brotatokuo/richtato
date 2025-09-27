@@ -1,34 +1,31 @@
 import { AccountsSection } from '@/components/dashboard/AccountsSection';
-import { BudgetProgress } from '@/components/dashboard/BudgetProgress';
-import { CashFlowChart } from '@/components/dashboard/CashFlowChart';
-import { ExpenseBreakdown } from '@/components/dashboard/ExpenseBreakdown';
 import { IncomeExpenseChart } from '@/components/dashboard/IncomeExpenseChart';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { SavingsChart } from '@/components/dashboard/SavingsChart';
-import { TopCategories } from '@/components/dashboard/TopCategories';
 import {
   AlertTriangle,
-  Gauge,
-  Percent,
+  Building2,
   PiggyBank,
   RefreshCw,
   TrendingUp,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-interface DashboardData {
+interface AssetDashboardData {
   networth: string;
   networth_growth: string;
   networth_growth_class: string;
+  total_assets: string;
+  total_liabilities: string;
   savings_rate: string;
   savings_rate_class: string;
   savings_rate_context: string;
-  budget_utilization_30_days: string;
-  nonessential_spending_pct: string;
+  investment_performance: string;
+  investment_performance_class: string;
 }
 
-export function Dashboard() {
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+export function AssetDashboard() {
+  const [dashboardData, setDashboardData] = useState<AssetDashboardData | null>(
     null
   );
   const [loading, setLoading] = useState(true);
@@ -39,7 +36,7 @@ export function Dashboard() {
       setLoading(true);
       setError(null);
       // TODO: Replace with actual API call
-      // const data = await fetchDashboardData();
+      // const data = await fetchAssetDashboardData();
       // setDashboardData(data);
 
       // Mock data for now
@@ -47,11 +44,13 @@ export function Dashboard() {
         networth: '$125,430.00',
         networth_growth: '+$2,340.00',
         networth_growth_class: 'positive',
+        total_assets: '$150,680.75',
+        total_liabilities: '-$25,250.75',
         savings_rate: '23.5%',
         savings_rate_class: 'positive',
         savings_rate_context: 'vs last month',
-        budget_utilization_30_days: '78%',
-        nonessential_spending_pct: '45',
+        investment_performance: '+12.4%',
+        investment_performance_class: 'positive',
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -69,7 +68,7 @@ export function Dashboard() {
       <div className="flex items-center justify-center h-64">
         <div className="flex items-center space-x-2">
           <RefreshCw className="h-4 w-4 animate-spin" />
-          <span>Loading dashboard data...</span>
+          <span>Loading asset dashboard data...</span>
         </div>
       </div>
     );
@@ -80,7 +79,9 @@ export function Dashboard() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-          <p className="text-red-600 mb-4">Error loading dashboard: {error}</p>
+          <p className="text-red-600 mb-4">
+            Error loading asset dashboard: {error}
+          </p>
           <button
             onClick={loadDashboardData}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -98,7 +99,7 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* KPI Summary Row */}
+      {/* Asset KPI Summary Row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Net Worth"
@@ -109,6 +110,13 @@ export function Dashboard() {
             label: 'vs last month',
           }}
           icon={<TrendingUp className="h-4 w-4" />}
+        />
+
+        <MetricCard
+          title="Total Assets"
+          value={dashboardData.total_assets}
+          subtitle="All accounts combined"
+          icon={<Building2 className="h-4 w-4" />}
         />
 
         <MetricCard
@@ -123,27 +131,19 @@ export function Dashboard() {
         />
 
         <MetricCard
-          title="Budget Utilization"
-          value={dashboardData.budget_utilization_30_days}
-          subtitle="of current month's budget"
-          icon={<Gauge className="h-4 w-4" />}
-        />
-
-        <MetricCard
-          title="Non-Essential Spending"
-          value={`${dashboardData.nonessential_spending_pct}%`}
-          subtitle="of total spending"
-          icon={<Percent className="h-4 w-4" />}
+          title="Investment Performance"
+          value={dashboardData.investment_performance}
+          subtitle="YTD portfolio return"
+          trend={{
+            value: 12.4,
+            label: 'vs market',
+          }}
+          icon={<TrendingUp className="h-4 w-4" />}
         />
       </div>
 
-      {/* Main Analytics Grid */}
+      {/* Main Asset Analytics Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Budget Progress */}
-        <div className="lg:col-span-2">
-          <BudgetProgress />
-        </div>
-
         {/* Income vs Expenses */}
         <div>
           <IncomeExpenseChart />
@@ -152,11 +152,6 @@ export function Dashboard() {
         {/* Savings Trend */}
         <div>
           <SavingsChart />
-        </div>
-
-        {/* Expense Breakdown */}
-        <div>
-          <ExpenseBreakdown />
         </div>
 
         {/* Accounts */}

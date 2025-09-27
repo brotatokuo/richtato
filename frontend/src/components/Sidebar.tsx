@@ -6,11 +6,12 @@ import {
   ChevronLeft,
   ChevronRight,
   CloudUpload,
-  Home,
   LogOut,
+  PieChart,
   Settings,
   Table,
   TrendingUp,
+  Wallet,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -21,20 +22,26 @@ interface SidebarProps {
 
 const navigationItems = [
   {
-    name: 'Dashboard',
-    href: '/dashboard',
-    icon: Home,
+    name: 'Budget',
+    href: '/budget',
+    icon: Wallet,
   },
   {
-    name: 'Data',
-    href: '/data',
-    icon: Table,
+    name: 'Assets',
+    href: '/assets',
+    icon: PieChart,
   },
   {
     name: 'Cashflow',
     href: '/cashflow',
     icon: TrendingUp,
   },
+  {
+    name: 'Data',
+    href: '/data',
+    icon: Table,
+  },
+
   {
     name: 'Upload',
     href: '/upload',
