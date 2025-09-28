@@ -492,7 +492,6 @@ export function TransactionTable({
                     className="text-center py-8"
                   >
                     <div className="flex items-center justify-center gap-2">
-                      <RefreshCw className="h-4 w-4 animate-spin" />
                       Loading transactions...
                     </div>
                   </TableCell>

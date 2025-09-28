@@ -4,13 +4,7 @@ import { MetricCard } from '@/components/dashboard/MetricCard';
 import { SavingsChart } from '@/components/dashboard/SavingsChart';
 import { dashboardApiService } from '@/lib/api/dashboard';
 import { transactionsApiService } from '@/lib/api/transactions';
-import {
-  AlertTriangle,
-  Building2,
-  PiggyBank,
-  RefreshCw,
-  TrendingUp,
-} from 'lucide-react';
+import { AlertTriangle, Building2, PiggyBank, TrendingUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface AssetDashboardData {
@@ -108,9 +102,8 @@ export function AssetDashboard() {
   if (loading && !dashboardData) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="flex items-center space-x-2">
-          <RefreshCw className="h-4 w-4 animate-spin" />
-          <span>Loading asset dashboard data...</span>
+        <div className="text-muted-foreground">
+          Loading asset dashboard data...
         </div>
       </div>
     );

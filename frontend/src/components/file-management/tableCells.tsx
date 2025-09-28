@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Download, Edit, RefreshCw, Trash2 } from 'lucide-react';
+import { Download, Edit, Trash2 } from 'lucide-react';
 import { FileItem } from './types';
 import {
   formatFileSize,
@@ -156,7 +156,7 @@ export const ActionsCell = ({
         className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
         title="Retry upload"
       >
-        <RefreshCw className="h-4 w-4" />
+        Retry
       </Button>
     )}
     {(file.status === 'vectorized' || file.status === 'uploaded') && (

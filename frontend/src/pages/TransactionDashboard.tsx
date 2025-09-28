@@ -7,7 +7,6 @@ import {
   Gauge,
   Percent,
   PiggyBank,
-  RefreshCw,
   TrendingUp,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -41,10 +40,7 @@ export function Dashboard() {
   if (loading && !dashboardData) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="flex items-center space-x-2">
-          <RefreshCw className="h-4 w-4 animate-spin" />
-          <span>Loading dashboard data...</span>
-        </div>
+        <div className="text-muted-foreground">Loading dashboard data...</div>
       </div>
     );
   }

@@ -2,7 +2,7 @@ import { BaseChart } from '@/components/dashboard/BaseChart';
 import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { transactionsApiService } from '@/lib/api/transactions';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface BudgetCategory {
@@ -168,10 +168,7 @@ export function BudgetProgress() {
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center">
-            <div className="flex items-center gap-2">
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              <span className="text-muted-foreground">Loading...</span>
-            </div>
+            <div className="text-muted-foreground">Loading...</div>
           </div>
         </CardContent>
       </Card>
@@ -193,7 +190,6 @@ export function BudgetProgress() {
                 onClick={fetchBudgetData}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mx-auto"
               >
-                <RefreshCw className="h-4 w-4" />
                 Retry
               </button>
             </div>

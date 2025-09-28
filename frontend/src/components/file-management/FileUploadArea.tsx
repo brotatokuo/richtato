@@ -1,5 +1,5 @@
+import { AlertCircle, Upload, X } from 'lucide-react';
 import React from 'react';
-import { Upload, X, RefreshCw, AlertCircle } from 'lucide-react';
 import { FileUploadState } from './types';
 
 interface FileUploadAreaProps {
@@ -135,7 +135,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
                         className="text-blue-600 hover:text-blue-800 p-1"
                         title="Retry upload"
                       >
-                        <RefreshCw className="h-4 w-4" />
+                        Retry
                       </button>
                     )}
                   {upload.status !== 'vectorized' && onCancelUpload && (
