@@ -15,7 +15,7 @@ export function Welcome() {
       setLoginError(null);
       await demoLogin();
       // Navigate to dashboard after successful login
-      navigate('/dashboard');
+      navigate('/budget');
     } catch (error) {
       console.error('Demo login failed:', error);
       setLoginError(

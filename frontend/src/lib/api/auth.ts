@@ -110,7 +110,7 @@ class AuthApiService {
       'Content-Type': 'application/json',
     };
 
-    if (this.token) {
+    if (this.token && this.token !== 'session-based') {
       headers['Authorization'] = `Token ${this.token}`;
     }
 
@@ -244,7 +244,7 @@ class AuthApiService {
    * Get current user profile
    */
   async getProfile(): Promise<UserProfileResponse> {
-    if (!this.token) {
+    if (!this.token && !this.isSessionAuthenticated()) {
       throw new Error('Not authenticated');
     }
 
@@ -296,6 +296,13 @@ class AuthApiService {
   }
 
   /**
+   * Check if user is authenticated via session
+   */
+  isSessionAuthenticated(): boolean {
+    return this.token === 'session-based';
+  }
+
+  /**
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
@@ -318,20 +325,57 @@ class AuthApiService {
    * Demo login - creates a temporary demo user
    */
   async demoLogin(): Promise<LoginResponse> {
-    const response = await fetch(`${this.baseUrl}/auth/api/demo-login/`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      credentials: 'include', // Include cookies for session authentication
-    });
+    try {
+      // Get CSRF token first
+      const csrfHeaders = await csrfService.getHeaders();
 
-    const data = await this.handleResponse<LoginResponse>(response);
+      const response = await fetch(`${this.baseUrl}/auth/api/demo-login/`, {
+        method: 'POST',
+        headers: {
+          ...this.getHeaders(),
+          ...csrfHeaders,
+        },
+        credentials: 'include', // Include cookies for session authentication
+      });
 
-    if (data.success) {
-      this.token = data.token;
-      this.setStoredToken(data.token);
+      // If CSRF token is invalid, try to refresh it and retry once
+      if (response.status === 403) {
+        console.log('CSRF token invalid, refreshing...');
+        const refreshedCsrfHeaders = await csrfService
+          .refreshToken()
+          .then(() => csrfService.getHeaders());
+
+        const retryResponse = await fetch(
+          `${this.baseUrl}/auth/api/demo-login/`,
+          {
+            method: 'POST',
+            headers: {
+              ...this.getHeaders(),
+              ...refreshedCsrfHeaders,
+            },
+            credentials: 'include',
+          }
+        );
+
+        const data = await this.handleResponse<LoginResponse>(retryResponse);
+        if (data.success) {
+          this.token = data.token;
+          this.setStoredToken(data.token);
+        }
+        return data;
+      }
+
+      const data = await this.handleResponse<LoginResponse>(response);
+      if (data.success) {
+        this.token = data.token;
+        this.setStoredToken(data.token);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Demo login error:', error);
+      throw error;
     }
-
-    return data;
   }
 }
 

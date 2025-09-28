@@ -17,6 +17,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, JsonResponse
 from django.middleware.csrf import get_token
+from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from drf_yasg import openapi
@@ -584,12 +585,36 @@ class APILoginView(APIView):
 
         user = authenticate(request, username=username, password=password)
         if user is not None:
+            # Generate a token for the user
+            from rest_framework.authtoken.models import Token
+
+            token, created = Token.objects.get_or_create(user=user)
+
             login(request, user)
+
+            # Prepare user data in the format expected by frontend
+            user_data = {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email or "",
+                "first_name": "",  # Custom User model doesn't have first_name
+                "last_name": "",  # Custom User model doesn't have last_name
+                "is_staff": user.is_staff,
+                "is_superuser": user.is_superuser,
+                "is_active": user.is_active,
+                "date_joined": user.date_joined.isoformat()
+                if user.date_joined
+                else None,
+                "last_login": None,  # Custom User model doesn't have last_login
+            }
+
             return Response(
                 {
+                    "success": True,
                     "message": "Login successful",
-                    "user_id": user.id,
-                    "username": user.username,
+                    "user": user_data,
+                    "token": token.key,
+                    "organization": None,  # TODO: Add organization support
                 }
             )
         else:
@@ -624,17 +649,31 @@ class APIProfileView(APIView):
     )
     def get(self, request):
         user = request.user
+
+        # Prepare user data in the format expected by frontend
+        user_data = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email or "",
+            "first_name": "",  # Custom User model doesn't have first_name
+            "last_name": "",  # Custom User model doesn't have last_name
+            "is_staff": user.is_staff,
+            "is_superuser": user.is_superuser,
+            "is_active": user.is_active,
+            "date_joined": user.date_joined.isoformat() if user.date_joined else None,
+            "last_login": None,  # Custom User model doesn't have last_login
+        }
+
         return Response(
             {
-                "user_id": user.id,
-                "username": user.username,
-                "email": user.email,
-                "date_joined": user.date_joined,
-                "is_active": user.is_active,
+                "success": True,
+                "user": user_data,
+                "organization": None,  # TODO: Add organization support
             }
         )
 
 
+@method_decorator(csrf_exempt, name="dispatch")
 class APIDemoLoginView(APIView):
     permission_classes = []  # Allow unauthenticated access for demo login
 
@@ -648,23 +687,56 @@ class APIDemoLoginView(APIView):
     )
     def post(self, request):
         try:
+            logger.info("Demo login request received")
+            logger.info(f"Request method: {request.method}")
+            logger.info(f"Request headers: {dict(request.headers)}")
+            logger.info(f"Request user: {request.user}")
+            logger.info(f"Request authenticated: {request.user.is_authenticated}")
+
             demo_user, created = User.objects.get_or_create(
                 username="demo_user",
                 defaults={"email": "demo@richtato.local", "is_active": True},
             )
+            logger.info(f"Demo user created: {created}, user: {demo_user.username}")
 
             if created:
                 demo_user.set_password("demo_password")
                 demo_user.save()
+                logger.info("Demo user password set")
 
+            # Login the demo user
             login(request, demo_user)
+            logger.info("Demo user logged in successfully")
+
+            # Prepare user data in the format expected by frontend
+            user_data = {
+                "id": demo_user.id,
+                "username": demo_user.username,
+                "email": demo_user.email or "",
+                "first_name": "",  # Custom User model doesn't have first_name
+                "last_name": "",  # Custom User model doesn't have last_name
+                "is_staff": demo_user.is_staff,
+                "is_superuser": demo_user.is_superuser,
+                "is_active": demo_user.is_active,
+                "date_joined": demo_user.date_joined.isoformat()
+                if demo_user.date_joined
+                else None,
+                "last_login": None,  # Custom User model doesn't have last_login
+            }
 
             return Response(
                 {
+                    "success": True,
                     "message": "Demo login successful",
-                    "user_id": demo_user.id,
-                    "username": demo_user.username,
+                    "user": user_data,
+                    "token": "session-based",  # Using session authentication
+                    "organization": None,  # Demo user doesn't have organization
                 }
             )
         except Exception as e:
-            return Response({"error": str(e)}, status=400)
+            logger.error(f"Demo login error: {str(e)}")
+            logger.error(f"Exception type: {type(e)}")
+            import traceback
+
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return Response({"success": False, "error": str(e)}, status=400)
