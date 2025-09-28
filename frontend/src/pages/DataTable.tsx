@@ -18,12 +18,19 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
+  Account,
+  Category,
+  Transaction,
+  transactionsApiService,
+} from '@/lib/api/transactions';
+import {
   ArrowUpDown,
   Calendar,
   CreditCard,
   Download,
   Filter,
   Plus,
+  RefreshCw,
   Search,
   Tag,
   TrendingDown,
@@ -31,32 +38,12 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-interface Transaction {
-  id: string;
-  date: string;
-  description: string;
-  category: string;
-  amount: number;
-  account: string;
-}
-
 interface TransactionFormData {
   description: string;
   date: string;
   amount: string;
   account_name: string;
   category?: string;
-}
-
-interface Account {
-  id: string;
-  name: string;
-  type: 'checking' | 'savings' | 'credit_card' | 'investment';
-}
-
-interface Category {
-  id: string;
-  name: string;
 }
 
 type TransactionType = 'income' | 'expense';
@@ -78,70 +65,33 @@ interface ContextMenuProps {
 
 interface TransactionTableProps {
   type: TransactionType;
-  transactions: Transaction[];
-  onTransactionsChange: (transactions: Transaction[]) => void;
+  transactions: DisplayTransaction[];
+  onTransactionsChange: (transactions: DisplayTransaction[]) => void;
 }
 
-const mockAccounts: Account[] = [
-  { id: '1', name: 'Checking Account', type: 'checking' },
-  { id: '2', name: 'Savings Account', type: 'savings' },
-  { id: '3', name: 'Credit Card', type: 'credit_card' },
-  { id: '4', name: 'Investment Account', type: 'investment' },
-];
+// Display transaction interface (different from API)
+interface DisplayTransaction {
+  id: string;
+  date: string;
+  description: string;
+  category: string;
+  amount: number;
+  account: string;
+}
 
-const mockCategories: Category[] = [
-  { id: '1', name: 'Food & Dining' },
-  { id: '2', name: 'Transportation' },
-  { id: '3', name: 'Entertainment' },
-  { id: '4', name: 'Utilities' },
-  { id: '5', name: 'Healthcare' },
-  { id: '6', name: 'Shopping' },
-  { id: '7', name: 'Education' },
-  { id: '8', name: 'Travel' },
-];
-
-const mockTransactions: Transaction[] = [
-  {
-    id: '1',
-    date: '2024-01-15',
-    description: 'Grocery Store',
-    category: 'Food & Dining',
-    amount: -85.5,
-    account: 'Checking',
-  },
-  {
-    id: '2',
-    date: '2024-01-14',
-    description: 'Salary Deposit',
-    category: 'Income',
-    amount: 3500.0,
-    account: 'Checking',
-  },
-  {
-    id: '3',
-    date: '2024-01-13',
-    description: 'Gas Station',
-    category: 'Transportation',
-    amount: -45.2,
-    account: 'Credit Card',
-  },
-  {
-    id: '4',
-    date: '2024-01-12',
-    description: 'Coffee Shop',
-    category: 'Food & Dining',
-    amount: -4.75,
-    account: 'Credit Card',
-  },
-  {
-    id: '5',
-    date: '2024-01-11',
-    description: 'Investment Transfer',
-    category: 'Investment',
-    amount: -500.0,
-    account: 'Savings',
-  },
-];
+// Helper function to transform API transaction to display format
+const transformTransaction = (
+  apiTransaction: Transaction
+): DisplayTransaction => {
+  return {
+    id: apiTransaction.id.toString(),
+    date: apiTransaction.date,
+    description: apiTransaction.description,
+    category: apiTransaction.Category || 'Uncategorized',
+    amount: apiTransaction.amount,
+    account: apiTransaction.Account || 'Unknown',
+  };
+};
 
 // Context Menu Component
 function ContextMenu({
@@ -219,12 +169,16 @@ function TransactionForm({
   onFormChange,
   onSubmit,
   onCancel,
+  accounts,
+  categories,
 }: {
   type: TransactionType;
   formData: TransactionFormData;
   onFormChange: (data: TransactionFormData) => void;
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
+  accounts: Account[];
+  categories: Category[];
 }) {
   const isIncome = type === 'income';
   const colorClass = isIncome ? 'green' : 'red';
@@ -306,7 +260,7 @@ function TransactionForm({
                   <SelectValue placeholder="Select account" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockAccounts.map(account => (
+                  {accounts.map(account => (
                     <SelectItem key={account.id} value={account.name}>
                       {account.name}
                     </SelectItem>
@@ -330,7 +284,7 @@ function TransactionForm({
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockCategories.map(category => (
+                    {categories.map(category => (
                       <SelectItem key={category.id} value={category.name}>
                         {category.name}
                       </SelectItem>
@@ -430,11 +384,20 @@ function TransactionTable({
   type,
   transactions,
   onTransactionsChange,
-}: TransactionTableProps) {
+  accounts,
+  categories,
+  loading,
+  onRefresh,
+}: TransactionTableProps & {
+  accounts: Account[];
+  categories: Category[];
+  loading: boolean;
+  onRefresh: () => void;
+}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [sortField, setSortField] = useState<keyof Transaction>('date');
+  const [sortField, setSortField] = useState<keyof DisplayTransaction>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Context menu state
@@ -504,7 +467,7 @@ function TransactionTable({
       return 0;
     });
 
-  const categories = Array.from(new Set(transactions.map(t => t.category)));
+  const categoryNames = Array.from(new Set(transactions.map(t => t.category)));
 
   // Generate filter options for context menu
   const getFilterOptions = (field: string): FilterOption[] => {
@@ -519,14 +482,16 @@ function TransactionTable({
           count: transactions.filter(t => t.date === date).length,
         }));
       case 'category':
-        return categories.map(category => ({
+        return categoryNames.map(category => ({
           label: category,
           value: category,
           count: transactions.filter(t => t.category === category).length,
         }));
       case 'account':
-        const accounts = Array.from(new Set(transactions.map(t => t.account)));
-        return accounts.map(account => ({
+        const accountNames = Array.from(
+          new Set(transactions.map(t => t.account))
+        );
+        return accountNames.map(account => ({
           label: account,
           value: account,
           count: transactions.filter(t => t.account === account).length,
@@ -564,7 +529,7 @@ function TransactionTable({
     }
   };
 
-  const handleSort = (field: keyof Transaction) => {
+  const handleSort = (field: keyof DisplayTransaction) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -573,7 +538,7 @@ function TransactionTable({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
       !formData.description ||
@@ -584,38 +549,77 @@ function TransactionTable({
       return;
     }
 
-    const newTransaction: Transaction = {
-      id: Date.now().toString(),
-      date: formData.date,
-      description: formData.description,
-      category: isIncome ? 'Income' : formData.category!,
-      amount: isIncome
-        ? parseFloat(formData.amount)
-        : -parseFloat(formData.amount),
-      account: formData.account_name,
-    };
+    try {
+      // Find the account ID
+      const account = accounts.find(acc => acc.name === formData.account_name);
+      if (!account) {
+        throw new Error('Account not found');
+      }
 
-    onTransactionsChange([newTransaction, ...transactions]);
-    setFormData({
-      description: '',
-      date: new Date().toISOString().split('T')[0],
-      amount: '',
-      account_name: '',
-      ...(isIncome ? {} : { category: '' }),
-    });
-    setShowAddForm(false);
+      // Find the category ID for expenses
+      let categoryId: number | undefined;
+      if (!isIncome && formData.category) {
+        const category = categories.find(cat => cat.name === formData.category);
+        if (!category) {
+          throw new Error('Category not found');
+        }
+        categoryId = category.id;
+      }
+
+      const transactionData = {
+        description: formData.description,
+        date: formData.date,
+        amount: parseFloat(formData.amount),
+        Account: account.name,
+        ...(categoryId && {
+          Category: categories.find(cat => cat.id === categoryId)?.name,
+        }),
+      };
+
+      let newTransaction: Transaction;
+      if (isIncome) {
+        newTransaction =
+          await transactionsApiService.createIncomeTransaction(transactionData);
+      } else {
+        newTransaction =
+          await transactionsApiService.createExpenseTransaction(
+            transactionData
+          );
+      }
+
+      // Transform and add to local state
+      const transformedTransaction = transformTransaction(newTransaction);
+      onTransactionsChange([transformedTransaction, ...transactions]);
+
+      // Reset form
+      setFormData({
+        description: '',
+        date: new Date().toISOString().split('T')[0],
+        amount: '',
+        account_name: '',
+        ...(isIncome ? {} : { category: '' }),
+      });
+      setShowAddForm(false);
+    } catch (error) {
+      console.error('Error creating transaction:', error);
+      // You might want to show a toast notification here
+    }
   };
 
   const getTableHeaders = () => {
     const baseHeaders = [
-      { field: 'date' as keyof Transaction, label: 'Date', filterable: true },
       {
-        field: 'description' as keyof Transaction,
+        field: 'date' as keyof DisplayTransaction,
+        label: 'Date',
+        filterable: true,
+      },
+      {
+        field: 'description' as keyof DisplayTransaction,
         label: 'Description',
         filterable: false,
       },
       {
-        field: 'account' as keyof Transaction,
+        field: 'account' as keyof DisplayTransaction,
         label: 'Account',
         filterable: true,
       },
@@ -623,14 +627,14 @@ function TransactionTable({
 
     if (!isIncome) {
       baseHeaders.splice(2, 0, {
-        field: 'category' as keyof Transaction,
+        field: 'category' as keyof DisplayTransaction,
         label: 'Category',
         filterable: true,
       });
     }
 
     baseHeaders.push({
-      field: 'amount' as keyof Transaction,
+      field: 'amount' as keyof DisplayTransaction,
       label: 'Amount',
       filterable: false,
     });
@@ -639,8 +643,8 @@ function TransactionTable({
   };
 
   const renderTableCell = (
-    transaction: Transaction,
-    field: keyof Transaction
+    transaction: DisplayTransaction,
+    field: keyof DisplayTransaction
   ) => {
     switch (field) {
       case 'date':
@@ -723,13 +727,21 @@ function TransactionTable({
             </div>
           )}
         </div>
-        <Button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className={`bg-${colorClass}-600 hover:bg-${colorClass}-700`}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add {isIncome ? 'Income' : 'Expense'}
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={onRefresh} variant="outline" disabled={loading}>
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`}
+            />
+            Refresh
+          </Button>
+          <Button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className={`bg-${colorClass}-600 hover:bg-${colorClass}-700`}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add {isIncome ? 'Income' : 'Expense'}
+          </Button>
+        </div>
       </div>
 
       {/* Add Form */}
@@ -740,6 +752,8 @@ function TransactionTable({
           onFormChange={setFormData}
           onSubmit={handleSubmit}
           onCancel={() => setShowAddForm(false)}
+          accounts={accounts}
+          categories={categories}
         />
       )}
 
@@ -750,7 +764,7 @@ function TransactionTable({
         onSearchChange={setSearchTerm}
         filterCategory={filterCategory}
         onFilterChange={setFilterCategory}
-        categories={categories}
+        categories={categoryNames}
       />
 
       {/* Table */}
@@ -765,7 +779,9 @@ function TransactionTable({
                     className={`cursor-pointer hover:bg-muted/50 ${
                       header.field === 'amount' ? 'text-right' : ''
                     }`}
-                    onClick={() => handleSort(header.field)}
+                    onClick={() =>
+                      handleSort(header.field as keyof DisplayTransaction)
+                    }
                     onContextMenu={
                       header.filterable
                         ? e => handleContextMenu(e, header.field, header.label)
@@ -790,13 +806,27 @@ function TransactionTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.map(transaction => (
-                <TableRow key={transaction.id}>
-                  {getTableHeaders().map(header =>
-                    renderTableCell(transaction, header.field)
-                  )}
+              {loading ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={getTableHeaders().length}
+                    className="text-center py-8"
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      Loading transactions...
+                    </div>
+                  </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredTransactions.map((transaction, index) => (
+                  <TableRow key={`${transaction.id}-${index}`}>
+                    {getTableHeaders().map(header =>
+                      renderTableCell(transaction, header.field)
+                    )}
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -827,12 +857,65 @@ function TransactionTable({
 
 // Main DataTable Component
 export function DataTable() {
-  const [incomeTransactions, setIncomeTransactions] = useState<Transaction[]>(
-    mockTransactions.filter(t => t.amount > 0)
-  );
-  const [expenseTransactions, setExpenseTransactions] = useState<Transaction[]>(
-    mockTransactions.filter(t => t.amount < 0)
-  );
+  const [incomeTransactions, setIncomeTransactions] = useState<
+    DisplayTransaction[]
+  >([]);
+  const [expenseTransactions, setExpenseTransactions] = useState<
+    DisplayTransaction[]
+  >([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Load all data in parallel
+      const [incomeData, expenseData, accountsData, categoriesData] =
+        await Promise.all([
+          transactionsApiService.getIncomeTransactions(),
+          transactionsApiService.getExpenseTransactions(),
+          transactionsApiService.getAccounts(),
+          transactionsApiService.getCategories(),
+        ]);
+
+      // Transform and set data
+      setIncomeTransactions(incomeData.map(transformTransaction));
+      setExpenseTransactions(expenseData.map(transformTransaction));
+      setAccounts(accountsData);
+      setCategories(categoriesData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load data');
+      console.error('Error loading data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto">
+          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+            <CardContent className="text-center py-8">
+              <p className="text-red-600 mb-4">Error loading data: {error}</p>
+              <Button onClick={loadData} variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -842,6 +925,10 @@ export function DataTable() {
           type="income"
           transactions={incomeTransactions}
           onTransactionsChange={setIncomeTransactions}
+          accounts={accounts}
+          categories={categories}
+          loading={loading}
+          onRefresh={loadData}
         />
 
         {/* Expense Table */}
@@ -849,6 +936,10 @@ export function DataTable() {
           type="expense"
           transactions={expenseTransactions}
           onTransactionsChange={setExpenseTransactions}
+          accounts={accounts}
+          categories={categories}
+          loading={loading}
+          onRefresh={loadData}
         />
       </div>
     </div>
