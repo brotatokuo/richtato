@@ -1,6 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { transactionsApiService } from '@/lib/api/transactions';
 import ReactECharts from 'echarts-for-react';
-import { TrendingDown, TrendingUp } from 'lucide-react';
+import {
+  AlertTriangle,
+  RefreshCw,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 // Function to get computed CSS values
@@ -33,13 +39,20 @@ export function Cashflow() {
   });
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [themeKey, setThemeKey] = useState(0); // Force re-render when theme changes
 
-  // Mock data - replace with actual API call
-  useEffect(() => {
-    const fetchCashflowData = async () => {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+  // Fetch real data from APIs
+  const fetchCashflowData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch data from APIs
+      const [incomeTransactions, expenseTransactions] = await Promise.all([
+        transactionsApiService.getIncomeTransactions(),
+        transactionsApiService.getExpenseTransactions(),
+      ]);
 
       // Get theme-aware colors
       const chart1 = getCSSValue('--chart-1');
@@ -50,33 +63,81 @@ export function Cashflow() {
       const chart6 = getCSSValue('--chart-6');
       const chart7 = getCSSValue('--chart-7');
 
-      const mockData: CashflowData = {
-        income: 8500,
-        expenses: 7200,
-        netFlow: 1300,
+      // Calculate total income and expenses
+      const totalIncome = incomeTransactions.reduce(
+        (sum, transaction) => sum + transaction.amount,
+        0
+      );
+      const totalExpenses = expenseTransactions.reduce(
+        (sum, transaction) => sum + transaction.amount,
+        0
+      );
+      const netFlow = totalIncome - totalExpenses;
+
+      // Group income by source (using Account field as source)
+      const incomeBySource = incomeTransactions.reduce(
+        (acc, transaction) => {
+          const source = transaction.Account || 'Unknown';
+          if (!acc[source]) {
+            acc[source] = 0;
+          }
+          acc[source] += transaction.amount;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
+
+      // Group expenses by category
+      const expensesByCategory = expenseTransactions.reduce(
+        (acc, transaction) => {
+          const category = transaction.Category || 'Uncategorized';
+          if (!acc[category]) {
+            acc[category] = 0;
+          }
+          acc[category] += transaction.amount;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
+
+      // Convert to arrays with colors
+      const incomeCategories = Object.entries(incomeBySource).map(
+        ([name, value], index) => ({
+          name,
+          value,
+          color: `hsl(${[chart1, chart2, chart3, chart4][index % 4]})`,
+        })
+      );
+
+      const expenseCategories = Object.entries(expensesByCategory).map(
+        ([name, value], index) => ({
+          name,
+          value,
+          color: `hsl(${[chart5, chart6, chart7, chart1, chart2, chart3, chart4][index % 7]})`,
+        })
+      );
+
+      const cashflowData: CashflowData = {
+        income: totalIncome,
+        expenses: totalExpenses,
+        netFlow,
         categories: {
-          income: [
-            { name: 'Salary', value: 6000, color: `hsl(${chart1})` },
-            { name: 'Freelance', value: 1500, color: `hsl(${chart2})` },
-            { name: 'Investments', value: 800, color: `hsl(${chart3})` },
-            { name: 'Other', value: 200, color: `hsl(${chart4})` },
-          ],
-          expenses: [
-            { name: 'Housing', value: 2500, color: `hsl(${chart5})` },
-            { name: 'Food', value: 1200, color: `hsl(${chart6})` },
-            { name: 'Transportation', value: 800, color: `hsl(${chart7})` },
-            { name: 'Entertainment', value: 600, color: `hsl(${chart1})` },
-            { name: 'Utilities', value: 400, color: `hsl(${chart2})` },
-            { name: 'Healthcare', value: 300, color: `hsl(${chart3})` },
-            { name: 'Savings', value: 1400, color: `hsl(${chart4})` },
-          ],
+          income: incomeCategories,
+          expenses: expenseCategories,
         },
       };
 
-      setCashflowData(mockData);
+      setCashflowData(cashflowData);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to load cashflow data'
+      );
+    } finally {
       setLoading(false);
-    };
+    }
+  };
 
+  useEffect(() => {
     fetchCashflowData();
   }, []);
 
@@ -109,7 +170,6 @@ export function Cashflow() {
   const getSankeyOption = () => {
     // Get theme-aware colors
     const sankeyNode = getCSSValue('--sankey-node');
-    const sankeyLink = getCSSValue('--sankey-link');
     const sankeyText = getCSSValue('--sankey-text');
     const sankeyBg = getCSSValue('--sankey-bg');
     const sankeyBorder = getCSSValue('--sankey-border');
@@ -197,9 +257,44 @@ export function Cashflow() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600 mb-4">
+            Error loading cashflow data: {error}
+          </p>
+          <button
+            onClick={fetchCashflowData}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mx-auto"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header with refresh button */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-foreground">
+            Cash Flow Analysis
+          </h1>
+          <button
+            onClick={fetchCashflowData}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
+
         {/* Sankey Diagram */}
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardContent>

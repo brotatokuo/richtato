@@ -2,6 +2,8 @@ import { AccountsSection } from '@/components/dashboard/AccountsSection';
 import { IncomeExpenseChart } from '@/components/dashboard/IncomeExpenseChart';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { SavingsChart } from '@/components/dashboard/SavingsChart';
+import { dashboardApiService } from '@/lib/api/dashboard';
+import { transactionsApiService } from '@/lib/api/transactions';
 import {
   AlertTriangle,
   Building2,
@@ -22,6 +24,8 @@ interface AssetDashboardData {
   savings_rate_context: string;
   investment_performance: string;
   investment_performance_class: string;
+  total_income: string;
+  total_expenses: string;
 }
 
 export function AssetDashboard() {
@@ -35,22 +39,60 @@ export function AssetDashboard() {
     try {
       setLoading(true);
       setError(null);
-      // TODO: Replace with actual API call
-      // const data = await fetchAssetDashboardData();
-      // setDashboardData(data);
 
-      // Mock data for now
+      // Fetch data from multiple APIs
+      const [
+        dashboardMetrics,
+        accounts,
+        incomeTransactions,
+        expenseTransactions,
+      ] = await Promise.all([
+        dashboardApiService.getDashboardMetrics(),
+        transactionsApiService.getAccounts(),
+        transactionsApiService.getIncomeTransactions(),
+        transactionsApiService.getExpenseTransactions(),
+      ]);
+
+      // Calculate total assets from accounts
+      const totalAssets = accounts.reduce((sum, account) => {
+        // Extract balance from account data
+        const balance = account.balance || 0;
+        return sum + balance;
+      }, 0);
+
+      // Calculate total income and expenses
+      const totalIncome = incomeTransactions.reduce(
+        (sum, transaction) => sum + transaction.amount,
+        0
+      );
+      const totalExpenses = expenseTransactions.reduce(
+        (sum, transaction) => sum + transaction.amount,
+        0
+      );
+
+      // Calculate net worth (simplified as total assets for now)
+      const netWorth = totalAssets;
+
+      // Calculate investment performance (mock for now - would need historical data)
+      const investmentPerformance = 0; // This would need historical data to calculate
+
       setDashboardData({
-        networth: '$125,430.00',
-        networth_growth: '+$2,340.00',
-        networth_growth_class: 'positive',
-        total_assets: '$150,680.75',
-        total_liabilities: '-$25,250.75',
-        savings_rate: '23.5%',
-        savings_rate_class: 'positive',
-        savings_rate_context: 'vs last month',
-        investment_performance: '+12.4%',
-        investment_performance_class: 'positive',
+        networth: `$${netWorth.toLocaleString()}`,
+        networth_growth: dashboardMetrics.networth_growth,
+        networth_growth_class: dashboardMetrics.networth_growth_class,
+        total_assets: `$${totalAssets.toLocaleString()}`,
+        total_liabilities: '$0.00', // Would need liability data
+        savings_rate: dashboardMetrics.savings_rate,
+        savings_rate_class: dashboardMetrics.savings_rate_class,
+        savings_rate_context: dashboardMetrics.savings_rate_context,
+        investment_performance:
+          investmentPerformance > 0
+            ? `+${investmentPerformance.toFixed(1)}%`
+            : `${investmentPerformance.toFixed(1)}%`,
+        investment_performance_class:
+          investmentPerformance >= 0 ? 'positive' : 'negative',
+        total_income: `$${totalIncome.toLocaleString()}`,
+        total_expenses: `$${totalExpenses.toLocaleString()}`,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -99,6 +141,19 @@ export function AssetDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Header with refresh button */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-foreground">Asset Dashboard</h1>
+        <button
+          onClick={loadDashboardData}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
+      </div>
+
       {/* Asset KPI Summary Row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
@@ -106,7 +161,8 @@ export function AssetDashboard() {
           value={dashboardData.networth}
           subtitle={dashboardData.networth_growth}
           trend={{
-            value: 2.1,
+            value:
+              dashboardData.networth_growth_class === 'positive' ? 2.1 : -1.2,
             label: 'vs last month',
           }}
           icon={<TrendingUp className="h-4 w-4" />}
@@ -124,7 +180,7 @@ export function AssetDashboard() {
           value={dashboardData.savings_rate}
           subtitle={dashboardData.savings_rate_context}
           trend={{
-            value: 1.2,
+            value: dashboardData.savings_rate_class === 'positive' ? 1.2 : -0.5,
             label: 'vs last month',
           }}
           icon={<PiggyBank className="h-4 w-4" />}
@@ -135,7 +191,9 @@ export function AssetDashboard() {
           value={dashboardData.investment_performance}
           subtitle="YTD portfolio return"
           trend={{
-            value: 12.4,
+            value: parseFloat(
+              dashboardData.investment_performance.replace(/[+%]/g, '')
+            ),
             label: 'vs market',
           }}
           icon={<TrendingUp className="h-4 w-4" />}
