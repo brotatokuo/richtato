@@ -271,6 +271,30 @@ export function Cashflow() {
     );
   }
 
+  // Check if there's no data
+  const hasNoData = cashflowData.income === 0 && cashflowData.expenses === 0;
+
+  if (hasNoData) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="mb-6">
+            <div className="w-20 h-20 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+              <TrendingUp className="h-10 w-10 text-muted-foreground" />
+            </div>
+            <h2 className="text-2xl font-semibold text-foreground mb-2">
+              No Cashflow Data
+            </h2>
+            <p className="text-muted-foreground mb-6">
+              No income or expense transactions found. Add some transactions to
+              see your cashflow visualization.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
