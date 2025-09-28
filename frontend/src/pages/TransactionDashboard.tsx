@@ -1,7 +1,13 @@
+import { BaseChart } from '@/components/dashboard/BaseChart';
 import { BudgetProgress } from '@/components/dashboard/BudgetProgress';
 import { ExpenseBreakdown } from '@/components/dashboard/ExpenseBreakdown';
 import { MetricCard } from '@/components/dashboard/MetricCard';
-import { dashboardApiService, DashboardData } from '@/lib/api/dashboard';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  CashFlowData,
+  dashboardApiService,
+  DashboardData,
+} from '@/lib/api/dashboard';
 import {
   AlertTriangle,
   Gauge,
@@ -15,6 +21,8 @@ export function Dashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     null
   );
+  const [incomeExpenseData, setIncomeExpenseData] =
+    useState<CashFlowData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,9 +31,14 @@ export function Dashboard() {
       setLoading(true);
       setError(null);
 
-      // Fetch dashboard metrics from the backend
-      const data = await dashboardApiService.getDashboardMetrics();
-      setDashboardData(data);
+      // Fetch dashboard metrics and income/expense data from the backend
+      const [metricsData, incomeExpenseData] = await Promise.all([
+        dashboardApiService.getDashboardMetrics(),
+        dashboardApiService.getIncomeExpensesData(),
+      ]);
+
+      setDashboardData(metricsData);
+      setIncomeExpenseData(incomeExpenseData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
@@ -36,6 +49,62 @@ export function Dashboard() {
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  // Convert API data to chart format
+  const getIncomeExpenseChartData = () => {
+    if (!incomeExpenseData) return null;
+
+    const chartData = {
+      series: incomeExpenseData.datasets.map(dataset => ({
+        name: dataset.label,
+        type: 'bar',
+        data: dataset.data,
+        itemStyle: {
+          color:
+            dataset.backgroundColor ||
+            (dataset.label === 'Income' ? '#22c55e' : '#ef4444'),
+        },
+      })),
+    };
+
+    const chartOptions = {
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: {
+          type: 'shadow',
+        },
+        formatter: function (params: any) {
+          let result = params[0].name + '<br/>';
+          params.forEach((param: any) => {
+            result +=
+              param.seriesName + ': $' + param.value.toLocaleString() + '<br/>';
+          });
+          return result;
+        },
+      },
+      xAxis: {
+        type: 'category',
+        data: incomeExpenseData.labels,
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: {
+          formatter: function (value: number) {
+            return '$' + value.toLocaleString();
+          },
+        },
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '15%',
+        top: '10%',
+        containLabel: true,
+      },
+    };
+
+    return { data: chartData, options: chartOptions };
+  };
 
   if (loading && !dashboardData) {
     return (
@@ -108,11 +177,35 @@ export function Dashboard() {
         />
       </div>
 
+      {/* Budget Progress */}
+      <div className="lg:col-span-2">
+        <BudgetProgress />
+      </div>
+
       {/* Main Analytics Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Budget Progress */}
+        {/* Income vs Expenses Chart */}
         <div className="lg:col-span-2">
-          <BudgetProgress />
+          <Card>
+            <CardHeader>
+              <CardTitle>Income vs Expenses</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {incomeExpenseData ? (
+                <BaseChart
+                  type="bar"
+                  data={getIncomeExpenseChartData()?.data}
+                  options={getIncomeExpenseChartData()?.options}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-64">
+                  <div className="text-muted-foreground">
+                    Loading chart data...
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Expense Breakdown */}

@@ -181,12 +181,7 @@ export function AssetDashboard() {
       </div>
 
       {/* Main Asset Analytics Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Income vs Expenses */}
-        <div>
-          <IncomeExpenseChart />
-        </div>
-
+      <div className="grid gap-6 lg:grid-cols-1">
         {/* Savings Trend */}
         <div>
           <SavingsChart />
