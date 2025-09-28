@@ -7,7 +7,6 @@ import {
   transactionsApiService,
 } from '@/lib/api/transactions';
 import { DisplayTransaction, transformTransaction } from '@/types/transactions';
-import { RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 // Main DataTable Component
@@ -62,7 +61,6 @@ export function DataTable() {
             <CardContent className="text-center py-8">
               <p className="text-red-600 mb-4">Error loading data: {error}</p>
               <Button onClick={loadData} variant="outline">
-                <RefreshCw className="h-4 w-4 mr-2" />
                 Retry
               </Button>
             </CardContent>

@@ -1,7 +1,7 @@
 import { BaseChart } from '@/components/dashboard/BaseChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { transactionsApiService } from '@/lib/api/transactions';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 // Function to get computed CSS values
@@ -183,10 +183,7 @@ export function ExpenseBreakdown() {
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center">
-            <div className="flex items-center gap-2">
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              <span className="text-muted-foreground">Loading...</span>
-            </div>
+            <div className="text-muted-foreground">Loading...</div>
           </div>
         </CardContent>
       </Card>
@@ -203,14 +200,7 @@ export function ExpenseBreakdown() {
           <div className="h-64 flex items-center justify-center">
             <div className="text-center">
               <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-              <p className="text-red-600 mb-4">{error}</p>
-              <button
-                onClick={fetchExpenseData}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mx-auto"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Retry
-              </button>
+              <p className="text-red-600">{error}</p>
             </div>
           </div>
         </CardContent>

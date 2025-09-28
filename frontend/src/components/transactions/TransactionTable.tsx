@@ -32,7 +32,6 @@ import {
   CreditCard,
   Filter,
   Plus,
-  RefreshCw,
   Tag,
   TrendingDown,
   TrendingUp,
@@ -408,9 +407,6 @@ export function TransactionTable({
         </div>
         <div className="flex gap-2">
           <Button onClick={onRefresh} variant="outline" disabled={loading}>
-            <RefreshCw
-              className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`}
-            />
             Refresh
           </Button>
           <Button
