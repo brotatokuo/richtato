@@ -1,5 +1,7 @@
 import { BaseChart } from '@/components/dashboard/BaseChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { transactionsApiService } from '@/lib/api/transactions';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 // Function to get computed CSS values
@@ -17,64 +19,84 @@ interface ExpenseCategory {
   color: string;
 }
 
-const mockExpenses: ExpenseCategory[] = [
-  {
-    name: 'Food & Dining',
-    value: 28,
-    percentage: 28,
-    color: '#3b82f6',
-  },
-  {
-    name: 'Shopping',
-    value: 22,
-    percentage: 22,
-    color: '#10b981',
-  },
-  {
-    name: 'Transportation',
-    value: 15,
-    percentage: 15,
-    color: '#8b5cf6',
-  },
-  {
-    name: 'Entertainment',
-    value: 9,
-    percentage: 9,
-    color: '#f59e0b',
-  },
-  {
-    name: 'Utilities',
-    value: 8,
-    percentage: 8,
-    color: '#ef4444',
-  },
-  {
-    name: 'Healthcare',
-    value: 6,
-    percentage: 6,
-    color: '#6366f1',
-  },
-];
-
 export function ExpenseBreakdown() {
-  const [chartData, setChartData] = useState(null);
-  const [chartOptions, setChartOptions] = useState(null);
+  const [chartData, setChartData] = useState<any>(null);
+  const [chartOptions, setChartOptions] = useState<any>(null);
   const [themeKey, setThemeKey] = useState(0);
+  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>(
+    []
+  );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch expense data from API
+  const fetchExpenseData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const expenseTransactions =
+        await transactionsApiService.getExpenseTransactions();
+
+      // Group expenses by category
+      const expensesByCategory = expenseTransactions.reduce(
+        (acc, transaction) => {
+          const category = transaction.Category || 'Uncategorized';
+          if (!acc[category]) {
+            acc[category] = 0;
+          }
+          acc[category] += transaction.amount;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
+
+      // Calculate total expenses
+      const totalExpenses = Object.values(expensesByCategory).reduce(
+        (sum, amount) => sum + amount,
+        0
+      );
+
+      // Get chart colors
+      const chart1 = getCSSValue('--chart-1');
+      const chart2 = getCSSValue('--chart-2');
+      const chart3 = getCSSValue('--chart-3');
+      const chart4 = getCSSValue('--chart-4');
+      const chart5 = getCSSValue('--chart-5');
+      const chart6 = getCSSValue('--chart-6');
+
+      // Convert to ExpenseCategory format
+      const categories = Object.entries(expensesByCategory).map(
+        ([name, value], index) => ({
+          name,
+          value,
+          percentage:
+            totalExpenses > 0 ? Math.round((value / totalExpenses) * 100) : 0,
+          color: `hsl(${[chart1, chart2, chart3, chart4, chart5, chart6][index % 6]})`,
+        })
+      );
+
+      setExpenseCategories(categories);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to load expense data'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
+    fetchExpenseData();
+  }, []);
+
+  useEffect(() => {
+    if (expenseCategories.length === 0) return;
+
     // Get actual CSS values
-    const foregroundColor = getCSSValue('--foreground');
     const cardColor = getCSSValue('--card');
     const cardForegroundColor = getCSSValue('--card-foreground');
     const borderColor = getCSSValue('--border');
-
-    // Get chart colors
-    const chart1 = getCSSValue('--chart-1');
-    const chart2 = getCSSValue('--chart-2');
-    const chart3 = getCSSValue('--chart-3');
-    const chart4 = getCSSValue('--chart-4');
-    const chart5 = getCSSValue('--chart-5');
-    const chart6 = getCSSValue('--chart-6');
 
     const data = {
       series: [
@@ -83,11 +105,11 @@ export function ExpenseBreakdown() {
           type: 'pie',
           radius: ['60%', '85%'],
           center: ['50%', '50%'],
-          data: mockExpenses.map((expense, index) => ({
+          data: expenseCategories.map(expense => ({
             value: expense.value,
             name: expense.name,
             itemStyle: {
-              color: `hsl(${[chart1, chart2, chart3, chart4, chart5, chart6][index]})`,
+              color: expense.color,
             },
           })),
           emphasis: {
@@ -116,7 +138,7 @@ export function ExpenseBreakdown() {
           color: `hsl(${cardForegroundColor})`,
         },
         formatter: function (params: any) {
-          return `${params.name}: ${params.value}%`;
+          return `${params.name}: $${params.value.toLocaleString()}`;
         },
       },
       legend: {
@@ -126,7 +148,7 @@ export function ExpenseBreakdown() {
 
     setChartData(data);
     setChartOptions(options);
-  }, [themeKey]);
+  }, [expenseCategories, themeKey]);
 
   // Listen for theme changes
   useEffect(() => {
@@ -153,6 +175,49 @@ export function ExpenseBreakdown() {
     return () => observer.disconnect();
   }, []);
 
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Expense Breakdown</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64 flex items-center justify-center">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              <span className="text-muted-foreground">Loading...</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Expense Breakdown</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64 flex items-center justify-center">
+            <div className="text-center">
+              <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+              <p className="text-red-600 mb-4">{error}</p>
+              <button
+                onClick={fetchExpenseData}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mx-auto"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Retry
+              </button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!chartData || !chartOptions) {
     return (
       <Card>
@@ -161,7 +226,7 @@ export function ExpenseBreakdown() {
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center">
-            <div className="text-muted-foreground">Loading...</div>
+            <div className="text-muted-foreground">No data available</div>
           </div>
         </CardContent>
       </Card>
@@ -189,7 +254,7 @@ export function ExpenseBreakdown() {
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center flex flex-col items-center justify-center">
                 <div className="text-3xl font-bold text-foreground leading-none">
-                  {mockExpenses.length}
+                  {expenseCategories.length}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
                   Categories
@@ -203,7 +268,7 @@ export function ExpenseBreakdown() {
 
           {/* Category Breakdown */}
           <div className="space-y-3">
-            {mockExpenses.map((expense, index) => (
+            {expenseCategories.map((expense, index) => (
               <div
                 key={index}
                 className="flex items-center justify-between p-3 rounded-lg bg-muted/30"
@@ -212,7 +277,7 @@ export function ExpenseBreakdown() {
                   <div
                     className="w-4 h-4 rounded-full"
                     style={{
-                      backgroundColor: `hsl(${getCSSValue(`--chart-${(index % 6) + 1}`)})`,
+                      backgroundColor: expense.color,
                     }}
                   />
                   <span className="text-foreground font-medium">
@@ -224,7 +289,7 @@ export function ExpenseBreakdown() {
                     {expense.percentage}%
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    ${expense.value * 10}
+                    ${expense.value.toLocaleString()}
                   </div>
                 </div>
               </div>

@@ -26,6 +26,14 @@ export interface Category {
   type: string;
 }
 
+export interface Budget {
+  id: number;
+  category: string;
+  amount: number;
+  start_date: string;
+  end_date: string;
+}
+
 class TransactionsApiService {
   private baseUrl: string;
 
@@ -213,6 +221,20 @@ class TransactionsApiService {
         `Failed to delete expense transaction: ${response.status}`
       );
     }
+  }
+
+  /**
+   * Get all budgets
+   */
+  async getBudgets(): Promise<Budget[]> {
+    const response = await fetch(`${this.baseUrl}/budget/`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
+
+    const data = await this.handleResponse<{ rows: Budget[] }>(response);
+    return data.rows || [];
   }
 }
 
