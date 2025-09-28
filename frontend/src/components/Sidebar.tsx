@@ -41,17 +41,16 @@ const navigationItems = [
     href: '/data',
     icon: Table,
   },
-
-  {
-    name: 'Upload',
-    href: '/upload',
-    icon: CloudUpload,
-  },
-  {
-    name: 'Settings',
-    href: '/settings',
-    icon: Settings,
-  },
+  // {
+  //   name: 'Upload',
+  //   href: '/upload',
+  //   icon: CloudUpload,
+  // },
+  // {
+  //   name: 'Settings',
+  //   href: '/settings',
+  //   icon: Settings,
+  // },
 ];
 
 export function Sidebar({ className }: SidebarProps) {
