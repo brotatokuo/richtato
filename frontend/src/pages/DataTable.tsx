@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -37,6 +37,7 @@ import {
   Tag,
   TrendingDown,
   TrendingUp,
+  X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -193,6 +194,89 @@ function Pagination({
   );
 }
 
+// Modal Component
+function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+}) {
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () =>
+        document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+
+      {/* Modal */}
+      <div
+        ref={modalRef}
+        className="relative bg-card border border-border rounded-lg shadow-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <h2 className="text-xl font-semibold text-card-foreground">
+            {title}
+          </h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="h-8 w-8 p-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 // Context Menu Component
 function ContextMenu({
   isOpen,
@@ -288,126 +372,117 @@ function TransactionForm({
     : 'e.g., Groceries, Gas, Coffee';
 
   return (
-    <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold text-card-foreground">
-          Add New {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor={`${type}-description`}>Description</Label>
-              <Input
-                id={`${type}-description`}
-                value={formData.description}
-                onChange={e =>
-                  onFormChange({
-                    ...formData,
-                    description: e.target.value,
-                  })
-                }
-                placeholder={placeholder}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor={`${type}-amount`}>Amount</Label>
-              <Input
-                id={`${type}-amount`}
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.amount}
-                onChange={e =>
-                  onFormChange({
-                    ...formData,
-                    amount: e.target.value,
-                  })
-                }
-                placeholder="0.00"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor={`${type}-date`}>Date</Label>
-              <Input
-                id={`${type}-date`}
-                type="date"
-                value={formData.date}
-                onChange={e =>
-                  onFormChange({
-                    ...formData,
-                    date: e.target.value,
-                  })
-                }
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor={`${type}-account`}>Account</Label>
-              <Select
-                value={formData.account_name}
-                onValueChange={value =>
-                  onFormChange({
-                    ...formData,
-                    account_name: value,
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select account" />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts.map(account => (
-                    <SelectItem key={account.id} value={account.name}>
-                      {account.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {!isIncome && (
-              <div className="md:col-span-2">
-                <Label htmlFor={`${type}-category`}>Category</Label>
-                <Select
-                  value={formData.category || ''}
-                  onValueChange={value =>
-                    onFormChange({
-                      ...formData,
-                      category: value,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map(category => (
-                      <SelectItem key={category.id} value={category.name}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              type="submit"
-              className={`bg-${colorClass}-600 hover:bg-${colorClass}-700`}
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor={`${type}-description`}>Description</Label>
+          <Input
+            id={`${type}-description`}
+            value={formData.description}
+            onChange={e =>
+              onFormChange({
+                ...formData,
+                description: e.target.value,
+              })
+            }
+            placeholder={placeholder}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor={`${type}-amount`}>Amount</Label>
+          <Input
+            id={`${type}-amount`}
+            type="number"
+            step="0.01"
+            min="0"
+            value={formData.amount}
+            onChange={e =>
+              onFormChange({
+                ...formData,
+                amount: e.target.value,
+              })
+            }
+            placeholder="0.00"
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor={`${type}-date`}>Date</Label>
+          <Input
+            id={`${type}-date`}
+            type="date"
+            value={formData.date}
+            onChange={e =>
+              onFormChange({
+                ...formData,
+                date: e.target.value,
+              })
+            }
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor={`${type}-account`}>Account</Label>
+          <Select
+            value={formData.account_name}
+            onValueChange={value =>
+              onFormChange({
+                ...formData,
+                account_name: value,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select account" />
+            </SelectTrigger>
+            <SelectContent>
+              {accounts.map(account => (
+                <SelectItem key={account.id} value={account.name}>
+                  {account.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {!isIncome && (
+          <div className="md:col-span-2">
+            <Label htmlFor={`${type}-category`}>Category</Label>
+            <Select
+              value={formData.category || ''}
+              onValueChange={value =>
+                onFormChange({
+                  ...formData,
+                  category: value,
+                })
+              }
             >
-              Add {title}
-            </Button>
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
+              <SelectTrigger>
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map(category => (
+                  <SelectItem key={category.id} value={category.name}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </form>
-      </CardContent>
-    </Card>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <Button
+          type="submit"
+          className={`bg-${colorClass}-600 hover:bg-${colorClass}-700`}
+        >
+          Add {title}
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </form>
   );
 }
 
@@ -496,7 +571,7 @@ function TransactionTable({
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [sortField, setSortField] = useState<keyof DisplayTransaction>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
@@ -710,7 +785,7 @@ function TransactionTable({
       const transformedTransaction = transformTransaction(newTransaction);
       onTransactionsChange([transformedTransaction, ...transactions]);
 
-      // Reset form
+      // Reset form and close modal
       setFormData({
         description: '',
         date: new Date().toISOString().split('T')[0],
@@ -718,7 +793,7 @@ function TransactionTable({
         account_name: '',
         ...(isIncome ? {} : { category: '' }),
       });
-      setShowAddForm(false);
+      setShowAddModal(false);
     } catch (error) {
       console.error('Error creating transaction:', error);
       // You might want to show a toast notification here
@@ -855,7 +930,7 @@ function TransactionTable({
             Refresh
           </Button>
           <Button
-            onClick={() => setShowAddForm(!showAddForm)}
+            onClick={() => setShowAddModal(true)}
             className={`bg-${colorClass}-600 hover:bg-${colorClass}-700`}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -864,18 +939,22 @@ function TransactionTable({
         </div>
       </div>
 
-      {/* Add Form */}
-      {showAddForm && (
+      {/* Add Modal */}
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title={`Add New ${isIncome ? 'Income' : 'Expense'}`}
+      >
         <TransactionForm
           type={type}
           formData={formData}
           onFormChange={setFormData}
           onSubmit={handleSubmit}
-          onCancel={() => setShowAddForm(false)}
+          onCancel={() => setShowAddModal(false)}
           accounts={accounts}
           categories={categories}
         />
-      )}
+      </Modal>
 
       {/* Search and Filters */}
       <SearchAndFilter

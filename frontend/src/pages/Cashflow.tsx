@@ -1,12 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { transactionsApiService } from '@/lib/api/transactions';
 import ReactECharts from 'echarts-for-react';
-import {
-  AlertTriangle,
-  RefreshCw,
-  TrendingDown,
-  TrendingUp,
-} from 'lucide-react';
+import { AlertTriangle, TrendingDown, TrendingUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 // Function to get computed CSS values
@@ -269,7 +264,6 @@ export function Cashflow() {
             onClick={fetchCashflowData}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mx-auto"
           >
-            <RefreshCw className="h-4 w-4" />
             Retry
           </button>
         </div>
@@ -280,21 +274,6 @@ export function Cashflow() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header with refresh button */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-foreground">
-            Cash Flow Analysis
-          </h1>
-          <button
-            onClick={fetchCashflowData}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
-        </div>
-
         {/* Sankey Diagram */}
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardContent>
