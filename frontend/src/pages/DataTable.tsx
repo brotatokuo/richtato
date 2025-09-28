@@ -26,6 +26,8 @@ import {
 import {
   ArrowUpDown,
   Calendar,
+  ChevronLeft,
+  ChevronRight,
   CreditCard,
   Download,
   Filter,
@@ -92,6 +94,104 @@ const transformTransaction = (
     account: apiTransaction.Account || 'Unknown',
   };
 };
+
+// Pagination Component
+function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+  totalItems,
+  itemsPerPage,
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  totalItems: number;
+  itemsPerPage: number;
+}) {
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+  const getVisiblePages = () => {
+    const delta = 2;
+    const range = [];
+    const rangeWithDots = [];
+
+    for (
+      let i = Math.max(2, currentPage - delta);
+      i <= Math.min(totalPages - 1, currentPage + delta);
+      i++
+    ) {
+      range.push(i);
+    }
+
+    if (currentPage - delta > 2) {
+      rangeWithDots.push(1, '...');
+    } else {
+      rangeWithDots.push(1);
+    }
+
+    rangeWithDots.push(...range);
+
+    if (currentPage + delta < totalPages - 1) {
+      rangeWithDots.push('...', totalPages);
+    } else if (totalPages > 1) {
+      rangeWithDots.push(totalPages);
+    }
+
+    return rangeWithDots;
+  };
+
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex items-center justify-between px-4 py-3 bg-card/50 backdrop-blur-sm border-t border-border/50">
+      <div className="text-sm text-muted-foreground">
+        Showing {startItem} to {endItem} of {totalItems} results
+      </div>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Previous
+        </Button>
+
+        <div className="flex items-center gap-1">
+          {getVisiblePages().map((page, index) => (
+            <button
+              key={index}
+              onClick={() => typeof page === 'number' && onPageChange(page)}
+              disabled={page === '...'}
+              className={`px-3 py-1 text-sm rounded ${
+                page === currentPage
+                  ? 'bg-primary text-primary-foreground'
+                  : page === '...'
+                    ? 'text-muted-foreground cursor-not-allowed'
+                    : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+        >
+          Next
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 // Context Menu Component
 function ContextMenu({
@@ -400,6 +500,10 @@ function TransactionTable({
   const [sortField, setSortField] = useState<keyof DisplayTransaction>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
     isOpen: boolean;
@@ -430,6 +534,11 @@ function TransactionTable({
     account_name: '',
     ...(isIncome ? {} : { category: '' }),
   });
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterCategory, dateFilter, accountFilter]);
 
   const filteredTransactions = transactions
     .filter(transaction => {
@@ -466,6 +575,16 @@ function TransactionTable({
 
       return 0;
     });
+
+  // Pagination calculations
+  const totalItems = filteredTransactions.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedTransactions = filteredTransactions.slice(
+    startIndex,
+    endIndex
+  );
 
   const categoryNames = Array.from(new Set(transactions.map(t => t.category)));
 
@@ -719,6 +838,7 @@ function TransactionTable({
                   setDateFilter('');
                   setAccountFilter('');
                   setFilterCategory('');
+                  setCurrentPage(1);
                 }}
                 className="text-xs h-6 px-2"
               >
@@ -819,7 +939,7 @@ function TransactionTable({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredTransactions.map((transaction, index) => (
+                paginatedTransactions.map((transaction, index) => (
                   <TableRow key={`${transaction.id}-${index}`}>
                     {getTableHeaders().map(header =>
                       renderTableCell(transaction, header.field)
@@ -832,7 +952,16 @@ function TransactionTable({
         </CardContent>
       </Card>
 
-      {filteredTransactions.length === 0 && (
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
+      />
+
+      {totalItems === 0 && (
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardContent className="text-center py-8">
             <p className="text-muted-foreground">
