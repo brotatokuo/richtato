@@ -1,6 +1,7 @@
 import { BudgetProgress } from '@/components/dashboard/BudgetProgress';
 import { ExpenseBreakdown } from '@/components/dashboard/ExpenseBreakdown';
 import { MetricCard } from '@/components/dashboard/MetricCard';
+import { dashboardApiService, DashboardData } from '@/lib/api/dashboard';
 import {
   AlertTriangle,
   Gauge,
@@ -10,17 +11,6 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-
-interface DashboardData {
-  networth: string;
-  networth_growth: string;
-  networth_growth_class: string;
-  savings_rate: string;
-  savings_rate_class: string;
-  savings_rate_context: string;
-  budget_utilization_30_days: string;
-  nonessential_spending_pct: string;
-}
 
 export function Dashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
@@ -33,21 +23,10 @@ export function Dashboard() {
     try {
       setLoading(true);
       setError(null);
-      // TODO: Replace with actual API call
-      // const data = await fetchDashboardData();
-      // setDashboardData(data);
 
-      // Mock data for now
-      setDashboardData({
-        networth: '$125,430.00',
-        networth_growth: '+$2,340.00',
-        networth_growth_class: 'positive',
-        savings_rate: '23.5%',
-        savings_rate_class: 'positive',
-        savings_rate_context: 'vs last month',
-        budget_utilization_30_days: '78%',
-        nonessential_spending_pct: '45',
-      });
+      // Fetch dashboard metrics from the backend
+      const data = await dashboardApiService.getDashboardMetrics();
+      setDashboardData(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
@@ -100,7 +79,8 @@ export function Dashboard() {
           value={dashboardData.networth}
           subtitle={dashboardData.networth_growth}
           trend={{
-            value: 2.1,
+            value:
+              dashboardData.networth_growth_class === 'positive' ? 2.1 : -1.2,
             label: 'vs last month',
           }}
           icon={<TrendingUp className="h-4 w-4" />}
@@ -111,7 +91,7 @@ export function Dashboard() {
           value={dashboardData.savings_rate}
           subtitle={dashboardData.savings_rate_context}
           trend={{
-            value: 1.2,
+            value: dashboardData.savings_rate_class === 'positive' ? 1.2 : -0.5,
             label: 'vs last month',
           }}
           icon={<PiggyBank className="h-4 w-4" />}

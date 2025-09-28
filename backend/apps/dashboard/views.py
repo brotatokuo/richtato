@@ -2,19 +2,17 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 import pandas as pd
+from apps.account.models import Account, AccountTransaction
+from apps.budget.models import Budget
+from apps.expense.models import Expense
+from apps.expense.utils import sankey_cash_flow_overview
+from apps.income.models import Income
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Sum
 from django.http import HttpRequest, JsonResponse
 from django.utils import timezone
 from loguru import logger
-from utilities.postgres.pg_client import PostgresClient
-
-from apps.account.models import Account
-from apps.budget.models import Budget
-from apps.expense.models import Expense
-from apps.expense.utils import sankey_cash_flow_overview
-from apps.income.models import Income
 from utilities.postgres.pg_client import PostgresClient
 from utilities.tools import format_currency
 
@@ -647,3 +645,16 @@ def sankey_data(request):
             {"success": False, "error": "Failed to generate Sankey diagram data"},
             status=500,
         )
+
+
+@login_required
+def dashboard_metrics(request):
+    """
+    Get dashboard metrics (net worth, savings rate, budget utilization, etc.)
+    """
+    try:
+        context = generate_dashboard_context(request)
+        return JsonResponse(context)
+    except Exception as e:
+        logger.error(f"Error getting dashboard metrics: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
