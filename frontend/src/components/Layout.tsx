@@ -68,7 +68,7 @@ export function Layout() {
                 <img
                   src="/richtato.png"
                   alt="Richtato"
-                  className="h-8 w-8 rounded"
+                  className="h-8 w-8 rounded md:hidden"
                 />
                 <div className="flex items-center gap-2">
                   <IconComponent className="h-6 w-6 text-foreground" />

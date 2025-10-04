@@ -178,3 +178,26 @@ export class CategorySettingsApi {
 // Export singleton instance
 export const userApi = new UserApiService();
 export const categorySettingsApi = new CategorySettingsApi();
+
+// Cards / Accounts helpers
+export interface CardAccountItem {
+  id: number;
+  name: string;
+  bank: string;
+}
+
+class CardsApiService {
+  private baseUrl = 'http://localhost:8000/api/auth/card-accounts';
+
+  async list(): Promise<CardAccountItem[]> {
+    const res = await fetch(`${this.baseUrl}/`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('Failed to load card accounts');
+    const data = await res.json();
+    return data as CardAccountItem[];
+  }
+}
+
+export const cardsApi = new CardsApiService();

@@ -11,7 +11,7 @@
     --card-foreground: 0 0% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
-    --primary: 195 100% 30%;
+    --primary: 142 76% 36%;
     --primary-foreground: 0 0% 100%;
     --secondary: 0 0% 96.1%;
     --secondary-foreground: 0 0% 9%;
@@ -24,7 +24,7 @@
     --border: 0 0% 89.8%;
     --border-dashed: 0 0% 10%;
     --input: 0 0% 89.8%;
-    --ring: 195 100% 30%;
+    --ring: 142 76% 36%;
     --radius: 0.5rem;
 
     /* Chart Color Palette - Light Mode */
@@ -57,7 +57,7 @@
     --card-foreground: 0 0% 98%;
     --popover: 0 0% 3.9%;
     --popover-foreground: 0 0% 98%;
-    --primary: 195 100% 30%;
+    --primary: 142 76% 36%;
     --primary-foreground: 0 0% 100%;
     --secondary: 0 0% 14.9%;
     --secondary-foreground: 0 0% 98%;
@@ -70,7 +70,7 @@
     --border: 0 0% 14.9%;
     --border-dashed: 0 0% 50%;
     --input: 0 0% 14.9%;
-    --ring: 195 100% 30%;
+    --ring: 142 76% 36%;
 
     /* Chart Color Palette - Dark Mode */
     --chart-1: 217 91% 70%; /* Brighter Blue */
