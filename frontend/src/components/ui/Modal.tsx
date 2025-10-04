@@ -31,20 +31,9 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   }, [isOpen, onClose]);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        modalRef.current &&
-        !modalRef.current.contains(event.target as Node)
-      ) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () =>
-        document.removeEventListener('mousedown', handleClickOutside);
-    }
+    // Intentionally do not attach a global outside-click handler.
+    // We close via the backdrop's onMouseDown to avoid closing when
+    // interacting with portal-based components (e.g., Radix Select).
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -52,7 +41,11 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onMouseDown={onClose}
+        aria-hidden="true"
+      />
 
       {/* Modal */}
       <div
