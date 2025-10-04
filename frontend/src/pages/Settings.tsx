@@ -102,10 +102,53 @@ export function Settings() {
     return { enabled, disabled, budgets };
   }, [catalog]);
 
+  // Build payload on demand (for auto-save scenarios)
+  const buildCatalogPayload = (cat: CategoryCatalogItem[]) => {
+    const enabled = cat.filter(c => c.enabled).map(c => c.name);
+    const disabled = cat.filter(c => !c.enabled).map(c => c.name);
+    const budgets: Record<
+      string,
+      { amount: number | null; start_date?: string; end_date?: string | null }
+    > = {};
+    for (const c of cat) {
+      if (c.budget) {
+        budgets[c.name] = {
+          amount: c.budget.amount,
+          start_date: c.budget.start_date,
+          end_date: c.budget.end_date ?? null,
+        };
+      } else {
+        budgets[c.name] = { amount: null };
+      }
+    }
+    return { enabled, disabled, budgets };
+  };
+
+  // Debounced auto-save for category settings
+  const saveCatalogTimer = useRef<number | undefined>(undefined);
+  const scheduleSaveCatalog = (next: CategoryCatalogItem[]) => {
+    if (saveCatalogTimer.current) {
+      window.clearTimeout(saveCatalogTimer.current);
+    }
+    saveCatalogTimer.current = window.setTimeout(async () => {
+      try {
+        const p = buildCatalogPayload(next);
+        await categorySettingsApi.updateSettings(p);
+      } catch (e) {
+        console.error('Auto-save categories failed', e);
+        setError(e instanceof Error ? e.message : 'Failed to auto-save');
+      }
+    }, 500);
+  };
+
   const toggleCategory = (name: string, value: boolean) => {
-    setCatalog(prev =>
-      prev.map(c => (c.name === name ? { ...c, enabled: value } : c))
-    );
+    setCatalog(prev => {
+      const next = prev.map(c =>
+        c.name === name ? { ...c, enabled: value } : c
+      );
+      scheduleSaveCatalog(next);
+      return next;
+    });
   };
 
   const updateBudgetField = (
@@ -113,8 +156,8 @@ export function Settings() {
     field: 'amount' | 'start_date' | 'end_date',
     value: string
   ) => {
-    setCatalog(prev =>
-      prev.map(c => {
+    setCatalog(prev => {
+      const next = prev.map(c => {
         if (c.name !== name) return c;
         const current = c.budget ?? {
           id: 0,
@@ -129,14 +172,20 @@ export function Settings() {
           return { ...c, budget: { ...current, end_date: value || null } };
         }
         return { ...c, budget: { ...current, start_date: value } };
-      })
-    );
+      });
+      scheduleSaveCatalog(next);
+      return next;
+    });
   };
 
   const removeBudget = (name: string) => {
-    setCatalog(prev =>
-      prev.map(c => (c.name === name ? { ...c, budget: null } : c))
-    );
+    setCatalog(prev => {
+      const next = prev.map(c =>
+        c.name === name ? { ...c, budget: null } : c
+      );
+      scheduleSaveCatalog(next);
+      return next;
+    });
   };
 
   const save = async () => {
@@ -198,6 +247,19 @@ export function Settings() {
                     ).matches;
                     setTheme(prefersDark ? 'dark' : 'light');
                   }
+                  // Auto-save preference
+                  preferencesApi
+                    .update({
+                      theme: value as any,
+                      currency: settings.appearance.currency,
+                      date_format: settings.appearance.dateFormat,
+                    })
+                    .catch(e => {
+                      console.error('Auto-save theme failed', e);
+                      setError(
+                        e instanceof Error ? e.message : 'Failed to auto-save'
+                      );
+                    });
                 }}
               >
                 <SelectTrigger>
