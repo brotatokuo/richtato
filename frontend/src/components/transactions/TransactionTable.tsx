@@ -81,7 +81,7 @@ export function TransactionTable({
 
   const isIncome = type === 'income';
   const colorClass = isIncome ? 'green' : 'red';
-  const title = isIncome ? 'Income Transactions' : 'Expense Transactions';
+  const title = isIncome ? 'Income' : 'Expense';
   const icon = isIncome ? TrendingUp : TrendingDown;
   const IconComponent = icon;
 
@@ -440,69 +440,114 @@ export function TransactionTable({
         categories={categoryNames}
       />
 
-      {/* Table */}
-      <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {getTableHeaders().map(header => (
-                  <TableHead
-                    key={header.field}
-                    className={`cursor-pointer hover:bg-muted/50 ${
-                      header.field === 'amount' ? 'text-right' : ''
-                    }`}
-                    onClick={() =>
-                      handleSort(header.field as keyof DisplayTransaction)
-                    }
-                    onContextMenu={
-                      header.filterable
-                        ? e => handleContextMenu(e, header.field, header.label)
-                        : undefined
-                    }
-                  >
+      {/* Mobile list (<= md) */}
+      <div className="md:hidden">
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardContent className="p-0">
+            {loading ? (
+              <div className="py-8 text-center text-sm">
+                Loading transactions...
+              </div>
+            ) : (
+              <div className="divide-y">
+                {paginatedTransactions.map((t, index) => {
+                  const amount = Math.abs(t.amount);
+                  const sign = isIncome ? '+' : '-';
+                  const color = isIncome ? 'text-green-600' : 'text-red-600';
+                  return (
                     <div
-                      className={`flex items-center gap-2 ${
-                        header.field === 'amount' ? 'justify-end' : ''
-                      }`}
+                      key={`${t.id}-${index}`}
+                      className="p-4 flex items-start justify-between"
                     >
-                      {header.label}
-                      <div className="flex items-center gap-1">
-                        {header.filterable && (
-                          <Filter className="h-3 w-3 text-muted-foreground" />
-                        )}
-                        <ArrowUpDown className="h-4 w-4" />
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium truncate max-w-[70vw]">
+                          {t.description}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(t.date).toLocaleDateString()} • {t.account}
+                          {!isIncome && t.category ? ` • ${t.category}` : ''}
+                        </div>
+                      </div>
+                      <div
+                        className={`ml-4 text-right text-sm font-semibold ${color}`}
+                      >
+                        {sign}${amount.toFixed(2)}
                       </div>
                     </div>
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Table (md+) */}
+      <div className="hidden md:block">
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell
-                    colSpan={getTableHeaders().length}
-                    className="text-center py-8"
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      Loading transactions...
-                    </div>
-                  </TableCell>
+                  {getTableHeaders().map(header => (
+                    <TableHead
+                      key={header.field}
+                      className={`cursor-pointer hover:bg-muted/50 ${
+                        header.field === 'amount' ? 'text-right' : ''
+                      }`}
+                      onClick={() =>
+                        handleSort(header.field as keyof DisplayTransaction)
+                      }
+                      onContextMenu={
+                        header.filterable
+                          ? e =>
+                              handleContextMenu(e, header.field, header.label)
+                          : undefined
+                      }
+                    >
+                      <div
+                        className={`flex items-center gap-2 ${
+                          header.field === 'amount' ? 'justify-end' : ''
+                        }`}
+                      >
+                        {header.label}
+                        <div className="flex items-center gap-1">
+                          {header.filterable && (
+                            <Filter className="h-3 w-3 text-muted-foreground" />
+                          )}
+                          <ArrowUpDown className="h-4 w-4" />
+                        </div>
+                      </div>
+                    </TableHead>
+                  ))}
                 </TableRow>
-              ) : (
-                paginatedTransactions.map((transaction, index) => (
-                  <TableRow key={`${transaction.id}-${index}`}>
-                    {getTableHeaders().map(header =>
-                      renderTableCell(transaction, header.field)
-                    )}
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={getTableHeaders().length}
+                      className="text-center py-8"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        Loading transactions...
+                      </div>
+                    </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                ) : (
+                  paginatedTransactions.map((transaction, index) => (
+                    <TableRow key={`${transaction.id}-${index}`}>
+                      {getTableHeaders().map(header =>
+                        renderTableCell(transaction, header.field)
+                      )}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Pagination */}
       <Pagination
