@@ -406,13 +406,7 @@ export function TransactionTable({
           )}
         </div>
         <div className="flex gap-2">
-          <Button onClick={onRefresh} variant="outline" disabled={loading}>
-            Refresh
-          </Button>
-          <Button
-            onClick={() => setShowAddModal(true)}
-            className={`bg-${colorClass}-600 hover:bg-${colorClass}-700`}
-          >
+          <Button onClick={() => setShowAddModal(true)} variant="default">
             <Plus className="h-4 w-4 mr-2" />
             Add {isIncome ? 'Income' : 'Expense'}
           </Button>
