@@ -44,7 +44,10 @@ export function Layout() {
             aria-hidden="true"
           />
           <div className="relative z-50">
-            <Sidebar className="w-64 h-screen bg-background" />
+            <Sidebar
+              className="w-64 h-screen bg-background"
+              hideCollapseToggle
+            />
           </div>
         </div>
       )}
@@ -61,10 +64,18 @@ export function Layout() {
                 >
                   <Menu className="h-5 w-5" />
                 </button>
-                <IconComponent className="h-8 w-8 text-foreground" />
-                <h1 className="text-2xl font-semibold text-foreground">
-                  {currentPageConfig.title}
-                </h1>
+                {/* Mobile: keep Richtato logo */}
+                <img
+                  src="/richtato.png"
+                  alt="Richtato"
+                  className="h-8 w-8 rounded"
+                />
+                <div className="flex items-center gap-2">
+                  <IconComponent className="h-6 w-6 text-foreground" />
+                  <h1 className="text-xl md:text-2xl font-semibold text-foreground">
+                    {currentPageConfig.title}
+                  </h1>
+                </div>
               </div>
             </div>
           </div>

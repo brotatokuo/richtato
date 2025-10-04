@@ -5,10 +5,8 @@ import { cn } from '@/lib/utils';
 import {
   ChevronLeft,
   ChevronRight,
-  CloudUpload,
   LogOut,
   PieChart,
-  Settings,
   Table,
   TrendingUp,
   Wallet,
@@ -18,6 +16,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 interface SidebarProps {
   className?: string;
+  hideCollapseToggle?: boolean;
 }
 
 const navigationItems = [
@@ -53,7 +52,10 @@ const navigationItems = [
   // },
 ];
 
-export function Sidebar({ className }: SidebarProps) {
+export function Sidebar({
+  className,
+  hideCollapseToggle = false,
+}: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -165,23 +167,25 @@ export function Sidebar({ className }: SidebarProps) {
               <LogOut className="h-4 w-4" />
               Logout
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-2 w-full justify-start gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              onClick={toggleSidebar}
-              aria-label="Toggle sidebar"
-            >
-              {isCollapsed ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <ChevronLeft className="h-4 w-4" />
-              )}
-              {isCollapsed ? 'Expand' : 'Collapse'}
-            </Button>
+            {!hideCollapseToggle && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2 w-full justify-start gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onClick={toggleSidebar}
+                aria-label="Toggle sidebar"
+              >
+                {isCollapsed ? (
+                  <ChevronRight className="h-4 w-4" />
+                ) : (
+                  <ChevronLeft className="h-4 w-4" />
+                )}
+                {isCollapsed ? 'Expand' : 'Collapse'}
+              </Button>
+            )}
           </>
         )}
-        {isCollapsed && (
+        {isCollapsed && !hideCollapseToggle && (
           <div className="mt-3 flex flex-col items-center gap-2">
             <ThemeToggle isCollapsed={true} />
             <Button
