@@ -7,13 +7,7 @@ import {
   dashboardApiService,
   DashboardData,
 } from '@/lib/api/dashboard';
-import {
-  AlertTriangle,
-  Gauge,
-  Percent,
-  PiggyBank,
-  TrendingUp,
-} from 'lucide-react';
+import { AlertTriangle, Gauge, Percent, PiggyBank } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export function Dashboard() {

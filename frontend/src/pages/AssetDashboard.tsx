@@ -1,5 +1,4 @@
 import { AccountsSection } from '@/components/dashboard/AccountsSection';
-import { IncomeExpenseChart } from '@/components/dashboard/IncomeExpenseChart';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { SavingsChart } from '@/components/dashboard/SavingsChart';
 import { dashboardApiService } from '@/lib/api/dashboard';
@@ -12,12 +11,9 @@ interface AssetDashboardData {
   networth_growth: string;
   networth_growth_class: string;
   total_assets: string;
-  total_liabilities: string;
   savings_rate: string;
   savings_rate_class: string;
   savings_rate_context: string;
-  investment_performance: string;
-  investment_performance_class: string;
   total_income: string;
   total_expenses: string;
 }
@@ -67,24 +63,14 @@ export function AssetDashboard() {
       // Calculate net worth (simplified as total assets for now)
       const netWorth = totalAssets;
 
-      // Calculate investment performance (mock for now - would need historical data)
-      const investmentPerformance = 0; // This would need historical data to calculate
-
       setDashboardData({
         networth: `$${netWorth.toLocaleString()}`,
         networth_growth: dashboardMetrics.networth_growth,
         networth_growth_class: dashboardMetrics.networth_growth_class,
         total_assets: `$${totalAssets.toLocaleString()}`,
-        total_liabilities: '$0.00', // Would need liability data
         savings_rate: dashboardMetrics.savings_rate,
         savings_rate_class: dashboardMetrics.savings_rate_class,
         savings_rate_context: dashboardMetrics.savings_rate_context,
-        investment_performance:
-          investmentPerformance > 0
-            ? `+${investmentPerformance.toFixed(1)}%`
-            : `${investmentPerformance.toFixed(1)}%`,
-        investment_performance_class:
-          investmentPerformance >= 0 ? 'positive' : 'negative',
         total_income: `$${totalIncome.toLocaleString()}`,
         total_expenses: `$${totalExpenses.toLocaleString()}`,
       });
@@ -140,11 +126,6 @@ export function AssetDashboard() {
           title="Net Worth"
           value={dashboardData.networth}
           subtitle={dashboardData.networth_growth}
-          trend={{
-            value:
-              dashboardData.networth_growth_class === 'positive' ? 2.1 : -1.2,
-            label: 'vs last month',
-          }}
           icon={<TrendingUp className="h-4 w-4" />}
         />
 
@@ -159,25 +140,10 @@ export function AssetDashboard() {
           title="Savings Rate"
           value={dashboardData.savings_rate}
           subtitle={dashboardData.savings_rate_context}
-          trend={{
-            value: dashboardData.savings_rate_class === 'positive' ? 1.2 : -0.5,
-            label: 'vs last month',
-          }}
           icon={<PiggyBank className="h-4 w-4" />}
         />
 
-        <MetricCard
-          title="Investment Performance"
-          value={dashboardData.investment_performance}
-          subtitle="YTD portfolio return"
-          trend={{
-            value: parseFloat(
-              dashboardData.investment_performance.replace(/[+%]/g, '')
-            ),
-            label: 'vs market',
-          }}
-          icon={<TrendingUp className="h-4 w-4" />}
-        />
+        {/* Removed Investment Performance card until backed by real data */}
       </div>
 
       {/* Main Asset Analytics Grid */}
