@@ -83,18 +83,6 @@ export function Dashboard() {
       {/* KPI Summary Row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
-          title="Net Worth"
-          value={dashboardData.networth}
-          subtitle={dashboardData.networth_growth}
-          trend={{
-            value:
-              dashboardData.networth_growth_class === 'positive' ? 2.1 : -1.2,
-            label: 'vs last month',
-          }}
-          icon={<TrendingUp className="h-4 w-4" />}
-        />
-
-        <MetricCard
           title="Savings Rate"
           value={dashboardData.savings_rate}
           subtitle={dashboardData.savings_rate_context}
