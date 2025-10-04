@@ -111,28 +111,10 @@ class CategoryView(APIView):
         },
     )
     def get(self, request) -> Response:
-        # Only return categories that have been used in expenses (have transactions)
-        categories = Category.objects.filter(
-            user=request.user, transactions__isnull=False
-        ).distinct()
-        rows = []
-        for category in categories:
-            rows.append(
-                {
-                    "id": category.id,
-                    "name": category.name,
-                    "type": category.get_type_display(),
-                }
-            )
-        data = {
-            "columns": [
-                {"field": "id", "title": "ID"},
-                {"field": "name", "title": "Name"},
-                {"field": "type", "title": "Type"},
-            ],
-            "rows": rows,
-        }
-        return Response(data)
+        # Return enabled categories for the user in a simple list format
+        categories = Category.objects.filter(user=request.user, enabled=True)
+        results = [{"id": c.id, "name": c.name, "type": c.type} for c in categories]
+        return Response({"results": results})
 
     @swagger_auto_schema(
         operation_summary="Create new category",
