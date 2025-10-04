@@ -219,6 +219,10 @@ STATIC_URL = "/static/"
 # Static files collection directory for production
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
+# User-uploaded media files (e.g., uploaded receipts)
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 

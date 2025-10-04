@@ -1,6 +1,5 @@
-from django.db import models
-
 from apps.richtato_user.models import CardAccount, Category, User
+from django.db import models
 
 
 # Create your models here.
@@ -20,6 +19,9 @@ class Expense(models.Model):
     description = models.CharField(max_length=100)
     date = models.DateField()
     amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    # Optional structured metadata for an expense, e.g. OCR results, merchant info
+    details = models.JSONField(null=True, blank=True, default=dict)
 
     def __str__(self):
         return f"{self.date} [{self.account_name}] (${self.amount}) {self.description}"

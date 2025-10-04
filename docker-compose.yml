@@ -21,8 +21,8 @@ services:
   # Django Backend
   backend:
     build:
-      context: .
-      dockerfile: Dockerfile.backend
+      context: ./backend
+      dockerfile: Dockerfile
     environment:
       - DEPLOY_STAGE=DEV
       - DEV_DATABASE_URL=postgresql://richtato:richtato_password@db:5432/richtato

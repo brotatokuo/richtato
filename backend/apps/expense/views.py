@@ -19,6 +19,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from richtato.views import BaseAPIView
 from statement_imports.cards.card_factory import CardStatement
+from statement_imports.ocr.extract import (
+    extract_statement_to_df,
+    map_raw_table_to_standard,
+)
 
 from .models import Expense
 from .serializers import ExpenseSerializer
@@ -121,6 +125,10 @@ class ExpenseAPIView(BaseAPIView):
                 "account_name": openapi.Schema(
                     type=openapi.TYPE_INTEGER, description="Account ID"
                 ),
+                "details": openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    description="Arbitrary structured metadata (e.g., OCR results)",
+                ),
             },
             required=["amount", "description", "date"],
         ),
@@ -169,6 +177,10 @@ class ExpenseAPIView(BaseAPIView):
                 ),
                 "account_name": openapi.Schema(
                     type=openapi.TYPE_INTEGER, description="Account ID"
+                ),
+                "details": openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    description="Arbitrary structured metadata (e.g., OCR results)",
                 ),
             },
         ),
@@ -372,19 +384,67 @@ class ImportStatementsView(APIView):
         card_accounts = ensure_list(request.data.getlist("card_accounts"))
         logger.debug(f"Files: {files}")
         logger.debug(f"Card Accounts: {card_accounts}")
+
+        # Helper to persist uploaded file to a temporary path if needed
+        def _save_uploaded_to_temp(uploaded_file):
+            import os
+            import tempfile
+
+            suffix = ""
+            try:
+                name = getattr(uploaded_file, "name", "") or ""
+                _, ext = os.path.splitext(name)
+                suffix = ext if ext else ""
+            except Exception:
+                suffix = ""
+
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+            for chunk in (
+                uploaded_file.chunks()
+                if hasattr(uploaded_file, "chunks")
+                else [uploaded_file.read()]
+            ):
+                tmp.write(chunk)
+            tmp.flush()
+            tmp.close()
+            return tmp.name
+
         # Process the files and categorize transactions
         for file, card_account in zip(files, card_accounts):
             card = CardAccount.objects.get(id=card_account, user=request.user)
             logger.debug(f"Card: {card}")
-            card_statement = CardStatement.create_from_file(
-                request.user,
-                card.bank,
-                card.name,
-                file,
-            )
-            logger.debug("Card Statement formatted")
-            ExpenseManager.import_from_dataframe(
-                card_statement.formatted_df, request.user
-            )
+            name_lower = (getattr(file, "name", "") or "").lower()
+            is_pdf = name_lower.endswith(".pdf")
+            is_image = name_lower.endswith((".jpg", ".jpeg", ".png", ".heic", ".heif"))
+
+            if is_pdf or is_image:
+                # OCR path: save to temp, extract, map, and import
+                tmp_path = _save_uploaded_to_temp(file)
+                try:
+                    raw_df = extract_statement_to_df(tmp_path)
+                    std_df = map_raw_table_to_standard(raw_df, card.name)
+                    if std_df is not None and not std_df.empty:
+                        ExpenseManager.import_from_dataframe(std_df, request.user)
+                    else:
+                        logger.warning("OCR produced no usable rows; skipping file")
+                finally:
+                    try:
+                        import os
+
+                        os.remove(tmp_path)
+                    except Exception:
+                        pass
+            else:
+                # Fall back to existing CSV/XLSX canonicalizers
+                card_statement = CardStatement.create_from_file(
+                    request.user,
+                    card.bank,
+                    card.name,
+                    file,
+                )
+                logger.debug("Card Statement formatted")
+                ExpenseManager.import_from_dataframe(
+                    card_statement.formatted_df, request.user
+                )
 
         return Response({"message": "File processed successfully."})

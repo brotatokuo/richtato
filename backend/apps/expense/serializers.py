@@ -1,7 +1,6 @@
-from rest_framework import serializers
-
 from apps.expense.models import Expense
 from apps.richtato_user.models import CardAccount, Category, User
+from rest_framework import serializers
 
 
 class ExpenseSerializer(serializers.ModelSerializer):
@@ -21,5 +20,6 @@ class ExpenseSerializer(serializers.ModelSerializer):
             "description",
             "date",
             "amount",
+            "details",
         ]
         read_only_fields = ["id"]
