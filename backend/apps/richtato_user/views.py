@@ -13,6 +13,7 @@ from apps.richtato_user.serializers import CategorySerializer
 from apps.richtato_user.utils import (
     _get_line_graph_data_by_month,
 )
+from categories.categories import BaseCategory
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, JsonResponse
@@ -144,11 +145,8 @@ class CategoryView(APIView):
                 "type": openapi.Schema(
                     type=openapi.TYPE_STRING, description="Category type"
                 ),
-                "budget": openapi.Schema(
-                    type=openapi.TYPE_STRING, description="Budget amount"
-                ),
             },
-            required=["name", "type", "budget"],
+            required=["name", "type"],
         ),
         responses={
             201: openapi.Response("Created"),
@@ -156,10 +154,7 @@ class CategoryView(APIView):
         },
     )
     def post(self, request):
-        data = request.data
-        data["budget"] = float(data["budget"].replace("$", ""))
-        logger.debug(f"Category creation data: {data}")
-        serializer = CategorySerializer(data=data)
+        serializer = CategorySerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status=201)
@@ -178,9 +173,6 @@ class CategoryView(APIView):
                 "type": openapi.Schema(
                     type=openapi.TYPE_STRING, description="Category type"
                 ),
-                "budget": openapi.Schema(
-                    type=openapi.TYPE_STRING, description="Budget amount"
-                ),
             },
         ),
         responses={
@@ -195,11 +187,7 @@ class CategoryView(APIView):
         except Category.DoesNotExist:
             return Response({"error": "Category not found"}, status=404)
 
-        data = request.data
-        if "budget" in data:
-            data["budget"] = float(data["budget"].replace("$", ""))
-
-        serializer = CategorySerializer(category, data=data)
+        serializer = CategorySerializer(category, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -236,9 +224,90 @@ class CategoryFieldChoicesAPIView(APIView):
     )
     def get(self, request):
         type_choices = [
-            {"value": choice[0], "label": choice[1]} for choice in Category.TYPE_CHOICES
+            {"value": choice[0], "label": choice[1]}
+            for choice in Category.CATEGORY_TYPES
         ]
         return Response({"type_choices": type_choices})
+
+
+class CategorySettingsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Get full category catalog with enabled flags",
+        responses={200: openapi.Response("Success")},
+    )
+    def get(self, request):
+        registry = BaseCategory.get_registry()
+        user_cats = {c.name: c for c in Category.objects.filter(user=request.user)}
+        catalog = []
+        for display_name, cls in registry.items():
+            normalized = display_name.replace("/", "_")
+            instance = cls()
+            existing = user_cats.get(normalized)
+            catalog.append(
+                {
+                    "name": normalized,
+                    "display": display_name,
+                    "icon": instance.icon,
+                    "color": instance.color,
+                    "type": existing.type if existing else None,
+                    "enabled": existing.enabled if existing else False,
+                }
+            )
+        return Response({"categories": catalog})
+
+    @swagger_auto_schema(
+        operation_summary="Bulk enable/disable categories",
+        operation_description="Body: { enabled: string[], disabled: string[] }",
+        responses={
+            200: openapi.Response("Success"),
+            400: openapi.Response("Bad Request"),
+        },
+    )
+    def put(self, request):
+        enabled = set(request.data.get("enabled", []))
+        disabled = set(request.data.get("disabled", []))
+
+        # Enforce Unknown stays enabled
+        enabled.add("Unknown")
+
+        valid_names = {k.replace("/", "_") for k in BaseCategory.get_registry().keys()}
+        bad = (enabled | disabled) - valid_names
+        if bad:
+            return Response({"error": f"Unknown categories: {sorted(bad)}"}, status=400)
+
+        # Ensure Category rows exist for enabled names
+        existing = {
+            c.name: c
+            for c in Category.objects.filter(
+                user=request.user, name__in=list(enabled | disabled)
+            )
+        }
+        to_create = []
+        for name in enabled:
+            if name not in existing:
+                # Default type: essential unless listed as nonessential in defaults
+                # We can reuse create_default_categories_for_user mapping quickly:
+                # Fall back to essential if unknown
+                default_type = "essential"
+                to_create.append(
+                    Category(
+                        user=request.user, name=name, type=default_type, enabled=True
+                    )
+                )
+        if to_create:
+            Category.objects.bulk_create(to_create)
+
+        Category.objects.filter(user=request.user, name__in=list(enabled)).update(
+            enabled=True
+        )
+        # Don't disable Unknown
+        Category.objects.filter(
+            user=request.user, name__in=list(disabled - {"Unknown"})
+        ).update(enabled=False)
+
+        return Response({"success": True})
 
 
 # CSRF Token endpoint

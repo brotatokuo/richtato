@@ -4,7 +4,11 @@ from typing import List, Optional, Tuple
 
 import pandas as pd
 import pdfplumber
-import pytesseract
+
+try:
+    import pytesseract
+except Exception:  # pragma: no cover
+    pytesseract = None
 from PIL import Image, ImageFilter, ImageOps
 
 try:
@@ -258,6 +262,11 @@ def extract_image_to_df(path: str) -> pd.DataFrame:
     using line parsing for dates and amounts.
     Returns a DataFrame with generic columns that can be mapped by caller.
     """
+    if pytesseract is None:
+        raise ImportError(
+            "pytesseract is required for image OCR. Install it or avoid image OCR endpoints during setup."
+        )
+
     img = _open_image_any(path)
     proc = _preprocess_for_ocr(img)
     text = pytesseract.image_to_string(proc)

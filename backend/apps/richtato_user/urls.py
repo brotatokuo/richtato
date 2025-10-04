@@ -27,6 +27,11 @@ urlpatterns = [
         views.CategoryFieldChoicesAPIView.as_view(),
         name="category_field_choices",
     ),
+    path(
+        "category-settings/",
+        views.CategorySettingsAPIView.as_view(),
+        name="category_settings",
+    ),
     path("card-accounts/", views.CardBanksAPIView.as_view(), name="card_accounts"),
     # API Authentication endpoints
     path("api/login/", views.APILoginView.as_view(), name="api_login"),

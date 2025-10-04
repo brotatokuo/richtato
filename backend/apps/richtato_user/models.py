@@ -1,3 +1,4 @@
+from categories.categories import BaseCategory
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
@@ -7,8 +8,6 @@ from django.contrib.auth.models import (
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-
-from categories.categories import BaseCategory
 
 supported_card_banks = [
     ("american_express", "American Express"),
@@ -94,6 +93,7 @@ class Category(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="categories")
     name = models.CharField(max_length=100, choices=supported_categories)
     type = models.CharField(max_length=50, choices=CATEGORY_TYPES, default="essential")
+    enabled = models.BooleanField(default=True)
 
     class Meta:
         unique_together = ("user", "name")
@@ -131,15 +131,23 @@ class Category(models.Model):
             "Unknown": "nonessential",
         }
 
+        # Policy: Essentials enabled by default, plus common non-essentials
+        def _default_enabled(display_name: str) -> bool:
+            return (
+                category_essentials.get(display_name) == "essential"
+                or display_name in {"Dining", "Shopping", "Travel"}
+                or display_name == "Unknown"
+            )
+
         for category_key, category_display in cls.supported_categories:
             # Check if category already exists for this user
             if not cls.objects.filter(user=user, name=category_key).exists():
-                # You might want to set different defaults based on category
                 categories_to_create.append(
                     cls(
                         user=user,
                         name=category_key,
                         type=category_essentials.get(category_key),
+                        enabled=_default_enabled(category_display),
                     )
                 )
 

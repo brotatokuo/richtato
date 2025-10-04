@@ -4,7 +4,7 @@ from categories.categories import BaseCategory
 
 class CategoriesManager:
     def __init__(self, user: str):
-        self.categories = Category.objects.filter(user=user)
+        self.categories = Category.objects.filter(user=user, enabled=True)
         self.category_class_map = BaseCategory.get_registry()
         self.keyword_to_category = self._build_keyword_map()
 
