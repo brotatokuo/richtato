@@ -15,7 +15,7 @@ export function SavingsChart() {
     try {
       setError(null);
       const data = await dashboardApiService.getSavingsData();
-      setLabels(data.labels || []);
+      const nextLabels = data.labels || [];
       // Map datasets to ECharts series, preserving types/colors where possible
       const mappedSeries = (data.datasets || []).map((ds: any) => ({
         name: ds.label,
@@ -45,7 +45,19 @@ export function SavingsChart() {
           : undefined,
         barMaxWidth: ds.type === 'bar' ? 24 : undefined,
       }));
-      setSeries(mappedSeries);
+      // If all values are zero or empty, treat as no data
+      const allValues = (mappedSeries || [])
+        .flatMap((s: any) => s.data as number[])
+        .filter(v => typeof v === 'number');
+      const hasNonZero = allValues.some(v => v !== 0);
+
+      if (!nextLabels.length || !hasNonZero) {
+        setLabels([]);
+        setSeries([]);
+      } else {
+        setLabels(nextLabels);
+        setSeries(mappedSeries);
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to load savings data'
