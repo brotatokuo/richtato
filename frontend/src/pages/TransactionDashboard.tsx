@@ -80,10 +80,6 @@ export function Dashboard() {
           title="Savings Rate"
           value={dashboardData.savings_rate}
           subtitle={dashboardData.savings_rate_context}
-          trend={{
-            value: dashboardData.savings_rate_class === 'positive' ? 1.2 : -0.5,
-            label: 'vs last month',
-          }}
           icon={<PiggyBank className="h-4 w-4" />}
         />
 
