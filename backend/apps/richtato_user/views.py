@@ -1,4 +1,5 @@
 # API-only views for richtato_user app
+import datetime
 import json
 
 import pytz
@@ -240,11 +241,19 @@ class CategorySettingsAPIView(APIView):
     def get(self, request):
         registry = BaseCategory.get_registry()
         user_cats = {c.name: c for c in Category.objects.filter(user=request.user)}
+        # Gather existing budgets keyed by category name
+        from apps.budget.models import Budget
+
+        cat_to_budget = {
+            b.category.name: b
+            for b in Budget.objects.filter(user=request.user).select_related("category")
+        }
         catalog = []
         for display_name, cls in registry.items():
             normalized = display_name.replace("/", "_")
             instance = cls()
             existing = user_cats.get(normalized)
+            budget = cat_to_budget.get(normalized)
             catalog.append(
                 {
                     "name": normalized,
@@ -253,6 +262,18 @@ class CategorySettingsAPIView(APIView):
                     "color": instance.color,
                     "type": existing.type if existing else None,
                     "enabled": existing.enabled if existing else False,
+                    "budget": (
+                        {
+                            "id": budget.id,
+                            "amount": float(budget.amount),
+                            "start_date": budget.start_date.isoformat(),
+                            "end_date": budget.end_date.isoformat()
+                            if budget.end_date
+                            else None,
+                        }
+                        if budget
+                        else None
+                    ),
                 }
             )
         return Response({"categories": catalog})
@@ -268,6 +289,9 @@ class CategorySettingsAPIView(APIView):
     def put(self, request):
         enabled = set(request.data.get("enabled", []))
         disabled = set(request.data.get("disabled", []))
+        budgets = request.data.get(
+            "budgets", {}
+        )  # name -> { amount, start_date?, end_date? | null }
 
         # Enforce Unknown stays enabled
         enabled.add("Unknown")
@@ -306,6 +330,51 @@ class CategorySettingsAPIView(APIView):
         Category.objects.filter(
             user=request.user, name__in=list(disabled - {"Unknown"})
         ).update(enabled=False)
+
+        # Upsert budgets per provided mapping
+        if budgets:
+            from apps.budget.models import Budget
+
+            # Ensure we have Category objects for all names referenced in budgets
+            budget_names = list(budgets.keys())
+            categories = {
+                c.name: c
+                for c in Category.objects.filter(
+                    user=request.user, name__in=budget_names
+                )
+            }
+            for name, payload in budgets.items():
+                category = categories.get(name)
+                if not category:
+                    continue
+                amount = payload.get("amount", None)
+                # If amount is null/undefined, delete any existing budget for this category
+                if amount is None:
+                    Budget.objects.filter(user=request.user, category=category).delete()
+                    continue
+                start_date = payload.get("start_date")
+                end_date = payload.get("end_date") or None
+                if not start_date:
+                    start_date = datetime.date.today().isoformat()
+                # If a budget already exists for this user/category (by unique_together on start_date),
+                # prefer updating the first one; else create a new one.
+                existing_qs = Budget.objects.filter(
+                    user=request.user, category=category
+                )
+                if existing_qs.exists():
+                    b = existing_qs.order_by("-start_date").first()
+                    b.amount = amount
+                    b.start_date = start_date
+                    b.end_date = end_date
+                    b.save()
+                else:
+                    Budget.objects.create(
+                        user=request.user,
+                        category=category,
+                        amount=amount,
+                        start_date=start_date,
+                        end_date=end_date,
+                    )
 
         return Response({"success": True})
 

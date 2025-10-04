@@ -1,11 +1,13 @@
 import {
   CloudUpload,
+  Menu,
   PieChart,
   Settings,
   Table,
   TrendingUp,
   Wallet,
 } from 'lucide-react';
+import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 
@@ -24,6 +26,7 @@ const routeConfig: Record<
 
 export function Layout() {
   const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   // Get the current page config based on the route
   const currentPageConfig =
@@ -32,13 +35,32 @@ export function Layout() {
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar />
+      <Sidebar className="hidden md:flex" />
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="relative z-50">
+            <Sidebar className="w-64 h-screen bg-background" />
+          </div>
+        </div>
+      )}
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
           <div className="mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
+                <button
+                  className="md:hidden inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-foreground hover:bg-muted"
+                  onClick={() => setMobileOpen(true)}
+                  aria-label="Open menu"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
                 <IconComponent className="h-8 w-8 text-foreground" />
                 <h1 className="text-2xl font-semibold text-foreground">
                   {currentPageConfig.title}

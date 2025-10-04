@@ -233,10 +233,10 @@ class BudgetAPIView(BaseAPIView):
                 "end_date": openapi.Schema(
                     type=openapi.TYPE_STRING,
                     format=openapi.FORMAT_DATE,
-                    description="End date",
+                    description="End date (omit for no expiry)",
                 ),
             },
-            required=["category", "amount", "start_date", "end_date"],
+            required=["category", "amount", "start_date"],
         ),
         responses={
             201: openapi.Response("Created"),
@@ -249,6 +249,8 @@ class BudgetAPIView(BaseAPIView):
         """
         modified_data = request.data.copy()
         modified_data["user"] = request.user.id
+        if not modified_data.get("end_date"):
+            modified_data["end_date"] = None
         logger.debug(f"POST data: {modified_data}")
         serializer = BudgetSerializer(data=modified_data)
         if serializer.is_valid():
@@ -293,6 +295,8 @@ class BudgetAPIView(BaseAPIView):
         """
         logger.debug(f"PATCH data: {request.data}")
         reversed_data = self.apply_fieldmap(request.data)
+        if "end_date" in reversed_data and not reversed_data.get("end_date"):
+            reversed_data["end_date"] = None
         budget = get_object_or_404(Budget, pk=pk, user=request.user)
 
         serializer = BudgetSerializer(budget, data=reversed_data, partial=True)

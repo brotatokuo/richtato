@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -5,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -13,71 +15,107 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { CategoryCatalogItem, categorySettingsApi } from '@/lib/api/user';
 import { Palette } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 export function Settings() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [catalog, setCatalog] = useState<CategoryCatalogItem[]>([]);
+
   const [settings, setSettings] = useState({
-    notifications: {
-      email: true,
-      push: false,
-      weekly: true,
-      monthly: true,
-    },
-    privacy: {
-      dataSharing: false,
-      analytics: true,
-      marketing: false,
-    },
     appearance: {
       theme: 'system',
       currency: 'USD',
       dateFormat: 'MM/DD/YYYY',
     },
-    data: {
-      autoBackup: true,
-      retentionPeriod: '2',
-    },
   });
 
-  const handleNotificationChange = (key: string, value: boolean) => {
-    setSettings(prev => ({
-      ...prev,
-      notifications: {
-        ...prev.notifications,
-        [key]: value,
-      },
-    }));
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await categorySettingsApi.getCatalog();
+        setCatalog(res.categories);
+        setError(null);
+      } catch (e: any) {
+        setError(e?.message ?? 'Failed to load settings');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const payload = useMemo(() => {
+    const enabled = catalog.filter(c => c.enabled).map(c => c.name);
+    const disabled = catalog.filter(c => !c.enabled).map(c => c.name);
+    const budgets: Record<
+      string,
+      { amount: number | null; start_date?: string; end_date?: string | null }
+    > = {};
+    for (const c of catalog) {
+      if (c.budget) {
+        budgets[c.name] = {
+          amount: c.budget.amount,
+          start_date: c.budget.start_date,
+          end_date: c.budget.end_date ?? null,
+        };
+      } else {
+        budgets[c.name] = { amount: null };
+      }
+    }
+    return { enabled, disabled, budgets };
+  }, [catalog]);
+
+  const toggleCategory = (name: string, value: boolean) => {
+    setCatalog(prev =>
+      prev.map(c => (c.name === name ? { ...c, enabled: value } : c))
+    );
   };
 
-  const handlePrivacyChange = (key: string, value: boolean) => {
-    setSettings(prev => ({
-      ...prev,
-      privacy: {
-        ...prev.privacy,
-        [key]: value,
-      },
-    }));
+  const updateBudgetField = (
+    name: string,
+    field: 'amount' | 'start_date' | 'end_date',
+    value: string
+  ) => {
+    setCatalog(prev =>
+      prev.map(c => {
+        if (c.name !== name) return c;
+        const current = c.budget ?? {
+          id: 0,
+          amount: 0,
+          start_date: new Date().toISOString().slice(0, 10),
+          end_date: null as string | null,
+        };
+        if (field === 'amount') {
+          return { ...c, budget: { ...current, amount: Number(value) || 0 } };
+        }
+        if (field === 'end_date') {
+          return { ...c, budget: { ...current, end_date: value || null } };
+        }
+        return { ...c, budget: { ...current, start_date: value } };
+      })
+    );
   };
 
-  const handleAppearanceChange = (key: string, value: string) => {
-    setSettings(prev => ({
-      ...prev,
-      appearance: {
-        ...prev.appearance,
-        [key]: value,
-      },
-    }));
+  const removeBudget = (name: string) => {
+    setCatalog(prev =>
+      prev.map(c => (c.name === name ? { ...c, budget: null } : c))
+    );
   };
 
-  const handleDataChange = (key: string, value: string | boolean) => {
-    setSettings(prev => ({
-      ...prev,
-      data: {
-        ...prev.data,
-        [key]: value,
-      },
-    }));
+  const save = async () => {
+    try {
+      setLoading(true);
+      await categorySettingsApi.updateSettings(payload);
+      setError(null);
+    } catch (e: any) {
+      setError(e?.message ?? 'Failed to save settings');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -99,7 +137,12 @@ export function Settings() {
               <Label htmlFor="theme">Theme</Label>
               <Select
                 value={settings.appearance.theme}
-                onValueChange={value => handleAppearanceChange('theme', value)}
+                onValueChange={value =>
+                  setSettings(prev => ({
+                    ...prev,
+                    appearance: { ...prev.appearance, theme: value },
+                  }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -117,7 +160,10 @@ export function Settings() {
               <Select
                 value={settings.appearance.currency}
                 onValueChange={value =>
-                  handleAppearanceChange('currency', value)
+                  setSettings(prev => ({
+                    ...prev,
+                    appearance: { ...prev.appearance, currency: value },
+                  }))
                 }
               >
                 <SelectTrigger>
@@ -137,7 +183,10 @@ export function Settings() {
               <Select
                 value={settings.appearance.dateFormat}
                 onValueChange={value =>
-                  handleAppearanceChange('dateFormat', value)
+                  setSettings(prev => ({
+                    ...prev,
+                    appearance: { ...prev.appearance, dateFormat: value },
+                  }))
                 }
               >
                 <SelectTrigger>
@@ -149,6 +198,107 @@ export function Settings() {
                   <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Categories & Budgets */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Categories & Budgets</CardTitle>
+            <CardDescription>
+              Enable categories and set optional budgets per category. Budgets
+              have no expiry by default.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {error && (
+              <div className="text-sm text-red-600" role="alert">
+                {error}
+              </div>
+            )}
+            {loading && <div className="text-sm">Loading…</div>}
+            {!loading && (
+              <div className="space-y-3">
+                {catalog.map(item => (
+                  <div
+                    key={item.name}
+                    className="grid gap-3 md:grid-cols-12 items-center border rounded-md p-3"
+                  >
+                    <div className="md:col-span-3 flex items-center gap-2">
+                      <span aria-hidden>{item.icon}</span>
+                      <span>{item.display}</span>
+                    </div>
+                    <div className="md:col-span-2 flex items-center gap-2">
+                      <Label htmlFor={`enabled-${item.name}`}>Enabled</Label>
+                      <Switch
+                        id={`enabled-${item.name}`}
+                        checked={item.enabled}
+                        onCheckedChange={val =>
+                          toggleCategory(item.name, Boolean(val))
+                        }
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor={`amount-${item.name}`}>Budget</Label>
+                      <Input
+                        id={`amount-${item.name}`}
+                        type="number"
+                        step="0.01"
+                        value={item.budget?.amount ?? ''}
+                        placeholder="No budget"
+                        onChange={e =>
+                          updateBudgetField(item.name, 'amount', e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor={`start-${item.name}`}>Start</Label>
+                      <Input
+                        id={`start-${item.name}`}
+                        type="date"
+                        value={item.budget?.start_date ?? ''}
+                        onChange={e =>
+                          updateBudgetField(
+                            item.name,
+                            'start_date',
+                            e.target.value
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor={`end-${item.name}`}>End (optional)</Label>
+                      <Input
+                        id={`end-${item.name}`}
+                        type="date"
+                        value={item.budget?.end_date ?? ''}
+                        onChange={e =>
+                          updateBudgetField(
+                            item.name,
+                            'end_date',
+                            e.target.value
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="md:col-span-1 flex justify-end">
+                      <Button
+                        variant="secondary"
+                        onClick={() => removeBudget(item.name)}
+                        disabled={!item.budget}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="pt-2 flex justify-end gap-2">
+              <Button onClick={save} disabled={loading}>
+                Save Changes
+              </Button>
             </div>
           </CardContent>
         </Card>

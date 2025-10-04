@@ -1,10 +1,9 @@
 import datetime
 from decimal import Decimal
 
+from apps.richtato_user.models import Category, User
 from django.core.exceptions import ValidationError
 from django.db import models
-
-from apps.richtato_user.models import Category, User
 
 
 # Create your models here.
@@ -20,7 +19,7 @@ class Budget(models.Model):
     )
 
     class Meta:
-        # Simple unique constraint to prevent exact duplicates
+        # Keep DB-level uniqueness compatible; enforce single active budget via app logic
         unique_together = (
             "user",
             "category",

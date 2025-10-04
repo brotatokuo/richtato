@@ -1,7 +1,8 @@
+import { csrfService } from '@/lib/api/csrf';
 import {
-  User,
   CreateUserRequest,
   UpdateUserRequest,
+  User,
   UserRole,
 } from '@/types/user';
 
@@ -122,5 +123,58 @@ export class UserApiService {
   }
 }
 
+export interface CategoryCatalogItem {
+  name: string;
+  display: string;
+  icon: string;
+  color: string;
+  type: string | null;
+  enabled: boolean;
+  budget: {
+    id: number;
+    amount: number;
+    start_date: string;
+    end_date: string | null;
+  } | null;
+}
+
+export class CategorySettingsApi {
+  private baseUrl = 'http://localhost:8000/api/auth/category-settings';
+
+  private async getHeaders(): Promise<HeadersInit> {
+    const headers = await csrfService.getHeaders();
+    return headers;
+  }
+
+  async getCatalog(): Promise<{ categories: CategoryCatalogItem[] }> {
+    const res = await fetch(`${this.baseUrl}/`, {
+      method: 'GET',
+      headers: await this.getHeaders(),
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('Failed to load category settings');
+    return res.json();
+  }
+
+  async updateSettings(payload: {
+    enabled: string[];
+    disabled: string[];
+    budgets?: Record<
+      string,
+      { amount: number | null; start_date?: string; end_date?: string | null }
+    >;
+  }): Promise<{ success: boolean }> {
+    const res = await fetch(`${this.baseUrl}/`, {
+      method: 'PUT',
+      headers: await this.getHeaders(),
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to update category settings');
+    return res.json();
+  }
+}
+
 // Export singleton instance
 export const userApi = new UserApiService();
+export const categorySettingsApi = new CategorySettingsApi();
