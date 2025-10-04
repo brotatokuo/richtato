@@ -457,19 +457,19 @@ export function TransactionTable({
                   return (
                     <div
                       key={`${t.id}-${index}`}
-                      className="p-4 flex items-start justify-between"
+                      className="p-4 w-full flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
                     >
-                      <div className="space-y-1">
-                        <div className="text-sm font-medium truncate max-w-[70vw]">
+                      <div className="space-y-1 min-w-0 sm:pr-2">
+                        <div className="text-sm font-medium whitespace-normal break-words">
                           {t.description}
                         </div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs text-muted-foreground whitespace-normal break-words">
                           {new Date(t.date).toLocaleDateString()} • {t.account}
                           {!isIncome && t.category ? ` • ${t.category}` : ''}
                         </div>
                       </div>
                       <div
-                        className={`ml-4 text-right text-sm font-semibold ${color}`}
+                        className={`sm:ml-4 sm:text-right text-sm font-semibold ${color}`}
                       >
                         {sign}${amount.toFixed(2)}
                       </div>
