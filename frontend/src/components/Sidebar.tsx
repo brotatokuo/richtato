@@ -7,6 +7,7 @@ import {
   ChevronRight,
   LogOut,
   PieChart,
+  Settings as SettingsIcon,
   Table,
   TrendingUp,
   Wallet,
@@ -40,15 +41,15 @@ const navigationItems = [
     href: '/data',
     icon: Table,
   },
+  {
+    name: 'Settings',
+    href: '/settings',
+    icon: SettingsIcon,
+  },
   // {
   //   name: 'Upload',
   //   href: '/upload',
   //   icon: CloudUpload,
-  // },
-  // {
-  //   name: 'Settings',
-  //   href: '/settings',
-  //   icon: Settings,
   // },
 ];
 

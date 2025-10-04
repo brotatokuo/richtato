@@ -16,7 +16,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { CategoryCatalogItem, categorySettingsApi } from '@/lib/api/user';
+import { transactionsApiService } from '@/lib/api/transactions';
+import {
+  CategoryCatalogItem,
+  cardsApi,
+  categorySettingsApi,
+} from '@/lib/api/user';
 import { Palette } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -24,6 +29,10 @@ export function Settings() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<CategoryCatalogItem[]>([]);
+  const [accounts, setAccounts] = useState<{ id: number; name: string }[]>([]);
+  const [cardAccounts, setCardAccounts] = useState<
+    { id: number; name: string; bank: string }[]
+  >([]);
 
   const [settings, setSettings] = useState({
     appearance: {
@@ -37,8 +46,14 @@ export function Settings() {
     (async () => {
       try {
         setLoading(true);
-        const res = await categorySettingsApi.getCatalog();
-        setCatalog(res.categories);
+        const [catalogRes, accountsRes, cardsRes] = await Promise.all([
+          categorySettingsApi.getCatalog(),
+          transactionsApiService.getAccounts(),
+          cardsApi.list(),
+        ]);
+        setCatalog(catalogRes.categories);
+        setAccounts(accountsRes.map(a => ({ id: a.id, name: a.name })));
+        setCardAccounts(cardsRes);
         setError(null);
       } catch (e: any) {
         setError(e?.message ?? 'Failed to load settings');
@@ -120,7 +135,7 @@ export function Settings() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-1">
         {/* Appearance */}
         <Card>
           <CardHeader>
@@ -300,6 +315,64 @@ export function Settings() {
                 Save Changes
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Accounts */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Accounts</CardTitle>
+            <CardDescription>All financial accounts on file</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-sm">Loading…</div>
+            ) : accounts.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No accounts</div>
+            ) : (
+              <div className="space-y-2">
+                {accounts.map(acc => (
+                  <div
+                    key={acc.id}
+                    className="flex items-center justify-between rounded-md border p-3"
+                  >
+                    <div className="text-sm font-medium">{acc.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      ID {acc.id}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Card Accounts */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Cards</CardTitle>
+            <CardDescription>Linked card accounts</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-sm">Loading…</div>
+            ) : cardAccounts.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No cards</div>
+            ) : (
+              <div className="space-y-2">
+                {cardAccounts.map(card => (
+                  <div
+                    key={card.id}
+                    className="flex items-center justify-between rounded-md border p-3"
+                  >
+                    <div className="text-sm font-medium">{card.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {card.bank} • ID {card.id}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
