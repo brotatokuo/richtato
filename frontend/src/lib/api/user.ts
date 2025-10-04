@@ -217,6 +217,7 @@ class PreferencesApiService {
     const res = await fetch(`${this.baseUrl}/`, {
       method: 'GET',
       credentials: 'include',
+      headers: await csrfService.getHeaders(),
     });
     if (!res.ok) throw new Error('Failed to load preferences');
     return res.json();
@@ -228,7 +229,7 @@ class PreferencesApiService {
     const res = await fetch(`${this.baseUrl}/`, {
       method: 'PUT',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await csrfService.getHeaders(),
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('Failed to update preferences');

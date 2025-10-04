@@ -1,4 +1,3 @@
-import { ThemeToggle } from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -157,7 +156,6 @@ export function Sidebar({
         </div>
         {!isCollapsed && (
           <>
-            <ThemeToggle className="mt-3 w-full" isCollapsed={false} />
             <Button
               variant="ghost"
               size="sm"
@@ -188,7 +186,6 @@ export function Sidebar({
         )}
         {isCollapsed && !hideCollapseToggle && (
           <div className="mt-3 flex flex-col items-center gap-2">
-            <ThemeToggle isCollapsed={true} />
             <Button
               variant="ghost"
               size="icon"
