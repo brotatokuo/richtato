@@ -3,14 +3,13 @@ import { MetricCard } from '@/components/dashboard/MetricCard';
 import { SavingsChart } from '@/components/dashboard/SavingsChart';
 import { dashboardApiService } from '@/lib/api/dashboard';
 import { transactionsApiService } from '@/lib/api/transactions';
-import { AlertTriangle, Building2, PiggyBank, TrendingUp } from 'lucide-react';
+import { AlertTriangle, PiggyBank, TrendingUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface AssetDashboardData {
   networth: string;
   networth_growth: string;
   networth_growth_class: string;
-  total_assets: string;
   savings_rate: string;
   savings_rate_class: string;
   savings_rate_context: string;
@@ -43,20 +42,33 @@ export function AssetDashboard() {
         transactionsApiService.getExpenseTransactions(),
       ]);
 
+      // Helper to coerce currency strings or numbers to a number
+      const parseAmountToNumber = (value: unknown): number => {
+        if (typeof value === 'number') return value;
+        if (typeof value === 'string') {
+          const normalized = value.replace(/[^0-9.-]+/g, '');
+          const parsed = parseFloat(normalized);
+          return isNaN(parsed) ? 0 : parsed;
+        }
+        if (typeof value === 'bigint') return Number(value);
+        return 0;
+      };
+
       // Calculate total assets from accounts
       const totalAssets = accounts.reduce((sum, account) => {
-        // Extract balance from account data
-        const balance = account.balance || 0;
-        return sum + balance;
+        const balanceNumber = parseAmountToNumber((account as any).balance);
+        return sum + balanceNumber;
       }, 0);
 
       // Calculate total income and expenses
       const totalIncome = incomeTransactions.reduce(
-        (sum, transaction) => sum + transaction.amount,
+        (sum, transaction) =>
+          sum + parseAmountToNumber((transaction as any).amount),
         0
       );
       const totalExpenses = expenseTransactions.reduce(
-        (sum, transaction) => sum + transaction.amount,
+        (sum, transaction) =>
+          sum + parseAmountToNumber((transaction as any).amount),
         0
       );
 
@@ -67,7 +79,6 @@ export function AssetDashboard() {
         networth: `$${netWorth.toLocaleString()}`,
         networth_growth: dashboardMetrics.networth_growth,
         networth_growth_class: dashboardMetrics.networth_growth_class,
-        total_assets: `$${totalAssets.toLocaleString()}`,
         savings_rate: dashboardMetrics.savings_rate,
         savings_rate_class: dashboardMetrics.savings_rate_class,
         savings_rate_context: dashboardMetrics.savings_rate_context,
@@ -127,13 +138,6 @@ export function AssetDashboard() {
           value={dashboardData.networth}
           subtitle={dashboardData.networth_growth}
           icon={<TrendingUp className="h-4 w-4" />}
-        />
-
-        <MetricCard
-          title="Total Assets"
-          value={dashboardData.total_assets}
-          subtitle="All accounts combined"
-          icon={<Building2 className="h-4 w-4" />}
         />
 
         <MetricCard
