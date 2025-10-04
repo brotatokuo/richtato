@@ -49,7 +49,8 @@ class CardBanksAPIView(APIView):
     def get(self, request):
         card_accounts = CardAccount.objects.filter(user=request.user)
         logger.debug(f"User card accounts: {card_accounts}")
-        return Response(card_accounts)
+        data = [{"id": c.id, "name": c.name, "bank": c.bank} for c in card_accounts]
+        return Response(data)
 
 
 class CombinedGraphAPIView(APIView):
