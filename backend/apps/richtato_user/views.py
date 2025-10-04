@@ -9,8 +9,9 @@ from apps.richtato_user.models import (
     CardAccount,
     Category,
     User,
+    UserPreference,
 )
-from apps.richtato_user.serializers import CategorySerializer
+from apps.richtato_user.serializers import CategorySerializer, UserPreferenceSerializer
 from apps.richtato_user.utils import (
     _get_line_graph_data_by_month,
 )
@@ -359,6 +360,42 @@ class CategorySettingsAPIView(APIView):
                     )
 
         return Response({"success": True})
+
+
+class UserPreferenceAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Get user preferences",
+        responses={200: openapi.Response("Success")},
+    )
+    def get(self, request):
+        pref, _ = UserPreference.objects.get_or_create(user=request.user)
+        data = UserPreferenceSerializer(pref).data
+        return Response(data)
+
+    @swagger_auto_schema(
+        operation_summary="Update user preferences",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "theme": openapi.Schema(type=openapi.TYPE_STRING),
+                "currency": openapi.Schema(type=openapi.TYPE_STRING),
+                "date_format": openapi.Schema(type=openapi.TYPE_STRING),
+            },
+        ),
+        responses={
+            200: openapi.Response("Success"),
+            400: openapi.Response("Bad Request"),
+        },
+    )
+    def put(self, request):
+        pref, _ = UserPreference.objects.get_or_create(user=request.user)
+        serializer = UserPreferenceSerializer(pref, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
 
 
 # CSRF Token endpoint

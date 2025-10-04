@@ -33,6 +33,7 @@ urlpatterns = [
         name="category_settings",
     ),
     path("card-accounts/", views.CardBanksAPIView.as_view(), name="card_accounts"),
+    path("preferences/", views.UserPreferenceAPIView.as_view(), name="preferences"),
     # API Authentication endpoints
     path("api/login/", views.APILoginView.as_view(), name="api_login"),
     path("api/logout/", views.APILogoutView.as_view(), name="api_logout"),

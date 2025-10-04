@@ -201,3 +201,39 @@ class CardsApiService {
 }
 
 export const cardsApi = new CardsApiService();
+
+// Preferences API
+export type ThemePref = 'light' | 'dark' | 'system';
+export interface UserPreferencesPayload {
+  theme?: ThemePref;
+  currency?: string;
+  date_format?: string;
+}
+
+class PreferencesApiService {
+  private baseUrl = 'http://localhost:8000/api/auth/preferences';
+
+  async get(): Promise<UserPreferencesPayload> {
+    const res = await fetch(`${this.baseUrl}/`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('Failed to load preferences');
+    return res.json();
+  }
+
+  async update(
+    payload: UserPreferencesPayload
+  ): Promise<UserPreferencesPayload> {
+    const res = await fetch(`${this.baseUrl}/`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to update preferences');
+    return res.json();
+  }
+}
+
+export const preferencesApi = new PreferencesApiService();

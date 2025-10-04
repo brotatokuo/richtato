@@ -16,16 +16,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { useTheme } from '@/contexts/useTheme';
 import { transactionsApiService } from '@/lib/api/transactions';
 import {
   CategoryCatalogItem,
   cardsApi,
   categorySettingsApi,
+  preferencesApi,
 } from '@/lib/api/user';
-import { Palette } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Calendar, Palette } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 export function Settings() {
+  const { setTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<CategoryCatalogItem[]>([]);
@@ -33,6 +36,9 @@ export function Settings() {
   const [cardAccounts, setCardAccounts] = useState<
     { id: number; name: string; bank: string }[]
   >([]);
+
+  const startInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const endInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const [settings, setSettings] = useState({
     appearance: {
@@ -46,14 +52,26 @@ export function Settings() {
     (async () => {
       try {
         setLoading(true);
-        const [catalogRes, accountsRes, cardsRes] = await Promise.all([
+        const [catalogRes, accountsRes, cardsRes, prefRes] = await Promise.all([
           categorySettingsApi.getCatalog(),
           transactionsApiService.getAccounts(),
           cardsApi.list(),
+          preferencesApi.get(),
         ]);
         setCatalog(catalogRes.categories);
         setAccounts(accountsRes.map(a => ({ id: a.id, name: a.name })));
         setCardAccounts(cardsRes);
+        if (prefRes) {
+          setSettings(prev => ({
+            ...prev,
+            appearance: {
+              theme: (prefRes.theme as any) || prev.appearance.theme,
+              currency: prefRes.currency || prev.appearance.currency,
+              dateFormat:
+                (prefRes.date_format as any) || prev.appearance.dateFormat,
+            },
+          }));
+        }
         setError(null);
       } catch (e: any) {
         setError(e?.message ?? 'Failed to load settings');
@@ -124,7 +142,21 @@ export function Settings() {
   const save = async () => {
     try {
       setLoading(true);
-      await categorySettingsApi.updateSettings(payload);
+      await Promise.all([
+        categorySettingsApi.updateSettings(payload),
+        preferencesApi.update({
+          theme: settings.appearance.theme as any,
+          currency: settings.appearance.currency,
+          date_format: settings.appearance.dateFormat,
+        }),
+      ]);
+      // Sync theme immediately
+      if (
+        settings.appearance.theme === 'light' ||
+        settings.appearance.theme === 'dark'
+      ) {
+        setTheme(settings.appearance.theme);
+      }
       setError(null);
     } catch (e: any) {
       setError(e?.message ?? 'Failed to save settings');
@@ -152,12 +184,21 @@ export function Settings() {
               <Label htmlFor="theme">Theme</Label>
               <Select
                 value={settings.appearance.theme}
-                onValueChange={value =>
+                onValueChange={value => {
                   setSettings(prev => ({
                     ...prev,
                     appearance: { ...prev.appearance, theme: value },
-                  }))
-                }
+                  }));
+                  // Apply theme immediately for user feedback
+                  if (value === 'light' || value === 'dark') {
+                    setTheme(value);
+                  } else if (value === 'system') {
+                    const prefersDark = window.matchMedia(
+                      '(prefers-color-scheme: dark)'
+                    ).matches;
+                    setTheme(prefersDark ? 'dark' : 'light');
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -169,30 +210,6 @@ export function Settings() {
                 </SelectContent>
               </Select>
             </div>
-
-            <div>
-              <Label htmlFor="currency">Currency</Label>
-              <Select
-                value={settings.appearance.currency}
-                onValueChange={value =>
-                  setSettings(prev => ({
-                    ...prev,
-                    appearance: { ...prev.appearance, currency: value },
-                  }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USD">USD ($)</SelectItem>
-                  <SelectItem value="EUR">EUR (€)</SelectItem>
-                  <SelectItem value="GBP">GBP (£)</SelectItem>
-                  <SelectItem value="CAD">CAD (C$)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             <div>
               <Label htmlFor="date-format">Date Format</Label>
               <Select
@@ -269,33 +286,81 @@ export function Settings() {
                     </div>
                     <div className="md:col-span-2">
                       <Label htmlFor={`start-${item.name}`}>Start</Label>
-                      <Input
-                        id={`start-${item.name}`}
-                        type="date"
-                        value={item.budget?.start_date ?? ''}
-                        onChange={e =>
-                          updateBudgetField(
-                            item.name,
-                            'start_date',
-                            e.target.value
-                          )
-                        }
-                      />
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id={`start-${item.name}`}
+                          type="date"
+                          value={item.budget?.start_date ?? ''}
+                          onChange={e =>
+                            updateBudgetField(
+                              item.name,
+                              'start_date',
+                              e.target.value
+                            )
+                          }
+                          ref={el => {
+                            startInputRefs.current[item.name] = el;
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          aria-label={`Open calendar for ${item.display} start`}
+                          onClick={() => {
+                            const el = startInputRefs.current[item.name];
+                            if (!el) return;
+                            // prefer native picker when available
+                            if (typeof (el as any).showPicker === 'function') {
+                              (el as any).showPicker();
+                            } else {
+                              el.focus();
+                              el.click();
+                            }
+                          }}
+                        >
+                          <Calendar className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="md:col-span-2">
                       <Label htmlFor={`end-${item.name}`}>End (optional)</Label>
-                      <Input
-                        id={`end-${item.name}`}
-                        type="date"
-                        value={item.budget?.end_date ?? ''}
-                        onChange={e =>
-                          updateBudgetField(
-                            item.name,
-                            'end_date',
-                            e.target.value
-                          )
-                        }
-                      />
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id={`end-${item.name}`}
+                          type="date"
+                          value={item.budget?.end_date ?? ''}
+                          onChange={e =>
+                            updateBudgetField(
+                              item.name,
+                              'end_date',
+                              e.target.value
+                            )
+                          }
+                          ref={el => {
+                            endInputRefs.current[item.name] = el;
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          aria-label={`Open calendar for ${item.display} end`}
+                          onClick={() => {
+                            const el = endInputRefs.current[item.name];
+                            if (!el) return;
+                            // prefer native picker when available
+                            if (typeof (el as any).showPicker === 'function') {
+                              (el as any).showPicker();
+                            } else {
+                              el.focus();
+                              el.click();
+                            }
+                          }}
+                        >
+                          <Calendar className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="md:col-span-1 flex justify-end">
                       <Button

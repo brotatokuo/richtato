@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Category
+from .models import Category, UserPreference
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -9,3 +9,9 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ["id", "name", "type", "enabled"]
 
         read_only_fields = ["id"]
+
+
+class UserPreferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserPreference
+        fields = ["theme", "currency", "date_format"]

@@ -159,3 +159,29 @@ class Category(models.Model):
         """Signal to create categories when a new user is created"""
         if created:  # Only for newly created users
             Category.create_default_categories_for_user(instance)
+
+
+class UserPreference(models.Model):
+    THEME_CHOICES = [
+        ("light", "Light"),
+        ("dark", "Dark"),
+        ("system", "System"),
+    ]
+
+    DATE_FORMAT_CHOICES = [
+        ("MM/DD/YYYY", "MM/DD/YYYY"),
+        ("DD/MM/YYYY", "DD/MM/YYYY"),
+        ("YYYY-MM-DD", "YYYY-MM-DD"),
+    ]
+
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="preferences"
+    )
+    theme = models.CharField(max_length=10, choices=THEME_CHOICES, default="system")
+    currency = models.CharField(max_length=3, default="USD")
+    date_format = models.CharField(
+        max_length=20, choices=DATE_FORMAT_CHOICES, default="MM/DD/YYYY"
+    )
+
+    def __str__(self):
+        return f"Preferences for {self.user}"
