@@ -73,7 +73,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="space-y-6 overflow-x-hidden max-w-full">
+    <div className="space-y-6 max-w-full">
       {/* KPI Summary Row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 min-w-0">
         <MetricCard

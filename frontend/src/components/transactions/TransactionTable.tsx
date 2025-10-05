@@ -331,7 +331,11 @@ export function TransactionTable({
           </TableCell>
         );
       case 'description':
-        return <TableCell>{transaction.description}</TableCell>;
+        return (
+          <TableCell className="whitespace-normal break-words break-all">
+            {transaction.description}
+          </TableCell>
+        );
       case 'account':
         return <TableCell>{transaction.account}</TableCell>;
       case 'category':
@@ -483,68 +487,70 @@ export function TransactionTable({
       </div>
 
       {/* Table (md+) */}
-      <div className="hidden md:block">
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {getTableHeaders().map(header => (
-                    <TableHead
-                      key={header.field}
-                      className={`cursor-pointer hover:bg-muted/50 ${
-                        header.field === 'amount' ? 'text-right' : ''
-                      }`}
-                      onClick={() =>
-                        handleSort(header.field as keyof DisplayTransaction)
-                      }
-                      onContextMenu={
-                        header.filterable
-                          ? e =>
-                              handleContextMenu(e, header.field, header.label)
-                          : undefined
-                      }
-                    >
-                      <div
-                        className={`flex items-center gap-2 ${
-                          header.field === 'amount' ? 'justify-end' : ''
-                        }`}
-                      >
-                        {header.label}
-                        <div className="flex items-center gap-1">
-                          {header.filterable && (
-                            <Filter className="h-3 w-3 text-muted-foreground" />
-                          )}
-                          <ArrowUpDown className="h-4 w-4" />
-                        </div>
-                      </div>
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
+      <div className="hidden md:block overflow-x-auto">
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50 min-w-0">
+          <CardContent className="p-0 min-w-0">
+            <div className="min-w-full">
+              <Table className="min-w-full table-fixed md:table-auto">
+                <TableHeader>
                   <TableRow>
-                    <TableCell
-                      colSpan={getTableHeaders().length}
-                      className="text-center py-8"
-                    >
-                      <div className="flex items-center justify-center gap-2">
-                        Loading transactions...
-                      </div>
-                    </TableCell>
+                    {getTableHeaders().map(header => (
+                      <TableHead
+                        key={header.field}
+                        className={`cursor-pointer hover:bg-muted/50 whitespace-normal break-words ${
+                          header.field === 'amount' ? 'text-right' : ''
+                        } min-w-0`}
+                        onClick={() =>
+                          handleSort(header.field as keyof DisplayTransaction)
+                        }
+                        onContextMenu={
+                          header.filterable
+                            ? e =>
+                                handleContextMenu(e, header.field, header.label)
+                            : undefined
+                        }
+                      >
+                        <div
+                          className={`flex items-center gap-2 min-w-0 ${
+                            header.field === 'amount' ? 'justify-end' : ''
+                          } flex-wrap`}
+                        >
+                          {header.label}
+                          <div className="flex items-center gap-1">
+                            {header.filterable && (
+                              <Filter className="h-3 w-3 text-muted-foreground" />
+                            )}
+                            <ArrowUpDown className="h-4 w-4" />
+                          </div>
+                        </div>
+                      </TableHead>
+                    ))}
                   </TableRow>
-                ) : (
-                  paginatedTransactions.map((transaction, index) => (
-                    <TableRow key={`${transaction.id}-${index}`}>
-                      {getTableHeaders().map(header =>
-                        renderTableCell(transaction, header.field)
-                      )}
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={getTableHeaders().length}
+                        className="text-center py-8"
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          Loading transactions...
+                        </div>
+                      </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    paginatedTransactions.map((transaction, index) => (
+                      <TableRow key={`${transaction.id}-${index}`}>
+                        {getTableHeaders().map(header =>
+                          renderTableCell(transaction, header.field)
+                        )}
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>

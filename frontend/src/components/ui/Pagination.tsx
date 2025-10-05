@@ -52,11 +52,11 @@ export function Pagination({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-card/50 backdrop-blur-sm border-t border-border/50">
-      <div className="text-sm text-muted-foreground">
+    <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-card/50 backdrop-blur-sm border-t border-border/50">
+      <div className="text-sm text-muted-foreground min-w-0">
         Showing {startItem} to {endItem} of {totalItems} results
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 min-w-0">
         <Button
           variant="outline"
           size="sm"
@@ -67,7 +67,7 @@ export function Pagination({
           Previous
         </Button>
 
-        <div className="flex items-center gap-1">
+        <div className="hidden sm:flex items-center gap-1 flex-wrap overflow-x-auto max-w-full">
           {getVisiblePages().map((page, index) => (
             <button
               key={index}
