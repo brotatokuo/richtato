@@ -198,6 +198,43 @@ class CardsApiService {
     const data = await res.json();
     return data as CardAccountItem[];
   }
+
+  async create(payload: {
+    name: string;
+    bank: string;
+  }): Promise<CardAccountItem> {
+    const res = await fetch(`${this.baseUrl}/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: await csrfService.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to create card account');
+    return res.json();
+  }
+
+  async update(
+    id: number,
+    payload: Partial<{ name: string; bank: string }>
+  ): Promise<CardAccountItem> {
+    const res = await fetch(`${this.baseUrl}/${id}/`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: await csrfService.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to update card account');
+    return res.json();
+  }
+
+  async remove(id: number): Promise<void> {
+    const res = await fetch(`${this.baseUrl}/${id}/`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: await csrfService.getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to delete card account');
+  }
 }
 
 export const cardsApi = new CardsApiService();

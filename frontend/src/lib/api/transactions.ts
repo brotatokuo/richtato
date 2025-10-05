@@ -110,6 +110,62 @@ class TransactionsApiService {
   }
 
   /**
+   * Create an account
+   */
+  async createAccount(input: {
+    name: string;
+    type: string;
+    asset_entity_name?: string;
+  }): Promise<Account> {
+    const response = await fetch(`${this.baseUrl}/accounts/api/accounts/`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      credentials: 'include',
+      body: JSON.stringify(input),
+    });
+
+    return this.handleResponse<Account>(response);
+  }
+
+  /**
+   * Update an account
+   */
+  async updateAccount(
+    id: number,
+    input: Partial<{ name: string; type: string; asset_entity_name: string }>
+  ): Promise<Account> {
+    const response = await fetch(
+      `${this.baseUrl}/accounts/api/accounts/${id}/`,
+      {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(input),
+      }
+    );
+
+    return this.handleResponse<Account>(response);
+  }
+
+  /**
+   * Delete an account
+   */
+  async deleteAccount(id: number): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/accounts/api/accounts/${id}/`,
+      {
+        method: 'DELETE',
+        headers: this.getHeaders(),
+        credentials: 'include',
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete account: ${response.status}`);
+    }
+  }
+
+  /**
    * Get all categories
    */
   async getCategories(): Promise<Category[]> {

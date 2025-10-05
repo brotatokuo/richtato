@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Modal } from '@/components/ui/Modal';
 import {
   Select,
   SelectContent,
@@ -17,14 +18,14 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/contexts/useTheme';
-import { transactionsApiService } from '@/lib/api/transactions';
+import { Account, transactionsApiService } from '@/lib/api/transactions';
 import {
   CategoryCatalogItem,
   cardsApi,
   categorySettingsApi,
   preferencesApi,
 } from '@/lib/api/user';
-import { Calendar, Palette } from 'lucide-react';
+import { Calendar, Palette, Plus } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 export function Settings() {
@@ -32,7 +33,7 @@ export function Settings() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<CategoryCatalogItem[]>([]);
-  const [accounts, setAccounts] = useState<{ id: number; name: string }[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [cardAccounts, setCardAccounts] = useState<
     { id: number; name: string; bank: string }[]
   >([]);
@@ -48,6 +49,119 @@ export function Settings() {
     },
   });
 
+  // Account CRUD modal state
+  const [showCreateAccount, setShowCreateAccount] = useState(false);
+  const [showEditAccount, setShowEditAccount] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(
+    null
+  );
+  const [accountForm, setAccountForm] = useState({
+    name: '',
+    type: 'checking',
+    entity: 'other',
+  });
+
+  const refreshAccounts = async () => {
+    try {
+      const data = await transactionsApiService.getAccounts();
+      setAccounts(data);
+    } catch (e: any) {
+      setError(e?.message ?? 'Failed to refresh accounts');
+    }
+  };
+
+  const accountTypeOptions = [
+    'checking',
+    'savings',
+    'retirement',
+    'investment',
+  ];
+  const entityOptions = [
+    'bank_of_america',
+    'chase',
+    'citibank',
+    'marcus',
+    'other',
+  ];
+
+  const openCreateAccount = () => {
+    setAccountForm({ name: '', type: 'checking', entity: 'other' });
+    setShowCreateAccount(true);
+  };
+
+  const submitCreateAccount = async () => {
+    try {
+      setLoading(true);
+      await transactionsApiService.createAccount({
+        name: accountForm.name,
+        type: accountForm.type,
+        asset_entity_name: accountForm.entity,
+      });
+      await refreshAccounts();
+      setShowCreateAccount(false);
+      setError(null);
+    } catch (e: any) {
+      setError(e?.message ?? 'Failed to create account');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openEditAccount = (acc: Account) => {
+    setSelectedAccountId(acc.id);
+    setAccountForm({
+      name: acc.name,
+      type: (acc as any).type
+        ? String((acc as any).type).toLowerCase()
+        : 'checking',
+      entity: (acc as any).entity
+        ? String((acc as any).entity).toLowerCase()
+        : 'other',
+    });
+    setShowEditAccount(true);
+  };
+
+  const submitEditAccount = async () => {
+    if (selectedAccountId == null) return;
+    try {
+      const payload: any = {};
+      if (accountForm.name) payload.name = accountForm.name;
+      if (accountForm.type) payload.type = accountForm.type;
+      if (accountForm.entity) payload.asset_entity_name = accountForm.entity;
+      if (Object.keys(payload).length === 0) return;
+      setLoading(true);
+      await transactionsApiService.updateAccount(selectedAccountId, payload);
+      await refreshAccounts();
+      setShowEditAccount(false);
+      setError(null);
+    } catch (e: any) {
+      setError(e?.message ?? 'Failed to update account');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openDeleteAccount = (id: number) => {
+    setSelectedAccountId(id);
+    setShowDeleteAccount(true);
+  };
+
+  const submitDeleteAccount = async () => {
+    if (selectedAccountId == null) return;
+    try {
+      setLoading(true);
+      await transactionsApiService.deleteAccount(selectedAccountId);
+      await refreshAccounts();
+      setShowDeleteAccount(false);
+      setError(null);
+    } catch (e: any) {
+      setError(e?.message ?? 'Failed to delete account');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     (async () => {
       try {
@@ -59,7 +173,7 @@ export function Settings() {
           preferencesApi.get(),
         ]);
         setCatalog(catalogRes.categories);
-        setAccounts(accountsRes.map(a => ({ id: a.id, name: a.name })));
+        setAccounts(accountsRes);
         setCardAccounts(cardsRes);
         if (prefRes) {
           setSettings(prev => ({
@@ -295,6 +409,269 @@ export function Settings() {
             </div>
           </CardContent>
         </Card>
+        {/* Accounts */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Accounts</CardTitle>
+                <CardDescription>
+                  All financial accounts on file
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={openCreateAccount}
+              >
+                <Plus className="h-4 w-4 mr-2" /> Add
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-sm">Loading…</div>
+            ) : accounts.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No accounts</div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {accounts.map(acc => (
+                  <button
+                    key={acc.id}
+                    type="button"
+                    onClick={() => openEditAccount(acc)}
+                    className="rounded-lg border p-4 text-left hover:bg-accent hover:text-accent-foreground transition"
+                    aria-label={`Open ${acc.name}`}
+                  >
+                    <div className="text-sm font-medium mb-1">{acc.name}</div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      {((acc as any).type || (acc as any).entity) && (
+                        <>
+                          {(acc as any).type && (
+                            <span className="inline-flex items-center rounded-full border px-2 py-0.5">
+                              {(acc as any).type}
+                            </span>
+                          )}
+                          {(acc as any).entity && (
+                            <span className="inline-flex items-center rounded-full border px-2 py-0.5">
+                              {(acc as any).entity}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Account Modals */}
+        <Modal
+          isOpen={showCreateAccount}
+          onClose={() => setShowCreateAccount(false)}
+          title="Create Account"
+        >
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="acc-name">Name</Label>
+              <Input
+                id="acc-name"
+                value={accountForm.name}
+                onChange={e =>
+                  setAccountForm({ ...accountForm, name: e.target.value })
+                }
+                placeholder="e.g., Main Checking"
+              />
+            </div>
+            <div>
+              <Label htmlFor="acc-type">Type</Label>
+              <Select
+                value={accountForm.type}
+                onValueChange={v => setAccountForm({ ...accountForm, type: v })}
+              >
+                <SelectTrigger id="acc-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {accountTypeOptions.map(t => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="acc-entity">Bank/Entity</Label>
+              <Select
+                value={accountForm.entity}
+                onValueChange={v =>
+                  setAccountForm({ ...accountForm, entity: v })
+                }
+              >
+                <SelectTrigger id="acc-entity">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {entityOptions.map(e => (
+                    <SelectItem key={e} value={e}>
+                      {e}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowCreateAccount(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={submitCreateAccount}
+                disabled={!accountForm.name}
+              >
+                Create
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        <Modal
+          isOpen={showEditAccount}
+          onClose={() => setShowEditAccount(false)}
+          title="Edit Account"
+        >
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-acc-name">Name</Label>
+              <Input
+                id="edit-acc-name"
+                value={accountForm.name}
+                onChange={e =>
+                  setAccountForm({ ...accountForm, name: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-acc-type">Type</Label>
+              <Select
+                value={accountForm.type}
+                onValueChange={v => setAccountForm({ ...accountForm, type: v })}
+              >
+                <SelectTrigger id="edit-acc-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {accountTypeOptions.map(t => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="edit-acc-entity">Bank/Entity</Label>
+              <Select
+                value={accountForm.entity}
+                onValueChange={v =>
+                  setAccountForm({ ...accountForm, entity: v })
+                }
+              >
+                <SelectTrigger id="edit-acc-entity">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {entityOptions.map(e => (
+                    <SelectItem key={e} value={e}>
+                      {e}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-between gap-2">
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setShowEditAccount(false);
+                  if (selectedAccountId != null)
+                    openDeleteAccount(selectedAccountId);
+                }}
+              >
+                Delete
+              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowEditAccount(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={submitEditAccount}
+                  disabled={!accountForm.name}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+
+        <Modal
+          isOpen={showDeleteAccount}
+          onClose={() => setShowDeleteAccount(false)}
+          title="Delete Account"
+        >
+          <div className="space-y-4">
+            <p>Are you sure you want to delete this account?</p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteAccount(false)}
+              >
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={submitDeleteAccount}>
+                Delete
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Card Accounts */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Cards</CardTitle>
+            <CardDescription>Linked card accounts</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-sm">Loading…</div>
+            ) : cardAccounts.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No cards</div>
+            ) : (
+              <div className="space-y-2">
+                {cardAccounts.map(card => (
+                  <div
+                    key={card.id}
+                    className="flex items-center justify-between rounded-md border p-3"
+                  >
+                    <div className="text-sm font-medium">{card.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {card.bank} • ID {card.id}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Categories & Budgets */}
         <Card>
@@ -442,64 +819,6 @@ export function Settings() {
                 Save Changes
               </Button>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Accounts */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Accounts</CardTitle>
-            <CardDescription>All financial accounts on file</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-sm">Loading…</div>
-            ) : accounts.length === 0 ? (
-              <div className="text-sm text-muted-foreground">No accounts</div>
-            ) : (
-              <div className="space-y-2">
-                {accounts.map(acc => (
-                  <div
-                    key={acc.id}
-                    className="flex items-center justify-between rounded-md border p-3"
-                  >
-                    <div className="text-sm font-medium">{acc.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      ID {acc.id}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Card Accounts */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Cards</CardTitle>
-            <CardDescription>Linked card accounts</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-sm">Loading…</div>
-            ) : cardAccounts.length === 0 ? (
-              <div className="text-sm text-muted-foreground">No cards</div>
-            ) : (
-              <div className="space-y-2">
-                {cardAccounts.map(card => (
-                  <div
-                    key={card.id}
-                    className="flex items-center justify-between rounded-md border p-3"
-                  >
-                    <div className="text-sm font-medium">{card.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {card.bank} • ID {card.id}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
