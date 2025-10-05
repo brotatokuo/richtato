@@ -12,8 +12,6 @@ export function Register() {
     email: '',
     password: '',
     confirmPassword: '',
-    firstName: '',
-    lastName: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -41,7 +39,11 @@ export function Register() {
     }
 
     try {
-      await register(formData);
+      await register({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+      });
       navigate('/budget');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
@@ -61,33 +63,6 @@ export function Register() {
         </div>
 
         <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="firstName">First Name</Label>
-              <Input
-                id="firstName"
-                name="firstName"
-                type="text"
-                value={formData.firstName}
-                onChange={handleChange}
-                required
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input
-                id="lastName"
-                name="lastName"
-                type="text"
-                value={formData.lastName}
-                onChange={handleChange}
-                required
-                className="mt-1"
-              />
-            </div>
-          </div>
-
           <div>
             <Label htmlFor="username">Username</Label>
             <Input

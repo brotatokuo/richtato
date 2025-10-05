@@ -56,20 +56,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const register = async (data: RegisterRequest) => {
-    // TODO: Implement actual registration API call
-    // For now, just set a mock user
-    setUser({
-      id: 1,
+    // Call backend register endpoint
+    const res = await authApi.register({
       username: data.username,
       email: data.email,
-      first_name: data.firstName,
-      last_name: data.lastName,
-      is_staff: false,
-      is_superuser: false,
-      is_active: true,
-      date_joined: new Date().toISOString(),
-      last_login: new Date().toISOString(),
-    } as User);
+      password: data.password,
+    });
+
+    if (!res.success) {
+      throw new Error(res.message || 'Registration failed');
+    }
+
+    // Auto-login after successful registration
+    await login(data.username, data.password);
   };
 
   const logout = async () => {

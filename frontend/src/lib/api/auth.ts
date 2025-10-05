@@ -48,7 +48,7 @@ export interface RegisterRequest {
 export interface RegisterResponse {
   success: boolean;
   message: string;
-  user: User;
+  user_id?: number;
 }
 
 export interface UserProfileResponse {
@@ -123,16 +123,19 @@ class AuthApiService {
       if (response.status === 401) {
         this.token = null;
         this.clearStoredToken();
-        // Don't throw here, let the calling code handle it
       }
 
-      const errorData: ApiError = await response.json().catch(() => ({
-        success: false,
-        message: 'An error occurred',
-      }));
-      throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
-      );
+      let message = `HTTP error! status: ${response.status}`;
+      try {
+        const data = await response.json();
+        // Prefer backend-provided message if available
+        if (typeof data?.message === 'string') message = data.message;
+        else if (typeof data?.error === 'string') message = data.error;
+      } catch {
+        // ignore JSON parse error and keep default message
+      }
+
+      throw new Error(message);
     }
 
     return response.json();
@@ -231,13 +234,55 @@ class AuthApiService {
    * Register a new user
    */
   async register(userData: RegisterRequest): Promise<RegisterResponse> {
-    const response = await fetch(`${this.baseUrl}/auth/register/`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(userData),
-    });
+    // Django session auth requires CSRF token and cookies
+    const csrfHeaders = await csrfService.getHeaders();
 
-    return this.handleResponse<RegisterResponse>(response);
+    const payload = {
+      username: userData.username,
+      email: userData.email,
+      password: userData.password,
+      password_confirm: userData.password,
+    } as const;
+
+    const makeRequest = async () =>
+      fetch(`${this.baseUrl}/auth/register/`, {
+        method: 'POST',
+        headers: {
+          ...this.getHeaders(),
+          ...csrfHeaders,
+        },
+        body: JSON.stringify(payload),
+        credentials: 'include',
+      });
+
+    let response = await makeRequest();
+
+    // Retry once if CSRF invalid
+    if (response.status === 403) {
+      const refreshedCsrfHeaders = await csrfService
+        .refreshToken()
+        .then(() => csrfService.getHeaders());
+
+      response = await fetch(`${this.baseUrl}/auth/register/`, {
+        method: 'POST',
+        headers: {
+          ...this.getHeaders(),
+          ...refreshedCsrfHeaders,
+        },
+        body: JSON.stringify(payload),
+        credentials: 'include',
+      });
+    }
+
+    const data = await this.handleResponse<{
+      message?: string;
+      user_id?: number;
+    }>(response);
+    return {
+      success: true,
+      message: data.message || 'Registered successfully',
+      user_id: data.user_id,
+    };
   }
 
   /**
