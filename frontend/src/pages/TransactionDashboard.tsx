@@ -105,14 +105,13 @@ export function Dashboard() {
 
       {/* Main Analytics Grid */}
       <div className="grid gap-6 lg:grid-cols-2 min-w-0">
-        {/* Income vs Expenses Chart */}
-        <div className="lg:col-span-2 min-w-0 overflow-x-auto">
-          <IncomeExpenseChart data={incomeExpenseData} />
-        </div>
-
         {/* Expense Breakdown */}
         <div className="lg:col-span-2 min-w-0 overflow-x-auto">
           <ExpenseBreakdown />
+        </div>
+        {/* Income vs Expenses Chart */}
+        <div className="lg:col-span-2 min-w-0 overflow-x-auto">
+          <IncomeExpenseChart data={incomeExpenseData} />
         </div>
       </div>
     </div>

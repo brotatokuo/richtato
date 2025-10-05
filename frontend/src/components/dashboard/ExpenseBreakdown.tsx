@@ -1,4 +1,4 @@
-import { BaseChart } from '@/components/dashboard/BaseChart';
+import { PieWithDetailedLegend } from '@/components/dashboard/PieWithDetailedLegend';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { AlertTriangle } from 'lucide-react';
@@ -224,58 +224,35 @@ export function ExpenseBreakdown() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Expense Breakdown</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Donut Chart Section */}
-          <div className="relative h-80 flex items-center justify-center">
-            <div className="w-full">
-              <BaseChart
-                key={themeKey}
-                type="pie"
-                data={chartData}
-                options={chartOptions}
-              />
-            </div>
-            {/* Center Text */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="text-center flex flex-col items-center justify-center">
-                <div className="text-3xl font-bold text-foreground leading-none">
-                  {expenseCategories.length}
-                </div>
-                <div className="text-sm text-muted-foreground mt-1">
-                  Categories
-                </div>
-                <div className="text-xs text-muted-foreground/70 mt-1">
-                  Total Expenses
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Category Breakdown */}
-          <div className="space-y-3">
+    <PieWithDetailedLegend
+      title="Expense Breakdown"
+      chartData={chartData}
+      chartOptions={chartOptions}
+      centerPrimary={expenseCategories.length}
+      centerSecondaryLabel="Categories"
+      centerTertiaryLabel="Total Expenses"
+      chartKey={themeKey}
+      legend={
+        <div className="h-80 overflow-y-auto">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-2">
             {expenseCategories.map((expense, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-3 rounded-lg bg-muted/30"
+                className="flex items-center justify-between p-2 rounded-md bg-muted/20"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <div
-                    className="w-4 h-4 rounded-full"
+                    className="w-3 h-3 rounded-full"
                     style={{
                       backgroundColor: expense.color,
                     }}
                   />
-                  <span className="text-foreground font-medium">
+                  <span className="text-sm text-foreground font-medium">
                     {expense.name}
                   </span>
                 </div>
                 <div className="text-right">
-                  <div className="font-semibold text-foreground">
+                  <div className="text-sm font-semibold text-foreground">
                     {expense.percentage}%
                   </div>
                   <div className="text-xs text-muted-foreground">
@@ -286,7 +263,7 @@ export function ExpenseBreakdown() {
             ))}
           </div>
         </div>
-      </CardContent>
-    </Card>
+      }
+    />
   );
 }

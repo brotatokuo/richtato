@@ -1,5 +1,5 @@
-import { BaseChart } from '@/components/dashboard/BaseChart';
 import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown';
+import { PieWithDetailedLegend } from '@/components/dashboard/PieWithDetailedLegend';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { AlertTriangle } from 'lucide-react';
@@ -226,41 +226,15 @@ export function BudgetProgress() {
     totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Budget Overview</CardTitle>
-      </CardHeader>
-      <CardContent className="overflow-y-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Donut Chart Section */}
-          <div className="relative h-80 flex items-center justify-center">
-            <div className="w-full h-full">
-              <BaseChart
-                type="pie"
-                data={chartData}
-                options={chartOptions}
-                height="100%"
-              />
-            </div>
-            {/* Center Text */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="text-center flex flex-col items-center justify-center">
-                <div className="text-3xl font-bold text-foreground leading-none">
-                  {overallPercentage}%
-                </div>
-                <div className="text-sm text-muted-foreground mt-1">Used</div>
-                <div className="text-xs text-muted-foreground/70 mt-1">
-                  ${totalSpent.toLocaleString()} / $
-                  {totalBudget.toLocaleString()}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Category Breakdown */}
-          <CategoryBreakdown categories={budgetCategories} />
-        </div>
-      </CardContent>
-    </Card>
+    <PieWithDetailedLegend
+      title="Budget Overview"
+      chartData={chartData}
+      chartOptions={chartOptions}
+      centerPrimary={`${overallPercentage}%`}
+      centerSecondaryLabel="Used"
+      centerTertiaryLabel={`$${totalSpent.toLocaleString()} / $${totalBudget.toLocaleString()}`}
+      legend={<CategoryBreakdown categories={budgetCategories} />}
+      height="20rem"
+    />
   );
 }
