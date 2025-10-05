@@ -33,6 +33,7 @@ DEBUG = True  # Force DEBUG to True for local development
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
+    "0.0.0.0",
     "backend",
     "frontend",
     "richtato.onrender.com",
@@ -140,34 +141,56 @@ def print_deploy_stage(deploy_stage: str) -> None:
 
 # Load environment variables and set DEPLOY_STAGE
 def configure_database_for_stage(deploy_stage: str) -> dict:
-    match deploy_stage:
-        case "LOCAL":
-            return {
-                "default": {
-                    "ENGINE": "django.db.backends.sqlite3",
-                    "NAME": BASE_DIR / "db.sqlite3",
-                }
+    """Configure Postgres for all stages (no sqlite).
+
+    Priority:
+    1. DATABASE_URL
+    2. <STAGE>_DATABASE_URL (backwards-compat)
+    3. Individual PG/POSTGRES_* vars with sensible local defaults
+    """
+
+    # 1) Standard DATABASE_URL if provided
+    db_url = os.getenv("DATABASE_URL")
+
+    # 2) Backwards-compatible stage-specific URL
+    if not db_url:
+        stage_key = f"{deploy_stage}_DATABASE_URL"
+        db_url = os.getenv(stage_key)
+
+    if db_url:
+        parsed = urlparse(db_url)
+        db_name = parsed.path.lstrip("/")
+        return {
+            "default": {
+                "ENGINE": "django.db.backends.postgresql",
+                "NAME": db_name,
+                "USER": parsed.username,
+                "PASSWORD": parsed.password,
+                "HOST": parsed.hostname,
+                "PORT": parsed.port or 5432,
+                # Optionally: keep connections open (tune as needed)
+                "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "60")),
             }
-        case "PROD" | "DEV":
-            PG_DB_URL = f"{deploy_stage}_DATABASE_URL"
-            db_url = os.getenv(PG_DB_URL)
-            assert (
-                db_url
-            ), f"Missing {PG_DB_URL} environment variable for {deploy_stage}"
-            tmpPostgres = urlparse(db_url)
-            db_name = tmpPostgres.path.replace("/", "")
-            return {
-                "default": {
-                    "ENGINE": "django.db.backends.postgresql",
-                    "NAME": db_name,
-                    "USER": tmpPostgres.username,
-                    "PASSWORD": tmpPostgres.password,
-                    "HOST": tmpPostgres.hostname,
-                    "PORT": tmpPostgres.port or 5432,
-                }
-            }
-        case _:
-            raise ValueError(f"Invalid DEPLOY_STAGE: {deploy_stage}")
+        }
+
+    # 3) Build from individual env vars (local Postgres defaults)
+    host = os.getenv("PGHOST", os.getenv("POSTGRES_HOST", "localhost"))
+    port = int(os.getenv("PGPORT", os.getenv("POSTGRES_PORT", "5432")))
+    name = os.getenv("PGDATABASE", os.getenv("POSTGRES_DB", "richtato"))
+    user = os.getenv("PGUSER", os.getenv("POSTGRES_USER", "postgres"))
+    password = os.getenv("PGPASSWORD", os.getenv("POSTGRES_PASSWORD", ""))
+
+    return {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": name,
+            "USER": user,
+            "PASSWORD": password,
+            "HOST": host,
+            "PORT": port,
+            "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "60")),
+        }
+    }
 
 
 load_dotenv()
@@ -248,6 +271,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://0.0.0.0:8000",
 ]
 
 # REST Framework Configuration
