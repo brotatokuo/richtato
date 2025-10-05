@@ -68,7 +68,7 @@ export function Welcome() {
               <button
                 onClick={handleDemoLogin}
                 disabled={isLoggingIn}
-                className="group relative px-8 py-4 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-2xl hover:from-primary/90 hover:to-secondary/90 transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="group relative px-8 py-4 bg-primary text-primary-foreground font-semibold rounded-2xl hover:bg-primary/90 transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 <span className="flex items-center gap-2">
                   {isLoggingIn ? 'Logging in...' : 'Try Demo'}
@@ -80,7 +80,7 @@ export function Welcome() {
 
               <Link
                 to="/login"
-                className="px-8 py-4 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold rounded-2xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-300 transform hover:scale-105"
+                className="px-8 py-4 bg-secondary text-secondary-foreground font-semibold rounded-2xl border border-transparent hover:bg-secondary/90 transition-all duration-300 transform hover:scale-105"
               >
                 Sign In
               </Link>
