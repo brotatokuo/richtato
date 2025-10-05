@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import os
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from colorama import Fore
 from dotenv import load_dotenv
@@ -160,6 +160,15 @@ def configure_database_for_stage(deploy_stage: str) -> dict:
     if db_url:
         parsed = urlparse(db_url)
         db_name = parsed.path.lstrip("/")
+        # Map query params (e.g., sslmode=require) into Django OPTIONS
+        query_params = {k: v[0] for k, v in parse_qs(parsed.query).items()}
+        db_options: dict[str, str] = {}
+        if "sslmode" in query_params:
+            db_options["sslmode"] = query_params["sslmode"]
+        # Allow override via env
+        env_sslmode = os.getenv("DB_SSLMODE")
+        if env_sslmode:
+            db_options["sslmode"] = env_sslmode
         return {
             "default": {
                 "ENGINE": "django.db.backends.postgresql",
@@ -170,6 +179,7 @@ def configure_database_for_stage(deploy_stage: str) -> dict:
                 "PORT": parsed.port or 5432,
                 # Optionally: keep connections open (tune as needed)
                 "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "60")),
+                "OPTIONS": db_options or {},
             }
         }
 
