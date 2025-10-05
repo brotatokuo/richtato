@@ -184,11 +184,15 @@ def configure_database_for_stage(deploy_stage: str) -> dict:
         }
 
     # 3) Build from individual env vars (local Postgres defaults)
-    host = os.getenv("PGHOST", os.getenv("POSTGRES_HOST", "localhost"))
-    port = int(os.getenv("PGPORT", os.getenv("POSTGRES_PORT", "5432")))
-    name = os.getenv("PGDATABASE", os.getenv("POSTGRES_DB", "richtato"))
-    user = os.getenv("PGUSER", os.getenv("POSTGRES_USER", "postgres"))
-    password = os.getenv("PGPASSWORD", os.getenv("POSTGRES_PASSWORD", ""))
+    host = os.getenv("POSTGRES_HOST", "localhost")
+    port = int(os.getenv("POSTGRES_PORT", "5432"))
+    name = os.getenv("POSTGRES_DB", "richtato")
+    user = os.getenv("POSTGRES_USER", "postgres")
+    password = os.getenv("POSTGRES_PASSWORD", "")
+
+    print(
+        f"host: {host}, port: {port}, name: {name}, user: {user}, password: {password}"
+    )
 
     return {
         "default": {

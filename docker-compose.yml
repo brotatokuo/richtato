@@ -2,10 +2,8 @@ services:
   # PostgreSQL Database
   db:
     image: postgres:15
-    environment:
-      POSTGRES_DB: richtato
-      POSTGRES_USER: richtato
-      POSTGRES_PASSWORD: richtato_password
+    env_file:
+      - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
