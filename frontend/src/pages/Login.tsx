@@ -31,10 +31,10 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-950 dark:via-black dark:to-slate-900 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-primary/10 dark:from-slate-950 dark:via-black dark:to-slate-900 relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0 bg-grid-slate-100 dark:bg-grid-slate-800/25 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] dark:[mask-image:linear-gradient(0deg,rgba(255,255,255,0.1),rgba(255,255,255,0.5))]"></div>
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-to-r from-blue-400/20 to-purple-400/20 dark:from-blue-500/10 dark:to-purple-500/10 rounded-full blur-3xl"></div>
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-to-r from-primary/20 to-secondary/20 dark:from-primary/10 dark:to-secondary/20 rounded-full blur-3xl"></div>
 
       <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
         <div className="w-full max-w-md">
@@ -51,7 +51,7 @@ export function Login() {
 
           {/* Login Card */}
           <div className="relative p-8 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 rounded-3xl shadow-xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-3xl"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/10 rounded-3xl"></div>
 
             <div className="relative z-10">
               {/* Header */}
@@ -83,7 +83,7 @@ export function Login() {
                     value={username}
                     onChange={e => setUsername(e.target.value)}
                     required
-                    className="mt-2 bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 rounded-xl"
+                    className="mt-2 bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-600 focus:border-primary dark:focus:border-primary focus:ring-primary/20 dark:focus:ring-primary/20 rounded-xl"
                     placeholder="Enter your username"
                   />
                 </div>
@@ -102,7 +102,7 @@ export function Login() {
                       value={password}
                       onChange={e => setPassword(e.target.value)}
                       required
-                      className="pr-10 bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 rounded-xl"
+                      className="pr-10 bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-600 focus:border-primary dark:focus:border-primary focus:ring-primary/20 dark:focus:ring-primary/20 rounded-xl"
                       placeholder="Enter your password"
                     />
                     <button
@@ -127,7 +127,7 @@ export function Login() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-blue-500/25"
+                  className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white font-semibold py-3 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-primary/25"
                   disabled={loading}
                 >
                   {loading ? 'Signing in...' : 'Sign In'}
@@ -140,7 +140,7 @@ export function Login() {
                   Don't have an account?{' '}
                   <Link
                     to="/register"
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium hover:underline transition-colors"
+                    className="text-primary dark:text-primary hover:text-primary/90 dark:hover:text-primary/80 font-medium hover:underline transition-colors"
                   >
                     Create one here
                   </Link>
@@ -148,7 +148,7 @@ export function Login() {
                 <p className="text-sm text-slate-600 dark:text-slate-400">
                   <Link
                     to="/password-reset"
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium hover:underline transition-colors"
+                    className="text-primary dark:text-primary hover:text-primary/90 dark:hover:text-primary/80 font-medium hover:underline transition-colors"
                   >
                     Forgot your password?
                   </Link>

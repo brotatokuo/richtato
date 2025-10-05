@@ -37,10 +37,11 @@ export const getFileIcon = (type: string) => {
 
 export const getFileTypeColor = (type: string): string => {
   if (type.startsWith('image/')) return 'bg-green-100 text-green-800';
-  if (type.startsWith('video/')) return 'bg-purple-100 text-purple-800';
+  if (type.startsWith('video/'))
+    return 'bg-secondary text-secondary-foreground';
   if (type.startsWith('audio/')) return 'bg-pink-100 text-pink-800';
   if (type.includes('text') || type.includes('document'))
-    return 'bg-blue-100 text-blue-800';
+    return 'bg-primary/15 text-primary';
   if (type.includes('zip') || type.includes('rar') || type.includes('7z'))
     return 'bg-orange-100 text-orange-800';
   if (type.includes('code') || type.includes('script'))
@@ -59,7 +60,7 @@ export const getStatusInfo = (status: UploadStatus) => {
     case 'uploading':
       return {
         icon: Loader2,
-        color: 'bg-blue-100 text-blue-800',
+        color: 'bg-primary/15 text-primary',
         label: 'Uploading',
         animate: true,
       };

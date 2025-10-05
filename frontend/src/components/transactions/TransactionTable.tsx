@@ -376,13 +376,13 @@ export function TransactionTable({
                 Active filters:
               </span>
               {dateFilter && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full dark:bg-blue-900/20 dark:text-blue-400">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/15 text-primary text-xs rounded-full dark:bg-primary/20 dark:text-primary">
                   <Calendar className="h-3 w-3" />
                   {new Date(dateFilter).toLocaleDateString()}
                 </span>
               )}
               {!isIncome && filterCategory && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full dark:bg-purple-900/20 dark:text-purple-400">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground text-xs rounded-full dark:bg-secondary/20 dark:text-secondary-foreground">
                   <Tag className="h-3 w-3" />
                   {filterCategory}
                 </span>

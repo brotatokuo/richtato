@@ -41,7 +41,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'uploading':
-        return 'text-blue-600';
+        return 'text-primary';
       case 'uploaded':
         return 'text-green-600';
       case 'processing':
@@ -132,7 +132,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
                     onRetryUpload && (
                       <button
                         onClick={() => onRetryUpload(index)}
-                        className="text-blue-600 hover:text-blue-800 p-1"
+                        className="text-primary hover:text-primary/80 p-1"
                         title="Retry upload"
                       >
                         Retry
@@ -157,7 +157,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
                   <div
                     className={`h-2 rounded-full transition-all duration-300 ${
                       upload.status === 'uploading'
-                        ? 'bg-blue-600'
+                        ? 'bg-primary'
                         : 'bg-yellow-500'
                     }`}
                     style={{ width: `${upload.progress}%` }}

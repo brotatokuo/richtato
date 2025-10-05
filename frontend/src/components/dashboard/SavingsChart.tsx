@@ -141,7 +141,7 @@ export function SavingsChart() {
               <p className="text-red-600 mb-4">{error}</p>
               <button
                 onClick={fetchSavings}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
               >
                 Retry
               </button>

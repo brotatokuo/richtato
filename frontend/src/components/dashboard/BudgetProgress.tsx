@@ -188,7 +188,7 @@ export function BudgetProgress() {
               <p className="text-red-600 mb-4">{error}</p>
               <button
                 onClick={fetchBudgetData}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mx-auto"
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 mx-auto"
               >
                 Retry
               </button>

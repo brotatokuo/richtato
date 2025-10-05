@@ -52,7 +52,7 @@ export const StatusCell = ({ file }: { file: FileItem }) => {
         <div className="flex items-center gap-1 text-xs">
           <div className="w-16 h-1 bg-gray-200 rounded-full overflow-hidden">
             <div
-              className="h-full bg-blue-500 transition-all duration-300"
+              className="h-full bg-primary transition-all duration-300"
               style={{
                 width: `${
                   file.status === 'uploading'
@@ -153,7 +153,7 @@ export const ActionsCell = ({
         variant="outline"
         size="sm"
         onClick={() => onRetry(file)}
-        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
+        className="h-8 w-8 p-0 text-primary hover:text-primary/90"
         title="Retry upload"
       >
         Retry

@@ -88,7 +88,7 @@ export const ColumnFilterMenu: React.FC<ColumnFilterMenuProps> = ({
           placeholder="Search values..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent"
           autoFocus
         />
       </div>

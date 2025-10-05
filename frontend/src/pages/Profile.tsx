@@ -183,7 +183,7 @@ export function Profile() {
               </div>
 
               <div className="flex items-center gap-3">
-                <DollarSign className="h-5 w-5 text-blue-500" />
+                <DollarSign className="h-5 w-5 text-primary" />
                 <div>
                   <p className="text-sm font-medium">Accounts Connected</p>
                   <p className="text-xs text-muted-foreground">3</p>
@@ -191,7 +191,7 @@ export function Profile() {
               </div>
 
               <div className="flex items-center gap-3">
-                <DollarSign className="h-5 w-5 text-purple-500" />
+                <DollarSign className="h-5 w-5 text-secondary" />
                 <div>
                   <p className="text-sm font-medium">Categories Used</p>
                   <p className="text-xs text-muted-foreground">12</p>

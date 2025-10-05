@@ -151,7 +151,7 @@ export function Upload() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-blue-500" />
+              <FileText className="h-5 w-5 text-primary" />
               <div>
                 <p className="font-medium">CSV Files</p>
                 <p className="text-sm text-muted-foreground">

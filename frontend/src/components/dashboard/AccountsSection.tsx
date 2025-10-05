@@ -46,14 +46,14 @@ const getAccountTypeColor = (type: string) => {
   switch (type.toLowerCase()) {
     case 'checking':
     case 'checking_account':
-      return 'bg-blue-500';
+      return 'bg-primary';
     case 'savings':
     case 'savings_account':
       return 'bg-green-500';
     case 'investment':
     case 'investment_account':
     case 'brokerage':
-      return 'bg-purple-500';
+      return 'bg-secondary';
     case 'retirement':
     case '401k':
     case 'ira':
@@ -222,7 +222,7 @@ export function AccountsSection() {
       <CardContent>
         <div className="space-y-8">
           {/* Grand Total Summary */}
-          <div className="p-6 border rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
+          <div className="p-6 border rounded-lg bg-gradient-to-r from-primary/5 to-indigo-50 dark:from-primary/10 dark:to-indigo-950/20">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-foreground">
