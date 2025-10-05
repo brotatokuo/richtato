@@ -95,7 +95,7 @@ export function BudgetProgress() {
           {
             name: 'Budget Usage',
             type: 'pie',
-            radius: ['60%', '85%'],
+            radius: ['55%', '80%'],
             center: ['50%', '50%'],
             data: [
               {
@@ -166,7 +166,7 @@ export function BudgetProgress() {
         <CardHeader>
           <CardTitle>Budget Overview</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-y-hidden">
           <div className="h-64 flex items-center justify-center">
             <div className="text-muted-foreground">Loading...</div>
           </div>
@@ -181,7 +181,7 @@ export function BudgetProgress() {
         <CardHeader>
           <CardTitle>Budget Overview</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-y-hidden">
           <div className="h-64 flex items-center justify-center">
             <div className="text-center">
               <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
@@ -205,7 +205,7 @@ export function BudgetProgress() {
         <CardHeader>
           <CardTitle>Budget Overview</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-y-hidden">
           <div className="h-64 flex items-center justify-center">
             <div className="text-muted-foreground">
               No budget data available
@@ -230,12 +230,17 @@ export function BudgetProgress() {
       <CardHeader>
         <CardTitle>Budget Overview</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="overflow-y-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Donut Chart Section */}
           <div className="relative h-80 flex items-center justify-center">
-            <div className="w-full">
-              <BaseChart type="pie" data={chartData} options={chartOptions} />
+            <div className="w-full h-full">
+              <BaseChart
+                type="pie"
+                data={chartData}
+                options={chartOptions}
+                height="100%"
+              />
             </div>
             {/* Center Text */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
