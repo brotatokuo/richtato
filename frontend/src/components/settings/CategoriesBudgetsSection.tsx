@@ -283,13 +283,14 @@ export function CategoriesBudgetsSection() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div className="space-y-1">
                         <Label htmlFor={`start-${item.name}`}>Start</Label>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Input
                             id={`start-${item.name}`}
                             type="date"
+                            className="min-w-0 flex-1"
                             value={item.budget?.start_date ?? ''}
                             onChange={e =>
                               updateBudgetField(
@@ -303,6 +304,7 @@ export function CategoriesBudgetsSection() {
                             type="button"
                             variant="outline"
                             size="icon"
+                            className="shrink-0"
                             aria-label={`Open calendar for ${item.display} start`}
                           >
                             <Calendar className="h-4 w-4" />
@@ -313,10 +315,11 @@ export function CategoriesBudgetsSection() {
                         <Label htmlFor={`end-${item.name}`}>
                           End (optional)
                         </Label>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Input
                             id={`end-${item.name}`}
                             type="date"
+                            className="min-w-0 flex-1"
                             value={item.budget?.end_date ?? ''}
                             onChange={e =>
                               updateBudgetField(
@@ -330,6 +333,7 @@ export function CategoriesBudgetsSection() {
                             type="button"
                             variant="outline"
                             size="icon"
+                            className="shrink-0"
                             aria-label={`Open calendar for ${item.display} end`}
                           >
                             <Calendar className="h-4 w-4" />
