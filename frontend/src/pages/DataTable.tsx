@@ -21,6 +21,9 @@ export function DataTable() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeMobileTab, setActiveMobileTab] = useState<'income' | 'expense'>(
+    'income'
+  );
 
   const loadData = async () => {
     try {
@@ -55,8 +58,8 @@ export function DataTable() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-7xl mx-auto">
+      <div className="min-h-screen bg-background px-3 py-4 sm:p-6">
+        <div className="w-full max-w-full mx-auto">
           <Card className="bg-card/50 backdrop-blur-sm border-border/50">
             <CardContent className="text-center py-8">
               <p className="text-red-600 mb-4">Error loading data: {error}</p>
@@ -71,29 +74,91 @@ export function DataTable() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-12">
-        {/* Income Table */}
-        <TransactionTable
-          type="income"
-          transactions={incomeTransactions}
-          onTransactionsChange={setIncomeTransactions}
-          accounts={accounts}
-          categories={categories}
-          loading={loading}
-          onRefresh={loadData}
-        />
+    <div className="min-h-screen bg-background px-3 py-4 sm:p-6">
+      <div className="w-full max-w-full mx-auto space-y-8 sm:space-y-12">
+        {/* Mobile toggle */}
+        <div className="md:hidden flex items-center gap-2">
+          <Button
+            type="button"
+            variant={activeMobileTab === 'income' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveMobileTab('income')}
+            aria-pressed={activeMobileTab === 'income'}
+          >
+            Income
+          </Button>
+          <Button
+            type="button"
+            variant={activeMobileTab === 'expense' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveMobileTab('expense')}
+            aria-pressed={activeMobileTab === 'expense'}
+          >
+            Expense
+          </Button>
+          <div className="ml-auto">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={loadData}
+            >
+              Refresh
+            </Button>
+          </div>
+        </div>
 
-        {/* Expense Table */}
-        <TransactionTable
-          type="expense"
-          transactions={expenseTransactions}
-          onTransactionsChange={setExpenseTransactions}
-          accounts={accounts}
-          categories={categories}
-          loading={loading}
-          onRefresh={loadData}
-        />
+        {/* Mobile view: show one table at a time */}
+        <div className="md:hidden">
+          {activeMobileTab === 'income' ? (
+            <TransactionTable
+              type="income"
+              transactions={incomeTransactions}
+              onTransactionsChange={setIncomeTransactions}
+              accounts={accounts}
+              categories={categories}
+              loading={loading}
+              onRefresh={loadData}
+            />
+          ) : (
+            <TransactionTable
+              type="expense"
+              transactions={expenseTransactions}
+              onTransactionsChange={setExpenseTransactions}
+              accounts={accounts}
+              categories={categories}
+              loading={loading}
+              onRefresh={loadData}
+            />
+          )}
+        </div>
+
+        {/* Desktop/tablet: show both tables stacked */}
+        <div className="hidden md:block">
+          {/* Income Table */}
+          <TransactionTable
+            type="income"
+            transactions={incomeTransactions}
+            onTransactionsChange={setIncomeTransactions}
+            accounts={accounts}
+            categories={categories}
+            loading={loading}
+            onRefresh={loadData}
+          />
+        </div>
+
+        <div className="hidden md:block">
+          {/* Expense Table */}
+          <TransactionTable
+            type="expense"
+            transactions={expenseTransactions}
+            onTransactionsChange={setExpenseTransactions}
+            accounts={accounts}
+            categories={categories}
+            loading={loading}
+            onRefresh={loadData}
+          />
+        </div>
       </div>
     </div>
   );

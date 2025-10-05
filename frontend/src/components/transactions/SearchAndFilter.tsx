@@ -36,7 +36,7 @@ export function SearchAndFilter({
   return (
     <Card className="bg-card/50 backdrop-blur-sm border-border/50">
       <CardContent className="p-4">
-        <div className="flex gap-4">
+        <div className="flex gap-4 flex-wrap items-center">
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -49,7 +49,7 @@ export function SearchAndFilter({
             </div>
           </div>
           {!isIncome && (
-            <div className="w-48">
+            <div className="w-full sm:w-48">
               <Select
                 value={filterCategory || 'all'}
                 onValueChange={value =>
@@ -70,7 +70,7 @@ export function SearchAndFilter({
               </Select>
             </div>
           )}
-          <Button variant="outline">
+          <Button variant="outline" className="hidden md:inline-flex">
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
