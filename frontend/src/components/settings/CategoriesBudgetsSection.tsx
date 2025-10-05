@@ -139,97 +139,219 @@ export function CategoriesBudgetsSection() {
         {error && <div className="text-sm text-red-600">{error}</div>}
         {loading && <div className="text-sm">Loading…</div>}
         {!loading && (
-          <div className="space-y-3">
-            {catalog.map(item => (
-              <div
-                key={item.name}
-                className="grid gap-3 md:grid-cols-12 items-center border rounded-md p-3"
-              >
-                <div className="md:col-span-3 flex items-center gap-2">
-                  <span aria-hidden>{item.icon}</span>
-                  <span>{item.display}</span>
-                </div>
-                <div className="md:col-span-2 flex items-center gap-2">
-                  <Label htmlFor={`enabled-${item.name}`}>Enabled</Label>
-                  <Switch
-                    id={`enabled-${item.name}`}
-                    checked={item.enabled}
-                    onCheckedChange={val =>
-                      toggleCategory(item.name, Boolean(val))
-                    }
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor={`amount-${item.name}`}>Budget</Label>
-                  <Input
-                    id={`amount-${item.name}`}
-                    type="number"
-                    step="0.01"
-                    value={item.budget?.amount ?? ''}
-                    placeholder="No budget"
-                    onChange={e =>
-                      updateBudgetField(item.name, 'amount', e.target.value)
-                    }
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor={`start-${item.name}`}>Start</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id={`start-${item.name}`}
-                      type="date"
-                      value={item.budget?.start_date ?? ''}
-                      onChange={e =>
-                        updateBudgetField(
-                          item.name,
-                          'start_date',
-                          e.target.value
-                        )
-                      }
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      aria-label={`Open calendar for ${item.display} start`}
-                    >
-                      <Calendar className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor={`end-${item.name}`}>End (optional)</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id={`end-${item.name}`}
-                      type="date"
-                      value={item.budget?.end_date ?? ''}
-                      onChange={e =>
-                        updateBudgetField(item.name, 'end_date', e.target.value)
-                      }
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      aria-label={`Open calendar for ${item.display} end`}
-                    >
-                      <Calendar className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="md:col-span-1 flex justify-end">
-                  <Button
-                    variant="secondary"
-                    onClick={() => removeBudget(item.name)}
-                    disabled={!item.budget}
+          <>
+            {/* Desktop layout */}
+            <div className="hidden md:block">
+              <div className="space-y-3">
+                {catalog.map(item => (
+                  <div
+                    key={item.name}
+                    className="grid gap-3 md:grid-cols-12 items-center border rounded-md p-3"
                   >
-                    Clear
-                  </Button>
-                </div>
+                    <div className="md:col-span-3 flex items-center gap-2">
+                      <span aria-hidden>{item.icon}</span>
+                      <span>{item.display}</span>
+                    </div>
+                    <div className="md:col-span-2 flex items-center gap-2">
+                      <Label htmlFor={`enabled-${item.name}`}>Enabled</Label>
+                      <Switch
+                        id={`enabled-${item.name}`}
+                        checked={item.enabled}
+                        onCheckedChange={val =>
+                          toggleCategory(item.name, Boolean(val))
+                        }
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor={`amount-${item.name}`}>Budget</Label>
+                      <Input
+                        id={`amount-${item.name}`}
+                        type="number"
+                        step="0.01"
+                        value={item.budget?.amount ?? ''}
+                        placeholder="No budget"
+                        onChange={e =>
+                          updateBudgetField(item.name, 'amount', e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor={`start-${item.name}`}>Start</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id={`start-${item.name}`}
+                          type="date"
+                          value={item.budget?.start_date ?? ''}
+                          onChange={e =>
+                            updateBudgetField(
+                              item.name,
+                              'start_date',
+                              e.target.value
+                            )
+                          }
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          aria-label={`Open calendar for ${item.display} start`}
+                        >
+                          <Calendar className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor={`end-${item.name}`}>End (optional)</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id={`end-${item.name}`}
+                          type="date"
+                          value={item.budget?.end_date ?? ''}
+                          onChange={e =>
+                            updateBudgetField(
+                              item.name,
+                              'end_date',
+                              e.target.value
+                            )
+                          }
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          aria-label={`Open calendar for ${item.display} end`}
+                        >
+                          <Calendar className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="md:col-span-1 flex justify-end">
+                      <Button
+                        variant="secondary"
+                        onClick={() => removeBudget(item.name)}
+                        disabled={!item.budget}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+
+            {/* Mobile layout */}
+            <div className="md:hidden">
+              <div className="space-y-3">
+                {catalog.map(item => (
+                  <div
+                    key={item.name}
+                    className="border rounded-md p-3 space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span aria-hidden>{item.icon}</span>
+                        <span className="font-medium">{item.display}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label
+                          htmlFor={`enabled-${item.name}`}
+                          className="text-xs"
+                        >
+                          Enabled
+                        </Label>
+                        <Switch
+                          id={`enabled-${item.name}`}
+                          checked={item.enabled}
+                          onCheckedChange={val =>
+                            toggleCategory(item.name, Boolean(val))
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor={`amount-${item.name}`}>Budget</Label>
+                      <Input
+                        id={`amount-${item.name}`}
+                        type="number"
+                        step="0.01"
+                        value={item.budget?.amount ?? ''}
+                        placeholder="No budget"
+                        onChange={e =>
+                          updateBudgetField(item.name, 'amount', e.target.value)
+                        }
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor={`start-${item.name}`}>Start</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id={`start-${item.name}`}
+                            type="date"
+                            value={item.budget?.start_date ?? ''}
+                            onChange={e =>
+                              updateBudgetField(
+                                item.name,
+                                'start_date',
+                                e.target.value
+                              )
+                            }
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            aria-label={`Open calendar for ${item.display} start`}
+                          >
+                            <Calendar className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor={`end-${item.name}`}>
+                          End (optional)
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id={`end-${item.name}`}
+                            type="date"
+                            value={item.budget?.end_date ?? ''}
+                            onChange={e =>
+                              updateBudgetField(
+                                item.name,
+                                'end_date',
+                                e.target.value
+                              )
+                            }
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            aria-label={`Open calendar for ${item.display} end`}
+                          >
+                            <Calendar className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button
+                        variant="secondary"
+                        onClick={() => removeBudget(item.name)}
+                        disabled={!item.budget}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
         )}
         <div className="pt-2 flex justify-end gap-2">
           <Button onClick={save} disabled={loading}>

@@ -73,9 +73,9 @@ export function Dashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden max-w-full">
       {/* KPI Summary Row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 min-w-0">
         <MetricCard
           title="Savings Rate"
           value={dashboardData.savings_rate}
@@ -99,19 +99,19 @@ export function Dashboard() {
       </div>
 
       {/* Budget Progress */}
-      <div className="lg:col-span-2">
+      <div className="lg:col-span-2 min-w-0 overflow-x-auto">
         <BudgetProgress />
       </div>
 
       {/* Main Analytics Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2 min-w-0">
         {/* Income vs Expenses Chart */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 min-w-0 overflow-x-auto">
           <IncomeExpenseChart data={incomeExpenseData} />
         </div>
 
         {/* Expense Breakdown */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 min-w-0 overflow-x-auto">
           <ExpenseBreakdown />
         </div>
       </div>

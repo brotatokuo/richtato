@@ -130,9 +130,9 @@ export function AssetDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Asset KPI Summary Row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 w-full min-w-0">
         <MetricCard
           title="Net Worth"
           value={dashboardData.networth}
@@ -151,14 +151,14 @@ export function AssetDashboard() {
       </div>
 
       {/* Main Asset Analytics Grid */}
-      <div className="grid gap-6 lg:grid-cols-1">
+      <div className="grid gap-6 lg:grid-cols-1 w-full min-w-0">
         {/* Savings Trend */}
-        <div>
+        <div className="w-full overflow-x-auto">
           <SavingsChart />
         </div>
 
         {/* Accounts */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 w-full overflow-x-auto">
           <AccountsSection />
         </div>
       </div>
