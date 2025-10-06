@@ -1,9 +1,11 @@
-import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown';
-import { PieWithDetailedLegend } from '@/components/dashboard/PieWithDetailedLegend';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useBudgetDateRange } from '@/contexts/BudgetDateRangeContext';
+import { dashboardApiService } from '@/lib/api/dashboard';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { CategoryBreakdown } from './CategoryBreakdown';
+import { PieWithDetailedLegend } from './PieWithDetailedLegend';
 
 interface BudgetCategory {
   name: string;
@@ -23,6 +25,7 @@ const getCSSValue = (property: string) => {
 };
 
 export function BudgetProgress() {
+  const { startDate, endDate, setRange } = useBudgetDateRange();
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>(
     []
   );
@@ -30,17 +33,24 @@ export function BudgetProgress() {
   const [chartOptions, setChartOptions] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [years, setYears] = useState<number[]>([]);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
 
   // Fetch budget data from API
-  const fetchBudgetData = async () => {
+  const fetchBudgetData = async (year?: number, month?: number) => {
     try {
       setLoading(true);
       setError(null);
 
-      const [budgets, expenseTransactions] = await Promise.all([
-        transactionsApiService.getBudgets(),
-        transactionsApiService.getExpenseTransactions(),
-      ]);
+      // Fetch pre-aggregated budget progress from backend
+      const { budgets: progress } =
+        await transactionsApiService.getBudgetProgress({
+          year,
+          month,
+          startDate,
+          endDate,
+        });
 
       // Get chart colors
       const chart1 = getCSSValue('--chart-1');
@@ -50,35 +60,17 @@ export function BudgetProgress() {
       const chart5 = getCSSValue('--chart-5');
       const chart6 = getCSSValue('--chart-6');
 
-      // Group expenses by category
-      const expensesByCategory = expenseTransactions.reduce(
-        (acc, transaction) => {
-          const category = transaction.Category || 'Uncategorized';
-          if (!acc[category]) {
-            acc[category] = 0;
-          }
-          acc[category] += transaction.amount;
-          return acc;
-        },
-        {} as Record<string, number>
-      );
-
-      // Create budget categories by matching budgets with expenses
-      const categories: BudgetCategory[] = budgets.map((budget, index) => {
-        const spent = expensesByCategory[budget.category] || 0;
-        const percentage =
-          budget.amount > 0 ? Math.round((spent / budget.amount) * 100) : 0;
-        const remaining = budget.amount - spent;
-
-        return {
-          name: budget.category,
-          budget: budget.amount,
-          spent,
-          percentage,
+      // Create budget categories from API response
+      const categories: BudgetCategory[] = progress.map(
+        (item: any, index: number) => ({
+          name: item.category,
+          budget: item.budget,
+          spent: item.spent,
+          percentage: item.percentage,
           color: `hsl(${[chart1, chart2, chart3, chart4, chart5, chart6][index % 6]})`,
-          remaining,
-        };
-      });
+          remaining: item.remaining,
+        })
+      );
 
       setBudgetCategories(categories);
 
@@ -157,8 +149,47 @@ export function BudgetProgress() {
   };
 
   useEffect(() => {
-    fetchBudgetData();
+    // Initialize years/month to current if available
+    const init = async () => {
+      try {
+        const yrs = await dashboardApiService.getExpenseYears();
+        setYears(yrs);
+        const startParts = startDate.split('-');
+        const y = Number(startParts[0]);
+        const m = Number(startParts[1]);
+        setSelectedYear(y);
+        setSelectedMonth(m);
+        await fetchBudgetData(y, m);
+      } catch (e) {
+        // fallback without filters
+        await fetchBudgetData();
+      }
+    };
+    init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleYearChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const y = Number(e.target.value);
+    setSelectedYear(y);
+    const m = selectedMonth ?? 1;
+    const start = `${y}-${String(m).padStart(2, '0')}-01`;
+    const end = new Date(y, m, 0);
+    const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+    setRange({ startDate: start, endDate: endStr });
+    await fetchBudgetData(y, m);
+  };
+
+  const handleMonthChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const m = Number(e.target.value);
+    setSelectedMonth(m);
+    const y = selectedYear ?? new Date().getFullYear();
+    const start = `${y}-${String(m).padStart(2, '0')}-01`;
+    const end = new Date(y, m, 0);
+    const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+    setRange({ startDate: start, endDate: endStr });
+    await fetchBudgetData(y, m);
+  };
 
   if (loading) {
     return (
@@ -187,7 +218,12 @@ export function BudgetProgress() {
               <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
               <p className="text-red-600 mb-4">{error}</p>
               <button
-                onClick={fetchBudgetData}
+                onClick={() =>
+                  fetchBudgetData(
+                    selectedYear ?? undefined,
+                    selectedMonth ?? undefined
+                  )
+                }
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 mx-auto"
               >
                 Retry
@@ -226,15 +262,49 @@ export function BudgetProgress() {
     totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
 
   return (
-    <PieWithDetailedLegend
-      title="Budget Overview"
-      chartData={chartData}
-      chartOptions={chartOptions}
-      centerPrimary={`${overallPercentage}%`}
-      centerSecondaryLabel="Used"
-      centerTertiaryLabel={`$${totalSpent.toLocaleString()} / $${totalBudget.toLocaleString()}`}
-      legend={<CategoryBreakdown categories={budgetCategories} />}
-      height="20rem"
-    />
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <select
+          className="border rounded px-2 py-1 bg-background"
+          value={selectedYear ?? ''}
+          onChange={handleYearChange}
+        >
+          <option value="" disabled>
+            Year
+          </option>
+          {(years.length ? years : [new Date().getFullYear()]).map(y => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
+        <select
+          className="border rounded px-2 py-1 bg-background"
+          value={selectedMonth ?? ''}
+          onChange={handleMonthChange}
+        >
+          <option value="" disabled>
+            Month
+          </option>
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
+            <option key={m} value={m}>
+              {new Date(2000, m - 1, 1).toLocaleString('default', {
+                month: 'short',
+              })}
+            </option>
+          ))}
+        </select>
+      </div>
+      <PieWithDetailedLegend
+        title="Budget Overview"
+        chartData={chartData}
+        chartOptions={chartOptions}
+        centerPrimary={`${overallPercentage}%`}
+        centerSecondaryLabel="Used"
+        centerTertiaryLabel={`$${totalSpent.toLocaleString()} / $${totalBudget.toLocaleString()}`}
+        legend={<CategoryBreakdown categories={budgetCategories} />}
+        height="20rem"
+      />
+    </div>
   );
 }

@@ -130,14 +130,41 @@ def expense_categories_data(request):
     Get expense breakdown by category for pie chart
     """
     try:
-        # Get year and month from query params
+        # Get date range from query params (prefer start_date/end_date)
         import calendar
         from datetime import date
 
+        start_date_param = request.GET.get("start_date")
+        end_date_param = request.GET.get("end_date")
         year = request.GET.get("year")
         month = request.GET.get("month")
         today = timezone.now().date()
-        if year and month:
+
+        start_date: date | None = None
+        end_date: date | None = None
+
+        if start_date_param or end_date_param:
+            try:
+                if start_date_param:
+                    y, m, d = map(int, start_date_param.split("-"))
+                    start_date = date(y, m, d)
+                if end_date_param:
+                    y2, m2, d2 = map(int, end_date_param.split("-"))
+                    end_date = date(y2, m2, d2)
+            except Exception:
+                return JsonResponse(
+                    {"error": "Invalid start_date or end_date"}, status=400
+                )
+
+            if start_date and not end_date:
+                end_date = date(
+                    start_date.year,
+                    start_date.month,
+                    calendar.monthrange(start_date.year, start_date.month)[1],
+                )
+            if end_date and not start_date:
+                start_date = date(end_date.year, end_date.month, 1)
+        elif year and month:
             year = int(year)
             month = int(month)
             start_date = date(year, month, 1)
@@ -175,6 +202,8 @@ def expense_categories_data(request):
                         "borderColor": "#fff",
                     }
                 ],
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
             }
         )
 

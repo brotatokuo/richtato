@@ -1,8 +1,9 @@
-import { PieWithDetailedLegend } from '@/components/dashboard/PieWithDetailedLegend';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { transactionsApiService } from '@/lib/api/transactions';
+import { useBudgetDateRange } from '@/contexts/BudgetDateRangeContext';
+import { dashboardApiService } from '@/lib/api/dashboard';
 import { AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { PieWithDetailedLegend } from './PieWithDetailedLegend';
 
 // Function to get computed CSS values
 const getCSSValue = (property: string) => {
@@ -20,6 +21,7 @@ interface ExpenseCategory {
 }
 
 export function ExpenseBreakdown() {
+  const { startDate, endDate } = useBudgetDateRange();
   const [chartData, setChartData] = useState<any>(null);
   const [chartOptions, setChartOptions] = useState<any>(null);
   const [themeKey, setThemeKey] = useState(0);
@@ -34,28 +36,17 @@ export function ExpenseBreakdown() {
     try {
       setLoading(true);
       setError(null);
-
-      const expenseTransactions =
-        await transactionsApiService.getExpenseTransactions();
-
-      // Group expenses by category
-      const expensesByCategory = expenseTransactions.reduce(
-        (acc, transaction) => {
-          const category = transaction.Category || 'Uncategorized';
-          if (!acc[category]) {
-            acc[category] = 0;
-          }
-          acc[category] += transaction.amount;
-          return acc;
-        },
-        {} as Record<string, number>
-      );
-
-      // Calculate total expenses
-      const totalExpenses = Object.values(expensesByCategory).reduce(
-        (sum, amount) => sum + amount,
-        0
-      );
+      const data = await dashboardApiService.getExpenseCategoriesData({
+        startDate,
+        endDate,
+      });
+      const labels = data.labels || [];
+      const values = (data.datasets?.[0]?.data as number[]) || [];
+      const expensesByCategory = labels.map((name, idx) => ({
+        name,
+        value: values[idx] || 0,
+      }));
+      const totalExpenses = values.reduce((sum, v) => sum + (v || 0), 0);
 
       // Get chart colors
       const chart1 = getCSSValue('--chart-1');
@@ -66,15 +57,15 @@ export function ExpenseBreakdown() {
       const chart6 = getCSSValue('--chart-6');
 
       // Convert to ExpenseCategory format
-      const categories = Object.entries(expensesByCategory).map(
-        ([name, value], index) => ({
-          name,
-          value,
-          percentage:
-            totalExpenses > 0 ? Math.round((value / totalExpenses) * 100) : 0,
-          color: `hsl(${[chart1, chart2, chart3, chart4, chart5, chart6][index % 6]})`,
-        })
-      );
+      const categories = expensesByCategory.map((entry, index) => ({
+        name: entry.name,
+        value: entry.value,
+        percentage:
+          totalExpenses > 0
+            ? Math.round(((entry.value || 0) / totalExpenses) * 100)
+            : 0,
+        color: `hsl(${[chart1, chart2, chart3, chart4, chart5, chart6][index % 6]})`,
+      }));
 
       setExpenseCategories(categories);
     } catch (err) {
@@ -88,7 +79,7 @@ export function ExpenseBreakdown() {
 
   useEffect(() => {
     fetchExpenseData();
-  }, []);
+  }, [startDate, endDate]);
 
   useEffect(() => {
     if (expenseCategories.length === 0) return;

@@ -292,6 +292,41 @@ class TransactionsApiService {
     const data = await this.handleResponse<{ rows: Budget[] }>(response);
     return data.rows || [];
   }
+
+  /**
+   * Get budget progress for specific year and month
+   */
+  async getBudgetProgress(input: {
+    year?: number;
+    month?: number | string;
+    startDate?: string; // YYYY-MM-DD
+    endDate?: string; // YYYY-MM-DD
+  }): Promise<{
+    budgets: Array<{
+      category: string;
+      budget: number;
+      spent: number;
+      percentage: number;
+      remaining: number;
+      year: number;
+      month: number;
+    }>;
+  }> {
+    const url = new URL(`${this.baseUrl}/budget/progress/`);
+    if (input.year) url.searchParams.append('year', String(input.year));
+    if (input.month !== undefined && input.month !== null)
+      url.searchParams.append('month', String(input.month));
+    if (input.startDate) url.searchParams.append('start_date', input.startDate);
+    if (input.endDate) url.searchParams.append('end_date', input.endDate);
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
+
+    return this.handleResponse(response);
+  }
 }
 
 export const transactionsApiService = new TransactionsApiService();

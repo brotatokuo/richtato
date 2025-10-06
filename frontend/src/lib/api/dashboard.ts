@@ -125,27 +125,61 @@ class DashboardApiService {
   /**
    * Get budget progress data for current month
    */
-  async getBudgetProgressData(): Promise<BudgetProgressData[]> {
-    const response = await fetch(`${this.baseUrl}/budget-progress/`, {
+  async getBudgetProgressData(
+    year?: number,
+    month?: number | string
+  ): Promise<any> {
+    const url = new URL(`${this.baseUrl}/budget-progress/`);
+    if (year) url.searchParams.append('year', String(year));
+    if (month !== undefined && month !== null)
+      url.searchParams.append('month', String(month));
+    const response = await fetch(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
     });
+    return this.handleResponse<any>(response);
+  }
 
-    return this.handleResponse<BudgetProgressData[]>(response);
+  /**
+   * Get expense years
+   */
+  async getExpenseYears(): Promise<number[]> {
+    const response = await fetch(`${this.baseUrl}/expense-years/`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
+    const data = await this.handleResponse<{ years: number[] }>(response);
+    return data.years || [];
   }
 
   /**
    * Get expense categories data
    */
-  async getExpenseCategoriesData(): Promise<ExpenseCategoriesData> {
-    const response = await fetch(`${this.baseUrl}/expense-categories/`, {
+  async getExpenseCategoriesData(params?: {
+    startDate?: string;
+    endDate?: string;
+    year?: number;
+    month?: number;
+  }): Promise<
+    ExpenseCategoriesData & { start_date?: string; end_date?: string }
+  > {
+    const url = new URL(`${this.baseUrl}/expense-categories/`);
+    if (params?.startDate)
+      url.searchParams.append('start_date', params.startDate);
+    if (params?.endDate) url.searchParams.append('end_date', params.endDate);
+    if (params?.year) url.searchParams.append('year', String(params.year));
+    if (params?.month) url.searchParams.append('month', String(params.month));
+    const response = await fetch(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
     });
 
-    return this.handleResponse<ExpenseCategoriesData>(response);
+    return this.handleResponse<
+      ExpenseCategoriesData & { start_date?: string; end_date?: string }
+    >(response);
   }
 
   /**

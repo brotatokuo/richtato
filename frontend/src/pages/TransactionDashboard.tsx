@@ -1,21 +1,67 @@
-import { BudgetProgress } from '@/components/dashboard/BudgetProgress';
-import { ExpenseBreakdown } from '@/components/dashboard/ExpenseBreakdown';
+import { BudgetProgress } from '@/components/budget_dashboard/BudgetProgress';
+import { ExpenseBreakdown } from '@/components/budget_dashboard/ExpenseBreakdown';
 import { IncomeExpenseChart } from '@/components/dashboard/IncomeExpenseChart';
 import { MetricCard } from '@/components/dashboard/MetricCard';
+import {
+  BudgetDateRangeProvider,
+  useBudgetDateRange,
+} from '@/contexts/BudgetDateRangeContext';
 import {
   CashFlowData,
   dashboardApiService,
   DashboardData,
 } from '@/lib/api/dashboard';
+import { transactionsApiService } from '@/lib/api/transactions';
 import { AlertTriangle, Gauge, Percent, PiggyBank } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+function DateRangeControls() {
+  const { startDate, endDate, setRange } = useBudgetDateRange();
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    if (name === 'start') setRange({ startDate: value, endDate });
+    if (name === 'end') setRange({ startDate, endDate: value });
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="date"
+        name="start"
+        className="border rounded px-2 py-1 bg-background"
+        value={startDate}
+        onChange={handleChange}
+      />
+      <span className="text-muted-foreground">to</span>
+      <input
+        type="date"
+        name="end"
+        className="border rounded px-2 py-1 bg-background"
+        value={endDate}
+        onChange={handleChange}
+      />
+    </div>
+  );
+}
+
 export function Dashboard() {
+  return (
+    <BudgetDateRangeProvider>
+      <DashboardContent />
+    </BudgetDateRangeProvider>
+  );
+}
+
+function DashboardContent() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     null
   );
   const [incomeExpenseData, setIncomeExpenseData] =
     useState<CashFlowData | null>(null);
+  const { startDate, endDate } = useBudgetDateRange();
+  const [budgetUtilizationPct, setBudgetUtilizationPct] =
+    useState<string>('N/A');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,6 +88,32 @@ export function Dashboard() {
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  // Recompute budget utilization when global date range changes
+  useEffect(() => {
+    const computeBudgetUtilization = async () => {
+      try {
+        const { budgets } = await transactionsApiService.getBudgetProgress({
+          startDate,
+          endDate,
+        });
+        const totalBudget = budgets.reduce(
+          (sum: number, b: any) => sum + (b.budget || 0),
+          0
+        );
+        const totalSpent = budgets.reduce(
+          (sum: number, b: any) => sum + (b.spent || 0),
+          0
+        );
+        const pct =
+          totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+        setBudgetUtilizationPct(`${pct}%`);
+      } catch {
+        setBudgetUtilizationPct('N/A');
+      }
+    };
+    computeBudgetUtilization();
+  }, [startDate, endDate]);
 
   if (loading && !dashboardData) {
     return (
@@ -85,8 +157,8 @@ export function Dashboard() {
 
         <MetricCard
           title="Budget Utilization"
-          value={dashboardData.budget_utilization_30_days}
-          subtitle="of current month's budget"
+          value={budgetUtilizationPct}
+          subtitle="of selected period"
           icon={<Gauge className="h-4 w-4" />}
         />
 
@@ -96,6 +168,11 @@ export function Dashboard() {
           subtitle="of total spending"
           icon={<Percent className="h-4 w-4" />}
         />
+      </div>
+
+      {/* Global Budget Date Range Controls */}
+      <div className="flex justify-end">
+        <DateRangeControls />
       </div>
 
       {/* Budget Progress */}
