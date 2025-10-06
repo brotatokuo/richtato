@@ -8,7 +8,7 @@ urlpatterns = [
     path(
         "<int:pk>/", views.BudgetAPIView.as_view(), name="budget_detail"
     ),  # GET, PUT, PATCH, DELETE
-    path("progress/", views.BudgetProgressView.as_view(), name="budget_progress"),
+    path("progress/", views.budget_progress, name="budget_progress"),
     path(
         "field-choices/",
         views.BudgetFieldChoicesView.as_view(),

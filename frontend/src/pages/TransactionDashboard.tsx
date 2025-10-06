@@ -1,7 +1,7 @@
+import { IncomeExpenseChart } from '@/components/asset_dashboard/IncomeExpenseChart';
+import { MetricCard } from '@/components/asset_dashboard/MetricCard';
 import { BudgetProgress } from '@/components/budget_dashboard/BudgetProgress';
 import { ExpenseBreakdown } from '@/components/budget_dashboard/ExpenseBreakdown';
-import { IncomeExpenseChart } from '@/components/dashboard/IncomeExpenseChart';
-import { MetricCard } from '@/components/dashboard/MetricCard';
 import {
   BudgetDateRangeProvider,
   useBudgetDateRange,

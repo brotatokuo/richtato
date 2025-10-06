@@ -1,6 +1,6 @@
-import { AccountsSection } from '@/components/dashboard/AccountsSection';
-import { MetricCard } from '@/components/dashboard/MetricCard';
-import { SavingsChart } from '@/components/dashboard/SavingsChart';
+import { AccountsSection } from '@/components/asset_dashboard/AccountsSection';
+import { MetricCard } from '@/components/asset_dashboard/MetricCard';
+import { SavingsChart } from '@/components/asset_dashboard/SavingsChart';
 import { dashboardApiService } from '@/lib/api/dashboard';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { AlertTriangle, PiggyBank, TrendingUp } from 'lucide-react';

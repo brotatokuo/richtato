@@ -1,4 +1,4 @@
-import { BaseChart } from '@/components/dashboard/BaseChart';
+import { BaseChart } from '@/components/asset_dashboard/BaseChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CashFlowData } from '@/lib/api/dashboard';
 

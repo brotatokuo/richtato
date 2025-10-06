@@ -7,6 +7,7 @@ from apps.budget.models import Budget
 from apps.budget.serializers import BudgetSerializer
 from apps.expense.models import Expense
 from apps.richtato_user.models import Category
+from django.contrib.auth.decorators import login_required
 from django.db.models import F, Q, Sum
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
@@ -347,3 +348,129 @@ class BudgetFieldChoicesView(APIView):
             ],
         }
         return Response(data)
+
+
+@login_required
+def budget_progress(request):
+    """Function view: budget progress over a date range.
+
+    Accepts start_date/end_date (YYYY-MM-DD) or year/month. Defaults to current month.
+    """
+    today = date.today()
+    year_param = request.GET.get("year")
+    month_param = request.GET.get("month")
+    start_date_param = request.GET.get("start_date")
+    end_date_param = request.GET.get("end_date")
+
+    start_date: date | None = None
+    end_date: date | None = None
+    year = today.year
+    month = today.month
+
+    if start_date_param or end_date_param:
+        try:
+            if start_date_param:
+                y, m, d = map(int, start_date_param.split("-"))
+                start_date = date(y, m, d)
+            if end_date_param:
+                y2, m2, d2 = map(int, end_date_param.split("-"))
+                end_date = date(y2, m2, d2)
+        except Exception:
+            return JsonResponse({"error": "Invalid start_date or end_date"}, status=400)
+
+        if start_date and not end_date:
+            end_date = date(
+                start_date.year,
+                start_date.month,
+                calendar.monthrange(start_date.year, start_date.month)[1],
+            )
+        if end_date and not start_date:
+            start_date = date(end_date.year, end_date.month, 1)
+
+        if start_date:
+            year = start_date.year
+            month = start_date.month
+    else:
+        try:
+            year = int(year_param) if year_param else today.year
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "Invalid year"}, status=400)
+
+        month_val: int | None = None
+        if month_param:
+            try:
+                mnum = int(month_param)
+                if 1 <= mnum <= 12:
+                    month_val = mnum
+            except ValueError:
+                key = month_param.strip().lower()
+                abbr_map = {
+                    m.lower(): i for i, m in enumerate(calendar.month_abbr) if m
+                }
+                name_map = {
+                    m.lower(): i for i, m in enumerate(calendar.month_name) if m
+                }
+                month_val = abbr_map.get(key) or name_map.get(key)
+        else:
+            month_val = today.month
+
+        if not month_val:
+            return JsonResponse({"error": "Invalid month"}, status=400)
+
+        month = month_val
+        start_date = date(year, month, 1)
+        end_date = date(year, month, calendar.monthrange(year, month)[1])
+
+    assert start_date is not None and end_date is not None
+    if end_date < start_date:
+        return JsonResponse(
+            {"error": "end_date must be on/after start_date"}, status=400
+        )
+
+    budgets = (
+        Budget.objects.filter(user=request.user, start_date__lte=end_date)
+        .filter(Q(end_date__isnull=True) | Q(end_date__gte=start_date))
+        .select_related("category")
+    )
+
+    results = []
+    for b in budgets:
+        total_spent = (
+            Expense.objects.filter(
+                user=request.user,
+                category=b.category,
+                date__gte=start_date,
+                date__lte=end_date,
+            ).aggregate(total=Coalesce(Sum("amount"), Decimal(0)))
+        )["total"]
+        budget_amount = b.amount or Decimal(0)
+        percentage = (
+            int(round((total_spent / budget_amount) * 100)) if budget_amount > 0 else 0
+        )
+        results.append(
+            {
+                "category": b.category.name,
+                "budget": float(budget_amount),
+                "spent": float(total_spent),
+                "percentage": percentage,
+                "remaining": float(budget_amount - total_spent),
+                "year": year,
+                "month": month,
+            }
+        )
+
+    return JsonResponse(
+        {
+            "budgets": results,
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+        }
+    )
+
+
+class BudgetProgressView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Delegate to function-based view for shared logic
+        return budget_progress(request)
