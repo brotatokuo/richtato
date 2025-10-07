@@ -296,7 +296,7 @@ class TransactionsApiService {
   /**
    * Get budget progress for specific year and month
    */
-  async getBudgetProgress(input: {
+  async getBudgetDashboard(input: {
     year?: number;
     month?: number | string;
     startDate?: string; // YYYY-MM-DD

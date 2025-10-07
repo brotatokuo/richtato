@@ -1,6 +1,6 @@
 import { IncomeExpenseChart } from '@/components/asset_dashboard/IncomeExpenseChart';
 import { MetricCard } from '@/components/asset_dashboard/MetricCard';
-import { BudgetProgress } from '@/components/budget_dashboard/BudgetProgress';
+import { BudgetDashboard } from '@/components/budget_dashboard/BudgetDashboard';
 import { ExpenseBreakdown } from '@/components/budget_dashboard/ExpenseBreakdown';
 import {
   BudgetDateRangeProvider,
@@ -15,7 +15,7 @@ import { transactionsApiService } from '@/lib/api/transactions';
 import { AlertTriangle, Gauge, Percent, PiggyBank } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-// Removed non-dropdown global date inputs; dropdown range is inside BudgetProgress
+// Removed non-dropdown global date inputs; dropdown range is inside BudgetDashboard
 
 export function Dashboard() {
   return (
@@ -65,7 +65,7 @@ function DashboardContent() {
   useEffect(() => {
     const computeBudgetUtilization = async () => {
       try {
-        const { budgets } = await transactionsApiService.getBudgetProgress({
+        const { budgets } = await transactionsApiService.getBudgetDashboard({
           startDate,
           endDate,
         });
@@ -142,11 +142,11 @@ function DashboardContent() {
         />
       </div>
 
-      {/* Date range controls managed within BudgetProgress */}
+      {/* Date range controls managed within BudgetDashboard */}
 
       {/* Budget Progress */}
       <div className="lg:col-span-2 min-w-0 overflow-x-auto">
-        <BudgetProgress />
+        <BudgetDashboard />
       </div>
 
       {/* Main Analytics Grid */}

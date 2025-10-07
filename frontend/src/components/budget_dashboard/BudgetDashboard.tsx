@@ -24,7 +24,7 @@ const getCSSValue = (property: string) => {
     .trim();
 };
 
-export function BudgetProgress() {
+export function BudgetDashboard() {
   const { startDate, endDate, setRange } = useBudgetDateRange();
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>(
     []
@@ -47,7 +47,7 @@ export function BudgetProgress() {
 
       // Fetch pre-aggregated budget progress from backend
       const { budgets: progress } =
-        await transactionsApiService.getBudgetProgress({
+        await transactionsApiService.getBudgetDashboard({
           startDate,
           endDate,
         });

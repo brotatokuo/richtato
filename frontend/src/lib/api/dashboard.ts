@@ -27,7 +27,7 @@ export interface CashFlowData {
   }>;
 }
 
-export interface BudgetProgressData {
+export interface BudgetDashboardData {
   category: string;
   spent: number;
   budget: number;
@@ -125,7 +125,7 @@ class DashboardApiService {
   /**
    * Get budget progress data for current month
    */
-  async getBudgetProgressData(
+  async getBudgetDashboardData(
     year?: number,
     month?: number | string
   ): Promise<any> {

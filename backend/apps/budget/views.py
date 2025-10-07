@@ -468,7 +468,7 @@ def budget_progress(request):
     )
 
 
-class BudgetProgressView(APIView):
+class BudgetDashboardView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
