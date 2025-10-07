@@ -297,36 +297,6 @@ export function AccountsSection() {
                     {getAccountIcon(type)}
                     {getAccountTypeLabel(type)}
                   </h3>
-                  <div className="text-right">
-                    <p
-                      className={`text-lg font-semibold ${
-                        accounts.reduce(
-                          (sum, account) => sum + account.balance,
-                          0
-                        ) >= 0
-                          ? 'text-green-600'
-                          : 'text-red-600'
-                      }`}
-                    >
-                      {accounts.reduce(
-                        (sum, account) => sum + account.balance,
-                        0
-                      ) >= 0
-                        ? '+'
-                        : ''}
-                      $
-                      {Math.abs(
-                        accounts.reduce(
-                          (sum, account) => sum + account.balance,
-                          0
-                        )
-                      ).toLocaleString()}
-                    </p>
-                    <span className="text-sm text-muted-foreground">
-                      {accounts.length} account
-                      {accounts.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {accounts.map(account => (
