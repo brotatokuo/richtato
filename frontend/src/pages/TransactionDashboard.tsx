@@ -15,35 +15,7 @@ import { transactionsApiService } from '@/lib/api/transactions';
 import { AlertTriangle, Gauge, Percent, PiggyBank } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-function DateRangeControls() {
-  const { startDate, endDate, setRange } = useBudgetDateRange();
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    if (name === 'start') setRange({ startDate: value, endDate });
-    if (name === 'end') setRange({ startDate, endDate: value });
-  };
-
-  return (
-    <div className="flex items-center gap-2">
-      <input
-        type="date"
-        name="start"
-        className="border rounded px-2 py-1 bg-background"
-        value={startDate}
-        onChange={handleChange}
-      />
-      <span className="text-muted-foreground">to</span>
-      <input
-        type="date"
-        name="end"
-        className="border rounded px-2 py-1 bg-background"
-        value={endDate}
-        onChange={handleChange}
-      />
-    </div>
-  );
-}
+// Removed non-dropdown global date inputs; dropdown range is inside BudgetProgress
 
 export function Dashboard() {
   return (
@@ -170,10 +142,7 @@ function DashboardContent() {
         />
       </div>
 
-      {/* Global Budget Date Range Controls */}
-      <div className="flex justify-end">
-        <DateRangeControls />
-      </div>
+      {/* Date range controls managed within BudgetProgress */}
 
       {/* Budget Progress */}
       <div className="lg:col-span-2 min-w-0 overflow-x-auto">

@@ -1,5 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingDown, TrendingUp } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Info, TrendingDown, TrendingUp } from 'lucide-react';
 
 interface MetricCardProps {
   title: string;
@@ -10,6 +18,7 @@ interface MetricCardProps {
     label: string;
   };
   icon?: React.ReactNode;
+  info?: React.ReactNode;
 }
 
 export function MetricCard({
@@ -18,6 +27,7 @@ export function MetricCard({
   subtitle,
   trend,
   icon,
+  info,
 }: MetricCardProps) {
   const isPositiveTrend = trend && trend.value > 0;
   const isNegativeTrend = trend && trend.value < 0;
@@ -25,9 +35,30 @@ export function MetricCard({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {title}
-        </CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            {title}
+          </CardTitle>
+          {info && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`How ${title} is calculated`}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Info className="h-4 w-4" />
+                </button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{title} calculation</DialogTitle>
+                  <DialogDescription>{info}</DialogDescription>
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
         {icon}
       </CardHeader>
       <CardContent>

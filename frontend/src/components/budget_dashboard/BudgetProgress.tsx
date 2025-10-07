@@ -34,11 +34,13 @@ export function BudgetProgress() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [years, setYears] = useState<number[]>([]);
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [fromYear, setFromYear] = useState<number | null>(null);
+  const [fromMonth, setFromMonth] = useState<number | null>(null);
+  const [toYear, setToYear] = useState<number | null>(null);
+  const [toMonth, setToMonth] = useState<number | null>(null);
 
   // Fetch budget data from API
-  const fetchBudgetData = async (year?: number, month?: number) => {
+  const fetchBudgetData = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -46,8 +48,6 @@ export function BudgetProgress() {
       // Fetch pre-aggregated budget progress from backend
       const { budgets: progress } =
         await transactionsApiService.getBudgetProgress({
-          year,
-          month,
           startDate,
           endDate,
         });
@@ -155,11 +155,16 @@ export function BudgetProgress() {
         const yrs = await dashboardApiService.getExpenseYears();
         setYears(yrs);
         const startParts = startDate.split('-');
-        const y = Number(startParts[0]);
-        const m = Number(startParts[1]);
-        setSelectedYear(y);
-        setSelectedMonth(m);
-        await fetchBudgetData(y, m);
+        const endParts = endDate.split('-');
+        const fy = Number(startParts[0]);
+        const fm = Number(startParts[1]);
+        const ty = Number(endParts[0]);
+        const tm = Number(endParts[1]);
+        setFromYear(fy);
+        setFromMonth(fm);
+        setToYear(ty);
+        setToMonth(tm);
+        await fetchBudgetData();
       } catch (e) {
         // fallback without filters
         await fetchBudgetData();
@@ -169,26 +174,58 @@ export function BudgetProgress() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleYearChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const y = Number(e.target.value);
-    setSelectedYear(y);
-    const m = selectedMonth ?? 1;
-    const start = `${y}-${String(m).padStart(2, '0')}-01`;
-    const end = new Date(y, m, 0);
-    const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
-    setRange({ startDate: start, endDate: endStr });
-    await fetchBudgetData(y, m);
+  const pad2 = (n: number) => String(n).padStart(2, '0');
+  const computeEndOfMonth = (year: number, month: number) => {
+    const end = new Date(year, month, 0);
+    return `${end.getFullYear()}-${pad2(end.getMonth() + 1)}-${pad2(end.getDate())}`;
   };
 
-  const handleMonthChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const m = Number(e.target.value);
-    setSelectedMonth(m);
-    const y = selectedYear ?? new Date().getFullYear();
-    const start = `${y}-${String(m).padStart(2, '0')}-01`;
-    const end = new Date(y, m, 0);
-    const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+  const updateRangeAndFetch = async (
+    yFrom: number,
+    mFrom: number,
+    yTo: number,
+    mTo: number
+  ) => {
+    const start = `${yFrom}-${pad2(mFrom)}-01`;
+    const endStr = computeEndOfMonth(yTo, mTo);
     setRange({ startDate: start, endDate: endStr });
-    await fetchBudgetData(y, m);
+    await fetchBudgetData();
+  };
+
+  const handleFromYearChange = async (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const y = Number(e.target.value);
+    setFromYear(y);
+    const m = fromMonth ?? 1;
+    await updateRangeAndFetch(y, m, toYear ?? y, toMonth ?? m);
+  };
+
+  const handleFromMonthChange = async (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const m = Number(e.target.value);
+    setFromMonth(m);
+    const y = fromYear ?? new Date().getFullYear();
+    await updateRangeAndFetch(y, m, toYear ?? y, toMonth ?? m);
+  };
+
+  const handleToYearChange = async (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const y = Number(e.target.value);
+    setToYear(y);
+    const m = toMonth ?? 12;
+    await updateRangeAndFetch(fromYear ?? y, fromMonth ?? 1, y, m);
+  };
+
+  const handleToMonthChange = async (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const m = Number(e.target.value);
+    setToMonth(m);
+    const y = toYear ?? new Date().getFullYear();
+    await updateRangeAndFetch(fromYear ?? y, fromMonth ?? 1, y, m);
   };
 
   if (loading) {
@@ -218,12 +255,7 @@ export function BudgetProgress() {
               <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
               <p className="text-red-600 mb-4">{error}</p>
               <button
-                onClick={() =>
-                  fetchBudgetData(
-                    selectedYear ?? undefined,
-                    selectedMonth ?? undefined
-                  )
-                }
+                onClick={() => fetchBudgetData()}
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 mx-auto"
               >
                 Retry
@@ -263,11 +295,12 @@ export function BudgetProgress() {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center flex-wrap gap-2 mb-2">
+        <span className="text-sm text-muted-foreground mr-1">From</span>
         <select
           className="border rounded px-2 py-1 bg-background"
-          value={selectedYear ?? ''}
-          onChange={handleYearChange}
+          value={fromYear ?? ''}
+          onChange={handleFromYearChange}
         >
           <option value="" disabled>
             Year
@@ -280,8 +313,39 @@ export function BudgetProgress() {
         </select>
         <select
           className="border rounded px-2 py-1 bg-background"
-          value={selectedMonth ?? ''}
-          onChange={handleMonthChange}
+          value={fromMonth ?? ''}
+          onChange={handleFromMonthChange}
+        >
+          <option value="" disabled>
+            Month
+          </option>
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
+            <option key={m} value={m}>
+              {new Date(2000, m - 1, 1).toLocaleString('default', {
+                month: 'short',
+              })}
+            </option>
+          ))}
+        </select>
+        <span className="text-sm text-muted-foreground mx-1">to</span>
+        <select
+          className="border rounded px-2 py-1 bg-background"
+          value={toYear ?? ''}
+          onChange={handleToYearChange}
+        >
+          <option value="" disabled>
+            Year
+          </option>
+          {(years.length ? years : [new Date().getFullYear()]).map(y => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
+        <select
+          className="border rounded px-2 py-1 bg-background"
+          value={toMonth ?? ''}
+          onChange={handleToMonthChange}
         >
           <option value="" disabled>
             Month
@@ -297,6 +361,17 @@ export function BudgetProgress() {
       </div>
       <PieWithDetailedLegend
         title="Budget Overview"
+        info={
+          <div className="space-y-2">
+            <p className="text-foreground">
+              Overall Usage = Total Spent / Total Budget.
+            </p>
+            <p>
+              Total Spent and Total Budget are summed across all categories for
+              the selected period. Remaining = Total Budget - Total Spent.
+            </p>
+          </div>
+        }
         chartData={chartData}
         chartOptions={chartOptions}
         centerPrimary={`${overallPercentage}%`}

@@ -138,6 +138,16 @@ export function AssetDashboard() {
           value={dashboardData.networth}
           subtitle={dashboardData.networth_growth}
           icon={<TrendingUp className="h-4 w-4" />}
+          info={
+            <div className="space-y-2">
+              <p className="text-foreground">
+                Net Worth = Sum of all account balances.
+              </p>
+              <p>
+                Currently simplified to total assets across linked accounts.
+              </p>
+            </div>
+          }
         />
 
         <MetricCard
@@ -145,6 +155,14 @@ export function AssetDashboard() {
           value={dashboardData.savings_rate}
           subtitle={dashboardData.savings_rate_context}
           icon={<PiggyBank className="h-4 w-4" />}
+          info={
+            <div className="space-y-2">
+              <p className="text-foreground">
+                Savings Rate = (Income - Expenses) / Income.
+              </p>
+              <p>Income and expenses are summed over the selected period.</p>
+            </div>
+          }
         />
 
         {/* Removed Investment Performance card until backed by real data */}
