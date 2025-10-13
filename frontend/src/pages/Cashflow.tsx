@@ -1,4 +1,6 @@
+import { IncomeExpenseChart } from '@/components/asset_dashboard/IncomeExpenseChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CashFlowData, dashboardApiService } from '@/lib/api/dashboard';
 import { transactionsApiService } from '@/lib/api/transactions';
 import ReactECharts from 'echarts-for-react';
 import { AlertTriangle, TrendingDown, TrendingUp } from 'lucide-react';
@@ -36,6 +38,8 @@ export function Cashflow() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [themeKey, setThemeKey] = useState(0); // Force re-render when theme changes
+  const [incomeExpenseData, setIncomeExpenseData] =
+    useState<CashFlowData | null>(null);
 
   // Fetch real data from APIs
   const fetchCashflowData = async () => {
@@ -44,10 +48,12 @@ export function Cashflow() {
       setError(null);
 
       // Fetch data from APIs
-      const [incomeTransactions, expenseTransactions] = await Promise.all([
-        transactionsApiService.getIncomeTransactions(),
-        transactionsApiService.getExpenseTransactions(),
-      ]);
+      const [incomeTransactions, expenseTransactions, incomeVsExpenses] =
+        await Promise.all([
+          transactionsApiService.getIncomeTransactions(),
+          transactionsApiService.getExpenseTransactions(),
+          dashboardApiService.getIncomeExpensesData(),
+        ]);
 
       // Get theme-aware colors
       const chart1 = getCSSValue('--chart-1');
@@ -123,6 +129,7 @@ export function Cashflow() {
       };
 
       setCashflowData(cashflowData);
+      setIncomeExpenseData(incomeVsExpenses);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to load cashflow data'
@@ -375,6 +382,10 @@ export function Cashflow() {
               </div>
             </CardContent>
           </Card>
+        </div>
+        {/* Income vs Expenses Chart */}
+        <div className="lg:col-span-2 min-w-0 overflow-x-auto">
+          <IncomeExpenseChart data={incomeExpenseData} />
         </div>
       </div>
     </div>

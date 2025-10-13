@@ -3,13 +3,13 @@ import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 import { AssetDashboard } from './pages/AssetDashboard';
+import { Dashboard } from './pages/BudgetDashboard';
 import { Cashflow } from './pages/Cashflow';
 import { DataTable } from './pages/DataTable';
 import { Login } from './pages/Login';
 import { Profile } from './pages/Profile';
 import { Register } from './pages/Register';
 import { Settings } from './pages/Settings';
-import { Dashboard } from './pages/TransactionDashboard';
 import { Upload } from './pages/Upload';
 import { Welcome } from './pages/Welcome';
 

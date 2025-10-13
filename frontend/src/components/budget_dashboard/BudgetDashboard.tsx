@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useBudgetDateRange } from '@/contexts/BudgetDateRangeContext';
-import { dashboardApiService } from '@/lib/api/dashboard';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -25,7 +24,7 @@ const getCSSValue = (property: string) => {
 };
 
 export function BudgetDashboard() {
-  const { startDate, endDate, setRange } = useBudgetDateRange();
+  const { startDate, endDate } = useBudgetDateRange();
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>(
     []
   );
@@ -33,9 +32,6 @@ export function BudgetDashboard() {
   const [chartOptions, setChartOptions] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [years, setYears] = useState<number[]>([]);
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
 
   // Fetch budget data from API
   const fetchBudgetData = async () => {
@@ -146,53 +142,19 @@ export function BudgetDashboard() {
     }
   };
 
+  // Initial load
   useEffect(() => {
-    // Initialize year/month to current if available
-    const init = async () => {
-      try {
-        const yrs = await dashboardApiService.getExpenseYears();
-        setYears(yrs);
-        const startParts = startDate.split('-');
-        const y = Number(startParts[0]);
-        const m = Number(startParts[1]);
-        setSelectedYear(y);
-        setSelectedMonth(m);
-        await fetchBudgetData();
-      } catch (e) {
-        // fallback without filters
-        await fetchBudgetData();
-      }
-    };
-    init();
+    fetchBudgetData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const pad2 = (n: number) => String(n).padStart(2, '0');
-  const computeEndOfMonth = (year: number, month: number) => {
-    const end = new Date(year, month, 0);
-    return `${end.getFullYear()}-${pad2(end.getMonth() + 1)}-${pad2(end.getDate())}`;
-  };
-
-  const updateMonthAndFetch = async (year: number, month: number) => {
-    const start = `${year}-${pad2(month)}-01`;
-    const endStr = computeEndOfMonth(year, month);
-    setRange({ startDate: start, endDate: endStr });
-    await fetchBudgetData();
-  };
-
-  const handleYearChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const y = Number(e.target.value);
-    setSelectedYear(y);
-    const m = selectedMonth ?? 1;
-    await updateMonthAndFetch(y, m);
-  };
-
-  const handleMonthChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const m = Number(e.target.value);
-    setSelectedMonth(m);
-    const y = selectedYear ?? new Date().getFullYear();
-    await updateMonthAndFetch(y, m);
-  };
+  // Refetch when global date range changes
+  useEffect(() => {
+    if (startDate && endDate) {
+      fetchBudgetData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate]);
 
   if (loading) {
     return (
@@ -261,38 +223,6 @@ export function BudgetDashboard() {
 
   return (
     <div>
-      <div className="flex items-center flex-wrap gap-2 mb-2">
-        <select
-          className="border rounded px-2 py-1 bg-background"
-          value={selectedYear ?? ''}
-          onChange={handleYearChange}
-        >
-          <option value="" disabled>
-            Year
-          </option>
-          {(years.length ? years : [new Date().getFullYear()]).map(y => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
-        <select
-          className="border rounded px-2 py-1 bg-background"
-          value={selectedMonth ?? ''}
-          onChange={handleMonthChange}
-        >
-          <option value="" disabled>
-            Month
-          </option>
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
-            <option key={m} value={m}>
-              {new Date(2000, m - 1, 1).toLocaleString('default', {
-                month: 'short',
-              })}
-            </option>
-          ))}
-        </select>
-      </div>
       <PieWithDetailedLegend
         title="Budget Overview"
         info={

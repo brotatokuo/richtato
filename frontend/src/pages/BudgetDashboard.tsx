@@ -1,4 +1,3 @@
-import { IncomeExpenseChart } from '@/components/asset_dashboard/IncomeExpenseChart';
 import { MetricCard } from '@/components/asset_dashboard/MetricCard';
 import { BudgetDashboard } from '@/components/budget_dashboard/BudgetDashboard';
 import { ExpenseBreakdown } from '@/components/budget_dashboard/ExpenseBreakdown';
@@ -6,14 +5,10 @@ import {
   BudgetDateRangeProvider,
   useBudgetDateRange,
 } from '@/contexts/BudgetDateRangeContext';
-import {
-  CashFlowData,
-  dashboardApiService,
-  DashboardData,
-} from '@/lib/api/dashboard';
+import { dashboardApiService, DashboardData } from '@/lib/api/dashboard';
 import { transactionsApiService } from '@/lib/api/transactions';
-import { AlertTriangle, Gauge, Percent, PiggyBank } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { AlertTriangle, Gauge, Percent } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 
 // Removed non-dropdown global date inputs; dropdown range is inside BudgetDashboard
 
@@ -25,15 +20,74 @@ export function Dashboard() {
   );
 }
 
+function MonthYearControls({
+  onChange,
+}: {
+  onChange: (year: number, month: number) => void;
+}) {
+  const years = useMemo(() => {
+    const current = new Date().getFullYear();
+    // reasonable range; could be fetched but keeping local for simplicity
+    const arr: number[] = [];
+    for (let y = current; y >= current - 15; y--) arr.push(y);
+    return arr;
+  }, []);
+  const { startDate } = useBudgetDateRange();
+  const [year, setYear] = useState<number>(() =>
+    Number(startDate.split('-')[0])
+  );
+  const [month, setMonth] = useState<number>(() =>
+    Number(startDate.split('-')[1])
+  );
+
+  const handleYear = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const y = Number(e.target.value);
+    setYear(y);
+    onChange(y, month);
+  };
+  const handleMonth = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const m = Number(e.target.value);
+    setMonth(m);
+    onChange(year, m);
+  };
+  return (
+    <div className="flex items-center flex-wrap gap-2">
+      <select
+        className="border rounded px-2 py-1 bg-background"
+        value={year}
+        onChange={handleYear}
+      >
+        {years.map(y => (
+          <option key={y} value={y}>
+            {y}
+          </option>
+        ))}
+      </select>
+      <select
+        className="border rounded px-2 py-1 bg-background"
+        value={month}
+        onChange={handleMonth}
+      >
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
+          <option key={m} value={m}>
+            {new Date(2000, m - 1, 1).toLocaleString('default', {
+              month: 'short',
+            })}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function DashboardContent() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     null
   );
-  const [incomeExpenseData, setIncomeExpenseData] =
-    useState<CashFlowData | null>(null);
-  const { startDate, endDate } = useBudgetDateRange();
+  const { startDate, endDate, setRange } = useBudgetDateRange();
   const [budgetUtilizationPct, setBudgetUtilizationPct] =
     useState<string>('N/A');
+  const [nonEssentialPct, setNonEssentialPct] = useState<string>('N/A');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,13 +97,8 @@ function DashboardContent() {
       setError(null);
 
       // Fetch dashboard metrics and income/expense data from the backend
-      const [metricsData, incomeExpenseData] = await Promise.all([
-        dashboardApiService.getDashboardMetrics(),
-        dashboardApiService.getIncomeExpensesData(),
-      ]);
-
+      const metricsData = await dashboardApiService.getDashboardMetrics();
       setDashboardData(metricsData);
-      setIncomeExpenseData(incomeExpenseData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
@@ -87,6 +136,38 @@ function DashboardContent() {
     computeBudgetUtilization();
   }, [startDate, endDate]);
 
+  // Recompute non-essential spending percentage from range-filtered data
+  useEffect(() => {
+    const computeNonEssentialPct = async () => {
+      try {
+        const [categories, expenseData] = await Promise.all([
+          transactionsApiService.getCategories(),
+          dashboardApiService.getExpenseCategoriesData({ startDate, endDate }),
+        ]);
+        const nonEssentialNames = new Set(
+          categories
+            .filter((c: any) => c.type === 'nonessential')
+            .map(c => c.name)
+        );
+        const labels: string[] = expenseData.labels || [];
+        const values: number[] =
+          (expenseData.datasets?.[0]?.data as number[]) || [];
+        let total = 0;
+        let nonEssential = 0;
+        for (let i = 0; i < labels.length; i++) {
+          const v = Number(values[i] || 0);
+          total += v;
+          if (nonEssentialNames.has(labels[i])) nonEssential += v;
+        }
+        const pct = total > 0 ? Math.round((nonEssential / total) * 100) : 0;
+        setNonEssentialPct(`${pct}%`);
+      } catch {
+        setNonEssentialPct('N/A');
+      }
+    };
+    computeNonEssentialPct();
+  }, [startDate, endDate]);
+
   if (loading && !dashboardData) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -118,23 +199,21 @@ function DashboardContent() {
 
   return (
     <div className="space-y-6 max-w-full">
+      {/* Global Month/Year Controls */}
+      <div className="flex justify-end">
+        <MonthYearControls
+          onChange={(y, m) => {
+            const pad2 = (n: number) => String(n).padStart(2, '0');
+            const start = `${y}-${pad2(m)}-01`;
+            const end = new Date(y, m, 0);
+            const endStr = `${end.getFullYear()}-${pad2(end.getMonth() + 1)}-${pad2(end.getDate())}`;
+            setRange({ startDate: start, endDate: endStr });
+          }}
+        />
+      </div>
+
       {/* KPI Summary Row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 min-w-0">
-        <MetricCard
-          title="Savings Rate"
-          value={dashboardData.savings_rate}
-          subtitle={dashboardData.savings_rate_context}
-          icon={<PiggyBank className="h-4 w-4" />}
-          info={
-            <div className="space-y-2">
-              <p className="text-foreground">
-                Savings Rate = (Income - Expenses) / Income.
-              </p>
-              <p>Income and expenses are summed over the selected period.</p>
-            </div>
-          }
-        />
-
         <MetricCard
           title="Budget Utilization"
           value={budgetUtilizationPct}
@@ -154,7 +233,7 @@ function DashboardContent() {
 
         <MetricCard
           title="Non-Essential Spending"
-          value={`${dashboardData.nonessential_spending_pct}%`}
+          value={nonEssentialPct}
           subtitle="of total spending"
           icon={<Percent className="h-4 w-4" />}
           info={
@@ -172,8 +251,6 @@ function DashboardContent() {
         />
       </div>
 
-      {/* Date range controls managed within BudgetDashboard */}
-
       {/* Budget Progress */}
       <div className="lg:col-span-2 min-w-0 overflow-x-auto">
         <BudgetDashboard />
@@ -184,10 +261,6 @@ function DashboardContent() {
         {/* Expense Breakdown */}
         <div className="lg:col-span-2 min-w-0 overflow-x-auto">
           <ExpenseBreakdown />
-        </div>
-        {/* Income vs Expenses Chart */}
-        <div className="lg:col-span-2 min-w-0 overflow-x-auto">
-          <IncomeExpenseChart data={incomeExpenseData} />
         </div>
       </div>
     </div>

@@ -28,9 +28,13 @@ export function Layout() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Get the current page config based on the route
-  const currentPageConfig =
-    routeConfig[location.pathname] || routeConfig['/dashboard'];
+  // Get the current page config based on the route (supports nested paths)
+  const matchedKey = Object.keys(routeConfig).find(
+    key => location.pathname === key || location.pathname.startsWith(`${key}/`)
+  );
+  const currentPageConfig = matchedKey
+    ? routeConfig[matchedKey]
+    : { title: 'Dashboard', icon: PieChart };
   const IconComponent = currentPageConfig.icon;
 
   return (
