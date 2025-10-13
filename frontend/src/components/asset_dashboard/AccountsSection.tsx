@@ -96,7 +96,13 @@ const getAccountTypeLabel = (type: string) => {
   }
 };
 
-export function AccountsSection() {
+export function AccountsSection({
+  onAccountClick,
+  reloadKey,
+}: {
+  onAccountClick?: (account: AccountWithBalance) => void;
+  reloadKey?: string | number;
+}) {
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,13 +115,17 @@ export function AccountsSection() {
 
         const accountsData = await transactionsApiService.getAccounts();
 
-        // Transform API data to include mock balance and lastUpdated for now
-        // In a real app, these would come from the API
+        // Coerce balances/dates to usable types if backend returns strings
         const accountsWithBalance: AccountWithBalance[] = accountsData.map(
-          account => ({
-            ...account,
-            balance: Math.random() * 50000, // Mock balance - replace with real data
-            lastUpdated: new Date().toISOString().split('T')[0], // Mock date
+          a => ({
+            ...a,
+            balance:
+              typeof (a as any).balance === 'number'
+                ? (a as any).balance
+                : Number(
+                    String((a as any).balance || '0').replace(/[^0-9.-]+/g, '')
+                  ),
+            lastUpdated: String((a as any).date || ''),
           })
         );
 
@@ -130,7 +140,7 @@ export function AccountsSection() {
     };
 
     loadAccounts();
-  }, []);
+  }, [reloadKey]);
 
   const groupedAccounts = accounts.reduce(
     (acc, account) => {
@@ -303,6 +313,7 @@ export function AccountsSection() {
                     <div
                       key={account.id}
                       className="p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
+                      onClick={() => onAccountClick?.(account)}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3">

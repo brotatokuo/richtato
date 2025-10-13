@@ -110,26 +110,99 @@ class AccountTransactionsAPIView(APIView):
 
     def get(self, request, pk):
         account = get_object_or_404(Account, pk=pk, user=request.user)
-        transactions = AccountTransaction.objects.filter(account=account).order_by(
-            "-date"
-        )
+        page_param = request.GET.get("page", "1")
+        page_size_param = request.GET.get("page_size", "10")
+        try:
+            page = max(1, int(page_param))
+            page_size = max(1, min(100, int(page_size_param)))
+        except ValueError:
+            page = 1
+            page_size = 10
+
+        qs = AccountTransaction.objects.filter(account=account).order_by("-date", "-id")
+        total = qs.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        transactions = qs[start:end]
+
         data = {
             "columns": [
                 {"field": "id", "title": "ID"},
                 {"field": "date", "title": "Date"},
                 {"field": "amount", "title": "Amount"},
-                {"field": "description", "title": "Description"},
             ],
             "rows": [
                 {
-                    "id": transaction.id,
-                    "date": format_date(transaction.date),
-                    "amount": format_currency(transaction.amount),
+                    "id": t.id,
+                    "date": format_date(t.date),
+                    "amount": format_currency(t.amount),
                 }
-                for transaction in transactions
+                for t in transactions
             ],
+            "page": page,
+            "page_size": page_size,
+            "total": total,
         }
         return Response(data)
+
+    def patch(self, request, pk):
+        account = get_object_or_404(Account, pk=pk, user=request.user)
+        transaction_id = request.data.get("id")
+        if not transaction_id:
+            return Response({"error": "Missing transaction id"}, status=400)
+        try:
+            tx = AccountTransaction.objects.get(id=transaction_id, account=account)
+        except AccountTransaction.DoesNotExist:
+            return Response({"error": "Transaction not found"}, status=404)
+
+        amount = request.data.get("amount")
+        date = request.data.get("date")
+        updated = False
+        if amount is not None:
+            tx.amount = amount
+            updated = True
+        if date is not None:
+            tx.date = date
+            updated = True
+        if not updated:
+            return Response({"error": "No updatable fields provided"}, status=400)
+
+        tx.save()
+        return Response(
+            {
+                "id": tx.id,
+                "date": format_date(tx.date),
+                "amount": format_currency(tx.amount),
+            }
+        )
+
+    def delete(self, request, pk):
+        account = get_object_or_404(Account, pk=pk, user=request.user)
+        transaction_id = request.data.get("id") or request.GET.get("id")
+        if not transaction_id:
+            return Response({"error": "Missing transaction id"}, status=400)
+        try:
+            tx = AccountTransaction.objects.get(id=transaction_id, account=account)
+        except AccountTransaction.DoesNotExist:
+            return Response({"error": "Transaction not found"}, status=404)
+
+        tx.delete()
+
+        # Recompute account latest balance/date after deletion
+        latest = (
+            AccountTransaction.objects.filter(account=account)
+            .order_by("-date", "-id")
+            .first()
+        )
+        if latest:
+            account.latest_balance = latest.amount
+            account.latest_balance_date = latest.date
+        else:
+            account.latest_balance = 0
+            account.latest_balance_date = None
+        account.save()
+
+        return Response(status=204)
 
 
 class AccountDetailAPIView(APIView):

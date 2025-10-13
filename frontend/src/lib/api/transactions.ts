@@ -124,6 +124,89 @@ class TransactionsApiService {
   }
 
   /**
+   * Get transactions (balance history) for an account
+   */
+  async getAccountTransactions(
+    accountId: number,
+    input?: {
+      page?: number;
+      pageSize?: number;
+    }
+  ): Promise<{
+    columns: Array<{ field: string; title: string }>;
+    rows: Array<{ id: number; date: string; amount: string }>;
+    page: number;
+    page_size: number;
+    total: number;
+  }> {
+    const url = new URL(
+      `${this.baseUrl}/accounts/api/accounts/${accountId}/transactions/`
+    );
+    if (input?.page) url.searchParams.append('page', String(input.page));
+    if (input?.pageSize)
+      url.searchParams.append('page_size', String(input.pageSize));
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
+    return this.handleResponse(response);
+  }
+
+  /**
+   * Create a balance update (account transaction)
+   */
+  async createAccountTransaction(input: {
+    account: number;
+    amount: number;
+    date: string; // YYYY-MM-DD
+  }): Promise<any> {
+    const response = await fetch(
+      `${this.baseUrl}/accounts/api/accounts/details/`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(input),
+      }
+    );
+    return this.handleResponse(response);
+  }
+
+  async updateAccountTransaction(
+    accountId: number,
+    input: {
+      id: number;
+      amount?: number;
+      date?: string;
+    }
+  ): Promise<any> {
+    const response = await fetch(
+      `${this.baseUrl}/accounts/api/accounts/${accountId}/transactions/`,
+      {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(input),
+      }
+    );
+    return this.handleResponse(response);
+  }
+
+  async deleteAccountTransaction(accountId: number, id: number): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/accounts/api/accounts/${accountId}/transactions/`,
+      {
+        method: 'DELETE',
+        headers: this.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ id }),
+      }
+    );
+    if (!response.ok) throw new Error('Failed to delete transaction');
+  }
+
+  /**
    * Create an account
    */
   async createAccount(input: {
