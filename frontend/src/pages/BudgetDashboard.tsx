@@ -8,7 +8,7 @@ import {
 import { dashboardApiService, DashboardData } from '@/lib/api/dashboard';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { AlertTriangle, Gauge, Percent } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 // Removed non-dropdown global date inputs; dropdown range is inside BudgetDashboard
 
@@ -90,6 +90,18 @@ function DashboardContent() {
   const [nonEssentialPct, setNonEssentialPct] = useState<string>('N/A');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [budgetProgress, setBudgetProgress] = useState<
+    Array<{
+      category: string;
+      budget: number;
+      spent: number;
+      percentage: number;
+      remaining: number;
+      year: number;
+      month: number;
+    }>
+  >([]);
+  const lastRangeRef = useRef<string | null>(null);
 
   const loadDashboardData = async () => {
     try {
@@ -118,6 +130,8 @@ function DashboardContent() {
           startDate,
           endDate,
         });
+        setBudgetProgress(budgets);
+
         const totalBudget = budgets.reduce(
           (sum: number, b: any) => sum + (b.budget || 0),
           0
@@ -133,6 +147,10 @@ function DashboardContent() {
         setBudgetUtilizationPct('N/A');
       }
     };
+    // Deduplicate same-range fetches (avoids StrictMode double-invoke)
+    const key = `${startDate}|${endDate}`;
+    if (lastRangeRef.current === key) return;
+    lastRangeRef.current = key;
     computeBudgetUtilization();
   }, [startDate, endDate]);
 
@@ -253,7 +271,7 @@ function DashboardContent() {
 
       {/* Budget Progress */}
       <div className="lg:col-span-2 min-w-0 overflow-x-auto">
-        <BudgetDashboard />
+        <BudgetDashboard progress={budgetProgress} />
       </div>
 
       {/* Main Analytics Grid */}

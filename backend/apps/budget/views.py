@@ -467,6 +467,9 @@ def budget_progress(request):
             }
         )
 
+    # Sort categories by highest percentage to lowest for frontend display
+    results = sorted(results, key=lambda x: x["percentage"], reverse=True)
+
     return JsonResponse(
         {
             "budgets": results,

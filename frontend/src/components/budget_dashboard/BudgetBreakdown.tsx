@@ -23,7 +23,19 @@ const getCSSValue = (property: string) => {
     .trim();
 };
 
-export function BudgetDashboard() {
+export function BudgetDashboard({
+  progress,
+}: {
+  progress?: Array<{
+    category: string;
+    budget: number;
+    spent: number;
+    percentage: number;
+    remaining: number;
+    year: number;
+    month: number;
+  }>;
+}) {
   const { startDate, endDate } = useBudgetDateRange();
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>(
     []
@@ -33,18 +45,17 @@ export function BudgetDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch budget data from API
+  // Fetch budget data from API (only if progress not provided)
   const fetchBudgetData = async () => {
     try {
       setLoading(true);
       setError(null);
 
       // Fetch pre-aggregated budget progress from backend
-      const { budgets: progress } =
-        await transactionsApiService.getBudgetDashboard({
-          startDate,
-          endDate,
-        });
+      const { budgets } = await transactionsApiService.getBudgetDashboard({
+        startDate,
+        endDate,
+      });
 
       // Get chart colors
       const chart1 = getCSSValue('--chart-1');
@@ -55,7 +66,7 @@ export function BudgetDashboard() {
       const chart6 = getCSSValue('--chart-6');
 
       // Create budget categories from API response
-      const categories: BudgetCategory[] = progress.map(
+      const categories: BudgetCategory[] = budgets.map(
         (item: any, index: number) => ({
           name: item.category,
           budget: item.budget,
@@ -136,15 +147,110 @@ export function BudgetDashboard() {
     }
   };
 
-  // Initial load
+  // If progress is provided by parent, compute chart state from it
   useEffect(() => {
-    fetchBudgetData();
+    if (!progress) return;
+    try {
+      setLoading(true);
+      setError(null);
+
+      const chart1 = getCSSValue('--chart-1');
+      const chart2 = getCSSValue('--chart-2');
+      const chart3 = getCSSValue('--chart-3');
+      const chart4 = getCSSValue('--chart-4');
+      const chart5 = getCSSValue('--chart-5');
+      const chart6 = getCSSValue('--chart-6');
+
+      const categories: BudgetCategory[] = progress.map(
+        (item: any, index: number) => ({
+          name: item.category,
+          budget: item.budget,
+          spent: item.spent,
+          percentage: item.percentage,
+          color: `hsl(${[chart1, chart2, chart3, chart4, chart5, chart6][index % 6]})`,
+          remaining: item.remaining,
+        })
+      );
+
+      setBudgetCategories(categories);
+
+      const totalBudget = categories.reduce((sum, cat) => sum + cat.budget, 0);
+      const totalSpent = categories.reduce((sum, cat) => sum + cat.spent, 0);
+      const totalRemaining = totalBudget - totalSpent;
+      const overallPercentage =
+        totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+
+      const chartDataObj = {
+        series: [
+          {
+            name: 'Budget Usage',
+            type: 'pie',
+            radius: ['55%', '80%'],
+            center: ['50%', '50%'],
+            data: [
+              {
+                value: totalSpent,
+                name: 'Spent',
+                itemStyle: {
+                  color: overallPercentage > 100 ? '#ef4444' : '#3b82f6',
+                },
+              },
+              {
+                value: Math.max(0, totalRemaining),
+                name: 'Remaining',
+                itemStyle: {
+                  color: '#e5e7eb',
+                },
+              },
+            ],
+            emphasis: {
+              itemStyle: {
+                shadowBlur: 10,
+                shadowOffsetX: 0,
+                shadowColor: 'rgba(0, 0, 0, 0.5)',
+              },
+            },
+            label: {
+              show: false,
+            },
+            labelLine: {
+              show: false,
+            },
+          },
+        ],
+      };
+
+      const chartOptionsObj = {
+        tooltip: {
+          trigger: 'item',
+        },
+        legend: {
+          show: false,
+        },
+      };
+
+      setChartData(chartDataObj);
+      setChartOptions(chartOptionsObj);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to load budget data'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [progress]);
+
+  // Initial load (only if progress is not provided by parent)
+  useEffect(() => {
+    if (!progress) {
+      fetchBudgetData();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Refetch when global date range changes
+  // Refetch when global date range changes (only if fetching locally)
   useEffect(() => {
-    if (startDate && endDate) {
+    if (!progress && startDate && endDate) {
       fetchBudgetData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
