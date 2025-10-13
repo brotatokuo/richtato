@@ -209,7 +209,6 @@ export function Cashflow() {
         name: cat.name,
         itemStyle: { color: cat.color },
       })),
-      { name: 'Total Expenses', itemStyle: { color: `hsl(${sankeyNode})` } },
     ];
 
     const links = [
@@ -217,12 +216,6 @@ export function Cashflow() {
       ...cashflowData.categories.expenses.map(cat => ({
         source: 'Total Income',
         target: cat.name,
-        value: cat.value,
-      })),
-      // Then from expense categories into Total Expenses
-      ...cashflowData.categories.expenses.map(cat => ({
-        source: cat.name,
-        target: 'Total Expenses',
         value: cat.value,
       })),
     ];
