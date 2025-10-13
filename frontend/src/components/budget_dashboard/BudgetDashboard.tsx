@@ -34,10 +34,8 @@ export function BudgetDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [years, setYears] = useState<number[]>([]);
-  const [fromYear, setFromYear] = useState<number | null>(null);
-  const [fromMonth, setFromMonth] = useState<number | null>(null);
-  const [toYear, setToYear] = useState<number | null>(null);
-  const [toMonth, setToMonth] = useState<number | null>(null);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
 
   // Fetch budget data from API
   const fetchBudgetData = async () => {
@@ -149,21 +147,16 @@ export function BudgetDashboard() {
   };
 
   useEffect(() => {
-    // Initialize years/month to current if available
+    // Initialize year/month to current if available
     const init = async () => {
       try {
         const yrs = await dashboardApiService.getExpenseYears();
         setYears(yrs);
         const startParts = startDate.split('-');
-        const endParts = endDate.split('-');
-        const fy = Number(startParts[0]);
-        const fm = Number(startParts[1]);
-        const ty = Number(endParts[0]);
-        const tm = Number(endParts[1]);
-        setFromYear(fy);
-        setFromMonth(fm);
-        setToYear(ty);
-        setToMonth(tm);
+        const y = Number(startParts[0]);
+        const m = Number(startParts[1]);
+        setSelectedYear(y);
+        setSelectedMonth(m);
         await fetchBudgetData();
       } catch (e) {
         // fallback without filters
@@ -180,52 +173,25 @@ export function BudgetDashboard() {
     return `${end.getFullYear()}-${pad2(end.getMonth() + 1)}-${pad2(end.getDate())}`;
   };
 
-  const updateRangeAndFetch = async (
-    yFrom: number,
-    mFrom: number,
-    yTo: number,
-    mTo: number
-  ) => {
-    const start = `${yFrom}-${pad2(mFrom)}-01`;
-    const endStr = computeEndOfMonth(yTo, mTo);
+  const updateMonthAndFetch = async (year: number, month: number) => {
+    const start = `${year}-${pad2(month)}-01`;
+    const endStr = computeEndOfMonth(year, month);
     setRange({ startDate: start, endDate: endStr });
     await fetchBudgetData();
   };
 
-  const handleFromYearChange = async (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
+  const handleYearChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const y = Number(e.target.value);
-    setFromYear(y);
-    const m = fromMonth ?? 1;
-    await updateRangeAndFetch(y, m, toYear ?? y, toMonth ?? m);
+    setSelectedYear(y);
+    const m = selectedMonth ?? 1;
+    await updateMonthAndFetch(y, m);
   };
 
-  const handleFromMonthChange = async (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
+  const handleMonthChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const m = Number(e.target.value);
-    setFromMonth(m);
-    const y = fromYear ?? new Date().getFullYear();
-    await updateRangeAndFetch(y, m, toYear ?? y, toMonth ?? m);
-  };
-
-  const handleToYearChange = async (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    const y = Number(e.target.value);
-    setToYear(y);
-    const m = toMonth ?? 12;
-    await updateRangeAndFetch(fromYear ?? y, fromMonth ?? 1, y, m);
-  };
-
-  const handleToMonthChange = async (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    const m = Number(e.target.value);
-    setToMonth(m);
-    const y = toYear ?? new Date().getFullYear();
-    await updateRangeAndFetch(fromYear ?? y, fromMonth ?? 1, y, m);
+    setSelectedMonth(m);
+    const y = selectedYear ?? new Date().getFullYear();
+    await updateMonthAndFetch(y, m);
   };
 
   if (loading) {
@@ -296,11 +262,10 @@ export function BudgetDashboard() {
   return (
     <div>
       <div className="flex items-center flex-wrap gap-2 mb-2">
-        <span className="text-sm text-muted-foreground mr-1">From</span>
         <select
           className="border rounded px-2 py-1 bg-background"
-          value={fromYear ?? ''}
-          onChange={handleFromYearChange}
+          value={selectedYear ?? ''}
+          onChange={handleYearChange}
         >
           <option value="" disabled>
             Year
@@ -313,39 +278,8 @@ export function BudgetDashboard() {
         </select>
         <select
           className="border rounded px-2 py-1 bg-background"
-          value={fromMonth ?? ''}
-          onChange={handleFromMonthChange}
-        >
-          <option value="" disabled>
-            Month
-          </option>
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
-            <option key={m} value={m}>
-              {new Date(2000, m - 1, 1).toLocaleString('default', {
-                month: 'short',
-              })}
-            </option>
-          ))}
-        </select>
-        <span className="text-sm text-muted-foreground mx-1">to</span>
-        <select
-          className="border rounded px-2 py-1 bg-background"
-          value={toYear ?? ''}
-          onChange={handleToYearChange}
-        >
-          <option value="" disabled>
-            Year
-          </option>
-          {(years.length ? years : [new Date().getFullYear()]).map(y => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
-        <select
-          className="border rounded px-2 py-1 bg-background"
-          value={toMonth ?? ''}
-          onChange={handleToMonthChange}
+          value={selectedMonth ?? ''}
+          onChange={handleMonthChange}
         >
           <option value="" disabled>
             Month
