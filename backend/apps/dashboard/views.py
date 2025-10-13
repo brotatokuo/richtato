@@ -217,9 +217,27 @@ def income_expenses_data(request):
     Get monthly income vs expenses comparison
     """
     try:
-        # Get data for last 6 months
-        end_date = timezone.now().date()
-        start_date = end_date - relativedelta(months=6)
+        # Optional explicit date range
+        start_date_param = request.GET.get("start_date")
+        end_date_param = request.GET.get("end_date")
+
+        if start_date_param or end_date_param:
+            # Parse provided dates; if only one provided, default the other
+            if start_date_param:
+                start_date = datetime.strptime(start_date_param, "%Y-%m-%d").date()
+            else:
+                # Default to 6 months prior if only end date given
+                tmp_end = datetime.strptime(end_date_param, "%Y-%m-%d").date()
+                start_date = (tmp_end - relativedelta(months=6)).replace(day=1)
+
+            if end_date_param:
+                end_date = datetime.strptime(end_date_param, "%Y-%m-%d").date()
+            else:
+                end_date = timezone.now().date()
+        else:
+            # Default: last 6 months
+            end_date = timezone.now().date()
+            start_date = end_date - relativedelta(months=6)
 
         labels = []
         income_data = []

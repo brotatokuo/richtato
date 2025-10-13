@@ -1,5 +1,7 @@
 import { IncomeExpenseChart } from '@/components/asset_dashboard/IncomeExpenseChart';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { CashFlowData, dashboardApiService } from '@/lib/api/dashboard';
 import { transactionsApiService } from '@/lib/api/transactions';
 import ReactECharts from 'echarts-for-react';
@@ -41,18 +43,43 @@ export function Cashflow() {
   const [incomeExpenseData, setIncomeExpenseData] =
     useState<CashFlowData | null>(null);
 
+  const getCurrentMonthRange = () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const toIso = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+        d.getDate()
+      ).padStart(2, '0')}`;
+    return { startDate: toIso(start), endDate: toIso(end) };
+  };
+
+  const initialRange = getCurrentMonthRange();
+  const [startDate, setStartDate] = useState<string>(initialRange.startDate);
+  const [endDate, setEndDate] = useState<string>(initialRange.endDate);
+
   // Fetch real data from APIs
   const fetchCashflowData = async () => {
     try {
       setLoading(true);
       setError(null);
+      // Validate date range
+      if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+        throw new Error('Start date must be before or equal to end date');
+      }
 
       // Fetch data from APIs
       const [incomeTransactions, expenseTransactions, incomeVsExpenses] =
         await Promise.all([
-          transactionsApiService.getIncomeTransactions(),
-          transactionsApiService.getExpenseTransactions(),
-          dashboardApiService.getIncomeExpensesData(),
+          transactionsApiService.getIncomeTransactions({
+            startDate,
+            endDate,
+          }),
+          transactionsApiService.getExpenseTransactions({
+            startDate,
+            endDate,
+          }),
+          dashboardApiService.getIncomeExpensesData({ startDate, endDate }),
         ]);
 
       // Get theme-aware colors
@@ -277,112 +304,156 @@ export function Cashflow() {
   // Check if there's no data
   const hasNoData = cashflowData.income === 0 && cashflowData.expenses === 0;
 
-  if (hasNoData) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto">
-          <div className="mb-6">
-            <div className="w-20 h-20 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
-              <TrendingUp className="h-10 w-10 text-muted-foreground" />
-            </div>
-            <h2 className="text-2xl font-semibold text-foreground mb-2">
-              No Cashflow Data
-            </h2>
-            <p className="text-muted-foreground mb-6">
-              No income or expense transactions found. Add some transactions to
-              see your cashflow visualization.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Sankey Diagram */}
+        {/* Date Range Controls */}
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-          <CardContent>
-            <div className="h-96">
-              <ReactECharts
-                key={themeKey} // Force re-render when theme changes
-                option={getSankeyOption()}
-                style={{ height: '100%', width: '100%' }}
-                opts={{ renderer: 'canvas' }}
-              />
+          <CardContent className="p-4">
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="flex flex-col">
+                <label className="text-sm text-muted-foreground mb-1">
+                  Start date
+                </label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-sm text-muted-foreground mb-1">
+                  End date
+                </label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={e => setEndDate(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={fetchCashflowData}>Apply</Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const r = getCurrentMonthRange();
+                    setStartDate(r.startDate);
+                    setEndDate(r.endDate);
+                  }}
+                >
+                  This month
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
-
-        {/* Category Breakdown */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Income Categories */}
+        {hasNoData ? (
           <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-green-600 flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Income Sources
-              </CardTitle>
-            </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {cashflowData.categories.income.map((category, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: category.color }}
-                      />
-                      <span className="text-foreground">{category.name}</span>
-                    </div>
-                    <span className="font-semibold text-foreground">
-                      ${category.value.toLocaleString()}
-                    </span>
-                  </div>
-                ))}
+              <div className="text-center py-12">
+                <div className="w-20 h-20 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+                  <TrendingUp className="h-10 w-10 text-muted-foreground" />
+                </div>
+                <h2 className="text-2xl font-semibold text-foreground mb-2">
+                  No Cashflow Data
+                </h2>
+                <p className="text-muted-foreground">
+                  No income or expense transactions found for this range. Adjust
+                  dates above.
+                </p>
               </div>
             </CardContent>
           </Card>
+        ) : (
+          <>
+            {/* Sankey Diagram */}
+            <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+              <CardContent>
+                <div className="h-96">
+                  <ReactECharts
+                    key={themeKey} // Force re-render when theme changes
+                    option={getSankeyOption()}
+                    style={{ height: '100%', width: '100%' }}
+                    opts={{ renderer: 'canvas' }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Expense Categories */}
-          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-red-600 flex items-center gap-2">
-                <TrendingDown className="h-5 w-5" />
-                Expense Categories
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {cashflowData.categories.expenses.map((category, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
+            {/* Category Breakdown */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Income Categories */}
+              <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold text-green-600 flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Income Sources
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {cashflowData.categories.income.map((category, index) => (
                       <div
-                        className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: category.color }}
-                      />
-                      <span className="text-foreground">{category.name}</span>
-                    </div>
-                    <span className="font-semibold text-foreground">
-                      ${category.value.toLocaleString()}
-                    </span>
+                        key={index}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: category.color }}
+                          />
+                          <span className="text-foreground">
+                            {category.name}
+                          </span>
+                        </div>
+                        <span className="font-semibold text-foreground">
+                          ${category.value.toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        {/* Income vs Expenses Chart */}
-        <div className="lg:col-span-2 min-w-0 overflow-x-auto">
-          <IncomeExpenseChart data={incomeExpenseData} />
-        </div>
+                </CardContent>
+              </Card>
+
+              {/* Expense Categories */}
+              <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold text-red-600 flex items-center gap-2">
+                    <TrendingDown className="h-5 w-5" />
+                    Expense Categories
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {cashflowData.categories.expenses.map((category, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: category.color }}
+                          />
+                          <span className="text-foreground">
+                            {category.name}
+                          </span>
+                        </div>
+                        <span className="font-semibold text-foreground">
+                          ${category.value.toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            {/* Income vs Expenses Chart */}
+            <div className="lg:col-span-2 min-w-0 overflow-x-auto">
+              <IncomeExpenseChart data={incomeExpenseData} />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

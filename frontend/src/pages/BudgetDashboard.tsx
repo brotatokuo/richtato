@@ -51,9 +51,9 @@ function MonthYearControls({
     onChange(year, m);
   };
   return (
-    <div className="flex items-center flex-wrap gap-2">
+    <div className="flex items-center flex-wrap gap-3">
       <select
-        className="border rounded px-2 py-1 bg-background"
+        className="border rounded-md px-3 py-2 bg-background text-lg"
         value={year}
         onChange={handleYear}
       >
@@ -64,7 +64,7 @@ function MonthYearControls({
         ))}
       </select>
       <select
-        className="border rounded px-2 py-1 bg-background"
+        className="border rounded-md px-3 py-2 bg-background text-lg"
         value={month}
         onChange={handleMonth}
       >
@@ -200,7 +200,7 @@ function DashboardContent() {
   return (
     <div className="space-y-6 max-w-full">
       {/* Global Month/Year Controls */}
-      <div className="flex justify-end">
+      <div className="flex justify-start">
         <MonthYearControls
           onChange={(y, m) => {
             const pad2 = (n: number) => String(n).padStart(2, '0');

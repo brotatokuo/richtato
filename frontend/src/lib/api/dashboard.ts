@@ -99,8 +99,15 @@ class DashboardApiService {
   /**
    * Get income vs expenses data for the last 6 months
    */
-  async getIncomeExpensesData(): Promise<CashFlowData> {
-    const response = await fetch(`${this.baseUrl}/income-expenses/`, {
+  async getIncomeExpensesData(params?: {
+    startDate?: string;
+    endDate?: string;
+  }): Promise<CashFlowData> {
+    const url = new URL(`${this.baseUrl}/income-expenses/`);
+    if (params?.startDate)
+      url.searchParams.append('start_date', params.startDate);
+    if (params?.endDate) url.searchParams.append('end_date', params.endDate);
+    const response = await fetch(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',

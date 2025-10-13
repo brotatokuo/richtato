@@ -86,7 +86,7 @@ export function Sidebar({
       )}
     >
       {/* Header */}
-      <div className="flex h-16 items-center border-b border-slate-200/50 dark:border-slate-700/50 px-4">
+      <div className="flex h-16 items-center justify-between border-b border-slate-200/50 dark:border-slate-700/50 px-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center">
             <img
@@ -101,6 +101,21 @@ export function Sidebar({
             </span>
           )}
         </div>
+        {!hideCollapseToggle && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-transparent focus:ring-0 focus:outline-none"
+            onClick={toggleSidebar}
+            aria-label="Toggle sidebar"
+          >
+            {isCollapsed ? (
+              <ChevronRight className="h-4 w-4 opacity-70" />
+            ) : (
+              <ChevronLeft className="h-4 w-4 opacity-70" />
+            )}
+          </Button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -138,7 +153,7 @@ export function Sidebar({
         <div className="flex items-center gap-3">
           <button
             onClick={handleProfileClick}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-500 text-white text-sm font-medium shadow-lg hover:bg-slate-600 transition-colors cursor-pointer"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-500 text-white text-xs font-medium shadow-lg hover:bg-slate-600 transition-colors cursor-pointer shrink-0"
             aria-label="Go to profile"
           >
             {user
@@ -166,37 +181,10 @@ export function Sidebar({
               <LogOut className="h-4 w-4" />
               Logout
             </Button>
-            {!hideCollapseToggle && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-2 w-full justify-start gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                onClick={toggleSidebar}
-                aria-label="Toggle sidebar"
-              >
-                {isCollapsed ? (
-                  <ChevronRight className="h-4 w-4" />
-                ) : (
-                  <ChevronLeft className="h-4 w-4" />
-                )}
-                {isCollapsed ? 'Expand' : 'Collapse'}
-              </Button>
-            )}
+            {/* Footer collapse toggle removed - now in header */}
           </>
         )}
-        {isCollapsed && !hideCollapseToggle && (
-          <div className="mt-3 flex flex-col items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              onClick={toggleSidebar}
-              aria-label="Toggle sidebar"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
+        {/* Collapsed footer toggle removed - now in header */}
       </div>
     </div>
   );

@@ -119,12 +119,6 @@ export function BudgetDashboard() {
       const chartOptionsObj = {
         tooltip: {
           trigger: 'item',
-          formatter: function (params: any) {
-            const value = params.value;
-            const percentage =
-              totalBudget > 0 ? Math.round((value / totalBudget) * 100) : 0;
-            return `${params.name}: $${value.toLocaleString()} (${percentage}%)`;
-          },
         },
         legend: {
           show: false,

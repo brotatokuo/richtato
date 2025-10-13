@@ -61,16 +61,35 @@ class ExpenseAPIView(BaseAPIView):
         """
         Get the most recent entries for the user.
         """
+        from datetime import datetime as _dt
+
         limit_param = request.GET.get("limit", None)
+        start_date_str = request.GET.get("start_date")
+        end_date_str = request.GET.get("end_date")
 
         try:
             limit = int(limit_param) if limit_param is not None else None
         except ValueError:
             return Response({"error": "Invalid limit value"}, status=400)
 
+        # Build base queryset
+        qs = Expense.objects.filter(user=request.user)
+
+        # Optional date filtering
+        try:
+            if start_date_str:
+                start_date = _dt.strptime(start_date_str, "%Y-%m-%d").date()
+                qs = qs.filter(date__gte=start_date)
+            if end_date_str:
+                end_date = _dt.strptime(end_date_str, "%Y-%m-%d").date()
+                qs = qs.filter(date__lte=end_date)
+        except ValueError:
+            return Response(
+                {"error": "Invalid date format. Use YYYY-MM-DD."}, status=400
+            )
+
         entries = (
-            Expense.objects.filter(user=request.user)
-            .annotate(
+            qs.annotate(
                 Account=F("account_name__name"),
                 Category=F("category__name"),
             )

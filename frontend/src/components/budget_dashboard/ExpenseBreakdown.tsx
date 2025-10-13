@@ -84,11 +84,6 @@ export function ExpenseBreakdown() {
   useEffect(() => {
     if (expenseCategories.length === 0) return;
 
-    // Get actual CSS values
-    const cardColor = getCSSValue('--card');
-    const cardForegroundColor = getCSSValue('--card-foreground');
-    const borderColor = getCSSValue('--border');
-
     const data = {
       series: [
         {
@@ -96,6 +91,8 @@ export function ExpenseBreakdown() {
           type: 'pie',
           radius: ['60%', '85%'],
           center: ['50%', '50%'],
+          hoverAnimation: false,
+          selectedMode: false,
           data: expenseCategories.map(expense => ({
             value: expense.value,
             name: expense.name,
@@ -103,13 +100,7 @@ export function ExpenseBreakdown() {
               color: expense.color,
             },
           })),
-          emphasis: {
-            itemStyle: {
-              shadowBlur: 10,
-              shadowOffsetX: 0,
-              shadowColor: 'rgba(0, 0, 0, 0.5)',
-            },
-          },
+          emphasis: { disabled: true },
           label: {
             show: false,
           },
@@ -123,14 +114,10 @@ export function ExpenseBreakdown() {
     const options = {
       tooltip: {
         trigger: 'item',
-        backgroundColor: `hsl(${cardColor})`,
-        borderColor: `hsl(${borderColor})`,
-        textStyle: {
-          color: `hsl(${cardForegroundColor})`,
-        },
-        formatter: function (params: any) {
-          return `${params.name}: $${params.value.toLocaleString()}`;
-        },
+        showDelay: 0,
+        hideDelay: 0,
+        confine: true,
+        transitionDuration: 0.05,
       },
       legend: {
         show: false,

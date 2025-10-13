@@ -1,4 +1,9 @@
 import pytz
+from apps.account.models import Account
+from apps.richtato_user.utils import (
+    _get_line_graph_data_by_day,
+    _get_line_graph_data_by_month,
+)
 from django.db.models import F
 from django.shortcuts import get_object_or_404
 from loguru import logger
@@ -8,12 +13,6 @@ from rest_framework.decorators import authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from apps.account.models import Account
-from apps.richtato_user.utils import (
-    _get_line_graph_data_by_day,
-    _get_line_graph_data_by_month,
-)
 from richtato.views import BaseAPIView
 
 from .models import Income
@@ -33,16 +32,35 @@ class IncomeAPIView(BaseAPIView):
         """
         Get the most recent entries for the user.
         """
+        from datetime import datetime as _dt
+
         limit_param = request.GET.get("limit", None)
+        start_date_str = request.GET.get("start_date")
+        end_date_str = request.GET.get("end_date")
 
         try:
             limit = int(limit_param) if limit_param is not None else None
         except ValueError:
             return Response({"error": "Invalid limit value"}, status=400)
 
+        # Build base queryset
+        qs = Income.objects.filter(user=request.user)
+
+        # Optional date filtering
+        try:
+            if start_date_str:
+                start_date = _dt.strptime(start_date_str, "%Y-%m-%d").date()
+                qs = qs.filter(date__gte=start_date)
+            if end_date_str:
+                end_date = _dt.strptime(end_date_str, "%Y-%m-%d").date()
+                qs = qs.filter(date__lte=end_date)
+        except ValueError:
+            return Response(
+                {"error": "Invalid date format. Use YYYY-MM-DD."}, status=400
+            )
+
         entries = (
-            Income.objects.filter(user=request.user)
-            .annotate(
+            qs.annotate(
                 Account=F("account_name__name"),
             )
             .order_by("-date")

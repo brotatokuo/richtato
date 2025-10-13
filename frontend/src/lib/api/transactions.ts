@@ -60,11 +60,18 @@ class TransactionsApiService {
   /**
    * Get income transactions
    */
-  async getIncomeTransactions(limit?: number): Promise<Transaction[]> {
+  async getIncomeTransactions(input?: {
+    limit?: number;
+    startDate?: string; // YYYY-MM-DD
+    endDate?: string; // YYYY-MM-DD
+  }): Promise<Transaction[]> {
     const url = new URL(`${this.baseUrl}/income/api/incomes/`);
-    if (limit) {
-      url.searchParams.append('limit', limit.toString());
+    if (input?.limit) {
+      url.searchParams.append('limit', input.limit.toString());
     }
+    if (input?.startDate)
+      url.searchParams.append('start_date', input.startDate);
+    if (input?.endDate) url.searchParams.append('end_date', input.endDate);
 
     const response = await fetch(url.toString(), {
       method: 'GET',
@@ -79,11 +86,18 @@ class TransactionsApiService {
   /**
    * Get expense transactions
    */
-  async getExpenseTransactions(limit?: number): Promise<Transaction[]> {
+  async getExpenseTransactions(input?: {
+    limit?: number;
+    startDate?: string; // YYYY-MM-DD
+    endDate?: string; // YYYY-MM-DD
+  }): Promise<Transaction[]> {
     const url = new URL(`${this.baseUrl}/expense/api/expenses/`);
-    if (limit) {
-      url.searchParams.append('limit', limit.toString());
+    if (input?.limit) {
+      url.searchParams.append('limit', input.limit.toString());
     }
+    if (input?.startDate)
+      url.searchParams.append('start_date', input.startDate);
+    if (input?.endDate) url.searchParams.append('end_date', input.endDate);
 
     const response = await fetch(url.toString(), {
       method: 'GET',
