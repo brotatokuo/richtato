@@ -58,7 +58,7 @@ export function DataTable() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background px-3 py-4 sm:p-6">
+      <div className="min-h-screen bg-background">
         <div className="w-full max-w-full mx-auto min-w-0">
           <Card className="bg-card/50 backdrop-blur-sm border-border/50">
             <CardContent className="text-center py-8">
@@ -74,7 +74,7 @@ export function DataTable() {
   }
 
   return (
-    <div className="min-h-screen bg-background px-3 py-4 sm:p-6">
+    <div className="min-h-screen bg-background">
       <div className="w-full max-w-full mx-auto space-y-8 sm:space-y-12 min-w-0">
         {/* Mobile toggle */}
         <div className="md:hidden flex items-center gap-2">

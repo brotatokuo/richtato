@@ -284,7 +284,7 @@ export function Cashflow() {
   if (hasNoData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
+        <div className="text-center max-w-md mx-auto">
           <div className="mb-6">
             <div className="w-20 h-20 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
               <TrendingUp className="h-10 w-10 text-muted-foreground" />
