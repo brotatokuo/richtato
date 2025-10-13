@@ -1,6 +1,6 @@
 import calendar
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 import pytz
 from apps.budget.models import Budget
@@ -447,13 +447,21 @@ def budget_progress(request):
         percentage = (
             int(round((total_spent / budget_amount) * 100)) if budget_amount > 0 else 0
         )
+        # Round monetary fields to 2 decimals
+        budget_amount_q = budget_amount.quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        total_spent_q = total_spent.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        remaining_q = (budget_amount - total_spent).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
         results.append(
             {
                 "category": b.category.name,
-                "budget": float(budget_amount),
-                "spent": float(total_spent),
+                "budget": float(budget_amount_q),
+                "spent": float(total_spent_q),
                 "percentage": percentage,
-                "remaining": float(budget_amount - total_spent),
+                "remaining": float(remaining_q),
                 "year": year,
                 "month": month,
             }

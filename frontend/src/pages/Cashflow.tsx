@@ -2,7 +2,6 @@ import { IncomeExpenseChart } from '@/components/asset_dashboard/IncomeExpenseCh
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { CashFlowData, dashboardApiService } from '@/lib/api/dashboard';
 import { transactionsApiService } from '@/lib/api/transactions';
 import ReactECharts from 'echarts-for-react';
 import { AlertTriangle, TrendingDown, TrendingUp } from 'lucide-react';
@@ -40,8 +39,7 @@ export function Cashflow() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [themeKey, setThemeKey] = useState(0); // Force re-render when theme changes
-  const [incomeExpenseData, setIncomeExpenseData] =
-    useState<CashFlowData | null>(null);
+  // Income vs Expenses chart is independent now; no local state needed for it
 
   const getCurrentMonthRange = () => {
     const now = new Date();
@@ -69,18 +67,16 @@ export function Cashflow() {
       }
 
       // Fetch data from APIs
-      const [incomeTransactions, expenseTransactions, incomeVsExpenses] =
-        await Promise.all([
-          transactionsApiService.getIncomeTransactions({
-            startDate,
-            endDate,
-          }),
-          transactionsApiService.getExpenseTransactions({
-            startDate,
-            endDate,
-          }),
-          dashboardApiService.getIncomeExpensesData({ startDate, endDate }),
-        ]);
+      const [incomeTransactions, expenseTransactions] = await Promise.all([
+        transactionsApiService.getIncomeTransactions({
+          startDate,
+          endDate,
+        }),
+        transactionsApiService.getExpenseTransactions({
+          startDate,
+          endDate,
+        }),
+      ]);
 
       // Get theme-aware colors
       const chart1 = getCSSValue('--chart-1');
@@ -156,7 +152,6 @@ export function Cashflow() {
       };
 
       setCashflowData(cashflowData);
-      setIncomeExpenseData(incomeVsExpenses);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to load cashflow data'
@@ -441,9 +436,9 @@ export function Cashflow() {
                 </CardContent>
               </Card>
             </div>
-            {/* Income vs Expenses Chart */}
+            {/* Income vs Expenses Chart (independent) */}
             <div className="lg:col-span-2 min-w-0 overflow-x-auto">
-              <IncomeExpenseChart data={incomeExpenseData} />
+              <IncomeExpenseChart />
             </div>
           </>
         )}
