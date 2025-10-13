@@ -2,6 +2,13 @@ import { AccountsSection } from '@/components/asset_dashboard/AccountsSection';
 import { MetricCard } from '@/components/asset_dashboard/MetricCard';
 import { SavingsChart } from '@/components/asset_dashboard/SavingsChart';
 import { Modal } from '@/components/ui/Modal';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { dashboardApiService } from '@/lib/api/dashboard';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { AlertTriangle, PiggyBank, TrendingUp } from 'lucide-react';
@@ -397,22 +404,28 @@ export function AssetDashboard() {
                   >
                     Next
                   </button>
-                  <select
-                    className="border rounded px-2 py-1"
-                    value={txPageSize}
-                    onChange={async e => {
-                      const ps = Number(e.target.value) || 10;
-                      setTxPageSize(ps);
-                      setTxPage(1);
-                      await reloadHistoryPage(1, ps);
-                    }}
-                  >
-                    {[5, 10, 20, 50].map(s => (
-                      <option key={s} value={s}>
-                        {s} / page
-                      </option>
-                    ))}
-                  </select>
+                  <div className="min-w-[120px]">
+                    <Select
+                      value={String(txPageSize)}
+                      onValueChange={async (val: string) => {
+                        const ps = Number(val) || 10;
+                        setTxPageSize(ps);
+                        setTxPage(1);
+                        await reloadHistoryPage(1, ps);
+                      }}
+                    >
+                      <SelectTrigger className="h-8">
+                        <SelectValue placeholder="Items / page" />
+                      </SelectTrigger>
+                      <SelectContent position="popper">
+                        {[5, 10, 20, 50].map(s => (
+                          <SelectItem key={s} value={String(s)}>
+                            {s} / page
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </div>
