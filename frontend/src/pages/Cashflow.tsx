@@ -178,10 +178,6 @@ export function Cashflow() {
 
     const nodes = [
       { name: 'Total Income', itemStyle: { color: `hsl(${sankeyNode})` } },
-      ...cashflowData.categories.income.map(cat => ({
-        name: cat.name,
-        itemStyle: { color: cat.color },
-      })),
       ...cashflowData.categories.expenses.map(cat => ({
         name: cat.name,
         itemStyle: { color: cat.color },
@@ -190,13 +186,13 @@ export function Cashflow() {
     ];
 
     const links = [
-      // Income flows
-      ...cashflowData.categories.income.map(cat => ({
+      // Flow income into expense categories
+      ...cashflowData.categories.expenses.map(cat => ({
         source: 'Total Income',
         target: cat.name,
         value: cat.value,
       })),
-      // Expense flows
+      // Then from expense categories into Total Expenses
       ...cashflowData.categories.expenses.map(cat => ({
         source: cat.name,
         target: 'Total Expenses',

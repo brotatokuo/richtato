@@ -1,5 +1,5 @@
 import { MetricCard } from '@/components/asset_dashboard/MetricCard';
-import { BudgetDashboard } from '@/components/budget_dashboard/BudgetDashboard';
+import { BudgetDashboard } from '@/components/budget_dashboard/BudgetBreakdown';
 import { ExpenseBreakdown } from '@/components/budget_dashboard/ExpenseBreakdown';
 import {
   BudgetDateRangeProvider,
