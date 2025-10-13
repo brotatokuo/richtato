@@ -125,6 +125,14 @@ function DashboardContent() {
           value={dashboardData.savings_rate}
           subtitle={dashboardData.savings_rate_context}
           icon={<PiggyBank className="h-4 w-4" />}
+          info={
+            <div className="space-y-2">
+              <p className="text-foreground">
+                Savings Rate = (Income - Expenses) / Income.
+              </p>
+              <p>Income and expenses are summed over the selected period.</p>
+            </div>
+          }
         />
 
         <MetricCard
@@ -132,6 +140,16 @@ function DashboardContent() {
           value={budgetUtilizationPct}
           subtitle="of selected period"
           icon={<Gauge className="h-4 w-4" />}
+          info={
+            <div className="space-y-2">
+              <p className="text-foreground">
+                Budget Utilization = Total Spent / Total Budget.
+              </p>
+              <p>
+                Totals are summed across all categories for the selected period.
+              </p>
+            </div>
+          }
         />
 
         <MetricCard
@@ -139,6 +157,18 @@ function DashboardContent() {
           value={`${dashboardData.nonessential_spending_pct}%`}
           subtitle="of total spending"
           icon={<Percent className="h-4 w-4" />}
+          info={
+            <div className="space-y-2">
+              <p className="text-foreground">
+                Non‑Essential Spending = Non‑essential Expenses / Total
+                Expenses.
+              </p>
+              <p>
+                Categories flagged as non‑essential are included in the
+                numerator for the selected period.
+              </p>
+            </div>
+          }
         />
       </div>
 
