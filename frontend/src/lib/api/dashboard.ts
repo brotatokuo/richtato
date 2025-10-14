@@ -104,7 +104,10 @@ class DashboardApiService {
     startDate?: string;
     endDate?: string;
   }): Promise<CashFlowData> {
-    const url = new URL(`${this.baseUrl}/income-expenses/`);
+    const url = new URL(
+      `${this.baseUrl}/income-expenses/`,
+      window.location.origin
+    );
     if (params?.startDate)
       url.searchParams.append('start_date', params.startDate);
     if (params?.endDate) url.searchParams.append('end_date', params.endDate);
@@ -137,7 +140,10 @@ class DashboardApiService {
     year?: number,
     month?: number | string
   ): Promise<any> {
-    const url = new URL(`${this.baseUrl}/budget-progress/`);
+    const url = new URL(
+      `${this.baseUrl}/budget-progress/`,
+      window.location.origin
+    );
     if (year) url.searchParams.append('year', String(year));
     if (month !== undefined && month !== null)
       url.searchParams.append('month', String(month));
@@ -173,7 +179,10 @@ class DashboardApiService {
   }): Promise<
     ExpenseCategoriesData & { start_date?: string; end_date?: string }
   > {
-    const url = new URL(`${this.baseUrl}/expense-categories/`);
+    const url = new URL(
+      `${this.baseUrl}/expense-categories/`,
+      window.location.origin
+    );
     if (params?.startDate)
       url.searchParams.append('start_date', params.startDate);
     if (params?.endDate) url.searchParams.append('end_date', params.endDate);

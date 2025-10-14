@@ -65,7 +65,10 @@ class TransactionsApiService {
     startDate?: string; // YYYY-MM-DD
     endDate?: string; // YYYY-MM-DD
   }): Promise<Transaction[]> {
-    const url = new URL(`${this.baseUrl}/income/api/incomes/`);
+    const url = new URL(
+      `${this.baseUrl}/income/api/incomes/`,
+      window.location.origin
+    );
     if (input?.limit) {
       url.searchParams.append('limit', input.limit.toString());
     }
@@ -91,7 +94,10 @@ class TransactionsApiService {
     startDate?: string; // YYYY-MM-DD
     endDate?: string; // YYYY-MM-DD
   }): Promise<Transaction[]> {
-    const url = new URL(`${this.baseUrl}/expense/api/expenses/`);
+    const url = new URL(
+      `${this.baseUrl}/expense/api/expenses/`,
+      window.location.origin
+    );
     if (input?.limit) {
       url.searchParams.append('limit', input.limit.toString());
     }
@@ -140,7 +146,8 @@ class TransactionsApiService {
     total: number;
   }> {
     const url = new URL(
-      `${this.baseUrl}/accounts/api/accounts/${accountId}/transactions/`
+      `${this.baseUrl}/accounts/api/accounts/${accountId}/transactions/`,
+      window.location.origin
     );
     if (input?.page) url.searchParams.append('page', String(input.page));
     if (input?.pageSize)
@@ -409,7 +416,10 @@ class TransactionsApiService {
       month: number;
     }>;
   }> {
-    const url = new URL(`${this.baseUrl}/budget/progress/`);
+    const url = new URL(
+      `${this.baseUrl}/budget/progress/`,
+      window.location.origin
+    );
     if (input.year) url.searchParams.append('year', String(input.year));
     if (input.month !== undefined && input.month !== null)
       url.searchParams.append('month', String(input.month));
