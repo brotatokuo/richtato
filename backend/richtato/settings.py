@@ -36,12 +36,11 @@ ALLOWED_HOSTS = [
     "0.0.0.0",
     "backend",
     "frontend",
-    "richtato.onrender.com",
-    "richtato-react.onrender.com",
+    "richtato-latest.onrender.com",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://richtato.onrender.com",
+    "https://richtato-latest.onrender.com",
 ]
 
 # Application definition
@@ -280,7 +279,7 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to access CSRF token
 CSRF_TRUSTED_ORIGINS = [
-    "https://richtato.onrender.com",
+    "https://richtato-latest.onrender.com",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5173",
