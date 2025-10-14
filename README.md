@@ -59,6 +59,7 @@ richtato/
 ## 🛠️ Technology Stack
 
 ### Backend
+
 - **Django 4.x**: Web framework
 - **PostgreSQL**: Primary database
 - **Python 3.9+**: Programming language
@@ -66,6 +67,7 @@ richtato/
 - **Plotly**: Interactive visualizations
 
 ### Frontend
+
 - **HTML5/CSS3**: Structure and styling
 - **JavaScript (ES6+)**: Client-side functionality
 - **Chart.js**: Chart visualizations
@@ -74,12 +76,14 @@ richtato/
 - **DataTables**: Enhanced table functionality
 
 ### AI & Integrations
+
 - **OpenAI**: AI-powered insights and analysis
 - **Custom AI Models**: Built-in intelligent categorization
 
 ## 📦 Installation
 
 ### Prerequisites
+
 - Python 3.9 or higher
 - PostgreSQL 12 or higher
 - Node.js (for frontend assets)
@@ -87,12 +91,14 @@ richtato/
 ### Quick Start
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd richtato
    ```
 
 2. **Set up Python environment**
+
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
@@ -100,15 +106,17 @@ richtato/
    ```
 
 3. **Configure database**
+
    ```bash
    # Create PostgreSQL database
    createdb richtato_db
-   
+
    # Run migrations
    python richtato/manage.py migrate
    ```
 
 4. **Set up environment variables**
+
    ```bash
    # Create .env file with your configuration
    cp .env.example .env
@@ -116,6 +124,7 @@ richtato/
    ```
 
 5. **Run the development server**
+
    ```bash
    ./run.sh
    # Or manually:
@@ -129,12 +138,14 @@ richtato/
 ## 🎯 Key Components
 
 ### Expense Categorization System
+
 - **Smart Categorization**: AI-powered automatic categorization
 - **Custom Categories**: 20+ predefined categories with icons and colors
 - **Keyword Matching**: Intelligent transaction matching
 - **Visual Indicators**: Color-coded categories in charts and tables
 
 ### Dashboard Analytics
+
 - **Income vs Expenses**: Monthly comparison charts
 - **Cash Flow Sankey**: Interactive money flow visualization
 - **Budget Progress**: Real-time budget tracking
@@ -142,6 +153,7 @@ richtato/
 - **Savings Trends**: Investment and savings tracking
 
 ### Statement Import System
+
 - **Multi-format Support**: CSV, Excel, PDF imports
 - **Bank Integration**: Support for major banks
 - **Credit Card Support**: American Express, Chase, Citi, Bank of America
@@ -149,6 +161,7 @@ richtato/
 - **File Upload**: Direct file upload interface
 
 ### Budget Management
+
 - **Category Budgets**: Set limits by expense category
 - **Progress Tracking**: Visual progress bars and alerts
 - **Monthly/Annual Views**: Flexible budget periods
@@ -157,6 +170,7 @@ richtato/
 ## 🔧 Configuration
 
 ### Environment Variables
+
 ```bash
 # Database
 DATABASE_URL=postgresql://user:password@localhost/richtato_db
@@ -171,7 +185,9 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 ```
 
 ### Database Configuration
+
 The application uses PostgreSQL for optimal performance with financial data. Key features:
+
 - JSON fields for flexible data storage
 - Full-text search capabilities
 - Efficient indexing for large datasets
@@ -180,21 +196,80 @@ The application uses PostgreSQL for optimal performance with financial data. Key
 ## 🚀 Deployment
 
 ### Production Setup
+
 1. **Configure production database**
 2. **Set up static file serving** (nginx recommended)
 3. **Configure environment variables**
 4. **Set up SSL certificates**
 5. **Configure backup strategy**
 
-### Docker Deployment
+### Docker Deployment (Single Service: Frontend + Backend + Nginx)
+
+You can deploy with a single container that serves the React SPA via Nginx and proxies API requests to Django (Gunicorn) at `/api`.
+
 ```bash
-# Build and run with Docker Compose
-docker-compose up -d
+# Build the multi-stage Docker image (inject the API base URL used by Vite build)
+./build.sh richtato:latest https://your-hostname/api
+
+# Run locally (expects a Postgres instance; update DATABASE_URL as needed)
+./start.sh richtato:latest 10000
+
+# Open the app
+open http://localhost:10000
 ```
+
+#### Environment Variables (Required)
+
+Set these in your container or hosting environment:
+
+```bash
+# Django secret key
+SECRET_KEY=your_django_secret
+
+# Database connection (Render Postgres URL works; includes sslmode=require)
+DATABASE_URL=postgresql://user:pass@host:5432/dbname?sslmode=require
+
+# Deployment stage: PROD on Render, DEV/LOCAL for local
+DEPLOY_STAGE=PROD
+
+# Render sets this automatically; default to 10000 locally
+PORT=10000
+```
+
+Vite frontend is built with `VITE_API_BASE_URL` passed as a build-arg and baked into the static assets. When using the single-container image with Nginx, use `/api` so the SPA and API share the same origin and cookies:
+
+```bash
+# Example build arg in CI/Render
+VITE_API_BASE_URL=/api
+```
+
+#### Render (Docker) Deployment
+
+1. Create a Render Web Service (Docker)
+
+   - Root: repository root
+   - Dockerfile: `Dockerfile`
+   - Build Command: uses Dockerfile (no command needed)
+   - Start Command: leave blank (Dockerfile CMD runs `/app/start.sh`)
+   - Build Args:
+     - `VITE_API_BASE_URL=/api`
+   - Environment:
+     - `SECRET_KEY=...`
+     - `DATABASE_URL=...` (Render Postgres)
+     - `DEPLOY_STAGE=PROD`
+
+2. Ensure Allowed Hosts
+
+   - Add your Render hostname to Django `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` if not already included.
+
+3. Post-deploy
+   - Migrations and collectstatic run automatically via the startup script.
+   - Nginx listens on `$PORT` and proxies `/api` and `/admin` to Django on 8000.
 
 ## 📊 Data Models
 
 ### Core Models
+
 - **User**: Extended user model with financial preferences
 - **Account**: Bank accounts, credit cards, investment accounts
 - **Expense**: Transaction records with categorization
@@ -203,6 +278,7 @@ docker-compose up -d
 - **Budget**: Budget limits and tracking
 
 ### Relationships
+
 - Users have multiple accounts
 - Accounts have multiple transactions
 - Transactions belong to categories
@@ -211,12 +287,14 @@ docker-compose up -d
 ## 🎨 UI/UX Features
 
 ### Design System
+
 - **Color Scheme**: Consistent color palette with category-specific colors
 - **Typography**: Modern, readable fonts
 - **Icons**: Font Awesome icons throughout
 - **Responsive**: Mobile-first design approach
 
 ### Interactive Elements
+
 - **Charts**: Interactive Chart.js visualizations
 - **Sankey Diagrams**: Plotly.js cash flow diagrams
 - **Tables**: Enhanced DataTables with sorting and filtering
@@ -225,12 +303,14 @@ docker-compose up -d
 ## 🔒 Security
 
 ### Authentication
+
 - Django's built-in authentication system
 - Password reset functionality
 - Session management
 - CSRF protection
 
 ### Data Protection
+
 - Encrypted sensitive data
 - Secure API endpoints
 - Input validation and sanitization
@@ -239,6 +319,7 @@ docker-compose up -d
 ## 🧪 Testing
 
 ### Running Tests
+
 ```bash
 # Run all tests
 python richtato/manage.py test
@@ -252,6 +333,7 @@ coverage report
 ```
 
 ### Test Structure
+
 - Unit tests for models and utilities
 - Integration tests for API endpoints
 - Frontend tests for JavaScript components
@@ -260,6 +342,7 @@ coverage report
 ## 📈 Performance
 
 ### Optimization Strategies
+
 - **Database Indexing**: Optimized queries for large datasets
 - **Caching**: Redis caching for frequently accessed data
 - **Static Assets**: Minified CSS and JavaScript
@@ -267,6 +350,7 @@ coverage report
 - **Lazy Loading**: On-demand data loading
 
 ### Monitoring
+
 - **Application Metrics**: Performance monitoring
 - **Error Tracking**: Comprehensive error logging
 - **User Analytics**: Usage pattern analysis
@@ -274,6 +358,7 @@ coverage report
 ## 🤝 Contributing
 
 ### Development Workflow
+
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
@@ -281,6 +366,7 @@ coverage report
 5. Submit a pull request
 
 ### Code Standards
+
 - **Python**: PEP 8 style guide
 - **JavaScript**: ESLint configuration
 - **CSS**: Consistent naming conventions
@@ -293,11 +379,13 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🆘 Support
 
 ### Documentation
+
 - [User Guide](docs/user-guide.md)
 - [API Documentation](docs/api.md)
 - [Development Guide](docs/development.md)
 
 ### Community
+
 - [Issues](https://github.com/your-repo/issues)
 - [Discussions](https://github.com/your-repo/discussions)
 - [Wiki](https://github.com/your-repo/wiki)
@@ -305,6 +393,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🔄 Changelog
 
 ### Version 1.0.0
+
 - Initial release with core functionality
 - Expense and income tracking
 - Basic dashboard analytics
@@ -313,4 +402,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Richtato** - Take control of your financial future with intelligent insights and powerful analytics. 
+**Richtato** - Take control of your financial future with intelligent insights and powerful analytics.
