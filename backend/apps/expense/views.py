@@ -20,9 +20,9 @@ from rest_framework.views import APIView
 from richtato.views import BaseAPIView
 from statement_imports.cards.card_factory import CardStatement
 from statement_imports.ocr.extract import (
+    extract_receipt_fields,
     extract_statement_to_df,
     map_raw_table_to_standard,
-    extract_receipt_fields,
 )
 
 from .models import Expense
@@ -502,11 +502,43 @@ class ReceiptOCRCreateExpenseView(APIView):
         },
     )
     def post(self, request):
+        # Debug prints to troubleshoot CSRF/auth/file upload
+        try:
+            print(
+                "[ReceiptOCR] POST invoked",
+                {
+                    "is_authenticated": getattr(
+                        request.user, "is_authenticated", False
+                    ),
+                    "user": getattr(request.user, "id", None),
+                    "method": request.method,
+                    "content_type": request.META.get("CONTENT_TYPE"),
+                    "has_x_csrf_header": bool(request.headers.get("X-CSRFToken")),
+                    "cookie_csrf_present": bool(request.COOKIES.get("csrftoken")),
+                },
+            )
+        except Exception:
+            pass
+
         uploaded = request.FILES.get("file")
         account_id = request.data.get("account_id")
         category_id = request.data.get("category_id")
 
         if not uploaded or not account_id:
+            try:
+                print(
+                    "[ReceiptOCR] Missing required fields",
+                    {
+                        "has_file": bool(uploaded),
+                        "account_id": account_id,
+                        "data_keys": list(getattr(request.data, "keys", lambda: [])()),
+                        "files_keys": list(
+                            getattr(request.FILES, "keys", lambda: [])()
+                        ),
+                    },
+                )
+            except Exception:
+                pass
             return Response({"error": "file and account_id are required"}, status=400)
 
         # Persist uploaded file to a temp path
@@ -535,6 +567,13 @@ class ReceiptOCRCreateExpenseView(APIView):
 
         tmp_path = _save_uploaded_to_temp(uploaded)
         try:
+            try:
+                print(
+                    "[ReceiptOCR] Saved upload to temp",
+                    {"tmp_path": tmp_path, "filename": getattr(uploaded, "name", None)},
+                )
+            except Exception:
+                pass
             fields = extract_receipt_fields(tmp_path)
         finally:
             try:
@@ -566,6 +605,10 @@ class ReceiptOCRCreateExpenseView(APIView):
         total = fields.get("total")
         amount = float(total) if isinstance(total, (int, float)) else None
         if amount is None:
+            try:
+                print("[ReceiptOCR] Unable to detect total", {"fields": fields})
+            except Exception:
+                pass
             return Response(
                 {"error": "Unable to detect total from receipt"}, status=400
             )
@@ -583,6 +626,20 @@ class ReceiptOCRCreateExpenseView(APIView):
             "details": {"ocr": fields},
         }
 
+        try:
+            print(
+                "[ReceiptOCR] Creating Expense",
+                {
+                    "account": account.id,
+                    "category": getattr(category, "id", None),
+                    "amount": amount,
+                    "date": date_str,
+                    "description": description,
+                },
+            )
+        except Exception:
+            pass
+
         serializer = ExpenseSerializer(data=payload)
         if serializer.is_valid():
             instance = serializer.save(user=request.user)
@@ -593,4 +650,8 @@ class ReceiptOCRCreateExpenseView(APIView):
             return Response(data, status=status.HTTP_201_CREATED)
         else:
             logger.error(f"Receipt OCR create invalid: {serializer.errors}")
+            try:
+                print("[ReceiptOCR] Serializer invalid", {"errors": serializer.errors})
+            except Exception:
+                pass
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
