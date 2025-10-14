@@ -285,6 +285,7 @@ export function TransactionTable({
         ...(isIncome ? {} : { category: '' }),
       });
       setShowAddModal(false);
+      onRefresh();
     } catch (error) {
       console.error('Error creating transaction:', error);
       // You might want to show a toast notification here

@@ -64,7 +64,10 @@ export function PieWithDetailedLegend({
       </CardHeader>
       <CardContent className="overflow-y-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="relative h-80 flex items-center justify-center">
+          <div
+            className="relative flex items-center justify-center"
+            style={{ height }}
+          >
             <div className="w-full h-full">
               <BaseChart
                 key={chartKey}

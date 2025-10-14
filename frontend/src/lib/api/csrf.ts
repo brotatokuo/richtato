@@ -10,19 +10,20 @@ class CSRFService {
    */
   async getCSRFToken(): Promise<string> {
     if (this.token) {
-      return this.token;
+      return this.token as string;
     }
 
     try {
       // First, try to get from cookie (Django sets this automatically)
-      const cookieValue = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrftoken='))
-        ?.split('=')[1];
+      const cookieValue =
+        document.cookie
+          .split('; ')
+          .find(row => row.startsWith('csrftoken='))
+          ?.split('=')[1] || '';
 
       if (cookieValue) {
-        this.token = cookieValue;
-        return this.token;
+        this.token = cookieValue as string;
+        return cookieValue;
       }
 
       // If no cookie, try to get from Django endpoint
@@ -34,7 +35,7 @@ class CSRFService {
       if (response.ok) {
         const data = await response.json();
         this.token = data.csrfToken;
-        return this.token;
+        return data.csrfToken as string;
       }
     } catch (error) {
       console.warn('Failed to get CSRF token:', error);
