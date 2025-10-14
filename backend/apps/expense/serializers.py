@@ -7,7 +7,9 @@ class ExpenseSerializer(serializers.ModelSerializer):
     account_name = serializers.PrimaryKeyRelatedField(
         queryset=CardAccount.objects.all()
     )
-    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
+    category = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(), allow_null=True, required=False
+    )
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
 
     class Meta:

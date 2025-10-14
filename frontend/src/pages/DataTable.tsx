@@ -31,19 +31,17 @@ export function DataTable() {
       setError(null);
 
       // Load all data in parallel
-      const [incomeData, expenseData, accountsData, categoriesData] =
-        await Promise.all([
-          transactionsApiService.getIncomeTransactions(),
-          transactionsApiService.getExpenseTransactions(),
-          transactionsApiService.getAccounts(),
-          transactionsApiService.getCategories(),
-        ]);
+      const [incomeData, expenseData, expenseChoices] = await Promise.all([
+        transactionsApiService.getIncomeTransactions(),
+        transactionsApiService.getExpenseTransactions(),
+        transactionsApiService.getExpenseFieldChoices(),
+      ]);
 
       // Transform and set data
       setIncomeTransactions(incomeData.map(transformTransaction));
       setExpenseTransactions(expenseData.map(transformTransaction));
-      setAccounts(accountsData);
-      setCategories(categoriesData);
+      setAccounts(expenseChoices.accounts);
+      setCategories(expenseChoices.categories);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
       console.error('Error loading data:', err);

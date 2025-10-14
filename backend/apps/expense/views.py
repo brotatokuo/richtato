@@ -162,9 +162,27 @@ class ExpenseAPIView(BaseAPIView):
         Create a new expense entry.
         """
         logger.debug(f"Request data: {request.data}")
+        try:
+            print(
+                "[ExpensePOST] Incoming",
+                {
+                    "user": getattr(request.user, "id", None),
+                    "data": dict(request.data),
+                },
+            )
+        except Exception:
+            pass
         incoming = request.data.copy()
         account_value = incoming.pop("Account", None)
         category_value = incoming.pop("Category", None)
+
+        try:
+            print(
+                "[ExpensePOST] Raw Account/Category",
+                {"Account": account_value, "Category": category_value},
+            )
+        except Exception:
+            pass
 
         # Resolve account by id or name (scoped to user)
         account_obj = None
@@ -180,6 +198,25 @@ class ExpenseAPIView(BaseAPIView):
                     name=str(account_value), user=request.user
                 ).first()
 
+        try:
+            print(
+                "[ExpensePOST] Resolved Account",
+                {
+                    "found": bool(account_obj),
+                    "id": getattr(account_obj, "id", None),
+                    "name": getattr(account_obj, "name", None),
+                },
+            )
+        except Exception:
+            pass
+
+        # If an account was provided but couldn't be resolved, return a clear error
+        if account_value is not None and account_obj is None:
+            return Response(
+                {"Account": ["Account not found for user."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Resolve category by id or name (scoped to user)
         category_obj = None
         if category_value is not None:
@@ -192,6 +229,26 @@ class ExpenseAPIView(BaseAPIView):
                     name=str(category_value), user=request.user
                 ).first()
 
+        try:
+            print(
+                "[ExpensePOST] Resolved Category",
+                {
+                    "provided": category_value is not None,
+                    "found": bool(category_obj),
+                    "id": getattr(category_obj, "id", None),
+                    "name": getattr(category_obj, "name", None),
+                },
+            )
+        except Exception:
+            pass
+
+        # If a category was provided but couldn't be resolved, return a clear error
+        if category_value is not None and category_obj is None:
+            return Response(
+                {"Category": ["Category not found for user."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         payload = {
             **incoming,
             "user": request.user.id,
@@ -199,11 +256,23 @@ class ExpenseAPIView(BaseAPIView):
             "category": getattr(category_obj, "id", None),
         }
         logger.debug(f"Modified data: {payload}")
+        try:
+            print(
+                "[ExpensePOST] Payload",
+                {k: (v if k != "details" else "<details>") for k, v in payload.items()},
+            )
+        except Exception:
+            pass
 
         serializer = ExpenseSerializer(data=payload)
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+        try:
+            print("[ExpensePOST] Serializer errors", serializer.errors)
+        except Exception:
+            pass
+        logger.error(f"Serializer errors: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @swagger_auto_schema(

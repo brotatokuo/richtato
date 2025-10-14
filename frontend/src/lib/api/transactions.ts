@@ -27,6 +27,16 @@ export interface Category {
   type: string;
 }
 
+export interface FieldChoiceItem {
+  value: number;
+  label: string;
+}
+
+export interface ExpenseFieldChoicesResponse {
+  account: FieldChoiceItem[];
+  category: FieldChoiceItem[];
+}
+
 export interface Budget {
   id: number;
   category: string;
@@ -278,6 +288,34 @@ class TransactionsApiService {
 
     const data = await this.handleResponse<{ results: Category[] }>(response);
     return data.results || [];
+  }
+
+  /**
+   * Get expense field choices (CardAccounts and Categories)
+   */
+  async getExpenseFieldChoices(): Promise<{
+    accounts: Account[];
+    categories: Category[];
+  }> {
+    const response = await fetch(`${this.baseUrl}/expense/field-choices/`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
+
+    const data =
+      await this.handleResponse<ExpenseFieldChoicesResponse>(response);
+    const accounts: Account[] = (data.account || []).map(item => ({
+      id: item.value,
+      name: item.label,
+      type: 'card',
+    }));
+    const categories: Category[] = (data.category || []).map(item => ({
+      id: item.value,
+      name: item.label,
+      type: 'expense',
+    }));
+    return { accounts, categories };
   }
 
   /**
