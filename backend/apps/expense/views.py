@@ -162,14 +162,45 @@ class ExpenseAPIView(BaseAPIView):
         Create a new expense entry.
         """
         logger.debug(f"Request data: {request.data}")
-        # HACK
-        modified_data = request.data.copy()
-        modified_data["account_name"] = modified_data.pop("Account", None)
-        modified_data["category"] = modified_data.pop("Category", None)
-        modified_data["user"] = request.user.id
-        logger.debug(f"Modified data: {modified_data}")
+        incoming = request.data.copy()
+        account_value = incoming.pop("Account", None)
+        category_value = incoming.pop("Category", None)
 
-        serializer = ExpenseSerializer(data=modified_data)
+        # Resolve account by id or name (scoped to user)
+        account_obj = None
+        if account_value is not None:
+            try:
+                # Try as ID first
+                account_obj = CardAccount.objects.get(
+                    id=int(account_value), user=request.user
+                )
+            except Exception:
+                # Fallback by name
+                account_obj = CardAccount.objects.filter(
+                    name=str(account_value), user=request.user
+                ).first()
+
+        # Resolve category by id or name (scoped to user)
+        category_obj = None
+        if category_value is not None:
+            try:
+                category_obj = Category.objects.get(
+                    id=int(category_value), user=request.user
+                )
+            except Exception:
+                category_obj = Category.objects.filter(
+                    name=str(category_value), user=request.user
+                ).first()
+
+        payload = {
+            **incoming,
+            "user": request.user.id,
+            "account_name": getattr(account_obj, "id", None),
+            "category": getattr(category_obj, "id", None),
+        }
+        logger.debug(f"Modified data: {payload}")
+
+        serializer = ExpenseSerializer(data=payload)
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)

@@ -95,14 +95,44 @@ class IncomeAPIView(BaseAPIView):
         Create a new Income entry.
         """
         logger.debug(f"Request data: {request.data}")
-        # Align with expense POST: accept Account name and map to serializer
-        data = request.data.copy()
-        data["user"] = request.user.id
-        serializer = IncomeSerializer(data=data)
+        # Accept 'Account' as id or name, resolve to user's Account, pass id to serializer
+        incoming = request.data.copy()
+        account_value = incoming.pop("Account", None)
+
+        account_obj = None
+        if account_value is not None:
+            try:
+                # Try as ID first (scoped to user)
+                account_obj = Account.objects.get(
+                    id=int(account_value), user=request.user
+                )
+            except Exception:
+                # Fallback by name (scoped to user)
+                account_obj = Account.objects.filter(
+                    name=str(account_value), user=request.user
+                ).first()
+
+        if account_obj is None:
+            return Response(
+                {"Account": ["Account not found for user."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        payload = {
+            **incoming,
+            "user": request.user.id,
+            # IncomeSerializer expects 'Account' (maps to account_name via source)
+            "Account": account_obj.id,
+        }
+        logger.debug(f"Modified data: {payload}")
+
+        serializer = IncomeSerializer(data=payload)
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            logger.error(f"Serializer errors: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request, pk):
         """
