@@ -1,6 +1,7 @@
 /**
  * Transactions API service for fetching income and expense data
  */
+import { csrfService } from './csrf';
 
 export interface Transaction {
   id: number;
@@ -65,10 +66,8 @@ class TransactionsApiService {
     startDate?: string; // YYYY-MM-DD
     endDate?: string; // YYYY-MM-DD
   }): Promise<Transaction[]> {
-    const url = new URL(
-      `${this.baseUrl}/income/api/incomes/`,
-      window.location.origin
-    );
+    const url = new URL(`${this.baseUrl}/income/`, window.location.origin);
+    console.debug('[TransactionsApi] GET', url.toString());
     if (input?.limit) {
       url.searchParams.append('limit', input.limit.toString());
     }
@@ -94,10 +93,8 @@ class TransactionsApiService {
     startDate?: string; // YYYY-MM-DD
     endDate?: string; // YYYY-MM-DD
   }): Promise<Transaction[]> {
-    const url = new URL(
-      `${this.baseUrl}/expense/api/expenses/`,
-      window.location.origin
-    );
+    const url = new URL(`${this.baseUrl}/expense/`, window.location.origin);
+    console.debug('[TransactionsApi] GET', url.toString());
     if (input?.limit) {
       url.searchParams.append('limit', input.limit.toString());
     }
@@ -289,9 +286,12 @@ class TransactionsApiService {
   async createIncomeTransaction(
     transaction: Partial<Transaction>
   ): Promise<Transaction> {
-    const response = await fetch(`${this.baseUrl}/incomes/`, {
+    const url = `${this.baseUrl}/income/`;
+    console.debug('[TransactionsApi] POST', url, transaction);
+    const headers = await csrfService.getHeaders();
+    const response = await fetch(url, {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers,
       credentials: 'include',
       body: JSON.stringify(transaction),
     });
@@ -305,9 +305,12 @@ class TransactionsApiService {
   async createExpenseTransaction(
     transaction: Partial<Transaction>
   ): Promise<Transaction> {
-    const response = await fetch(`${this.baseUrl}/expenses/`, {
+    const url = `${this.baseUrl}/expense/`;
+    console.debug('[TransactionsApi] POST', url, transaction);
+    const headers = await csrfService.getHeaders();
+    const response = await fetch(url, {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers,
       credentials: 'include',
       body: JSON.stringify(transaction),
     });
@@ -330,15 +333,19 @@ class TransactionsApiService {
       formData.append('category_id', String(input.categoryId));
     }
 
-    const response = await fetch(
-      `${this.baseUrl}/expense/api/expenses/receipt-ocr-create/`,
-      {
-        method: 'POST',
-        // Note: omit JSON headers; browser sets multipart boundaries automatically
-        credentials: 'include',
-        body: formData,
-      }
-    );
+    const url = `${this.baseUrl}/expense/receipt-ocr-create/`;
+    const token = await csrfService.getCSRFToken().catch(() => '');
+    console.debug('[TransactionsApi] POST (multipart)', url, {
+      accountId: input.accountId,
+      categoryId: input.categoryId,
+      hasFile: !!input.file,
+    });
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: token ? { 'X-CSRFToken': token } : undefined,
+      credentials: 'include',
+      body: formData,
+    });
     return this.handleResponse(response);
   }
 

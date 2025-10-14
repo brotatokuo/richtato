@@ -1,6 +1,6 @@
 import subprocess
 import tempfile
-from typing import List, Optional, Tuple, Dict, Any
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 import pdfplumber
@@ -392,8 +392,9 @@ def extract_receipt_fields(path: str) -> Dict[str, Any]:
             lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
 
     import re
-    import pandas as pd
     from datetime import date as _date
+
+    import pandas as pd
 
     # Total amount
     total = None

@@ -40,12 +40,6 @@ export function TransactionForm({
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {!isIncome && (
-          <div className="md:col-span-2">
-            <Label htmlFor={`${type}-receipt`}>Receipt (optional)</Label>
-            <Input id={`${type}-receipt`} type="file" accept="image/*,.pdf" />
-          </div>
-        )}
         <div>
           <Label htmlFor={`${type}-description`}>Description</Label>
           <Input

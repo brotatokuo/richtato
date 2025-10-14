@@ -95,7 +95,10 @@ class IncomeAPIView(BaseAPIView):
         Create a new Income entry.
         """
         logger.debug(f"Request data: {request.data}")
-        serializer = IncomeSerializer(data=request.data)
+        # Align with expense POST: accept Account name and map to serializer
+        data = request.data.copy()
+        data["user"] = request.user.id
+        serializer = IncomeSerializer(data=data)
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
