@@ -394,9 +394,10 @@ class TransactionsApiService {
     id: number,
     transaction: Partial<Transaction>
   ): Promise<Transaction> {
-    const response = await fetch(`${this.baseUrl}/incomes/${id}/`, {
+    const headers = await csrfService.getHeaders();
+    const response = await fetch(`${this.baseUrl}/income/${id}/`, {
       method: 'PATCH',
-      headers: this.getHeaders(),
+      headers,
       credentials: 'include',
       body: JSON.stringify(transaction),
     });
@@ -411,9 +412,10 @@ class TransactionsApiService {
     id: number,
     transaction: Partial<Transaction>
   ): Promise<Transaction> {
-    const response = await fetch(`${this.baseUrl}/expenses/${id}/`, {
+    const headers = await csrfService.getHeaders();
+    const response = await fetch(`${this.baseUrl}/expense/${id}/`, {
       method: 'PATCH',
-      headers: this.getHeaders(),
+      headers,
       credentials: 'include',
       body: JSON.stringify(transaction),
     });
@@ -425,9 +427,10 @@ class TransactionsApiService {
    * Delete an income transaction
    */
   async deleteIncomeTransaction(id: number): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/incomes/${id}/`, {
+    const headers = await csrfService.getHeaders();
+    const response = await fetch(`${this.baseUrl}/income/${id}/`, {
       method: 'DELETE',
-      headers: this.getHeaders(),
+      headers,
       credentials: 'include',
     });
 
@@ -442,9 +445,10 @@ class TransactionsApiService {
    * Delete an expense transaction
    */
   async deleteExpenseTransaction(id: number): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/expenses/${id}/`, {
+    const headers = await csrfService.getHeaders();
+    const response = await fetch(`${this.baseUrl}/expense/${id}/`, {
       method: 'DELETE',
-      headers: this.getHeaders(),
+      headers,
       credentials: 'include',
     });
 

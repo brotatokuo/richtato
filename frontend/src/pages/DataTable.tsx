@@ -17,7 +17,8 @@ export function DataTable() {
   const [expenseTransactions, setExpenseTransactions] = useState<
     DisplayTransaction[]
   >([]);
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [incomeAccounts, setIncomeAccounts] = useState<Account[]>([]);
+  const [expenseAccounts, setExpenseAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,16 +32,19 @@ export function DataTable() {
       setError(null);
 
       // Load all data in parallel
-      const [incomeData, expenseData, expenseChoices] = await Promise.all([
-        transactionsApiService.getIncomeTransactions(),
-        transactionsApiService.getExpenseTransactions(),
-        transactionsApiService.getExpenseFieldChoices(),
-      ]);
+      const [incomeData, expenseData, expenseChoices, incomeAccts] =
+        await Promise.all([
+          transactionsApiService.getIncomeTransactions(),
+          transactionsApiService.getExpenseTransactions(),
+          transactionsApiService.getExpenseFieldChoices(),
+          transactionsApiService.getAccounts(),
+        ]);
 
       // Transform and set data
       setIncomeTransactions(incomeData.map(transformTransaction));
       setExpenseTransactions(expenseData.map(transformTransaction));
-      setAccounts(expenseChoices.accounts);
+      setExpenseAccounts(expenseChoices.accounts);
+      setIncomeAccounts(incomeAccts);
       setCategories(expenseChoices.categories);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -104,7 +108,7 @@ export function DataTable() {
                 type="income"
                 transactions={incomeTransactions}
                 onTransactionsChange={setIncomeTransactions}
-                accounts={accounts}
+                accounts={incomeAccounts}
                 categories={categories}
                 loading={loading}
                 onRefresh={loadData}
@@ -116,7 +120,7 @@ export function DataTable() {
                 type="expense"
                 transactions={expenseTransactions}
                 onTransactionsChange={setExpenseTransactions}
-                accounts={accounts}
+                accounts={expenseAccounts}
                 categories={categories}
                 loading={loading}
                 onRefresh={loadData}
@@ -133,7 +137,7 @@ export function DataTable() {
               type="income"
               transactions={incomeTransactions}
               onTransactionsChange={setIncomeTransactions}
-              accounts={accounts}
+              accounts={incomeAccounts}
               categories={categories}
               loading={loading}
               onRefresh={loadData}
@@ -148,7 +152,7 @@ export function DataTable() {
               type="expense"
               transactions={expenseTransactions}
               onTransactionsChange={setExpenseTransactions}
-              accounts={accounts}
+              accounts={expenseAccounts}
               categories={categories}
               loading={loading}
               onRefresh={loadData}

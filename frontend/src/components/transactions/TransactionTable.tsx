@@ -37,7 +37,7 @@ import {
   TrendingDown,
   TrendingUp,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 
 const getLocalDateString = (): string => {
   const now = new Date();
@@ -65,6 +65,7 @@ export function TransactionTable({
   const [filterCategory, setFilterCategory] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [sortField, setSortField] = useState<keyof DisplayTransaction>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
@@ -96,6 +97,17 @@ export function TransactionTable({
   const IconComponent = icon;
 
   const [formData, setFormData] = useState<TransactionFormData>({
+    description: '',
+    date: getLocalDateString(),
+    amount: '',
+    account_name: '',
+    ...(isIncome ? {} : { category: '' }),
+  });
+
+  // Edit modal state
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<DisplayTransaction | null>(null);
+  const [editFormData, setEditFormData] = useState<TransactionFormData>({
     description: '',
     date: getLocalDateString(),
     amount: '',
@@ -332,6 +344,109 @@ export function TransactionTable({
       onRefresh();
     } catch (error) {
       console.error('Error uploading receipt:', error);
+    }
+  };
+
+  const openEditModal = (t: DisplayTransaction) => {
+    setSelectedTransaction(t);
+    setEditFormData({
+      description: t.description,
+      date: t.date,
+      amount: Math.abs(t.amount).toString(),
+      account_name: t.account,
+      ...(isIncome ? {} : { category: t.category || '' }),
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTransaction) return;
+    try {
+      const account = accounts.find(
+        acc => acc.name === editFormData.account_name
+      );
+      if (!account) throw new Error('Account not found');
+
+      let payload: any;
+      if (isIncome) {
+        // Income expects Account as primary key id
+        payload = {
+          description: editFormData.description,
+          date: editFormData.date,
+          amount: parseFloat(editFormData.amount),
+          Account: account.id,
+        };
+      } else {
+        // Expense expects account_name (id) and optional category (id)
+        const categoryId = editFormData.category
+          ? categories.find(cat => cat.name === editFormData.category)?.id
+          : undefined;
+        payload = {
+          description: editFormData.description,
+          date: editFormData.date,
+          amount: parseFloat(editFormData.amount),
+          account_name: account.id,
+          ...(categoryId !== undefined ? { category: categoryId } : {}),
+        };
+      }
+
+      const idNum = Number(selectedTransaction.id);
+      let updated: Transaction;
+      if (isIncome) {
+        updated = await transactionsApiService.updateIncomeTransaction(
+          idNum,
+          payload
+        );
+      } else {
+        updated = await transactionsApiService.updateExpenseTransaction(
+          idNum,
+          payload
+        );
+      }
+
+      // Enrich with names for consistent display mapping
+      const enriched = (
+        isIncome
+          ? { ...updated, Account: account.name }
+          : {
+              ...updated,
+              Account: account.name,
+              Category: editFormData.category || selectedTransaction.category,
+            }
+      ) as any;
+      const transformed = transformTransaction(enriched);
+      const next = transactions.map(t =>
+        t.id === selectedTransaction.id ? transformed : t
+      );
+      onTransactionsChange(next);
+
+      setShowEditModal(false);
+      setSelectedTransaction(null);
+      onRefresh();
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedTransaction) return;
+    const confirmDelete = window.confirm('Delete this transaction?');
+    if (!confirmDelete) return;
+    try {
+      const idNum = Number(selectedTransaction.id);
+      if (isIncome) {
+        await transactionsApiService.deleteIncomeTransaction(idNum);
+      } else {
+        await transactionsApiService.deleteExpenseTransaction(idNum);
+      }
+      const next = transactions.filter(t => t.id !== selectedTransaction.id);
+      onTransactionsChange(next);
+      setShowEditModal(false);
+      setSelectedTransaction(null);
+      onRefresh();
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
     }
   };
 
@@ -709,9 +824,16 @@ export function TransactionTable({
                     </TableRow>
                   ) : (
                     paginatedTransactions.map((transaction, index) => (
-                      <TableRow key={`${transaction.id}-${index}`}>
+                      <TableRow
+                        key={`${transaction.id}-${index}`}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => openEditModal(transaction)}
+                        title="Click to edit"
+                      >
                         {getTableHeaders().map(header => (
-                          <>{renderTableCell(transaction, header.field)}</>
+                          <Fragment key={String(header.field)}>
+                            {renderTableCell(transaction, header.field)}
+                          </Fragment>
                         ))}
                       </TableRow>
                     ))
@@ -751,6 +873,40 @@ export function TransactionTable({
         onSelect={handleFilterSelect}
         title={contextMenu.title}
       />
+
+      {/* Edit Modal */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedTransaction(null);
+        }}
+        title={`Edit ${isIncome ? 'Income' : 'Expense'}`}
+      >
+        <TransactionForm
+          type={type}
+          formData={editFormData}
+          onFormChange={setEditFormData}
+          onSubmit={handleEditSubmit}
+          onCancel={() => {
+            setShowEditModal(false);
+            setSelectedTransaction(null);
+          }}
+          accounts={accounts}
+          categories={categories}
+          submitLabel="Save changes"
+        />
+        <div className="mt-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="text-red-600 border-red-600 hover:bg-red-50"
+            onClick={handleDelete}
+          >
+            Delete {isIncome ? 'Income' : 'Expense'}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
