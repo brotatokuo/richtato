@@ -38,7 +38,7 @@ class TransactionsApiService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = 'http://localhost:8000/api';
+    this.baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
   }
 
   private getHeaders(): HeadersInit {

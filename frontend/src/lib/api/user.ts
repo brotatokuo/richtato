@@ -139,7 +139,7 @@ export interface CategoryCatalogItem {
 }
 
 export class CategorySettingsApi {
-  private baseUrl = 'http://localhost:8000/api/auth/category-settings';
+  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/category-settings`;
 
   private async getHeaders(): Promise<HeadersInit> {
     const headers = await csrfService.getHeaders();
@@ -187,7 +187,7 @@ export interface CardAccountItem {
 }
 
 class CardsApiService {
-  private baseUrl = 'http://localhost:8000/api/auth/card-accounts';
+  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/card-accounts`;
 
   async list(): Promise<CardAccountItem[]> {
     const res = await fetch(`${this.baseUrl}/`, {
@@ -248,7 +248,7 @@ export interface UserPreferencesPayload {
 }
 
 class PreferencesApiService {
-  private baseUrl = 'http://localhost:8000/api/auth/preferences';
+  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/preferences`;
 
   async get(): Promise<UserPreferencesPayload> {
     const res = await fetch(`${this.baseUrl}/`, {

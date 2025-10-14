@@ -37,7 +37,7 @@ ALLOWED_HOSTS = [
     "backend",
     "frontend",
     "richtato.onrender.com",
-    "richtato-dev.onrender.com",
+    "richtato-react.onrender.com",
 ]
 
 CSRF_TRUSTED_ORIGINS = [

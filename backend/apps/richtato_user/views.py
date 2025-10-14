@@ -21,7 +21,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, JsonResponse
 from django.middleware.csrf import get_token
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -400,9 +400,9 @@ class UserPreferenceAPIView(APIView):
 
 
 # CSRF Token endpoint
-@csrf_exempt
+@ensure_csrf_cookie
 def get_csrf_token(request):
-    """Get CSRF token for frontend"""
+    """Get CSRF token for frontend and ensure csrftoken cookie is set"""
     token = get_token(request)
     return JsonResponse({"csrfToken": token})
 

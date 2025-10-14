@@ -73,9 +73,8 @@ class AuthApiService {
   private token: string | null = null;
 
   constructor() {
-    // Use environment variable or default to localhost
-    this.baseUrl =
-      import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+    // Use environment variable or default to in-cluster /api (nginx proxy)
+    this.baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
 
     // Load token from localStorage on initialization
     this.token = this.getStoredToken();

@@ -48,7 +48,8 @@ class DashboardApiService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = 'http://localhost:8000/api/dashboard';
+    const root = import.meta.env.VITE_API_BASE_URL || '/api';
+    this.baseUrl = `${root}/dashboard`;
   }
 
   private getHeaders(): HeadersInit {
