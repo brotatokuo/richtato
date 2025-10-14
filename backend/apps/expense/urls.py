@@ -6,6 +6,7 @@ from .views import (
     ExpenseGraphAPIView,
     CategorizeTransactionView,
     ImportStatementsView,
+    ReceiptOCRCreateExpenseView,
 )
 
 page_name = "expenses"
@@ -18,4 +19,7 @@ urlpatterns = [
         f"api/{page_name}/categorize-transaction/", CategorizeTransactionView.as_view()
     ),  # Post
     path(f"api/{page_name}/import-statements/", ImportStatementsView.as_view()),  # Post
+    path(
+        f"api/{page_name}/receipt-ocr-create/", ReceiptOCRCreateExpenseView.as_view()
+    ),  # Post
 ]

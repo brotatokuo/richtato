@@ -22,6 +22,7 @@ from statement_imports.cards.card_factory import CardStatement
 from statement_imports.ocr.extract import (
     extract_statement_to_df,
     map_raw_table_to_standard,
+    extract_receipt_fields,
 )
 
 from .models import Expense
@@ -467,3 +468,129 @@ class ImportStatementsView(APIView):
                 )
 
         return Response({"message": "File processed successfully."})
+
+
+class ReceiptOCRCreateExpenseView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Upload a receipt and create an expense",
+        operation_description=(
+            "Upload a receipt image or PDF. The server runs OCR to extract merchant, date,"
+            " and total, then creates an expense. Provide account_id and optionally category_id."
+        ),
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "file": openapi.Schema(
+                    type=openapi.TYPE_FILE, description="Receipt file"
+                ),
+                "account_id": openapi.Schema(
+                    type=openapi.TYPE_INTEGER,
+                    description="CardAccount ID",
+                    format="int32",
+                ),
+                "category_id": openapi.Schema(
+                    type=openapi.TYPE_INTEGER, description="Category ID", format="int32"
+                ),
+            },
+            required=["file", "account_id"],
+        ),
+        responses={
+            201: openapi.Response("Created"),
+            400: openapi.Response("Bad Request"),
+        },
+    )
+    def post(self, request):
+        uploaded = request.FILES.get("file")
+        account_id = request.data.get("account_id")
+        category_id = request.data.get("category_id")
+
+        if not uploaded or not account_id:
+            return Response({"error": "file and account_id are required"}, status=400)
+
+        # Persist uploaded file to a temp path
+        def _save_uploaded_to_temp(uploaded_file):
+            import os
+            import tempfile
+
+            suffix = ""
+            try:
+                name = getattr(uploaded_file, "name", "") or ""
+                _, ext = os.path.splitext(name)
+                suffix = ext if ext else ""
+            except Exception:
+                suffix = ""
+
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+            for chunk in (
+                uploaded_file.chunks()
+                if hasattr(uploaded_file, "chunks")
+                else [uploaded_file.read()]
+            ):
+                tmp.write(chunk)
+            tmp.flush()
+            tmp.close()
+            return tmp.name
+
+        tmp_path = _save_uploaded_to_temp(uploaded)
+        try:
+            fields = extract_receipt_fields(tmp_path)
+        finally:
+            try:
+                import os
+
+                os.remove(tmp_path)
+            except Exception:
+                pass
+
+        # Resolve account and category
+        try:
+            account = CardAccount.objects.get(id=account_id, user=request.user)
+        except CardAccount.DoesNotExist:
+            return Response({"error": "Account not found"}, status=400)
+
+        if category_id:
+            try:
+                category = Category.objects.get(id=category_id, user=request.user)
+            except Category.DoesNotExist:
+                return Response({"error": "Category not found"}, status=400)
+        else:
+            category = Category.objects.filter(
+                user=request.user, name="Unknown"
+            ).first()
+
+        # Build payload for serializer
+        description = fields.get("merchant") or "Receipt"
+        date_str = fields.get("date")
+        total = fields.get("total")
+        amount = float(total) if isinstance(total, (int, float)) else None
+        if amount is None:
+            return Response(
+                {"error": "Unable to detect total from receipt"}, status=400
+            )
+
+        # Expenses are negative in import pipeline; store negative amount
+        amount = -abs(amount)
+
+        payload = {
+            "user": request.user.id,
+            "amount": amount,
+            "date": date_str,
+            "description": description,
+            "account_name": account.id,
+            "category": category.id if category else None,
+            "details": {"ocr": fields},
+        }
+
+        serializer = ExpenseSerializer(data=payload)
+        if serializer.is_valid():
+            instance = serializer.save(user=request.user)
+            data = serializer.data
+            # Enrich with Account/Category names for frontend convenience
+            data["Account"] = account.name
+            data["Category"] = category.name if category else None
+            return Response(data, status=status.HTTP_201_CREATED)
+        else:
+            logger.error(f"Receipt OCR create invalid: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

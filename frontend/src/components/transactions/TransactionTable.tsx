@@ -266,10 +266,33 @@ export function TransactionTable({
         newTransaction =
           await transactionsApiService.createIncomeTransaction(transactionData);
       } else {
-        newTransaction =
-          await transactionsApiService.createExpenseTransaction(
-            transactionData
-          );
+        // Check if a file is present for OCR path
+        const fileInput = document.getElementById(
+          `${type}-receipt`
+        ) as HTMLInputElement | null;
+        const file = fileInput?.files?.[0];
+        if (file) {
+          // Use OCR endpoint when a receipt is provided
+          const created = await transactionsApiService.uploadReceiptAndCreateExpense({
+            file,
+            accountId: account.id,
+            categoryId,
+          });
+          // Map to Transaction shape
+          newTransaction = {
+            id: created.id,
+            description: created.description,
+            date: created.date,
+            amount: created.amount,
+            Account: created.Account,
+            Category: created.Category,
+          } as Transaction;
+        } else {
+          newTransaction =
+            await transactionsApiService.createExpenseTransaction(
+              transactionData
+            );
+        }
       }
 
       // Transform and add to local state

@@ -1,6 +1,6 @@
 import subprocess
 import tempfile
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any
 
 import pandas as pd
 import pdfplumber
@@ -18,6 +18,25 @@ try:
 except Exception:
     # If HEIF support is not available, HEIC files won't be supported
     pillow_heif = None
+
+
+# Optional PaddleOCR support for better receipt OCR
+_paddle_ocr = None
+try:  # pragma: no cover
+    from paddleocr import PaddleOCR  # type: ignore
+
+    def _get_paddle_ocr():
+        global _paddle_ocr
+        if _paddle_ocr is None:
+            # Initialize once; English by default
+            _paddle_ocr = PaddleOCR(use_angle_cls=True, lang="en")
+        return _paddle_ocr
+
+except Exception:  # pragma: no cover
+    PaddleOCR = None  # type: ignore
+
+    def _get_paddle_ocr():  # type: ignore
+        return None
 
 
 def _has_text_layer(pdf_path: str) -> bool:
@@ -262,16 +281,31 @@ def extract_image_to_df(path: str) -> pd.DataFrame:
     using line parsing for dates and amounts.
     Returns a DataFrame with generic columns that can be mapped by caller.
     """
-    if pytesseract is None:
-        raise ImportError(
-            "pytesseract is required for image OCR. Install it or avoid image OCR endpoints during setup."
-        )
+    # Prefer PaddleOCR if available; fallback to pytesseract
+    ocr = _get_paddle_ocr()
+    lines: List[str] = []
+    if ocr is not None:
+        try:
+            result = ocr.ocr(path, cls=True)
+            for page in result:
+                for _, (box, (text, conf)) in enumerate(page):
+                    if conf is None or conf < 0.5:
+                        continue
+                    if text:
+                        lines.append(str(text).strip())
+        except Exception:
+            # fallback
+            ocr = None
 
-    img = _open_image_any(path)
-    proc = _preprocess_for_ocr(img)
-    text = pytesseract.image_to_string(proc)
-
-    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    if ocr is None:
+        if pytesseract is None:
+            raise ImportError(
+                "Neither PaddleOCR nor pytesseract available for image OCR. Install paddleocr or pytesseract."
+            )
+        img = _open_image_any(path)
+        proc = _preprocess_for_ocr(img)
+        text = pytesseract.image_to_string(proc)
+        lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
     # Heuristics: capture lines containing a date and an amount
     candidates: List[List[Optional[str]]] = []
     for ln in lines:
@@ -303,3 +337,108 @@ def extract_image_to_df(path: str) -> pd.DataFrame:
 
     df = pd.DataFrame(candidates, columns=["date_col", "desc_col", "amount_col"])
     return df
+
+
+def extract_receipt_fields(path: str) -> Dict[str, Any]:
+    """
+    Extract key fields from a receipt image/PDF using PaddleOCR if available,
+    falling back to pytesseract. Returns dict with merchant, date, total, lines.
+    """
+    # For PDFs, ensure they are searchable then rasterize via pdfplumber for text lines
+    if path.lower().endswith(".pdf"):
+        searchable = ocr_pdf_if_needed(path)
+        # Try to extract text lines via pdfplumber first
+        lines: List[str] = []
+        try:
+            with pdfplumber.open(searchable) as pdf:
+                for page in pdf.pages:
+                    try:
+                        txt = page.extract_text() or ""
+                        lines.extend(
+                            [ln.strip() for ln in txt.splitlines() if ln.strip()]
+                        )
+                    except Exception:
+                        continue
+        except Exception:
+            lines = []
+        # If no lines from text layer, fall back to image OCR path
+        if not lines:
+            return extract_receipt_fields(
+                searchable.replace(".pdf", "")
+            )  # naive fallback
+    else:
+        # Image path: use OCR engines
+        ocr = _get_paddle_ocr()
+        lines = []
+        if ocr is not None:
+            try:
+                result = ocr.ocr(path, cls=True)
+                for page in result:
+                    for _, (box, (text, conf)) in enumerate(page):
+                        if conf is None or conf < 0.5:
+                            continue
+                        if text:
+                            lines.append(str(text).strip())
+            except Exception:
+                ocr = None
+        if ocr is None:
+            if pytesseract is None:
+                raise ImportError(
+                    "Neither PaddleOCR nor pytesseract available for image OCR. Install paddleocr or pytesseract."
+                )
+            img = _open_image_any(path)
+            proc = _preprocess_for_ocr(img)
+            text = pytesseract.image_to_string(proc)
+            lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+
+    import re
+    import pandas as pd
+    from datetime import date as _date
+
+    # Total amount
+    total = None
+    for pat in [
+        r"total\s*[:\-]?\s*\$?\s*([0-9]+(?:\.[0-9]{2})?)",
+        r"amount\s*due\s*[:\-]?\s*\$?\s*([0-9]+(?:\.[0-9]{2})?)",
+        r"balance\s*due\s*[:\-]?\s*\$?\s*([0-9]+(?:\.[0-9]{2})?)",
+    ]:
+        joined = "\n".join(lines)
+        m = re.search(pat, joined, flags=re.I)
+        if m:
+            try:
+                total = float(m.group(1))
+                break
+            except Exception:
+                pass
+
+    # Date
+    parsed_date = None
+    for ln in lines:
+        m = re.search(
+            r"(\d{4}[\/\-\._]\d{1,2}[\/\-\._]\d{1,2}|\d{1,2}[\/\-\._]\d{1,2}[\/\-\._]\d{2,4})",
+            ln,
+        )
+        if m:
+            try:
+                parsed_date = str(pd.to_datetime(m.group(1), errors="raise").date())
+                break
+            except Exception:
+                continue
+    if parsed_date is None:
+        parsed_date = str(_date.today())
+
+    # Merchant: first non-header line
+    merchant = None
+    for ln in lines[:5]:
+        if len(ln) >= 2 and not re.search(
+            r"(receipt|invoice|total|tax|amount|date)", ln, re.I
+        ):
+            merchant = ln
+            break
+
+    return {
+        "merchant": merchant,
+        "date": parsed_date,
+        "total": total,
+        "raw_lines": lines,
+    }

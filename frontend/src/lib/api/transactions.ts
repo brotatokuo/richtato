@@ -316,6 +316,33 @@ class TransactionsApiService {
   }
 
   /**
+   * Upload a receipt and create an expense via OCR
+   */
+  async uploadReceiptAndCreateExpense(input: {
+    file: File;
+    accountId: number;
+    categoryId?: number;
+  }): Promise<Transaction & { Account?: string; Category?: string }> {
+    const formData = new FormData();
+    formData.append('file', input.file);
+    formData.append('account_id', String(input.accountId));
+    if (input.categoryId !== undefined) {
+      formData.append('category_id', String(input.categoryId));
+    }
+
+    const response = await fetch(
+      `${this.baseUrl}/expense/api/expenses/receipt-ocr-create/`,
+      {
+        method: 'POST',
+        // Note: omit JSON headers; browser sets multipart boundaries automatically
+        credentials: 'include',
+        body: formData,
+      }
+    );
+    return this.handleResponse(response);
+  }
+
+  /**
    * Update an income transaction
    */
   async updateIncomeTransaction(
