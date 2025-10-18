@@ -687,8 +687,7 @@ class ReceiptOCRCreateExpenseView(APIView):
         description = fields.get("merchant") or "Receipt"
         date_str = fields.get("date")
         total = fields.get("total")
-        amount = float(total) if isinstance(total, (int, float)) else None
-        if amount is None:
+        if total is None:
             try:
                 print("[ReceiptOCR] Unable to detect total", {"fields": fields})
             except Exception:
@@ -697,12 +696,9 @@ class ReceiptOCRCreateExpenseView(APIView):
                 {"error": "Unable to detect total from receipt"}, status=400
             )
 
-        # Expenses are negative in import pipeline; store negative amount
-        amount = -abs(amount)
-
         payload = {
             "user": request.user.id,
-            "amount": amount,
+            "amount": total,
             "date": date_str,
             "description": description,
             "account_name": account.id,
@@ -716,7 +712,7 @@ class ReceiptOCRCreateExpenseView(APIView):
                 {
                     "account": account.id,
                     "category": getattr(category, "id", None),
-                    "amount": amount,
+                    "amount": total,
                     "date": date_str,
                     "description": description,
                 },
