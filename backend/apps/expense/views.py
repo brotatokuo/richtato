@@ -1,10 +1,10 @@
 import pytz
 from apps.expense.imports import ExpenseManager
+from apps.richtato_user.models import CardAccount, Category
 from apps.richtato_user.utils import (
     _get_line_graph_data_by_day,
     _get_line_graph_data_by_month,
 )
-from apps.settings.models import CardAccount, Category
 from artificial_intelligence.ai import OpenAI
 from django.db.models import F
 from django.shortcuts import get_object_or_404
@@ -179,96 +179,65 @@ class ExpenseAPIView(BaseAPIView):
         # Attach user for serializer validation
         modified_data["user"] = request.user.id
         logger.debug(f"Normalized data: {modified_data}")
+        # Support both account_name and account_id keys (prefer account_name)
+        account_id = modified_data.get("account_name") or modified_data.get(
+            "account_id"
+        )
+        category_id = modified_data.get("category") or modified_data.get("category_id")
 
-        try:
-            print(
-                "[ExpensePOST] Raw Account/Category",
-                {"Account": account_value, "Category": category_value},
-            )
-        except Exception:
-            pass
-
-        # Resolve account by id or name (scoped to user)
-        account_obj = None
-        if account_value is not None:
-            try:
-                # Try as ID first
-                account_obj = CardAccount.objects.get(
-                    id=int(account_value), user=request.user
-                )
-            except Exception:
-                # Fallback by name
-                account_obj = CardAccount.objects.filter(
-                    name=str(account_value), user=request.user
-                ).first()
-
-        try:
-            print(
-                "[ExpensePOST] Resolved Account",
-                {
-                    "found": bool(account_obj),
-                    "id": getattr(account_obj, "id", None),
-                    "name": getattr(account_obj, "name", None),
-                },
-            )
-        except Exception:
-            pass
-
-        # If an account was provided but couldn't be resolved, return a clear error
-        if account_value is not None and account_obj is None:
+        if account_id is None:
             return Response(
-                {"Account": ["Account not found for user."]},
+                {"account_name": ["This field is required."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Resolve category by id or name (scoped to user)
-        category_obj = None
-        if category_value is not None:
-            try:
-                category_obj = Category.objects.get(
-                    id=int(category_value), user=request.user
-                )
-            except Exception:
-                category_obj = Category.objects.filter(
-                    name=str(category_value), user=request.user
-                ).first()
-
+        # Coerce IDs to int and validate ownership
         try:
-            print(
-                "[ExpensePOST] Resolved Category",
-                {
-                    "provided": category_value is not None,
-                    "found": bool(category_obj),
-                    "id": getattr(category_obj, "id", None),
-                    "name": getattr(category_obj, "name", None),
-                },
-            )
-        except Exception:
-            pass
-
-        # If a category was provided but couldn't be resolved, return a clear error
-        if category_value is not None and category_obj is None:
+            account_id = int(account_id)
+        except (TypeError, ValueError):
             return Response(
-                {"Category": ["Category not found for user."]},
+                {"account_name": ["Must be an integer ID."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        payload = {
-            **incoming,
-            "user": request.user.id,
-            "account_name": getattr(account_obj, "id", None),
-            "category": getattr(category_obj, "id", None),
-        }
-        logger.debug(f"Modified data: {payload}")
+        if not CardAccount.objects.filter(id=account_id, user=request.user).exists():
+            return Response(
+                {"account_name": ["Account not found for user."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if category_id is not None:
+            try:
+                category_id = int(category_id)
+            except (TypeError, ValueError):
+                return Response(
+                    {"category": ["Must be an integer ID."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if not Category.objects.filter(id=category_id, user=request.user).exists():
+                return Response(
+                    {"category": ["Category not found for user."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        # Normalize payload for serializer
+        modified_data["account_name"] = account_id
+        if category_id is not None:
+            modified_data["category"] = category_id
+
+        logger.debug(f"Modified data: {modified_data}")
         try:
             print(
                 "[ExpensePOST] Payload",
-                {k: (v if k != "details" else "<details>") for k, v in payload.items()},
+                {
+                    k: (v if k != "details" else "<details>")
+                    for k, v in modified_data.items()
+                },
             )
         except Exception:
             pass
 
-        serializer = ExpenseSerializer(data=payload)
+        serializer = ExpenseSerializer(data=modified_data)
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
