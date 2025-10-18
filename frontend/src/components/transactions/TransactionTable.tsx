@@ -17,6 +17,8 @@ import {
   Account,
   Category,
   Transaction,
+  CreateIncomeTransactionInput,
+  CreateExpenseTransactionInput,
   transactionsApiService,
 } from '@/lib/api/transactions';
 import {
@@ -256,32 +258,29 @@ export function TransactionTable({
       }
 
       const amountNum = parseFloat(formData.amount);
-      const transactionData = isIncome
-        ? {
-            description: formData.description,
-            date: formData.date,
-            amount: amountNum,
-            // Income serializer expects 'Account' as PK for account_name
-            Account: account.id,
-          }
-        : {
-            description: formData.description,
-            date: formData.date,
-            amount: amountNum,
-            // Expense serializer expects PK fields
-            account_name: account.id,
-            category: categoryId,
-          };
 
       let newTransaction: Transaction;
       if (isIncome) {
-        newTransaction =
-          await transactionsApiService.createIncomeTransaction(transactionData);
+        const incomePayload: CreateIncomeTransactionInput = {
+          description: formData.description,
+          date: formData.date,
+          amount: amountNum,
+          Account: account.id,
+        };
+        newTransaction = await transactionsApiService.createIncomeTransaction(
+          incomePayload
+        );
       } else {
-        newTransaction =
-          await transactionsApiService.createExpenseTransaction(
-            transactionData
-          );
+        const expensePayload: CreateExpenseTransactionInput = {
+          description: formData.description,
+          date: formData.date,
+          amount: amountNum,
+          account_name: account.id,
+          category: categoryId,
+        };
+        newTransaction = await transactionsApiService.createExpenseTransaction(
+          expensePayload
+        );
       }
 
       // Transform and add to local state

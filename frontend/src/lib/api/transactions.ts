@@ -11,6 +11,22 @@ export interface Transaction {
   Category?: string;
 }
 
+// Creation payloads differ from the read model. Backend expects numeric IDs.
+export interface CreateIncomeTransactionInput {
+  description: string;
+  date: string; // YYYY-MM-DD
+  amount: number;
+  Account: number; // account primary key
+}
+
+export interface CreateExpenseTransactionInput {
+  description: string;
+  date: string; // YYYY-MM-DD
+  amount: number;
+  account_name: number; // account primary key
+  category?: number; // category primary key
+}
+
 export interface Account {
   id: number;
   name: string;
@@ -274,7 +290,7 @@ class TransactionsApiService {
    * Create a new income transaction
    */
   async createIncomeTransaction(
-    transaction: Partial<Transaction>
+    transaction: CreateIncomeTransactionInput
   ): Promise<Transaction> {
     const response = await fetch(`${this.baseUrl}/income/`, {
       method: 'POST',
@@ -290,7 +306,7 @@ class TransactionsApiService {
    * Create a new expense transaction
    */
   async createExpenseTransaction(
-    transaction: Partial<Transaction>
+    transaction: CreateExpenseTransactionInput
   ): Promise<Transaction> {
     const response = await fetch(`${this.baseUrl}/expense/`, {
       method: 'POST',
