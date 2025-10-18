@@ -7,11 +7,9 @@ def migrate_category_budgets(apps, schema_editor):
     OldCategory = apps.get_model("richtato_user", "Category")
     Budget = apps.get_model("richtato_user", "Budget")
 
-    # Use the historical model state provided by `apps` to avoid referencing
-    # fields that may not exist yet (e.g., `enabled`) on the live model.
+    # Use the historical model to avoid referencing fields that don't exist yet
     for category in OldCategory.objects.all():
-        # If the historical Category still had a `budget` field at this point,
-        # migrate it into the new Budget model. If not present, skip.
+        # Only migrate if the category had an old budget (e.g., pre-existing data)
         if hasattr(category, "budget"):
             Budget.objects.create(
                 user=category.user,

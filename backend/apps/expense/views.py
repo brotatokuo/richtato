@@ -162,19 +162,23 @@ class ExpenseAPIView(BaseAPIView):
         Create a new expense entry.
         """
         logger.debug(f"Request data: {request.data}")
-        try:
-            print(
-                "[ExpensePOST] Incoming",
+        modified_data = request.data.copy()
+        # Deprecate name-based fields; enforce ID usage only
+        if any(k in modified_data for k in ("Account", "Category")):
+            return Response(
                 {
-                    "user": getattr(request.user, "id", None),
-                    "data": dict(request.data),
+                    "error": "Deprecated fields. Use integer IDs only.",
+                    "details": {
+                        "account_name": "CardAccount ID (required)",
+                        "category": "Category ID (optional)",
+                    },
                 },
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        except Exception:
-            pass
-        incoming = request.data.copy()
-        account_value = incoming.pop("Account", None)
-        category_value = incoming.pop("Category", None)
+
+        # Attach user for serializer validation
+        modified_data["user"] = request.user.id
+        logger.debug(f"Normalized data: {modified_data}")
 
         try:
             print(
@@ -315,8 +319,19 @@ class ExpenseAPIView(BaseAPIView):
         Update an existing expense entry.
         """
         logger.debug(f"PATCH request data: {request.data}")
-        reversed_data = self.apply_fieldmap(request.data)
-        logger.debug(f"Reversed data: {reversed_data}")
+        # Enforce ID-based updates only
+        if any(k in request.data for k in ("Account", "Category")):
+            return Response(
+                {
+                    "error": "Deprecated fields. Use integer IDs only.",
+                    "details": {
+                        "account_name": "CardAccount ID",
+                        "category": "Category ID",
+                    },
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        reversed_data = request.data
         expense = get_object_or_404(Expense, pk=pk, user=request.user)
 
         serializer = ExpenseSerializer(expense, data=reversed_data, partial=True)

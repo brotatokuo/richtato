@@ -10,7 +10,7 @@ from .views import (
 )
 
 urlpatterns = [
-    path("", ExpenseAPIView.as_view()),  # GET, POST at /api/expense/
+    path("", ExpenseAPIView.as_view()),  # GET, POST
     path("<int:pk>/", ExpenseAPIView.as_view()),  # GET, PATCH, DELETE
     path("field-choices/", ExpenseFieldChoicesView.as_view()),  # GET
     path("graph/", ExpenseGraphAPIView.as_view()),  # GET

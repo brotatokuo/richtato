@@ -17,6 +17,8 @@ import {
   Account,
   Category,
   Transaction,
+  CreateIncomeTransactionInput,
+  CreateExpenseTransactionInput,
   transactionsApiService,
 } from '@/lib/api/transactions';
 import {
@@ -255,8 +257,10 @@ export function TransactionTable({
     }
 
     try {
-      // Find the account ID
-      const account = accounts.find(acc => acc.name === formData.account_name);
+      // Resolve account by id from dropdown value
+      const account = accounts.find(
+        acc => String(acc.id) === String(formData.account_name)
+      );
       if (!account) {
         throw new Error('Account not found');
       }
@@ -264,32 +268,39 @@ export function TransactionTable({
       // Find the category ID for expenses
       let categoryId: number | undefined;
       if (!isIncome && formData.category) {
-        const category = categories.find(cat => cat.name === formData.category);
+        const category = categories.find(
+          cat => String(cat.id) === String(formData.category)
+        );
         if (!category) {
           throw new Error('Category not found');
         }
         categoryId = category.id;
       }
 
-      const transactionData = {
-        description: formData.description,
-        date: formData.date,
-        amount: parseFloat(formData.amount),
-        Account: account.name,
-        ...(categoryId && {
-          Category: categories.find(cat => cat.id === categoryId)?.name,
-        }),
-      };
+      const amountNum = parseFloat(formData.amount);
 
       let newTransaction: Transaction;
       if (isIncome) {
-        newTransaction =
-          await transactionsApiService.createIncomeTransaction(transactionData);
+        const incomePayload: CreateIncomeTransactionInput = {
+          description: formData.description,
+          date: formData.date,
+          amount: amountNum,
+          Account: account.id,
+        };
+        newTransaction = await transactionsApiService.createIncomeTransaction(
+          incomePayload
+        );
       } else {
-        newTransaction =
-          await transactionsApiService.createExpenseTransaction(
-            transactionData
-          );
+        const expensePayload: CreateExpenseTransactionInput = {
+          description: formData.description,
+          date: formData.date,
+          amount: amountNum,
+          account_name: account.id,
+          category: categoryId,
+        };
+        newTransaction = await transactionsApiService.createExpenseTransaction(
+          expensePayload
+        );
       }
 
       // Transform and add to local state
@@ -493,21 +504,24 @@ export function TransactionTable({
     switch (field) {
       case 'date':
         return (
-          <TableCell className="font-medium">
+          <TableCell key={String(field)} className="font-medium">
             {new Date(transaction.date).toLocaleDateString()}
           </TableCell>
         );
       case 'description':
         return (
-          <TableCell className="whitespace-normal break-words break-all">
+          <TableCell
+            key={String(field)}
+            className="whitespace-normal break-words break-all"
+          >
             {transaction.description}
           </TableCell>
         );
       case 'account':
-        return <TableCell>{transaction.account}</TableCell>;
+        return <TableCell key={String(field)}>{transaction.account}</TableCell>;
       case 'category':
         return (
-          <TableCell>
+          <TableCell key={String(field)}>
             <span className="px-2 py-1 rounded text-xs bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
               {transaction.category}
             </span>
@@ -518,12 +532,19 @@ export function TransactionTable({
         const sign = isIncome ? '+' : '-';
         const color = isIncome ? 'text-green-600' : 'text-red-600';
         return (
-          <TableCell className={`text-right font-medium ${color}`}>
+          <TableCell
+            key={String(field)}
+            className={`text-right font-medium ${color}`}
+          >
             {sign}${amount.toFixed(2)}
           </TableCell>
         );
       default:
-        return <TableCell>{String(transaction[field])}</TableCell>;
+        return (
+          <TableCell key={String(field)}>
+            {String(transaction[field])}
+          </TableCell>
+        );
     }
   };
 

@@ -106,7 +106,7 @@ export function TransactionForm({
             </SelectTrigger>
             <SelectContent>
               {accounts.map(account => (
-                <SelectItem key={account.id} value={account.name}>
+                <SelectItem key={account.id} value={String(account.id)}>
                   {account.name}
                 </SelectItem>
               ))}
@@ -130,7 +130,7 @@ export function TransactionForm({
               </SelectTrigger>
               <SelectContent>
                 {categories.map(category => (
-                  <SelectItem key={category.id} value={category.name}>
+                  <SelectItem key={category.id} value={String(category.id)}>
                     {category.name}
                   </SelectItem>
                 ))}

@@ -95,38 +95,18 @@ class IncomeAPIView(BaseAPIView):
         Create a new Income entry.
         """
         logger.debug(f"Request data: {request.data}")
-        # Accept 'Account' as id or name, resolve to user's Account, pass id to serializer
-        incoming = request.data.copy()
-        account_value = incoming.pop("Account", None)
-
-        account_obj = None
-        if account_value is not None:
-            try:
-                # Try as ID first (scoped to user)
-                account_obj = Account.objects.get(
-                    id=int(account_value), user=request.user
-                )
-            except Exception:
-                # Fallback by name (scoped to user)
-                account_obj = Account.objects.filter(
-                    name=str(account_value), user=request.user
-                ).first()
-
-        if account_obj is None:
+        # Enforce ID usage; reject name-based fields
+        if "Account" in request.data and not isinstance(
+            request.data.get("Account"), int
+        ):
             return Response(
-                {"Account": ["Account not found for user."]},
+                {
+                    "error": "Deprecated fields. Use integer IDs only.",
+                    "details": {"Account": "Account ID (for account_name)"},
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        payload = {
-            **incoming,
-            "user": request.user.id,
-            # IncomeSerializer expects 'Account' (maps to account_name via source)
-            "Account": account_obj.id,
-        }
-        logger.debug(f"Modified data: {payload}")
-
-        serializer = IncomeSerializer(data=payload)
+        serializer = IncomeSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -139,8 +119,17 @@ class IncomeAPIView(BaseAPIView):
         Update an existing Income entry.
         """
         logger.debug(f"PATCH request data: {request.data}")
+        if "Account" in request.data and not isinstance(
+            request.data.get("Account"), int
+        ):
+            return Response(
+                {
+                    "error": "Deprecated fields. Use integer IDs only.",
+                    "details": {"Account": "Account ID (for account_name)"},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         reversed_data = self.apply_fieldmap(request.data)
-        logger.debug(f"Reversed data: {reversed_data}")
         income = get_object_or_404(Income, pk=pk, user=request.user)
 
         serializer = IncomeSerializer(income, data=reversed_data, partial=True)
