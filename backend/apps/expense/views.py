@@ -161,34 +161,23 @@ class ExpenseAPIView(BaseAPIView):
         Create a new expense entry.
         """
         logger.debug(f"Request data: {request.data}")
-        # Normalize payload to accept either ids (account_name/category)
-        # or names via Account/Category
         modified_data = request.data.copy()
+        # Deprecate name-based fields; enforce ID usage only
+        if any(k in modified_data for k in ("Account", "Category")):
+            return Response(
+                {
+                    "error": "Deprecated fields. Use integer IDs only.",
+                    "details": {
+                        "account_name": "CardAccount ID (required)",
+                        "category": "Category ID (optional)",
+                    },
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        # Account: prefer provided id, otherwise resolve by name
-        if "account_name" in modified_data and modified_data["account_name"]:
-            pass  # already an id as expected by serializer
-        else:
-            account_value = modified_data.pop("Account", None)
-            if account_value:
-                account_obj = CardAccount.objects.filter(
-                    user=request.user, name=str(account_value)
-                ).first()
-                modified_data["account_name"] = account_obj.id if account_obj else None
-
-        # Category: prefer provided id, otherwise resolve by name
-        if "category" in modified_data and modified_data["category"]:
-            pass
-        else:
-            category_value = modified_data.pop("Category", None)
-            if category_value:
-                category_obj = Category.objects.filter(
-                    user=request.user, name=str(category_value)
-                ).first()
-                modified_data["category"] = category_obj.id if category_obj else None
-
+        # Attach user for serializer validation
         modified_data["user"] = request.user.id
-        logger.debug(f"Modified data: {modified_data}")
+        logger.debug(f"Normalized data: {modified_data}")
 
         serializer = ExpenseSerializer(data=modified_data)
         if serializer.is_valid():
@@ -236,8 +225,19 @@ class ExpenseAPIView(BaseAPIView):
         Update an existing expense entry.
         """
         logger.debug(f"PATCH request data: {request.data}")
-        reversed_data = self.apply_fieldmap(request.data)
-        logger.debug(f"Reversed data: {reversed_data}")
+        # Enforce ID-based updates only
+        if any(k in request.data for k in ("Account", "Category")):
+            return Response(
+                {
+                    "error": "Deprecated fields. Use integer IDs only.",
+                    "details": {
+                        "account_name": "CardAccount ID",
+                        "category": "Category ID",
+                    },
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        reversed_data = request.data
         expense = get_object_or_404(Expense, pk=pk, user=request.user)
 
         serializer = ExpenseSerializer(expense, data=reversed_data, partial=True)

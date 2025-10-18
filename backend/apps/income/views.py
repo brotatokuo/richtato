@@ -95,6 +95,17 @@ class IncomeAPIView(BaseAPIView):
         Create a new Income entry.
         """
         logger.debug(f"Request data: {request.data}")
+        # Enforce ID usage; reject name-based fields
+        if "Account" in request.data and not isinstance(
+            request.data.get("Account"), int
+        ):
+            return Response(
+                {
+                    "error": "Deprecated fields. Use integer IDs only.",
+                    "details": {"Account": "Account ID (for account_name)"},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         serializer = IncomeSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(user=request.user)
@@ -106,8 +117,17 @@ class IncomeAPIView(BaseAPIView):
         Update an existing Income entry.
         """
         logger.debug(f"PATCH request data: {request.data}")
+        if "Account" in request.data and not isinstance(
+            request.data.get("Account"), int
+        ):
+            return Response(
+                {
+                    "error": "Deprecated fields. Use integer IDs only.",
+                    "details": {"Account": "Account ID (for account_name)"},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         reversed_data = self.apply_fieldmap(request.data)
-        logger.debug(f"Reversed data: {reversed_data}")
         income = get_object_or_404(Income, pk=pk, user=request.user)
 
         serializer = IncomeSerializer(income, data=reversed_data, partial=True)
