@@ -161,10 +161,32 @@ class ExpenseAPIView(BaseAPIView):
         Create a new expense entry.
         """
         logger.debug(f"Request data: {request.data}")
-        # HACK
+        # Normalize payload to accept either ids (account_name/category)
+        # or names via Account/Category
         modified_data = request.data.copy()
-        modified_data["account_name"] = modified_data.pop("Account", None)
-        modified_data["category"] = modified_data.pop("Category", None)
+
+        # Account: prefer provided id, otherwise resolve by name
+        if "account_name" in modified_data and modified_data["account_name"]:
+            pass  # already an id as expected by serializer
+        else:
+            account_value = modified_data.pop("Account", None)
+            if account_value:
+                account_obj = CardAccount.objects.filter(
+                    user=request.user, name=str(account_value)
+                ).first()
+                modified_data["account_name"] = account_obj.id if account_obj else None
+
+        # Category: prefer provided id, otherwise resolve by name
+        if "category" in modified_data and modified_data["category"]:
+            pass
+        else:
+            category_value = modified_data.pop("Category", None)
+            if category_value:
+                category_obj = Category.objects.filter(
+                    user=request.user, name=str(category_value)
+                ).first()
+                modified_data["category"] = category_obj.id if category_obj else None
+
         modified_data["user"] = request.user.id
         logger.debug(f"Modified data: {modified_data}")
 

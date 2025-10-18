@@ -34,9 +34,9 @@ urlpatterns = [
     ),
     path("card-accounts/", views.CardBanksAPIView.as_view(), name="card_accounts"),
     path("preferences/", views.UserPreferenceAPIView.as_view(), name="preferences"),
-    # API Authentication endpoints
-    path("api/login/", views.APILoginView.as_view(), name="api_login"),
-    path("api/logout/", views.APILogoutView.as_view(), name="api_logout"),
-    path("api/profile/", views.APIProfileView.as_view(), name="api_profile"),
-    path("api/demo-login/", views.APIDemoLoginView.as_view(), name="api_demo_login"),
+    # API Authentication endpoints (no nested 'api/' segment)
+    path("login/", views.APILoginView.as_view(), name="api_login"),
+    path("logout/", views.APILogoutView.as_view(), name="api_logout"),
+    path("profile/", views.APIProfileView.as_view(), name="api_profile"),
+    path("demo-login/", views.APIDemoLoginView.as_view(), name="api_demo_login"),
 ]

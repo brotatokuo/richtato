@@ -373,7 +373,7 @@ class AuthApiService {
       // Get CSRF token first
       const csrfHeaders = await csrfService.getHeaders();
 
-      const response = await fetch(`${this.baseUrl}/auth/api/demo-login/`, {
+      const response = await fetch(`${this.baseUrl}/auth/demo-login/`, {
         method: 'POST',
         headers: {
           ...this.getHeaders(),
@@ -389,17 +389,14 @@ class AuthApiService {
           .refreshToken()
           .then(() => csrfService.getHeaders());
 
-        const retryResponse = await fetch(
-          `${this.baseUrl}/auth/api/demo-login/`,
-          {
-            method: 'POST',
-            headers: {
-              ...this.getHeaders(),
-              ...refreshedCsrfHeaders,
-            },
-            credentials: 'include',
-          }
-        );
+        const retryResponse = await fetch(`${this.baseUrl}/auth/demo-login/`, {
+          method: 'POST',
+          headers: {
+            ...this.getHeaders(),
+            ...refreshedCsrfHeaders,
+          },
+          credentials: 'include',
+        });
 
         const data = await this.handleResponse<LoginResponse>(retryResponse);
         if (data.success) {

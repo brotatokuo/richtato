@@ -34,6 +34,8 @@ export interface Budget {
   end_date: string;
 }
 
+import { csrfService } from './csrf';
+
 class TransactionsApiService {
   private baseUrl: string;
 
@@ -65,10 +67,7 @@ class TransactionsApiService {
     startDate?: string; // YYYY-MM-DD
     endDate?: string; // YYYY-MM-DD
   }): Promise<Transaction[]> {
-    const url = new URL(
-      `${this.baseUrl}/income/api/incomes/`,
-      window.location.origin
-    );
+    const url = new URL(`${this.baseUrl}/income/`, window.location.origin);
     if (input?.limit) {
       url.searchParams.append('limit', input.limit.toString());
     }
@@ -94,10 +93,7 @@ class TransactionsApiService {
     startDate?: string; // YYYY-MM-DD
     endDate?: string; // YYYY-MM-DD
   }): Promise<Transaction[]> {
-    const url = new URL(
-      `${this.baseUrl}/expense/api/expenses/`,
-      window.location.origin
-    );
+    const url = new URL(`${this.baseUrl}/expense/`, window.location.origin);
     if (input?.limit) {
       url.searchParams.append('limit', input.limit.toString());
     }
@@ -119,7 +115,7 @@ class TransactionsApiService {
    * Get all accounts
    */
   async getAccounts(): Promise<Account[]> {
-    const response = await fetch(`${this.baseUrl}/accounts/api/accounts/`, {
+    const response = await fetch(`${this.baseUrl}/accounts/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -146,7 +142,7 @@ class TransactionsApiService {
     total: number;
   }> {
     const url = new URL(
-      `${this.baseUrl}/accounts/api/accounts/${accountId}/transactions/`,
+      `${this.baseUrl}/accounts/${accountId}/transactions/`,
       window.location.origin
     );
     if (input?.page) url.searchParams.append('page', String(input.page));
@@ -168,15 +164,12 @@ class TransactionsApiService {
     amount: number;
     date: string; // YYYY-MM-DD
   }): Promise<any> {
-    const response = await fetch(
-      `${this.baseUrl}/accounts/api/accounts/details/`,
-      {
-        method: 'POST',
-        headers: this.getHeaders(),
-        credentials: 'include',
-        body: JSON.stringify(input),
-      }
-    );
+    const response = await fetch(`${this.baseUrl}/accounts/details/`, {
+      method: 'POST',
+      headers: await csrfService.getHeaders(),
+      credentials: 'include',
+      body: JSON.stringify(input),
+    });
     return this.handleResponse(response);
   }
 
@@ -189,10 +182,10 @@ class TransactionsApiService {
     }
   ): Promise<any> {
     const response = await fetch(
-      `${this.baseUrl}/accounts/api/accounts/${accountId}/transactions/`,
+      `${this.baseUrl}/accounts/${accountId}/transactions/`,
       {
         method: 'PATCH',
-        headers: this.getHeaders(),
+        headers: await csrfService.getHeaders(),
         credentials: 'include',
         body: JSON.stringify(input),
       }
@@ -202,10 +195,10 @@ class TransactionsApiService {
 
   async deleteAccountTransaction(accountId: number, id: number): Promise<void> {
     const response = await fetch(
-      `${this.baseUrl}/accounts/api/accounts/${accountId}/transactions/`,
+      `${this.baseUrl}/accounts/${accountId}/transactions/`,
       {
         method: 'DELETE',
-        headers: this.getHeaders(),
+        headers: await csrfService.getHeaders(),
         credentials: 'include',
         body: JSON.stringify({ id }),
       }
@@ -221,9 +214,9 @@ class TransactionsApiService {
     type: string;
     asset_entity_name?: string;
   }): Promise<Account> {
-    const response = await fetch(`${this.baseUrl}/accounts/api/accounts/`, {
+    const response = await fetch(`${this.baseUrl}/accounts/`, {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers: await csrfService.getHeaders(),
       credentials: 'include',
       body: JSON.stringify(input),
     });
@@ -238,15 +231,12 @@ class TransactionsApiService {
     id: number,
     input: Partial<{ name: string; type: string; asset_entity_name: string }>
   ): Promise<Account> {
-    const response = await fetch(
-      `${this.baseUrl}/accounts/api/accounts/${id}/`,
-      {
-        method: 'PATCH',
-        headers: this.getHeaders(),
-        credentials: 'include',
-        body: JSON.stringify(input),
-      }
-    );
+    const response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
+      method: 'PATCH',
+      headers: await csrfService.getHeaders(),
+      credentials: 'include',
+      body: JSON.stringify(input),
+    });
 
     return this.handleResponse<Account>(response);
   }
@@ -255,14 +245,11 @@ class TransactionsApiService {
    * Delete an account
    */
   async deleteAccount(id: number): Promise<void> {
-    const response = await fetch(
-      `${this.baseUrl}/accounts/api/accounts/${id}/`,
-      {
-        method: 'DELETE',
-        headers: this.getHeaders(),
-        credentials: 'include',
-      }
-    );
+    const response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
+      method: 'DELETE',
+      headers: await csrfService.getHeaders(),
+      credentials: 'include',
+    });
 
     if (!response.ok) {
       throw new Error(`Failed to delete account: ${response.status}`);
@@ -289,9 +276,9 @@ class TransactionsApiService {
   async createIncomeTransaction(
     transaction: Partial<Transaction>
   ): Promise<Transaction> {
-    const response = await fetch(`${this.baseUrl}/incomes/`, {
+    const response = await fetch(`${this.baseUrl}/income/`, {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers: await csrfService.getHeaders(),
       credentials: 'include',
       body: JSON.stringify(transaction),
     });
@@ -305,9 +292,9 @@ class TransactionsApiService {
   async createExpenseTransaction(
     transaction: Partial<Transaction>
   ): Promise<Transaction> {
-    const response = await fetch(`${this.baseUrl}/expenses/`, {
+    const response = await fetch(`${this.baseUrl}/expense/`, {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers: await csrfService.getHeaders(),
       credentials: 'include',
       body: JSON.stringify(transaction),
     });
@@ -322,9 +309,9 @@ class TransactionsApiService {
     id: number,
     transaction: Partial<Transaction>
   ): Promise<Transaction> {
-    const response = await fetch(`${this.baseUrl}/incomes/${id}/`, {
+    const response = await fetch(`${this.baseUrl}/income/${id}/`, {
       method: 'PATCH',
-      headers: this.getHeaders(),
+      headers: await csrfService.getHeaders(),
       credentials: 'include',
       body: JSON.stringify(transaction),
     });
@@ -339,9 +326,9 @@ class TransactionsApiService {
     id: number,
     transaction: Partial<Transaction>
   ): Promise<Transaction> {
-    const response = await fetch(`${this.baseUrl}/expenses/${id}/`, {
+    const response = await fetch(`${this.baseUrl}/expense/${id}/`, {
       method: 'PATCH',
-      headers: this.getHeaders(),
+      headers: await csrfService.getHeaders(),
       credentials: 'include',
       body: JSON.stringify(transaction),
     });
@@ -353,9 +340,9 @@ class TransactionsApiService {
    * Delete an income transaction
    */
   async deleteIncomeTransaction(id: number): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/incomes/${id}/`, {
+    const response = await fetch(`${this.baseUrl}/income/${id}/`, {
       method: 'DELETE',
-      headers: this.getHeaders(),
+      headers: await csrfService.getHeaders(),
       credentials: 'include',
     });
 
@@ -370,9 +357,9 @@ class TransactionsApiService {
    * Delete an expense transaction
    */
   async deleteExpenseTransaction(id: number): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/expenses/${id}/`, {
+    const response = await fetch(`${this.baseUrl}/expense/${id}/`, {
       method: 'DELETE',
-      headers: this.getHeaders(),
+      headers: await csrfService.getHeaders(),
       credentials: 'include',
     });
 

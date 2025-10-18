@@ -1,14 +1,14 @@
 from datetime import date
 
 from django.db import migrations
-from apps.richtato_user.models import Category
 
 
 def migrate_category_budgets(apps, schema_editor):
     OldCategory = apps.get_model("richtato_user", "Category")
     Budget = apps.get_model("richtato_user", "Budget")
 
-    for category in Category.objects.all():
+    # Use the historical model to avoid referencing fields that don't exist yet
+    for category in OldCategory.objects.all():
         # Only migrate if the category had an old budget (e.g., pre-existing data)
         if hasattr(category, "budget"):
             Budget.objects.create(

@@ -65,6 +65,8 @@ The Richtato backend has been cleaned up to focus exclusively on API functionali
 - `DELETE /<id>/` - Delete account
 - `GET /field-choices/` - Get account field choices
 - `GET /details/` - Get account details
+- `GET /details/field-choices/` - Get detail field choices
+- `GET /details/<id>/` - Get specific account detail
 - `GET /<id>/transactions/` - Get account transactions
 
 ### Income Management (`/api/income/`)
