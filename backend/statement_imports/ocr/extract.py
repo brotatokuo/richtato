@@ -4,39 +4,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 import pdfplumber
-
-try:
-    import pytesseract
-except Exception:  # pragma: no cover
-    pytesseract = None
+import pillow_heif
+import pytesseract
 from PIL import Image, ImageFilter, ImageOps
 
-try:
-    import pillow_heif  # Registers HEIF/HEIC plugin for PIL
-
-    pillow_heif.register_heif_opener()
-except Exception:
-    # If HEIF support is not available, HEIC files won't be supported
-    pillow_heif = None
-
-
-# Optional PaddleOCR support for better receipt OCR
-_paddle_ocr = None
-try:  # pragma: no cover
-    from paddleocr import PaddleOCR  # type: ignore
-
-    def _get_paddle_ocr():
-        global _paddle_ocr
-        if _paddle_ocr is None:
-            # Initialize once; English by default
-            _paddle_ocr = PaddleOCR(use_angle_cls=True, lang="en")
-        return _paddle_ocr
-
-except Exception:  # pragma: no cover
-    PaddleOCR = None  # type: ignore
-
-    def _get_paddle_ocr():  # type: ignore
-        return None
+pillow_heif.register_heif_opener()
 
 
 def _has_text_layer(pdf_path: str) -> bool:
@@ -51,11 +23,48 @@ def _has_text_layer(pdf_path: str) -> bool:
     return False
 
 
+def _rasterize_pdf_to_images(src_path: str, dpi: int = 300) -> list[str]:
+    """
+    Render PDF pages to PNG images using pdftoppm (Poppler). Returns a list of
+    temporary file paths. Caller is responsible for cleanup if needed.
+    """
+    import glob
+    import os
+
+    tmpdir = tempfile.mkdtemp(prefix="pdfppm_")
+    prefix = os.path.join(tmpdir, "page")
+    try:
+        subprocess.run(
+            [
+                "pdftoppm",
+                "-png",
+                f"-r{dpi}",
+                src_path,
+                prefix,
+            ],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception as exc:
+        # If pdftoppm is unavailable, raise a clear error so the caller can instruct installation
+        raise RuntimeError(
+            "pdftoppm is required to rasterize PDFs for Tesseract OCR. Install poppler (e.g., 'brew install poppler')."
+        ) from exc
+
+    image_paths = sorted(glob.glob(f"{prefix}-*.png"))
+    if not image_paths:
+        # No pages produced; fail explicitly
+        raise RuntimeError("Failed to rasterize PDF to images.")
+    return image_paths
+
+
 def ocr_pdf_if_needed(src_path: str) -> str:
     """
-    Ensure the input PDF has a text layer. If not, run OCR using OCRmyPDF and
-    return the path to the searchable PDF. If it already has text, return the
-    original path.
+    For statement table extraction pipelines that rely on a text layer, keep
+    the previous behavior: ensure a searchable PDF using OCRmyPDF when needed.
+    This preserves existing statement import behavior without changing to
+    image-based Tesseract parsing.
     """
     if _has_text_layer(src_path):
         return src_path
@@ -63,8 +72,6 @@ def ocr_pdf_if_needed(src_path: str) -> str:
     tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
     tmp.close()
 
-    # --skip-text keeps text-only PDFs intact; harmless if already scanned.
-    # --quiet reduces noise; rely on exceptions for failures.
     subprocess.run(
         [
             "ocrmypdf",
@@ -189,8 +196,15 @@ def map_raw_table_to_standard(raw_df: pd.DataFrame, card_name: str) -> pd.DataFr
     - Set Card to the provided card_name and Category to 'Unknown'.
     """
     if raw_df is None or raw_df.empty:
+        # Construct as dict of empty lists to satisfy strict type checkers
         return pd.DataFrame(
-            columns=["Card", "Date", "Description", "Amount", "Category"]
+            {
+                "Card": [],
+                "Date": [],
+                "Description": [],
+                "Amount": [],
+                "Category": [],
+            }
         )  # empty
 
     # Ensure string column names
@@ -199,10 +213,10 @@ def map_raw_table_to_standard(raw_df: pd.DataFrame, card_name: str) -> pd.DataFr
 
     # Identify date and amount columns by scoring
     date_scores: List[Tuple[str, int]] = [
-        (c, _score_date_column(raw_df[c])) for c in raw_df.columns
+        (c, _score_date_column(pd.Series(raw_df[c]))) for c in raw_df.columns
     ]
     amount_scores: List[Tuple[str, int]] = [
-        (c, _score_amount_column(raw_df[c])) for c in raw_df.columns
+        (c, _score_amount_column(pd.Series(raw_df[c]))) for c in raw_df.columns
     ]
 
     date_col = max(date_scores, key=lambda t: t[1])[0] if date_scores else None
@@ -221,7 +235,7 @@ def map_raw_table_to_standard(raw_df: pd.DataFrame, card_name: str) -> pd.DataFr
             except Exception:
                 return 0.0
 
-        desc_col = max(candidate_desc_cols, key=lambda c: avg_len(raw_df[c]))
+        desc_col = max(candidate_desc_cols, key=lambda c: avg_len(pd.Series(raw_df[c])))
     else:
         desc_col = None
 
@@ -275,37 +289,143 @@ def _preprocess_for_ocr(img: Image.Image) -> Image.Image:
     return gray
 
 
-def extract_image_to_df(path: str) -> pd.DataFrame:
+class OCRExtractor:
+    """
+    OCR abstraction with pluggable engines: 'tesseract', 'paddleocr', 'doctr'.
+    If engine is None, default order is PaddleOCR -> Tesseract -> docTR.
+    """
+
+    def __init__(self, engine: Optional[str] = None):
+        self.engine = engine
+
+    def _available_engines(self) -> List[str]:
+        engines: List[str] = []
+        try:
+            if pytesseract is not None:
+                engines.append("tesseract")
+        except Exception:
+            pass
+        try:
+            # Lazy import to avoid name resolution errors at type-check time
+            _ = _get_paddle_ocr()
+            if _ is not None:
+                engines.append("paddleocr")
+        except Exception:
+            pass
+        try:
+            _ = _get_doctr_model()
+            if _ is not None:
+                engines.append("doctr")
+        except Exception:
+            pass
+        return engines
+
+    def _resolve_engine_order(self) -> List[str]:
+        if self.engine:
+            ordered = [self.engine]
+            ordered.extend([e for e in self._available_engines() if e != self.engine])
+            return ordered
+        return [
+            e
+            for e in ["paddleocr", "tesseract", "doctr"]
+            if e in self._available_engines()
+        ]
+
+    def extract_lines(self, path: str) -> List[str]:
+        lower = path.lower()
+        if lower.endswith(".pdf"):
+            return self._extract_lines_from_pdf(path)
+        return self._extract_lines_from_image(path)
+
+    def _extract_lines_from_image(self, path: str) -> List[str]:
+        attempts: List[str] = []
+        for engine in self._resolve_engine_order():
+            try:
+                if engine == "tesseract":
+                    img = _open_image_any(path)
+                    proc = _preprocess_for_ocr(img)
+                    text = pytesseract.image_to_string(proc)  # type: ignore[arg-type]
+                    return [ln.strip() for ln in text.splitlines() if ln.strip()]
+                if engine == "paddleocr":
+                    ocr = _get_paddle_ocr()
+                    if ocr is None:
+                        raise RuntimeError("PaddleOCR unavailable")
+                    result = ocr.ocr(path, cls=True)
+                    lines: List[str] = []
+                    for page in result:
+                        for _, (box, (text, conf)) in enumerate(page):
+                            if conf is None or conf < 0.5:
+                                continue
+                            if text:
+                                lines.append(str(text).strip())
+                    return lines
+                if engine == "doctr":
+                    model = _get_doctr_model()
+                    # Avoid referencing DocumentFile type if unavailable
+                    if model is None or DocumentFile is None:  # type: ignore[name-defined]
+                        raise RuntimeError("docTR unavailable")
+                    doc = DocumentFile.from_images([path])  # type: ignore[name-defined]
+                    result = model(doc)
+                    lines: List[str] = []
+                    for page in result.pages:
+                        for block in page.blocks:
+                            for line in block.lines:
+                                words = [
+                                    w.value
+                                    for w in line.words
+                                    if getattr(w, "value", None)
+                                ]
+                                if words:
+                                    lines.append(" ".join(words).strip())
+                    return lines
+            except Exception as exc:
+                attempts.append(f"{engine}: {exc}")
+                continue
+        raise ImportError("No OCR engine available. " + ", ".join(attempts))
+
+    def _extract_lines_from_pdf(self, path: str) -> List[str]:
+        # Try docTR on PDF if requested/available
+        order = self._resolve_engine_order()
+        if "doctr" in order:
+            try:
+                model = _get_doctr_model()
+                if model is not None and DocumentFile is not None:  # type: ignore[name-defined]
+                    doc = DocumentFile.from_pdf(path)  # type: ignore[name-defined]
+                    result = model(doc)
+                    lines: List[str] = []
+                    for page in result.pages:
+                        for block in page.blocks:
+                            for line in block.lines:
+                                words = [
+                                    w.value
+                                    for w in line.words
+                                    if getattr(w, "value", None)
+                                ]
+                                if words:
+                                    lines.append(" ".join(words).strip())
+                    if lines:
+                        return lines
+            except Exception:
+                pass
+        # Fallback: rasterize to images and OCR per page
+        image_paths = _rasterize_pdf_to_images(path)
+        lines: List[str] = []
+        for img_path in image_paths:
+            try:
+                lines.extend(self._extract_lines_from_image(img_path))
+            except Exception:
+                continue
+        return lines
+
+
+def extract_image_to_df(path: str, engine: Optional[str] = None) -> pd.DataFrame:
     """
     OCR a receipt/statement photo and heuristically extract transaction-like rows
     using line parsing for dates and amounts.
     Returns a DataFrame with generic columns that can be mapped by caller.
     """
-    # Prefer PaddleOCR if available; fallback to pytesseract
-    ocr = _get_paddle_ocr()
-    lines: List[str] = []
-    if ocr is not None:
-        try:
-            result = ocr.ocr(path, cls=True)
-            for page in result:
-                for _, (box, (text, conf)) in enumerate(page):
-                    if conf is None or conf < 0.5:
-                        continue
-                    if text:
-                        lines.append(str(text).strip())
-        except Exception:
-            # fallback
-            ocr = None
-
-    if ocr is None:
-        if pytesseract is None:
-            raise ImportError(
-                "Neither PaddleOCR nor pytesseract available for image OCR. Install paddleocr or pytesseract."
-            )
-        img = _open_image_any(path)
-        proc = _preprocess_for_ocr(img)
-        text = pytesseract.image_to_string(proc)
-        lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    extractor = OCRExtractor(engine=engine)
+    lines: List[str] = extractor.extract_lines(path)
     # Heuristics: capture lines containing a date and an amount
     candidates: List[List[Optional[str]]] = []
     for ln in lines:
@@ -335,61 +455,24 @@ def extract_image_to_df(path: str) -> pd.DataFrame:
     if not candidates:
         return pd.DataFrame()
 
-    df = pd.DataFrame(candidates, columns=["date_col", "desc_col", "amount_col"])
+    # Build DataFrame explicitly as a dict to satisfy strict type checkers
+    df = pd.DataFrame(
+        {
+            "date_col": [row[0] for row in candidates],
+            "desc_col": [row[1] for row in candidates],
+            "amount_col": [row[2] for row in candidates],
+        }
+    )
     return df
 
 
-def extract_receipt_fields(path: str) -> Dict[str, Any]:
+def extract_receipt_fields(path: str, engine: Optional[str] = None) -> Dict[str, Any]:
     """
-    Extract key fields from a receipt image/PDF using PaddleOCR if available,
-    falling back to pytesseract. Returns dict with merchant, date, total, lines.
+    Extract key fields from a receipt image/PDF using the specified OCR engine
+    ('tesseract', 'paddleocr', 'doctr'). If not specified, uses a default order.
     """
-    # For PDFs, ensure they are searchable then rasterize via pdfplumber for text lines
-    if path.lower().endswith(".pdf"):
-        searchable = ocr_pdf_if_needed(path)
-        # Try to extract text lines via pdfplumber first
-        lines: List[str] = []
-        try:
-            with pdfplumber.open(searchable) as pdf:
-                for page in pdf.pages:
-                    try:
-                        txt = page.extract_text() or ""
-                        lines.extend(
-                            [ln.strip() for ln in txt.splitlines() if ln.strip()]
-                        )
-                    except Exception:
-                        continue
-        except Exception:
-            lines = []
-        # If no lines from text layer, fall back to image OCR path
-        if not lines:
-            return extract_receipt_fields(
-                searchable.replace(".pdf", "")
-            )  # naive fallback
-    else:
-        # Image path: use OCR engines
-        ocr = _get_paddle_ocr()
-        lines = []
-        if ocr is not None:
-            try:
-                result = ocr.ocr(path, cls=True)
-                for page in result:
-                    for _, (box, (text, conf)) in enumerate(page):
-                        if conf is None or conf < 0.5:
-                            continue
-                        if text:
-                            lines.append(str(text).strip())
-            except Exception:
-                ocr = None
-        if ocr is None:
-            if pytesseract is None:
-                raise ImportError(
-                    "Neither PaddleOCR nor pytesseract available for image OCR. Install paddleocr or pytesseract."
-                )
-            img = _open_image_any(path)
-            proc = _preprocess_for_ocr(img)
-            text = pytesseract.image_to_string(proc)
-            lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    extractor = OCRExtractor(engine=engine)
+    lines: List[str] = extractor.extract_lines(path)
 
     import re
     from datetime import date as _date
