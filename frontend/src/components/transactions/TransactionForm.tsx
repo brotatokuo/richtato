@@ -19,6 +19,7 @@ interface TransactionFormProps {
   onCancel: () => void;
   accounts: Account[];
   categories: Category[];
+  submitLabel?: string;
 }
 
 export function TransactionForm({
@@ -29,6 +30,7 @@ export function TransactionForm({
   onCancel,
   accounts,
   categories,
+  submitLabel,
 }: TransactionFormProps) {
   const isIncome = type === 'income';
   const colorClass = isIncome ? 'green' : 'red';
@@ -142,7 +144,7 @@ export function TransactionForm({
           type="submit"
           className={`bg-${colorClass}-600 hover:bg-${colorClass}-700`}
         >
-          Add {title}
+          {submitLabel ? submitLabel : `Add ${title}`}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel

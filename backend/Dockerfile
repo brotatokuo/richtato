@@ -15,6 +15,7 @@ RUN apt-get update \
         libpq-dev \
         tesseract-ocr \
         tesseract-ocr-eng \
+        ocrmypdf \
         ghostscript \
         libheif-dev \
         libheif1 \
@@ -23,6 +24,12 @@ RUN apt-get update \
         libpng-dev \
         libtiff-dev \
         libwebp-dev \
+        libgl1 \
+        libglib2.0-0 \
+        libsm6 \
+        libxrender1 \
+        libxext6 \
+        libgomp1 \
         zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 

@@ -14,7 +14,7 @@ def migrate_category_budgets(apps, schema_editor):
             Budget.objects.create(
                 user=category.user,
                 category=category,
-                start_date=date(2020, 1, 1),  # Or whatever default range you want
+                start_date=date(2020, 1, 1),
                 amount=category.budget,
             )
 

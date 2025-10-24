@@ -34,11 +34,12 @@ import {
   CreditCard,
   Filter,
   Plus,
+  ScanLine,
   Tag,
   TrendingDown,
   TrendingUp,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 
 const getLocalDateString = (): string => {
   const now = new Date();
@@ -65,6 +66,8 @@ export function TransactionTable({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [sortField, setSortField] = useState<keyof DisplayTransaction>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
@@ -73,16 +76,16 @@ export function TransactionTable({
   const [itemsPerPage] = useState(10);
 
   // Context menu state
-  const [contextMenu, setContextMenu] = useState<{
-    isOpen: boolean;
-    position: { x: number; y: number };
-    field: string;
-    title: string;
-  }>({
+  const [contextMenu, setContextMenu] = useState({
     isOpen: false,
     position: { x: 0, y: 0 },
     field: '',
     title: '',
+  } as {
+    isOpen: boolean;
+    position: { x: number; y: number };
+    field: string;
+    title: string;
   });
 
   // Additional filters
@@ -102,6 +105,23 @@ export function TransactionTable({
     account_name: '',
     ...(isIncome ? {} : { category: '' }),
   });
+
+  // Edit modal state
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<DisplayTransaction | null>(null);
+  const [editFormData, setEditFormData] = useState<TransactionFormData>({
+    description: '',
+    date: getLocalDateString(),
+    amount: '',
+    account_name: '',
+    ...(isIncome ? {} : { category: '' }),
+  });
+
+  // Receipt modal state
+  const [receiptAccountId, setReceiptAccountId] = useState<number | ''>('');
+  const [receiptCategoryId, setReceiptCategoryId] = useState<number | ''>('');
+  const [receiptDate, setReceiptDate] = useState<string>(getLocalDateString());
+  const receiptFileRef = useRef<HTMLInputElement | null>(null);
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -303,6 +323,144 @@ export function TransactionTable({
     }
   };
 
+  const handleReceiptSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const file = receiptFileRef.current?.files?.[0];
+      if (!file) return;
+
+      if (!receiptAccountId || typeof receiptAccountId !== 'number') {
+        throw new Error('Please select an account');
+      }
+
+      const created =
+        await transactionsApiService.uploadReceiptAndCreateExpense({
+          file,
+          accountId: receiptAccountId,
+          categoryId:
+            !isIncome && typeof receiptCategoryId === 'number'
+              ? receiptCategoryId
+              : undefined,
+        });
+
+      const transformedTransaction = transformTransaction(created as any);
+      onTransactionsChange([transformedTransaction, ...transactions]);
+
+      // reset
+      if (receiptFileRef.current) receiptFileRef.current.value = '';
+      setReceiptAccountId('');
+      setReceiptCategoryId('');
+      setReceiptDate(getLocalDateString());
+      setShowReceiptModal(false);
+      onRefresh();
+    } catch (error) {
+      console.error('Error uploading receipt:', error);
+    }
+  };
+
+  const openEditModal = (t: DisplayTransaction) => {
+    setSelectedTransaction(t);
+    setEditFormData({
+      description: t.description,
+      date: t.date,
+      amount: Math.abs(t.amount).toString(),
+      account_name: t.account,
+      ...(isIncome ? {} : { category: t.category || '' }),
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTransaction) return;
+    try {
+      const account = accounts.find(
+        acc => acc.name === editFormData.account_name
+      );
+      if (!account) throw new Error('Account not found');
+
+      let payload: any;
+      if (isIncome) {
+        // Income expects Account as primary key id
+        payload = {
+          description: editFormData.description,
+          date: editFormData.date,
+          amount: parseFloat(editFormData.amount),
+          Account: account.id,
+        };
+      } else {
+        // Expense expects account_name (id) and optional category (id)
+        const categoryId = editFormData.category
+          ? categories.find(cat => cat.name === editFormData.category)?.id
+          : undefined;
+        payload = {
+          description: editFormData.description,
+          date: editFormData.date,
+          amount: parseFloat(editFormData.amount),
+          account_name: account.id,
+          ...(categoryId !== undefined ? { category: categoryId } : {}),
+        };
+      }
+
+      const idNum = Number(selectedTransaction.id);
+      let updated: Transaction;
+      if (isIncome) {
+        updated = await transactionsApiService.updateIncomeTransaction(
+          idNum,
+          payload
+        );
+      } else {
+        updated = await transactionsApiService.updateExpenseTransaction(
+          idNum,
+          payload
+        );
+      }
+
+      // Enrich with names for consistent display mapping
+      const enriched = (
+        isIncome
+          ? { ...updated, Account: account.name }
+          : {
+              ...updated,
+              Account: account.name,
+              Category: editFormData.category || selectedTransaction.category,
+            }
+      ) as any;
+      const transformed = transformTransaction(enriched);
+      const next = transactions.map(t =>
+        t.id === selectedTransaction.id ? transformed : t
+      );
+      onTransactionsChange(next);
+
+      setShowEditModal(false);
+      setSelectedTransaction(null);
+      onRefresh();
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedTransaction) return;
+    const confirmDelete = window.confirm('Delete this transaction?');
+    if (!confirmDelete) return;
+    try {
+      const idNum = Number(selectedTransaction.id);
+      if (isIncome) {
+        await transactionsApiService.deleteIncomeTransaction(idNum);
+      } else {
+        await transactionsApiService.deleteExpenseTransaction(idNum);
+      }
+      const next = transactions.filter(t => t.id !== selectedTransaction.id);
+      onTransactionsChange(next);
+      setShowEditModal(false);
+      setSelectedTransaction(null);
+      onRefresh();
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+    }
+  };
+
   const getTableHeaders = () => {
     const baseHeaders = [
       {
@@ -440,6 +598,12 @@ export function TransactionTable({
           )}
         </div>
         <div className="flex gap-2">
+          {!isIncome && (
+            <Button onClick={() => setShowReceiptModal(true)} variant="outline">
+              <ScanLine className="h-4 w-4 mr-2" />
+              Scan/Upload Receipt
+            </Button>
+          )}
           <Button onClick={() => setShowAddModal(true)} variant="default">
             <Plus className="h-4 w-4 mr-2" />
             Add {isIncome ? 'Income' : 'Expense'}
@@ -462,6 +626,116 @@ export function TransactionTable({
           accounts={accounts}
           categories={categories}
         />
+      </Modal>
+
+      {/* Receipt Modal */}
+      <Modal
+        isOpen={showReceiptModal}
+        onClose={() => setShowReceiptModal(false)}
+        title="Scan/Upload Receipt"
+      >
+        <form onSubmit={handleReceiptSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label
+                className="block text-sm font-medium mb-1"
+                htmlFor="receipt-file"
+              >
+                Receipt file
+              </label>
+              <input
+                id="receipt-file"
+                ref={receiptFileRef}
+                type="file"
+                accept="image/*,.pdf"
+                capture="environment"
+                className="block w-full text-sm"
+                required
+              />
+            </div>
+            <div>
+              <label
+                className="block text-sm font-medium mb-1"
+                htmlFor="receipt-account"
+              >
+                Account
+              </label>
+              <select
+                id="receipt-account"
+                value={receiptAccountId}
+                onChange={e =>
+                  setReceiptAccountId(
+                    e.target.value ? Number(e.target.value) : ''
+                  )
+                }
+                className="block w-full border rounded px-2 py-2 text-sm"
+                required
+              >
+                <option value="">Select account</option>
+                {accounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                className="block text-sm font-medium mb-1"
+                htmlFor="receipt-category"
+              >
+                Category (optional)
+              </label>
+              <select
+                id="receipt-category"
+                value={receiptCategoryId}
+                onChange={e =>
+                  setReceiptCategoryId(
+                    e.target.value ? Number(e.target.value) : ''
+                  )
+                }
+                className="block w-full border rounded px-2 py-2 text-sm"
+              >
+                <option value="">Auto or Unknown</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                className="block text-sm font-medium mb-1"
+                htmlFor="receipt-date"
+              >
+                Date
+              </label>
+              <input
+                id="receipt-date"
+                type="date"
+                value={receiptDate}
+                onChange={e => setReceiptDate(e.target.value)}
+                className="block w-full border rounded px-2 py-2 text-sm"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="submit"
+              className={`bg-${colorClass}-600 hover:bg-${colorClass}-700`}
+            >
+              Create Expense from Receipt
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowReceiptModal(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
       </Modal>
 
       {/* Search and Filters */}
@@ -571,10 +845,17 @@ export function TransactionTable({
                     </TableRow>
                   ) : (
                     paginatedTransactions.map((transaction, index) => (
-                      <TableRow key={`${transaction.id}-${index}`}>
-                        {getTableHeaders().map(header =>
-                          renderTableCell(transaction, header.field)
-                        )}
+                      <TableRow
+                        key={`${transaction.id}-${index}`}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => openEditModal(transaction)}
+                        title="Click to edit"
+                      >
+                        {getTableHeaders().map(header => (
+                          <Fragment key={String(header.field)}>
+                            {renderTableCell(transaction, header.field)}
+                          </Fragment>
+                        ))}
                       </TableRow>
                     ))
                   )}
@@ -613,6 +894,40 @@ export function TransactionTable({
         onSelect={handleFilterSelect}
         title={contextMenu.title}
       />
+
+      {/* Edit Modal */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedTransaction(null);
+        }}
+        title={`Edit ${isIncome ? 'Income' : 'Expense'}`}
+      >
+        <TransactionForm
+          type={type}
+          formData={editFormData}
+          onFormChange={setEditFormData}
+          onSubmit={handleEditSubmit}
+          onCancel={() => {
+            setShowEditModal(false);
+            setSelectedTransaction(null);
+          }}
+          accounts={accounts}
+          categories={categories}
+          submitLabel="Save changes"
+        />
+        <div className="mt-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="text-red-600 border-red-600 hover:bg-red-50"
+            onClick={handleDelete}
+          >
+            Delete {isIncome ? 'Income' : 'Expense'}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
