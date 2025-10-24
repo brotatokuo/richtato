@@ -61,8 +61,6 @@ export interface Budget {
   end_date: string;
 }
 
-import { csrfService } from './csrf';
-
 class TransactionsApiService {
   private baseUrl: string;
 
