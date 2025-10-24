@@ -140,7 +140,6 @@ All dependencies are managed through `pyproject.toml` in the backend directory (
 - numpy 1.24.3 (numerical computing)
 - plotly 5.17.0 (data visualization)
 - openai 1.3.0 (AI integration)
-- Pillow 10.0.0 (image processing)
 - gunicorn 21.2.0 (production server)
 
 **Installation:**

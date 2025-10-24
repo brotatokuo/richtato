@@ -16,9 +16,9 @@ import {
 import {
   Account,
   Category,
-  Transaction,
-  CreateIncomeTransactionInput,
   CreateExpenseTransactionInput,
+  CreateIncomeTransactionInput,
+  Transaction,
   transactionsApiService,
 } from '@/lib/api/transactions';
 import {
@@ -34,12 +34,11 @@ import {
   CreditCard,
   Filter,
   Plus,
-  ScanLine,
   Tag,
   TrendingDown,
   TrendingUp,
 } from 'lucide-react';
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 
 const getLocalDateString = (): string => {
   const now = new Date();
@@ -66,7 +65,6 @@ export function TransactionTable({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortField, setSortField] = useState<keyof DisplayTransaction>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -116,12 +114,6 @@ export function TransactionTable({
     account_name: '',
     ...(isIncome ? {} : { category: '' }),
   });
-
-  // Receipt modal state
-  const [receiptAccountId, setReceiptAccountId] = useState<number | ''>('');
-  const [receiptCategoryId, setReceiptCategoryId] = useState<number | ''>('');
-  const [receiptDate, setReceiptDate] = useState<string>(getLocalDateString());
-  const receiptFileRef = useRef<HTMLInputElement | null>(null);
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -287,9 +279,8 @@ export function TransactionTable({
           amount: amountNum,
           Account: account.id,
         };
-        newTransaction = await transactionsApiService.createIncomeTransaction(
-          incomePayload
-        );
+        newTransaction =
+          await transactionsApiService.createIncomeTransaction(incomePayload);
       } else {
         const expensePayload: CreateExpenseTransactionInput = {
           description: formData.description,
@@ -298,9 +289,8 @@ export function TransactionTable({
           account_name: account.id,
           category: categoryId,
         };
-        newTransaction = await transactionsApiService.createExpenseTransaction(
-          expensePayload
-        );
+        newTransaction =
+          await transactionsApiService.createExpenseTransaction(expensePayload);
       }
 
       // Transform and add to local state
@@ -320,41 +310,6 @@ export function TransactionTable({
     } catch (error) {
       console.error('Error creating transaction:', error);
       // You might want to show a toast notification here
-    }
-  };
-
-  const handleReceiptSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const file = receiptFileRef.current?.files?.[0];
-      if (!file) return;
-
-      if (!receiptAccountId || typeof receiptAccountId !== 'number') {
-        throw new Error('Please select an account');
-      }
-
-      const created =
-        await transactionsApiService.uploadReceiptAndCreateExpense({
-          file,
-          accountId: receiptAccountId,
-          categoryId:
-            !isIncome && typeof receiptCategoryId === 'number'
-              ? receiptCategoryId
-              : undefined,
-        });
-
-      const transformedTransaction = transformTransaction(created as any);
-      onTransactionsChange([transformedTransaction, ...transactions]);
-
-      // reset
-      if (receiptFileRef.current) receiptFileRef.current.value = '';
-      setReceiptAccountId('');
-      setReceiptCategoryId('');
-      setReceiptDate(getLocalDateString());
-      setShowReceiptModal(false);
-      onRefresh();
-    } catch (error) {
-      console.error('Error uploading receipt:', error);
     }
   };
 
@@ -598,12 +553,6 @@ export function TransactionTable({
           )}
         </div>
         <div className="flex gap-2">
-          {!isIncome && (
-            <Button onClick={() => setShowReceiptModal(true)} variant="outline">
-              <ScanLine className="h-4 w-4 mr-2" />
-              Scan/Upload Receipt
-            </Button>
-          )}
           <Button onClick={() => setShowAddModal(true)} variant="default">
             <Plus className="h-4 w-4 mr-2" />
             Add {isIncome ? 'Income' : 'Expense'}
@@ -626,116 +575,6 @@ export function TransactionTable({
           accounts={accounts}
           categories={categories}
         />
-      </Modal>
-
-      {/* Receipt Modal */}
-      <Modal
-        isOpen={showReceiptModal}
-        onClose={() => setShowReceiptModal(false)}
-        title="Scan/Upload Receipt"
-      >
-        <form onSubmit={handleReceiptSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label
-                className="block text-sm font-medium mb-1"
-                htmlFor="receipt-file"
-              >
-                Receipt file
-              </label>
-              <input
-                id="receipt-file"
-                ref={receiptFileRef}
-                type="file"
-                accept="image/*,.pdf"
-                capture="environment"
-                className="block w-full text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label
-                className="block text-sm font-medium mb-1"
-                htmlFor="receipt-account"
-              >
-                Account
-              </label>
-              <select
-                id="receipt-account"
-                value={receiptAccountId}
-                onChange={e =>
-                  setReceiptAccountId(
-                    e.target.value ? Number(e.target.value) : ''
-                  )
-                }
-                className="block w-full border rounded px-2 py-2 text-sm"
-                required
-              >
-                <option value="">Select account</option>
-                {accounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>
-                    {acc.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label
-                className="block text-sm font-medium mb-1"
-                htmlFor="receipt-category"
-              >
-                Category (optional)
-              </label>
-              <select
-                id="receipt-category"
-                value={receiptCategoryId}
-                onChange={e =>
-                  setReceiptCategoryId(
-                    e.target.value ? Number(e.target.value) : ''
-                  )
-                }
-                className="block w-full border rounded px-2 py-2 text-sm"
-              >
-                <option value="">Auto or Unknown</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label
-                className="block text-sm font-medium mb-1"
-                htmlFor="receipt-date"
-              >
-                Date
-              </label>
-              <input
-                id="receipt-date"
-                type="date"
-                value={receiptDate}
-                onChange={e => setReceiptDate(e.target.value)}
-                className="block w-full border rounded px-2 py-2 text-sm"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              type="submit"
-              className={`bg-${colorClass}-600 hover:bg-${colorClass}-700`}
-            >
-              Create Expense from Receipt
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowReceiptModal(false)}
-            >
-              Cancel
-            </Button>
-          </div>
-        </form>
       </Modal>
 
       {/* Search and Filters */}
