@@ -106,6 +106,24 @@ class IncomeAPIView(BaseAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        # Validate account ownership
+        account_id = request.data.get("Account")
+        if account_id is not None:
+            try:
+                account_id = int(account_id)
+            except (TypeError, ValueError):
+                return Response(
+                    {"Account": ["Must be an integer ID."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if not Account.objects.filter(id=account_id, user=request.user).exists():
+                return Response(
+                    {"Account": ["Account not found for user."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         serializer = IncomeSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(user=request.user)
@@ -129,6 +147,24 @@ class IncomeAPIView(BaseAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        # Validate account ownership if Account is being updated
+        account_id = request.data.get("Account")
+        if account_id is not None:
+            try:
+                account_id = int(account_id)
+            except (TypeError, ValueError):
+                return Response(
+                    {"Account": ["Must be an integer ID."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if not Account.objects.filter(id=account_id, user=request.user).exists():
+                return Response(
+                    {"Account": ["Account not found for user."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         reversed_data = self.apply_fieldmap(request.data)
         income = get_object_or_404(Income, pk=pk, user=request.user)
 

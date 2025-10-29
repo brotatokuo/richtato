@@ -329,12 +329,24 @@ class TransactionsApiService {
   async createIncomeTransaction(
     transaction: CreateIncomeTransactionInput
   ): Promise<Transaction> {
-    const response = await fetch(`${this.baseUrl}/income/`, {
+    let response = await fetch(`${this.baseUrl}/income/`, {
       method: 'POST',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
       body: JSON.stringify(transaction),
     });
+
+    // If CSRF token is invalid, refresh it and retry once
+    if (response.status === 403) {
+      console.log('CSRF token invalid for income creation, refreshing...');
+      await csrfService.refreshToken();
+      response = await fetch(`${this.baseUrl}/income/`, {
+        method: 'POST',
+        headers: await csrfService.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(transaction),
+      });
+    }
 
     return this.handleResponse<Transaction>(response);
   }
@@ -345,12 +357,24 @@ class TransactionsApiService {
   async createExpenseTransaction(
     transaction: CreateExpenseTransactionInput
   ): Promise<Transaction> {
-    const response = await fetch(`${this.baseUrl}/expense/`, {
+    let response = await fetch(`${this.baseUrl}/expense/`, {
       method: 'POST',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
       body: JSON.stringify(transaction),
     });
+
+    // If CSRF token is invalid, refresh it and retry once
+    if (response.status === 403) {
+      console.log('CSRF token invalid for expense creation, refreshing...');
+      await csrfService.refreshToken();
+      response = await fetch(`${this.baseUrl}/expense/`, {
+        method: 'POST',
+        headers: await csrfService.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(transaction),
+      });
+    }
 
     return this.handleResponse<Transaction>(response);
   }
@@ -362,12 +386,24 @@ class TransactionsApiService {
     id: number,
     transaction: Partial<Transaction>
   ): Promise<Transaction> {
-    const response = await fetch(`${this.baseUrl}/income/${id}/`, {
+    let response = await fetch(`${this.baseUrl}/income/${id}/`, {
       method: 'PATCH',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
       body: JSON.stringify(transaction),
     });
+
+    // If CSRF token is invalid, refresh it and retry once
+    if (response.status === 403) {
+      console.log('CSRF token invalid for income update, refreshing...');
+      await csrfService.refreshToken();
+      response = await fetch(`${this.baseUrl}/income/${id}/`, {
+        method: 'PATCH',
+        headers: await csrfService.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(transaction),
+      });
+    }
 
     return this.handleResponse<Transaction>(response);
   }
@@ -379,12 +415,24 @@ class TransactionsApiService {
     id: number,
     transaction: Partial<Transaction>
   ): Promise<Transaction> {
-    const response = await fetch(`${this.baseUrl}/expense/${id}/`, {
+    let response = await fetch(`${this.baseUrl}/expense/${id}/`, {
       method: 'PATCH',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
       body: JSON.stringify(transaction),
     });
+
+    // If CSRF token is invalid, refresh it and retry once
+    if (response.status === 403) {
+      console.log('CSRF token invalid for expense update, refreshing...');
+      await csrfService.refreshToken();
+      response = await fetch(`${this.baseUrl}/expense/${id}/`, {
+        method: 'PATCH',
+        headers: await csrfService.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(transaction),
+      });
+    }
 
     return this.handleResponse<Transaction>(response);
   }

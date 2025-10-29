@@ -315,12 +315,20 @@ export function TransactionTable({
 
   const openEditModal = (t: DisplayTransaction) => {
     setSelectedTransaction(t);
+    // Find account ID from account name
+    const account = accounts.find(acc => acc.name === t.account);
+    // Find category ID from category name (for expenses only)
+    const category =
+      !isIncome && t.category
+        ? categories.find(cat => cat.name === t.category)
+        : null;
+
     setEditFormData({
       description: t.description,
       date: t.date,
       amount: Math.abs(t.amount).toString(),
-      account_name: t.account,
-      ...(isIncome ? {} : { category: t.category || '' }),
+      account_name: account ? String(account.id) : '',
+      ...(isIncome ? {} : { category: category ? String(category.id) : '' }),
     });
     setShowEditModal(true);
   };
@@ -329,10 +337,22 @@ export function TransactionTable({
     e.preventDefault();
     if (!selectedTransaction) return;
     try {
+      // Resolve account by id from dropdown value
       const account = accounts.find(
-        acc => acc.name === editFormData.account_name
+        acc => String(acc.id) === String(editFormData.account_name)
       );
       if (!account) throw new Error('Account not found');
+
+      // Find the category ID for expenses
+      let categoryId: number | undefined;
+      if (!isIncome && editFormData.category) {
+        const category = categories.find(
+          cat => String(cat.id) === String(editFormData.category)
+        );
+        if (category) {
+          categoryId = category.id;
+        }
+      }
 
       let payload: any;
       if (isIncome) {
@@ -345,9 +365,6 @@ export function TransactionTable({
         };
       } else {
         // Expense expects account_name (id) and optional category (id)
-        const categoryId = editFormData.category
-          ? categories.find(cat => cat.name === editFormData.category)?.id
-          : undefined;
         payload = {
           description: editFormData.description,
           date: editFormData.date,
@@ -372,13 +389,18 @@ export function TransactionTable({
       }
 
       // Enrich with names for consistent display mapping
+      const categoryName =
+        !isIncome && categoryId
+          ? categories.find(cat => cat.id === categoryId)?.name ||
+            selectedTransaction.category
+          : selectedTransaction.category;
       const enriched = (
         isIncome
           ? { ...updated, Account: account.name }
           : {
               ...updated,
               Account: account.name,
-              Category: editFormData.category || selectedTransaction.category,
+              Category: categoryName,
             }
       ) as any;
       const transformed = transformTransaction(enriched);

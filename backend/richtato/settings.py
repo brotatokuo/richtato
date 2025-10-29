@@ -130,19 +130,15 @@ def configure_database_for_stage(deploy_stage: str) -> dict:
             }
         }
     else:
-        host = os.getenv("POSTGRES_HOST", "localhost")
-        port = int(os.getenv("POSTGRES_PORT", "5432"))
-        name = os.getenv("POSTGRES_DB", "richtato")
-        user = os.getenv("POSTGRES_USER", "postgres")
-        password = os.getenv("POSTGRES_PASSWORD", "")
+        logger.info("DATABASE_URL is not set, using environment variables values")
         return {
             "default": {
                 "ENGINE": "django.db.backends.postgresql",
-                "NAME": name,
-                "USER": user,
-                "PASSWORD": password,
-                "HOST": host,
-                "PORT": port,
+                "NAME": os.getenv("POSTGRES_DB", "richtato"),
+                "USER": os.getenv("POSTGRES_USER", "postgres"),
+                "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
+                "HOST": os.getenv("POSTGRES_HOST", "db"),
+                "PORT": os.getenv("POSTGRES_PORT", 5433),
             }
         }
 
