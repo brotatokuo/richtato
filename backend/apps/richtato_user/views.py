@@ -15,17 +15,20 @@ from apps.richtato_user.serializers import CategorySerializer, UserPreferenceSer
 from apps.richtato_user.utils import (
     _get_line_graph_data_by_month,
 )
+from apps.settings.serializers import CardAccountSerializer
 from categories.categories import BaseCategory
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, JsonResponse
 from django.middleware.csrf import get_token
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from loguru import logger
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -46,11 +49,96 @@ class CardBanksAPIView(APIView):
             )
         },
     )
-    def get(self, request):
-        card_accounts = CardAccount.objects.filter(user=request.user)
+    def get(self, request, **kwargs):
+        pk = kwargs.get("pk")
+        if pk is not None:
+            card = get_object_or_404(CardAccount, pk=pk, user=request.user)
+            return Response({"id": card.id, "name": card.name, "bank": card.bank})
+
+        card_accounts = CardAccount.objects.filter(user=request.user).order_by("name")
         logger.debug(f"User card accounts: {card_accounts}")
         data = [{"id": c.id, "name": c.name, "bank": c.bank} for c in card_accounts]
         return Response(data)
+
+    @swagger_auto_schema(
+        operation_summary="Create a new card account",
+        operation_description="Create a new card account for the authenticated user",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "name": openapi.Schema(type=openapi.TYPE_STRING),
+                "bank": openapi.Schema(type=openapi.TYPE_STRING),
+            },
+            required=["name", "bank"],
+        ),
+        responses={
+            201: openapi.Response("Card account created successfully"),
+            400: openapi.Response("Invalid input data"),
+        },
+    )
+    def post(self, request):
+        serializer = CardAccountSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            logger.debug(f"Created card account: {serializer.data}")
+            return Response(
+                {
+                    "id": serializer.data["id"],
+                    "name": serializer.data["name"],
+                    "bank": serializer.data["bank"],
+                },
+                status=status.HTTP_201_CREATED,
+            )
+        logger.error(f"Error creating card account: {serializer.errors}")
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @swagger_auto_schema(
+        operation_summary="Update a card account",
+        operation_description="Update an existing card account for the authenticated user",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "name": openapi.Schema(type=openapi.TYPE_STRING),
+                "bank": openapi.Schema(type=openapi.TYPE_STRING),
+            },
+        ),
+        responses={
+            200: openapi.Response("Card account updated successfully"),
+            400: openapi.Response("Invalid input data"),
+            404: openapi.Response("Card account not found"),
+        },
+    )
+    def patch(self, request, **kwargs):
+        pk = kwargs.get("pk")
+        card = get_object_or_404(CardAccount, pk=pk, user=request.user)
+        serializer = CardAccountSerializer(card, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            logger.debug(f"Updated card account {pk}: {serializer.data}")
+            return Response(
+                {
+                    "id": serializer.data["id"],
+                    "name": serializer.data["name"],
+                    "bank": serializer.data["bank"],
+                }
+            )
+        logger.error(f"Error updating card account {pk}: {serializer.errors}")
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @swagger_auto_schema(
+        operation_summary="Delete a card account",
+        operation_description="Delete a card account for the authenticated user",
+        responses={
+            204: openapi.Response("Card account deleted successfully"),
+            404: openapi.Response("Card account not found"),
+        },
+    )
+    def delete(self, request, **kwargs):
+        pk = kwargs.get("pk")
+        card = get_object_or_404(CardAccount, pk=pk, user=request.user)
+        card.delete()
+        logger.debug(f"Deleted card account {pk}")
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CombinedGraphAPIView(APIView):
