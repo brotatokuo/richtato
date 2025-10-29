@@ -15,7 +15,7 @@ class SelfPingMiddleware:
     def ping_self_periodically(self):
         while self.keep_running:
             try:
-                new_prod = "http://richtato-latest.onrender.com"
+                new_prod = "https://richtato-latest.onrender.com"
                 response = requests.get(new_prod)
                 print(f"Pinged {new_prod} Status code: {response.status_code}")
 

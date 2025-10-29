@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import os
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import urlparse
 
 from colorama import Fore
 from dotenv import load_dotenv
@@ -110,106 +110,45 @@ def log_deploy_stage_message(
     )
 
 
-# Function to print deploy stage in a more friendly and clear way
-def print_deploy_stage(deploy_stage: str) -> None:
-    match deploy_stage:
-        case "LOCAL":
-            log_deploy_stage_message(
-                deploy_stage,
-                Fore.CYAN,
-                "🌟🚀",
-                f">>> The current environment is {deploy_stage.upper()}! All systems go! 💻",
-                "🚀",
-            )
-
-        case "DEV":
-            log_deploy_stage_message(
-                deploy_stage,
-                Fore.GREEN,
-                "🌱🎉",
-                ">>> You're in development mode! Feel free to experiment! 🌟",
-                "🎉",
-            )
-
-        case "PROD":
-            logger.warning(
-                f"{Fore.RED}{'=' * 20} 🚨🚨 WARNING: DEPLOY_STAGE is {deploy_stage.upper()} 🚨🚨 {'=' * 20}\n"
-                f"{Fore.RED}>>> You are running in PRODUCTION! <<<{Fore.RESET}"
-            )
-
-
 # Load environment variables and set DEPLOY_STAGE
 def configure_database_for_stage(deploy_stage: str) -> dict:
-    """Configure Postgres for all stages (no sqlite).
+    """Configure Postgres for all stages (no sqlite)."""
 
-    Priority:
-    1. DATABASE_URL
-    2. <STAGE>_DATABASE_URL (backwards-compat)
-    3. Individual PG/POSTGRES_* vars with sensible local defaults
-    """
-
-    # 1) Standard DATABASE_URL if provided
     db_url = os.getenv("DATABASE_URL")
 
-    # 2) Backwards-compatible stage-specific URL
-    if not db_url:
-        stage_key = f"{deploy_stage}_DATABASE_URL"
-        db_url = os.getenv(stage_key)
-
     if db_url:
+        # Parse the DATABASE_URL string (format: postgresql://user:password@host:port/dbname)
         parsed = urlparse(db_url)
-        db_name = parsed.path.lstrip("/")
-        # Map query params (e.g., sslmode=require) into Django OPTIONS
-        query_params = {k: v[0] for k, v in parse_qs(parsed.query).items()}
-        db_options: dict[str, str] = {}
-        if "sslmode" in query_params:
-            db_options["sslmode"] = query_params["sslmode"]
-        # Allow override via env
-        env_sslmode = os.getenv("DB_SSLMODE")
-        if env_sslmode:
-            db_options["sslmode"] = env_sslmode
         return {
             "default": {
                 "ENGINE": "django.db.backends.postgresql",
-                "NAME": db_name,
+                "NAME": parsed.path.lstrip("/"),
                 "USER": parsed.username,
                 "PASSWORD": parsed.password,
                 "HOST": parsed.hostname,
                 "PORT": parsed.port or 5432,
-                # Optionally: keep connections open (tune as needed)
-                "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "60")),
-                "OPTIONS": db_options or {},
             }
         }
-
-    # 3) Build from individual env vars (local Postgres defaults)
-    host = os.getenv("POSTGRES_HOST", "localhost")
-    port = int(os.getenv("POSTGRES_PORT", "5432"))
-    name = os.getenv("POSTGRES_DB", "richtato")
-    user = os.getenv("POSTGRES_USER", "postgres")
-    password = os.getenv("POSTGRES_PASSWORD", "")
-
-    print(
-        f"host: {host}, port: {port}, name: {name}, user: {user}, password: {password}"
-    )
-
-    return {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": name,
-            "USER": user,
-            "PASSWORD": password,
-            "HOST": host,
-            "PORT": port,
-            "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "60")),
+    else:
+        host = os.getenv("POSTGRES_HOST", "localhost")
+        port = int(os.getenv("POSTGRES_PORT", "5432"))
+        name = os.getenv("POSTGRES_DB", "richtato")
+        user = os.getenv("POSTGRES_USER", "postgres")
+        password = os.getenv("POSTGRES_PASSWORD", "")
+        return {
+            "default": {
+                "ENGINE": "django.db.backends.postgresql",
+                "NAME": name,
+                "USER": user,
+                "PASSWORD": password,
+                "HOST": host,
+                "PORT": port,
+            }
         }
-    }
 
 
 load_dotenv()
 DATABASES = configure_database_for_stage(DEPLOY_STAGE)
-print_deploy_stage(DEPLOY_STAGE)
-os.environ["DEPLOY_STAGE"] = DEPLOY_STAGE
 
 
 # Password validation
