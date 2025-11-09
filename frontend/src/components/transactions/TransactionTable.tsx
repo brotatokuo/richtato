@@ -644,7 +644,6 @@ export function TransactionTable({
           formData={formData}
           onFormChange={setFormData}
           onSubmit={handleSubmit}
-          onCancel={() => setShowAddModal(false)}
           accounts={accounts}
           categories={categories}
         />
@@ -826,24 +825,11 @@ export function TransactionTable({
           formData={editFormData}
           onFormChange={setEditFormData}
           onSubmit={handleEditSubmit}
-          onCancel={() => {
-            setShowEditModal(false);
-            setSelectedTransaction(null);
-          }}
+          onDelete={handleDelete}
           accounts={accounts}
           categories={categories}
-          submitLabel="Save changes"
+          submitLabel="Save"
         />
-        <div className="mt-4">
-          <Button
-            type="button"
-            variant="outline"
-            className="text-red-600 border-red-600 hover:bg-red-50"
-            onClick={handleDelete}
-          >
-            Delete {isIncome ? 'Income' : 'Expense'}
-          </Button>
-        </div>
       </Modal>
     </div>
   );

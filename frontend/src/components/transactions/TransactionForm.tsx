@@ -17,10 +17,10 @@ interface TransactionFormProps {
   formData: TransactionFormData;
   onFormChange: (data: TransactionFormData) => void;
   onSubmit: (e: React.FormEvent) => void;
-  onCancel: () => void;
   accounts: Account[];
   categories: Category[];
   submitLabel?: string;
+  onDelete?: () => void;
 }
 
 export function TransactionForm({
@@ -28,10 +28,10 @@ export function TransactionForm({
   formData,
   onFormChange,
   onSubmit,
-  onCancel,
   accounts,
   categories,
   submitLabel,
+  onDelete,
 }: TransactionFormProps) {
   const isIncome = type === 'income';
   const colorClass = isIncome ? 'green' : 'red';
@@ -224,16 +224,27 @@ export function TransactionForm({
           </div>
         )}
       </div>
-      <div className="flex gap-2">
-        <Button
-          type="submit"
-          className={`bg-${colorClass}-600 hover:bg-${colorClass}-700`}
-        >
-          {submitLabel ? submitLabel : `Add ${title}`}
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          {onDelete && (
+            <Button
+              type="button"
+              variant="outline"
+              className="text-red-600 border-red-600 hover:bg-red-50"
+              onClick={onDelete}
+            >
+              Delete
+            </Button>
+          )}
+        </div>
+        <div>
+          <Button
+            type="submit"
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            {submitLabel ? submitLabel : `Add ${title}`}
+          </Button>
+        </div>
       </div>
     </form>
   );
