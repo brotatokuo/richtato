@@ -34,7 +34,6 @@ export function TransactionForm({
   onDelete,
 }: TransactionFormProps) {
   const isIncome = type === 'income';
-  const colorClass = isIncome ? 'green' : 'red';
   const title = isIncome ? 'Income' : 'Expense';
   const placeholder = isIncome
     ? 'e.g., Salary, Freelance work'
