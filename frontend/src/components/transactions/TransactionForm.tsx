@@ -103,6 +103,16 @@ export function TransactionForm({
                 description: e.target.value,
               })
             }
+            onBlur={e => {
+              const val = e.target.value || '';
+              if (!isIncome) {
+                const hasRefundWord = /\brefund\b/i.test(val);
+                onFormChange({
+                  ...formData,
+                  isPositive: hasRefundWord ? true : false,
+                });
+              }
+            }}
             placeholder={placeholder}
             required
           />
