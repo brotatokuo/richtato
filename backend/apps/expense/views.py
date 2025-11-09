@@ -387,8 +387,10 @@ class ExpenseFieldChoicesView(APIView):
         },
     )
     def get(self, request):
-        user_card_accounts = CardAccount.objects.filter(user=request.user)
-        user_categories = Category.objects.filter(user=request.user)
+        user_card_accounts = CardAccount.objects.filter(user=request.user).order_by(
+            "name"
+        )
+        user_categories = Category.objects.filter(user=request.user).order_by("name")
         data = {
             "account": [
                 {"value": account.id, "label": account.name}

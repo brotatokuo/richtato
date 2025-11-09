@@ -6,6 +6,7 @@ export interface TransactionFormData {
   amount: string;
   account_name: string;
   category?: string;
+  isPositive?: boolean;
 }
 
 export type TransactionType = 'income' | 'expense';

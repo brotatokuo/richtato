@@ -1,1 +1,1 @@
-./publish.sh react /api 'linux/amd64,linux/arm64'
+./publish.sh latest /api 'linux/amd64,linux/arm64'
