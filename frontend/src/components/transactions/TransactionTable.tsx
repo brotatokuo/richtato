@@ -48,6 +48,14 @@ const getLocalDateString = (): string => {
   return `${year}-${month}-${day}`;
 };
 
+// Format an ISO date (YYYY-MM-DD) in local time without UTC shift
+const formatLocalDate = (isoDate: string): string => {
+  if (!isoDate) return '';
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const date = new Date(y, (m ?? 1) - 1, d ?? 1);
+  return date.toLocaleDateString();
+};
+
 export function TransactionTable({
   type,
   transactions,
@@ -101,7 +109,7 @@ export function TransactionTable({
     date: getLocalDateString(),
     amount: '',
     account_name: '',
-    ...(isIncome ? {} : { category: '' }),
+    ...(isIncome ? {} : { category: '', isPositive: false }),
   });
 
   // Edit modal state
@@ -112,13 +120,28 @@ export function TransactionTable({
     date: getLocalDateString(),
     amount: '',
     account_name: '',
-    ...(isIncome ? {} : { category: '' }),
+    ...(isIncome ? {} : { category: '', isPositive: false }),
   });
 
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filterCategory, dateFilter, accountFilter]);
+
+  const evaluateAmountField = (value: string): string => {
+    const val = String(value || '').trim();
+    if (!val.startsWith('=')) return val;
+    const expr = val.slice(1).trim().replace(/\s+/g, '');
+    if (!/^[0-9+\-*/().]+$/.test(expr)) return value;
+    try {
+      const result = Function('"use strict"; return (' + expr + ')')();
+      if (typeof result !== 'number' || !isFinite(result)) return value;
+      const normalized = Math.round(result * 100) / 100;
+      return String(Math.abs(normalized));
+    } catch {
+      return value;
+    }
+  };
 
   const filteredTransactions = transactions
     .filter(transaction => {
@@ -166,27 +189,30 @@ export function TransactionTable({
     endIndex
   );
 
-  const categoryNames = Array.from(new Set(transactions.map(t => t.category)));
+  const categoryNames = Array.from(
+    new Set(transactions.map(t => t.category))
+  ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
   // Generate filter options for context menu
   const getFilterOptions = (field: string): FilterOption[] => {
     switch (field) {
-      case 'date':
+      case 'date': {
         const dates = Array.from(new Set(transactions.map(t => t.date)))
           .sort()
           .reverse(); // Most recent first
         return dates.map(date => ({
-          label: new Date(date).toLocaleDateString(),
+          label: formatLocalDate(date),
           value: date,
           count: transactions.filter(t => t.date === date).length,
         }));
+      }
       case 'category':
         return categoryNames.map(category => ({
           label: category,
           value: category,
           count: transactions.filter(t => t.category === category).length,
         }));
-      case 'account':
+      case 'account': {
         const accountNames = Array.from(
           new Set(transactions.map(t => t.account))
         );
@@ -195,6 +221,7 @@ export function TransactionTable({
           value: account,
           count: transactions.filter(t => t.account === account).length,
         }));
+      }
       default:
         return [];
     }
@@ -269,14 +296,20 @@ export function TransactionTable({
         categoryId = category.id;
       }
 
-      const amountNum = parseFloat(formData.amount);
+      const rawAmount = evaluateAmountField(formData.amount);
+      const amountNum = parseFloat(rawAmount);
+      const signedAmount = isIncome
+        ? amountNum
+        : formData.isPositive
+          ? amountNum
+          : -amountNum;
 
       let newTransaction: Transaction;
       if (isIncome) {
         const incomePayload: CreateIncomeTransactionInput = {
           description: formData.description,
           date: formData.date,
-          amount: amountNum,
+          amount: signedAmount,
           Account: account.id,
         };
         newTransaction =
@@ -285,7 +318,7 @@ export function TransactionTable({
         const expensePayload: CreateExpenseTransactionInput = {
           description: formData.description,
           date: formData.date,
-          amount: amountNum,
+          amount: signedAmount,
           account_name: account.id,
           category: categoryId,
         };
@@ -303,7 +336,7 @@ export function TransactionTable({
         date: getLocalDateString(),
         amount: '',
         account_name: '',
-        ...(isIncome ? {} : { category: '' }),
+        ...(isIncome ? {} : { category: '', isPositive: false }),
       });
       setShowAddModal(false);
       onRefresh();
@@ -328,7 +361,12 @@ export function TransactionTable({
       date: t.date,
       amount: Math.abs(t.amount).toString(),
       account_name: account ? String(account.id) : '',
-      ...(isIncome ? {} : { category: category ? String(category.id) : '' }),
+      ...(isIncome
+        ? {}
+        : {
+            category: category ? String(category.id) : '',
+            isPositive: t.amount >= 0,
+          }),
     });
     setShowEditModal(true);
   };
@@ -355,12 +393,19 @@ export function TransactionTable({
       }
 
       let payload: any;
+      const rawEditAmount = evaluateAmountField(editFormData.amount);
+      const amountValue = parseFloat(rawEditAmount);
+      const signedAmount = isIncome
+        ? amountValue
+        : editFormData.isPositive
+          ? amountValue
+          : -amountValue;
       if (isIncome) {
         // Income expects Account as primary key id
         payload = {
           description: editFormData.description,
           date: editFormData.date,
-          amount: parseFloat(editFormData.amount),
+          amount: signedAmount,
           Account: account.id,
         };
       } else {
@@ -368,7 +413,7 @@ export function TransactionTable({
         payload = {
           description: editFormData.description,
           date: editFormData.date,
-          amount: parseFloat(editFormData.amount),
+          amount: signedAmount,
           account_name: account.id,
           ...(categoryId !== undefined ? { category: categoryId } : {}),
         };
@@ -482,7 +527,7 @@ export function TransactionTable({
       case 'date':
         return (
           <TableCell key={String(field)} className="font-medium">
-            {new Date(transaction.date).toLocaleDateString()}
+            {formatLocalDate(transaction.date)}
           </TableCell>
         );
       case 'description':
@@ -504,18 +549,24 @@ export function TransactionTable({
             </span>
           </TableCell>
         );
-      case 'amount':
-        const amount = Math.abs(transaction.amount);
-        const sign = isIncome ? '+' : '-';
-        const color = isIncome ? 'text-green-600' : 'text-red-600';
+      case 'amount': {
+        const amount = transaction.amount;
+        const isPositiveAmount = amount >= 0;
+        const sign = isIncome ? '+' : isPositiveAmount ? '+' : '-';
+        const color = isIncome
+          ? 'text-green-600'
+          : isPositiveAmount
+            ? 'text-green-600'
+            : 'text-red-600';
         return (
           <TableCell
             key={String(field)}
             className={`text-right font-medium ${color}`}
           >
-            {sign}${amount.toFixed(2)}
+            {sign}${Math.abs(amount).toFixed(2)}
           </TableCell>
         );
+      }
       default:
         return (
           <TableCell key={String(field)}>
@@ -543,7 +594,7 @@ export function TransactionTable({
               {dateFilter && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/15 text-primary text-xs rounded-full dark:bg-primary/20 dark:text-primary">
                   <Calendar className="h-3 w-3" />
-                  {new Date(dateFilter).toLocaleDateString()}
+                  {formatLocalDate(dateFilter)}
                 </span>
               )}
               {!isIncome && filterCategory && (
@@ -593,7 +644,6 @@ export function TransactionTable({
           formData={formData}
           onFormChange={setFormData}
           onSubmit={handleSubmit}
-          onCancel={() => setShowAddModal(false)}
           accounts={accounts}
           categories={categories}
         />
@@ -620,9 +670,14 @@ export function TransactionTable({
             ) : (
               <div className="divide-y">
                 {paginatedTransactions.map((t, index) => {
-                  const amount = Math.abs(t.amount);
-                  const sign = isIncome ? '+' : '-';
-                  const color = isIncome ? 'text-green-600' : 'text-red-600';
+                  const amount = t.amount;
+                  const isPositiveAmount = amount >= 0;
+                  const sign = isIncome ? '+' : isPositiveAmount ? '+' : '-';
+                  const color = isIncome
+                    ? 'text-green-600'
+                    : isPositiveAmount
+                      ? 'text-green-600'
+                      : 'text-red-600';
                   return (
                     <div
                       key={`${t.id}-${index}`}
@@ -633,14 +688,14 @@ export function TransactionTable({
                           {t.description}
                         </div>
                         <div className="text-xs text-muted-foreground whitespace-normal break-words">
-                          {new Date(t.date).toLocaleDateString()} • {t.account}
+                          {formatLocalDate(t.date)} • {t.account}
                           {!isIncome && t.category ? ` • ${t.category}` : ''}
                         </div>
                       </div>
                       <div
                         className={`sm:ml-4 sm:text-right text-sm font-semibold ${color}`}
                       >
-                        {sign}${amount.toFixed(2)}
+                        {sign}${Math.abs(amount).toFixed(2)}
                       </div>
                     </div>
                   );
@@ -770,24 +825,11 @@ export function TransactionTable({
           formData={editFormData}
           onFormChange={setEditFormData}
           onSubmit={handleEditSubmit}
-          onCancel={() => {
-            setShowEditModal(false);
-            setSelectedTransaction(null);
-          }}
+          onDelete={handleDelete}
           accounts={accounts}
           categories={categories}
-          submitLabel="Save changes"
+          submitLabel="Save"
         />
-        <div className="mt-4">
-          <Button
-            type="button"
-            variant="outline"
-            className="text-red-600 border-red-600 hover:bg-red-50"
-            onClick={handleDelete}
-          >
-            Delete {isIncome ? 'Income' : 'Expense'}
-          </Button>
-        </div>
       </Modal>
     </div>
   );

@@ -8,18 +8,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Account, Category } from '@/lib/api/transactions';
+import {
+  Account,
+  Category,
+  transactionsApiService,
+} from '@/lib/api/transactions';
 import { TransactionFormData, TransactionType } from '@/types/transactions';
+import { Minus, Plus } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 2,
+  minimumFractionDigits: 2,
+});
 
 interface TransactionFormProps {
   type: TransactionType;
   formData: TransactionFormData;
   onFormChange: (data: TransactionFormData) => void;
   onSubmit: (e: React.FormEvent) => void;
-  onCancel: () => void;
   accounts: Account[];
   categories: Category[];
   submitLabel?: string;
+  onDelete?: () => void;
 }
 
 export function TransactionForm({
@@ -27,17 +40,58 @@ export function TransactionForm({
   formData,
   onFormChange,
   onSubmit,
-  onCancel,
   accounts,
   categories,
   submitLabel,
+  onDelete,
 }: TransactionFormProps) {
   const isIncome = type === 'income';
-  const colorClass = isIncome ? 'green' : 'red';
   const title = isIncome ? 'Income' : 'Expense';
   const placeholder = isIncome
     ? 'e.g., Salary, Freelance work'
     : 'e.g., Groceries, Gas, Coffee';
+
+  const evaluateExpression = (expr: string): number | null => {
+    const trimmed = expr.trim().replace(/\s+/g, '');
+    if (!/^[0-9+\-*/().]+$/.test(trimmed)) return null;
+    try {
+      const result = Function('"use strict"; return (' + trimmed + ')')();
+      return typeof result === 'number' && isFinite(result) ? result : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const formatAmount = (value: number): string => {
+    return (Math.round(value * 100) / 100).toFixed(2);
+  };
+
+  const normalizeNumericString = (val: string): string => {
+    return val.replace(/[,$\s]/g, '');
+  };
+
+  const [amountDisplay, setAmountDisplay] = useState<string>(
+    formData.amount || ''
+  );
+  const [isAmountFocused, setIsAmountFocused] = useState<boolean>(false);
+
+  useEffect(() => {
+    // When external form data changes (e.g., opening modal), reflect as currency unless focused or expression
+    if (!isAmountFocused) {
+      if (!formData.amount) {
+        setAmountDisplay('');
+      } else if (String(formData.amount).trim().startsWith('=')) {
+        setAmountDisplay(formData.amount);
+      } else {
+        const num = parseFloat(normalizeNumericString(String(formData.amount)));
+        if (!isNaN(num)) {
+          setAmountDisplay(currencyFormatter.format(Math.abs(num)));
+        } else {
+          setAmountDisplay(formData.amount);
+        }
+      }
+    }
+  }, [formData.amount, isAmountFocused]);
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -53,27 +107,178 @@ export function TransactionForm({
                 description: e.target.value,
               })
             }
+            onBlur={async e => {
+              const val = e.target.value || '';
+              if (!isIncome) {
+                const hasRefundWord = /\brefund\b/i.test(val);
+                // Flip sign based on "refund" presence
+                let next = {
+                  ...formData,
+                  isPositive: hasRefundWord ? true : false,
+                };
+                try {
+                  if (val.trim().length > 0) {
+                    const result =
+                      await transactionsApiService.categorizeExpenseDescription(
+                        { description: val }
+                      );
+                    if (
+                      result?.category !== undefined &&
+                      result?.category !== null
+                    ) {
+                      next = { ...next, category: String(result.category) };
+                    }
+                  }
+                } catch {
+                  // Best-effort; ignore errors
+                  // console.debug('categorize failed', err);
+                }
+                onFormChange(next);
+              }
+            }}
             placeholder={placeholder}
             required
           />
         </div>
         <div>
           <Label htmlFor={`${type}-amount`}>Amount</Label>
-          <Input
-            id={`${type}-amount`}
-            type="number"
-            step="0.01"
-            min="0"
-            value={formData.amount}
-            onChange={e =>
-              onFormChange({
-                ...formData,
-                amount: e.target.value,
-              })
-            }
-            placeholder="0.00"
-            required
-          />
+          {isIncome ? (
+            <Input
+              id={`${type}-amount`}
+              type="text"
+              value={amountDisplay}
+              onFocus={() => {
+                setIsAmountFocused(true);
+                if (!amountDisplay) return;
+                // Show raw numeric for editing if currently formatted currency
+                if (!amountDisplay.trim().startsWith('=')) {
+                  const raw = normalizeNumericString(amountDisplay);
+                  setAmountDisplay(raw);
+                }
+              }}
+              onChange={e => {
+                const rawInput = e.target.value;
+                setAmountDisplay(rawInput);
+                if (rawInput.trim().startsWith('=')) {
+                  onFormChange({
+                    ...formData,
+                    amount: rawInput,
+                  });
+                } else {
+                  const normalized = normalizeNumericString(rawInput);
+                  onFormChange({
+                    ...formData,
+                    amount: normalized,
+                  });
+                }
+              }}
+              onBlur={e => {
+                setIsAmountFocused(false);
+                const val = e.target.value;
+                if (val.trim().startsWith('=')) {
+                  const result = evaluateExpression(val.trim().slice(1));
+                  if (result !== null) {
+                    const normalized = Math.abs(result); // don't affect sign toggle elsewhere
+                    const numericString = formatAmount(normalized);
+                    onFormChange({ ...formData, amount: numericString });
+                    setAmountDisplay(currencyFormatter.format(normalized));
+                  }
+                  return;
+                }
+                const normalized = normalizeNumericString(val);
+                const num = parseFloat(normalized);
+                if (!isNaN(num)) {
+                  const numericString = formatAmount(Math.abs(num));
+                  onFormChange({ ...formData, amount: numericString });
+                  setAmountDisplay(currencyFormatter.format(Math.abs(num)));
+                }
+              }}
+              placeholder="0.00"
+              required
+            />
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                aria-pressed={formData.isPositive ? 'true' : 'false'}
+                onClick={() =>
+                  onFormChange({
+                    ...formData,
+                    isPositive: !formData.isPositive,
+                  })
+                }
+                className={
+                  formData.isPositive
+                    ? 'border-green-600 text-green-600'
+                    : 'border-red-600 text-red-600'
+                }
+                title={
+                  formData.isPositive
+                    ? 'Refund (positive)'
+                    : 'Expense (negative)'
+                }
+              >
+                {formData.isPositive ? (
+                  <Plus className="h-4 w-4" />
+                ) : (
+                  <Minus className="h-4 w-4" />
+                )}
+              </Button>
+              <Input
+                id={`${type}-amount`}
+                type="text"
+                value={amountDisplay}
+                onFocus={() => {
+                  setIsAmountFocused(true);
+                  if (!amountDisplay) return;
+                  if (!amountDisplay.trim().startsWith('=')) {
+                    const raw = normalizeNumericString(amountDisplay);
+                    setAmountDisplay(raw);
+                  }
+                }}
+                onChange={e => {
+                  const rawInput = e.target.value;
+                  setAmountDisplay(rawInput);
+                  if (rawInput.trim().startsWith('=')) {
+                    onFormChange({
+                      ...formData,
+                      amount: rawInput,
+                    });
+                  } else {
+                    const normalized = normalizeNumericString(rawInput);
+                    onFormChange({
+                      ...formData,
+                      amount: normalized,
+                    });
+                  }
+                }}
+                onBlur={e => {
+                  setIsAmountFocused(false);
+                  const val = e.target.value;
+                  if (val.trim().startsWith('=')) {
+                    const result = evaluateExpression(val.trim().slice(1));
+                    if (result !== null) {
+                      const normalized = Math.abs(result); // do not change sign toggle
+                      const numericString = formatAmount(normalized);
+                      onFormChange({ ...formData, amount: numericString });
+                      setAmountDisplay(currencyFormatter.format(normalized));
+                    }
+                    return;
+                  }
+                  const normalized = normalizeNumericString(val);
+                  const num = parseFloat(normalized);
+                  if (!isNaN(num)) {
+                    const numericString = formatAmount(Math.abs(num));
+                    onFormChange({ ...formData, amount: numericString });
+                    setAmountDisplay(currencyFormatter.format(Math.abs(num)));
+                  }
+                }}
+                placeholder="0.00"
+                required
+              />
+            </div>
+          )}
         </div>
         <div>
           <Label htmlFor={`${type}-date`}>Date</Label>
@@ -139,16 +344,27 @@ export function TransactionForm({
           </div>
         )}
       </div>
-      <div className="flex gap-2">
-        <Button
-          type="submit"
-          className={`bg-${colorClass}-600 hover:bg-${colorClass}-700`}
-        >
-          {submitLabel ? submitLabel : `Add ${title}`}
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          {onDelete && (
+            <Button
+              type="button"
+              variant="outline"
+              className="text-red-600 border-red-600 hover:bg-red-50"
+              onClick={onDelete}
+            >
+              Delete
+            </Button>
+          )}
+        </div>
+        <div>
+          <Button
+            type="submit"
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            {submitLabel ? submitLabel : `Add ${title}`}
+          </Button>
+        </div>
       </div>
     </form>
   );

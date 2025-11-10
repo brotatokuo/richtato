@@ -2,13 +2,16 @@ import os
 import re
 from abc import ABC, abstractmethod
 
+import httpx
 import pandas as pd
+from apps.richtato_user.models import Category, User
+from dotenv import load_dotenv
 from loguru import logger
 
 # Optional imports
 from openai import OpenAI as OpenAIClient
 
-from apps.richtato_user.models import Category, User
+load_dotenv()
 
 
 class BaseAI(ABC):
@@ -23,20 +26,23 @@ class BaseAI(ABC):
 
 class OpenAI(BaseAI):
     def __init__(self):
-        # Initialize the OpenAI client with API key
-        self.client = OpenAIClient(api_key=os.environ["OPENAI_API_KEY"])
-        self.model_name = "gpt-3.5-turbo"
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise RuntimeError("Missing OPENAI_API_KEY in environment or .env file")
+        # Use a custom httpx.Client to avoid environment-specific 'proxies' kw issues
+        self.client = OpenAIClient(api_key=api_key, http_client=httpx.Client())
+        self.model_name = "gpt-4o-mini"
 
     def _ask(self, prompt: str) -> str:
-        # Use the new v1.0+ API syntax
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=[{"role": "user", "content": prompt}],
         )
-        return response.choices[0].message.content.strip()
+        content = response.choices[0].message.content or ""
+        return content.strip()
 
     def simplify_description(self, input: str) -> str:
-        prompt = f"""Simplify this transaction description: "{input}", into a more concise description."""
+        prompt = f'Simplify this transaction description: "{input}", into a more concise description.'
         return self._ask(prompt)
 
     def get_user_categories(self, user: User) -> list[str]:
@@ -52,11 +58,13 @@ class OpenAI(BaseAI):
         prompt = f"""
         Given the following categories: {category_string}
         Which category best matches the input text: "{input}"?
-        Please choose only from the given categories.
+        Please answer with EXACTLY one category name from the list. No extra words.
         """
 
+        logger.info(f"Prompt: {prompt}")
+
         response = self._ask(prompt)
-        return response
+        return self._normalize_category_response(response, category_list)
 
     def categorize_dataframe(self, user: User, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -108,3 +116,24 @@ class OpenAI(BaseAI):
         matches = re.findall(r"(\d+):\s*(.+)", response)
         mapping = {int(i): cat.strip() for i, cat in matches}
         return [mapping.get(i + 1, "Unknown") for i in range(len(batch))]
+
+    def _normalize_category_response(self, response: str, allowed: list[str]) -> str:
+        """
+        Attempt to coerce the model response to one of the allowed category names.
+        """
+        raw = (response or "").strip()
+        # Strip common markdown/quotes
+        raw = raw.strip("*").strip().strip('"').strip("'")
+        # Try exact and case-insensitive matches
+        for candidate in allowed:
+            if raw == candidate:
+                return candidate
+            if raw.lower() == candidate.lower():
+                return candidate
+        # Try to find any allowed category mentioned inside the response
+        lowered = raw.lower()
+        for candidate in allowed:
+            if candidate.lower() in lowered:
+                return candidate
+        # Default fallback
+        return "Unknown"
