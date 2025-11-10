@@ -8,7 +8,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Account, Category } from '@/lib/api/transactions';
+import {
+  Account,
+  Category,
+  transactionsApiService,
+} from '@/lib/api/transactions';
 import { TransactionFormData, TransactionType } from '@/types/transactions';
 import { Minus, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -103,14 +107,33 @@ export function TransactionForm({
                 description: e.target.value,
               })
             }
-            onBlur={e => {
+            onBlur={async e => {
               const val = e.target.value || '';
               if (!isIncome) {
                 const hasRefundWord = /\brefund\b/i.test(val);
-                onFormChange({
+                // Flip sign based on "refund" presence
+                let next = {
                   ...formData,
                   isPositive: hasRefundWord ? true : false,
-                });
+                };
+                try {
+                  if (val.trim().length > 0) {
+                    const result =
+                      await transactionsApiService.categorizeExpenseDescription(
+                        { description: val }
+                      );
+                    if (
+                      result?.category !== undefined &&
+                      result?.category !== null
+                    ) {
+                      next = { ...next, category: String(result.category) };
+                    }
+                  }
+                } catch {
+                  // Best-effort; ignore errors
+                  // console.debug('categorize failed', err);
+                }
+                onFormChange(next);
               }
             }}
             placeholder={placeholder}

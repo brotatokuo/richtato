@@ -522,6 +522,36 @@ class TransactionsApiService {
 
     return this.handleResponse(response);
   }
+
+  /**
+   * Categorize an expense description using AI
+   */
+  async categorizeExpenseDescription(input: {
+    description: string;
+  }): Promise<{ category: number }> {
+    let response = await fetch(
+      `${this.baseUrl}/expense/categorize-transaction/`,
+      {
+        method: 'POST',
+        headers: await csrfService.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(input),
+      }
+    );
+    if (response.status === 403) {
+      await csrfService.refreshToken();
+      response = await fetch(
+        `${this.baseUrl}/expense/categorize-transaction/`,
+        {
+          method: 'POST',
+          headers: await csrfService.getHeaders(),
+          credentials: 'include',
+          body: JSON.stringify(input),
+        }
+      );
+    }
+    return this.handleResponse<{ category: number }>(response);
+  }
 }
 
 export const transactionsApiService = new TransactionsApiService();

@@ -8,6 +8,8 @@ from apps.richtato_user.utils import (
 from artificial_intelligence.ai import OpenAI
 from django.db.models import F
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from loguru import logger
@@ -404,8 +406,10 @@ class ExpenseFieldChoicesView(APIView):
         return Response(data)
 
 
+@method_decorator(csrf_exempt, name="dispatch")
 class CategorizeTransactionView(APIView):
     permission_classes = [IsAuthenticated]
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
 
     @swagger_auto_schema(
         operation_summary="Categorize transaction",
@@ -433,11 +437,24 @@ class CategorizeTransactionView(APIView):
             return Response({"error": "Description is required."}, status=400)
 
         # Use AI to categorize the transaction
-        category = OpenAI().categorize_transaction(request.user, description)
-
-        cateogry_id = Category.objects.filter(name=category).first().id
-        logger.debug(f"Categorized as: {category}")
-        return Response({"category": cateogry_id})
+        try:
+            category_name = OpenAI().categorize_transaction(request.user, description)
+        except Exception as e:
+            logger.exception(f"AI categorize failed, falling back to 'Unknown': {e}")
+            category_name = "Unknown"
+        # Resolve to a Category ID for this user, with safe fallbacks
+        category_obj = (
+            Category.objects.filter(user=request.user, name=category_name).first()
+            or Category.objects.filter(
+                user=request.user, name__iexact=category_name
+            ).first()
+            or Category.objects.filter(user=request.user, name="Unknown").first()
+        )
+        if category_obj is None:
+            # As an ultimate fallback, create Unknown for the user (should normally exist)
+            category_obj = Category.objects.create(user=request.user, name="Unknown")
+        logger.debug(f"Categorized as: {category_name} -> id={category_obj.id}")
+        return Response({"category": category_obj.id})
 
 
 class ImportStatementsView(APIView):
