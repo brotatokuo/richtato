@@ -12,9 +12,10 @@ from apps.richtato_user.models import (
     UserPreference,
 )
 from apps.richtato_user.serializers import CategorySerializer, UserPreferenceSerializer
-from apps.richtato_user.utils import (
-    _get_line_graph_data_by_month,
-)
+from apps.richtato_user.services.card_account_service import CardAccountService
+from apps.richtato_user.services.category_service import CategoryService
+from apps.richtato_user.services.graph_service import GraphService
+from apps.richtato_user.services.user_service import UserService
 from apps.settings.serializers import CardAccountSerializer
 from categories.categories import BaseCategory
 from django.contrib.auth import authenticate, login, logout
@@ -40,6 +41,10 @@ pst = pytz.timezone("US/Pacific")
 class CardBanksAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.card_account_service = CardAccountService()
+
     @swagger_auto_schema(
         operation_summary="Get user card accounts",
         operation_description="Retrieve all card accounts for the authenticated user",
@@ -52,12 +57,17 @@ class CardBanksAPIView(APIView):
     def get(self, request, **kwargs):
         pk = kwargs.get("pk")
         if pk is not None:
-            card = get_object_or_404(CardAccount, pk=pk, user=request.user)
-            return Response({"id": card.id, "name": card.name, "bank": card.bank})
+            card_data = self.card_account_service.get_card_account_by_id(
+                pk, request.user
+            )
+            if not card_data:
+                return Response(
+                    {"error": "Card account not found"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            return Response(card_data)
 
-        card_accounts = CardAccount.objects.filter(user=request.user).order_by("name")
-        logger.debug(f"User card accounts: {card_accounts}")
-        data = [{"id": c.id, "name": c.name, "bank": c.bank} for c in card_accounts]
+        data = self.card_account_service.get_user_card_accounts_formatted(request.user)
         return Response(data)
 
     @swagger_auto_schema(
@@ -79,16 +89,13 @@ class CardBanksAPIView(APIView):
     def post(self, request):
         serializer = CardAccountSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(user=request.user)
-            logger.debug(f"Created card account: {serializer.data}")
-            return Response(
-                {
-                    "id": serializer.data["id"],
-                    "name": serializer.data["name"],
-                    "bank": serializer.data["bank"],
-                },
-                status=status.HTTP_201_CREATED,
+            name = serializer.validated_data["name"]
+            bank = serializer.validated_data["bank"]
+            card_data = self.card_account_service.create_card_account(
+                request.user, name, bank
             )
+            logger.debug(f"Created card account: {card_data}")
+            return Response(card_data, status=status.HTTP_201_CREATED)
         logger.error(f"Error creating card account: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -110,18 +117,16 @@ class CardBanksAPIView(APIView):
     )
     def patch(self, request, **kwargs):
         pk = kwargs.get("pk")
-        card = get_object_or_404(CardAccount, pk=pk, user=request.user)
-        serializer = CardAccountSerializer(card, data=request.data, partial=True)
+        serializer = CardAccountSerializer(data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save()
-            logger.debug(f"Updated card account {pk}: {serializer.data}")
-            return Response(
-                {
-                    "id": serializer.data["id"],
-                    "name": serializer.data["name"],
-                    "bank": serializer.data["bank"],
-                }
-            )
+            try:
+                card_data = self.card_account_service.update_card_account(
+                    pk, request.user, **serializer.validated_data
+                )
+                logger.debug(f"Updated card account {pk}: {card_data}")
+                return Response(card_data)
+            except ValueError as e:
+                return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
         logger.error(f"Error updating card account {pk}: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -135,14 +140,20 @@ class CardBanksAPIView(APIView):
     )
     def delete(self, request, **kwargs):
         pk = kwargs.get("pk")
-        card = get_object_or_404(CardAccount, pk=pk, user=request.user)
-        card.delete()
-        logger.debug(f"Deleted card account {pk}")
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        try:
+            self.card_account_service.delete_card_account(pk, request.user)
+            logger.debug(f"Deleted card account {pk}")
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
 
 
 class CombinedGraphAPIView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.graph_service = GraphService()
 
     @swagger_auto_schema(
         operation_summary="Get combined income/expense graph data",
@@ -154,42 +165,19 @@ class CombinedGraphAPIView(APIView):
         },
     )
     def get(self, request):
-        expense_data = _get_line_graph_data_by_month(request.user, Expense)
-        logger.debug(f"Expense data: {expense_data}")
-
-        income_data = _get_line_graph_data_by_month(request.user, Income)
-        logger.debug(f"Income data: {income_data}")
-
-        chart_data = {
-            "labels": expense_data["labels"],  # assumes income labels match
-            "datasets": [
-                {
-                    "label": "Expenses",
-                    "data": expense_data["values"],
-                    "backgroundColor": "rgba(232, 82, 63, 0.2)",
-                    "borderColor": "rgba(232, 82, 63, 0.5)",
-                    "borderWidth": 1,
-                    "fill": True,
-                    "tension": 0.4,
-                },
-                {
-                    "label": "Income",
-                    "data": income_data["values"],
-                    "backgroundColor": "rgba(152, 204, 44, 0.2)",
-                    "borderColor": "rgba(152, 204, 44, 0.5)",
-                    "borderWidth": 1,
-                    "fill": True,
-                    "tension": 0.4,
-                },
-            ],
-        }
-
+        chart_data = self.graph_service.get_combined_graph_data(
+            request.user, Expense, Income
+        )
         logger.debug(f"Combined chart data: {chart_data}")
         return Response(chart_data)
 
 
 class CategoryView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.category_service = CategoryService()
 
     @swagger_auto_schema(
         operation_summary="Get user categories",
@@ -202,8 +190,7 @@ class CategoryView(APIView):
     )
     def get(self, request) -> Response:
         # Return enabled categories for the user in a simple list format
-        categories = Category.objects.filter(user=request.user, enabled=True)
-        results = [{"id": c.id, "name": c.name, "type": c.type} for c in categories]
+        results = self.category_service.get_enabled_categories(request.user)
         return Response({"results": results})
 
     @swagger_auto_schema(
@@ -229,8 +216,13 @@ class CategoryView(APIView):
     def post(self, request):
         serializer = CategorySerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(user=request.user)
-            return Response(serializer.data, status=201)
+            name = serializer.validated_data["name"]
+            category_type = serializer.validated_data["type"]
+            enabled = serializer.validated_data.get("enabled", True)
+            category_data = self.category_service.create_category(
+                request.user, name, category_type, enabled
+            )
+            return Response(category_data, status=201)
         else:
             return Response(serializer.errors, status=400)
 
@@ -255,15 +247,15 @@ class CategoryView(APIView):
         },
     )
     def put(self, request, pk):
-        try:
-            category = Category.objects.get(pk=pk, user=request.user)
-        except Category.DoesNotExist:
-            return Response({"error": "Category not found"}, status=404)
-
-        serializer = CategorySerializer(category, data=request.data, partial=True)
+        serializer = CategorySerializer(data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
+            try:
+                category_data = self.category_service.update_category(
+                    pk, request.user, **serializer.validated_data
+                )
+                return Response(category_data)
+            except ValueError as e:
+                return Response({"error": str(e)}, status=404)
         return Response(serializer.errors, status=400)
 
     @swagger_auto_schema(
@@ -276,15 +268,18 @@ class CategoryView(APIView):
     )
     def delete(self, request, pk):
         try:
-            category = Category.objects.get(pk=pk, user=request.user)
-            category.delete()
+            self.category_service.delete_category(pk, request.user)
             return Response(status=204)
-        except Category.DoesNotExist:
-            return Response({"error": "Category not found"}, status=404)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=404)
 
 
 class CategoryFieldChoicesAPIView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.category_service = CategoryService()
 
     @swagger_auto_schema(
         operation_summary="Get category field choices",
@@ -296,15 +291,16 @@ class CategoryFieldChoicesAPIView(APIView):
         },
     )
     def get(self, request):
-        type_choices = [
-            {"value": choice[0], "label": choice[1]}
-            for choice in Category.CATEGORY_TYPES
-        ]
-        return Response({"type_choices": type_choices})
+        choices = self.category_service.get_field_choices()
+        return Response({"type_choices": choices["type"]})
 
 
 class CategorySettingsAPIView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.category_service = CategoryService()
 
     @swagger_auto_schema(
         operation_summary="Get full category catalog with enabled flags",
@@ -398,57 +394,72 @@ class CategorySettingsAPIView(APIView):
         Category.objects.filter(user=request.user, name__in=list(enabled)).update(
             enabled=True
         )
-        # Don't disable Unknown
-        Category.objects.filter(
-            user=request.user, name__in=list(disabled - {"Unknown"})
-        ).update(enabled=False)
+        Category.objects.filter(user=request.user, name__in=list(disabled)).update(
+            enabled=False
+        )
 
-        # Upsert budgets per provided mapping
-        if budgets:
-            from apps.budget.models import Budget
+        # Handle budgets: create/update/delete as needed
+        from decimal import Decimal
+        from apps.budget.models import Budget
 
-            # Ensure we have Category objects for all names referenced in budgets
-            budget_names = list(budgets.keys())
-            categories = {
-                c.name: c
-                for c in Category.objects.filter(
-                    user=request.user, name__in=budget_names
-                )
-            }
-            for name, payload in budgets.items():
-                category = categories.get(name)
-                if not category:
-                    continue
-                amount = payload.get("amount", None)
-                # If amount is null/undefined, delete any existing budget for this category
+        cat_map = {
+            c.name: c
+            for c in Category.objects.filter(user=request.user, name__in=budgets.keys())
+        }
+        existing_budgets = {
+            b.category.name: b
+            for b in Budget.objects.filter(user=request.user).select_related("category")
+        }
+
+        for name, bdata in budgets.items():
+            if bdata is None:
+                # Delete existing budget if present
+                if name in existing_budgets:
+                    existing_budgets[name].delete()
+            else:
+                # Create or update budget
+                amount = bdata.get("amount")
+                start_date_str = bdata.get("start_date")
+                end_date_str = bdata.get("end_date")
                 if amount is None:
-                    Budget.objects.filter(user=request.user, category=category).delete()
                     continue
-                start_date = payload.get("start_date")
-                end_date = payload.get("end_date") or None
-                if not start_date:
-                    start_date = datetime.date.today().isoformat()
-                # If a budget already exists for this user/category (by unique_together on start_date),
-                # prefer updating the first one; else create a new one.
-                existing_qs = Budget.objects.filter(
-                    user=request.user, category=category
+                amount = Decimal(str(amount))
+
+                # Parse dates
+                import datetime
+
+                start_date = (
+                    datetime.date.fromisoformat(start_date_str)
+                    if start_date_str
+                    else datetime.date.today()
                 )
-                if existing_qs.exists():
-                    b = existing_qs.order_by("-start_date").first()
+                end_date = (
+                    datetime.date.fromisoformat(end_date_str) if end_date_str else None
+                )
+
+                cat = cat_map.get(name)
+                if not cat:
+                    # If category doesn't exist yet, skip
+                    continue
+
+                if name in existing_budgets:
+                    # Update existing budget
+                    b = existing_budgets[name]
                     b.amount = amount
                     b.start_date = start_date
                     b.end_date = end_date
                     b.save()
                 else:
+                    # Create new budget
                     Budget.objects.create(
                         user=request.user,
-                        category=category,
+                        category=cat,
                         amount=amount,
                         start_date=start_date,
                         end_date=end_date,
                     )
 
-        return Response({"success": True})
+        return Response({"message": "Category settings updated"})
 
 
 class UserPreferenceAPIView(APIView):
@@ -456,415 +467,349 @@ class UserPreferenceAPIView(APIView):
 
     @swagger_auto_schema(
         operation_summary="Get user preferences",
-        responses={200: openapi.Response("Success")},
+        operation_description="Retrieve preferences for the authenticated user",
+        responses={
+            200: openapi.Response(
+                "Success",
+                examples={"application/json": {"theme": "light", "currency": "USD"}},
+            )
+        },
     )
     def get(self, request):
-        pref, _ = UserPreference.objects.get_or_create(user=request.user)
-        data = UserPreferenceSerializer(pref).data
-        return Response(data)
+        try:
+            preferences = UserPreference.objects.get(user=request.user)
+            serializer = UserPreferenceSerializer(preferences)
+            return Response(serializer.data)
+        except UserPreference.DoesNotExist:
+            # Return default preferences
+            return Response(
+                {"theme": "system", "currency": "USD", "date_format": "MM/DD/YYYY"}
+            )
 
     @swagger_auto_schema(
         operation_summary="Update user preferences",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                "theme": openapi.Schema(type=openapi.TYPE_STRING),
-                "currency": openapi.Schema(type=openapi.TYPE_STRING),
-                "date_format": openapi.Schema(type=openapi.TYPE_STRING),
-            },
-        ),
+        operation_description="Update preferences for the authenticated user",
+        request_body=UserPreferenceSerializer,
         responses={
-            200: openapi.Response("Success"),
-            400: openapi.Response("Bad Request"),
+            200: openapi.Response("Preferences updated successfully"),
+            400: openapi.Response("Invalid input data"),
         },
     )
     def put(self, request):
-        pref, _ = UserPreference.objects.get_or_create(user=request.user)
-        serializer = UserPreferenceSerializer(pref, data=request.data, partial=True)
+        try:
+            preferences = UserPreference.objects.get(user=request.user)
+            serializer = UserPreferenceSerializer(
+                preferences, data=request.data, partial=True
+            )
+        except UserPreference.DoesNotExist:
+            serializer = UserPreferenceSerializer(data=request.data, partial=True)
+
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(user=request.user)
             return Response(serializer.data)
         return Response(serializer.errors, status=400)
 
 
-# CSRF Token endpoint
+# Django views (CSRF-based authentication)
 @ensure_csrf_cookie
 def get_csrf_token(request):
-    """Get CSRF token for frontend and ensure csrftoken cookie is set"""
-    token = get_token(request)
-    return JsonResponse({"csrfToken": token})
+    return JsonResponse({"csrfToken": get_token(request)})
 
 
-# Authentication API Views
 class LoginView(APIView):
-    permission_classes = []  # Allow unauthenticated access for login
-
+    @method_decorator(csrf_exempt)
     @swagger_auto_schema(
-        operation_summary="User login",
-        operation_description="Authenticate user and return session information",
+        operation_summary="Login",
+        operation_description="Authenticate a user and start a session",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                "username": openapi.Schema(
-                    type=openapi.TYPE_STRING, description="Username"
-                ),
-                "password": openapi.Schema(
-                    type=openapi.TYPE_STRING, description="Password"
-                ),
+                "username": openapi.Schema(type=openapi.TYPE_STRING),
+                "password": openapi.Schema(type=openapi.TYPE_STRING),
             },
             required=["username", "password"],
         ),
         responses={
-            200: openapi.Response("Success"),
-            401: openapi.Response("Unauthorized"),
+            200: openapi.Response("Login successful"),
+            401: openapi.Response("Invalid credentials"),
         },
     )
     def post(self, request):
-        username = request.data.get("username")
-        password = request.data.get("password")
+        data = (
+            json.loads(request.body)
+            if isinstance(request.body, bytes)
+            else request.data
+        )
+        username = data.get("username")
+        password = data.get("password")
 
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
+        user_service = UserService()
+        user = user_service.authenticate_user(username, password)
+
+        if user:
             login(request, user)
-            return Response(
-                {
-                    "success": True,
-                    "message": "Login successful",
-                    "user": {
-                        "id": user.id,
-                        "username": user.username,
-                        "email": user.email,
-                        "is_staff": user.is_staff,
-                        "is_superuser": user.is_superuser,
-                        "is_active": user.is_active,
-                        "date_joined": user.date_joined,
-                        "last_login": user.last_login,
-                    },
-                    "token": "session-based",  # Using session authentication
-                }
+            return JsonResponse(
+                {"message": "Login successful", "user_id": user.id}, status=200
             )
-        else:
-            return Response({"error": "Invalid credentials"}, status=401)
+        return JsonResponse({"error": "Invalid credentials"}, status=401)
 
 
 class RegisterView(APIView):
-    permission_classes = []  # Allow unauthenticated access for registration
-
+    @method_decorator(csrf_exempt)
     @swagger_auto_schema(
-        operation_summary="User registration",
-        operation_description="Register a new user account",
+        operation_summary="Register",
+        operation_description="Register a new user",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                "username": openapi.Schema(
-                    type=openapi.TYPE_STRING, description="Username"
-                ),
-                "email": openapi.Schema(type=openapi.TYPE_STRING, description="Email"),
-                "password": openapi.Schema(
-                    type=openapi.TYPE_STRING, description="Password"
-                ),
-                "password_confirm": openapi.Schema(
-                    type=openapi.TYPE_STRING, description="Password confirmation"
-                ),
+                "username": openapi.Schema(type=openapi.TYPE_STRING),
+                "password": openapi.Schema(type=openapi.TYPE_STRING),
             },
-            required=["username", "email", "password", "password_confirm"],
+            required=["username", "password"],
         ),
         responses={
-            201: openapi.Response("Created"),
-            400: openapi.Response("Bad Request"),
+            201: openapi.Response("Registration successful"),
+            400: openapi.Response("Username already exists or invalid input"),
         },
     )
     def post(self, request):
-        username = request.data.get("username")
-        email = request.data.get("email")
-        password = request.data.get("password")
-        password_confirm = request.data.get("password_confirm")
+        data = (
+            json.loads(request.body)
+            if isinstance(request.body, bytes)
+            else request.data
+        )
+        username = data.get("username")
+        password = data.get("password")
 
-        if password != password_confirm:
-            return Response({"error": "Passwords do not match"}, status=400)
+        if not username or not password:
+            return JsonResponse(
+                {"error": "Username and password are required"}, status=400
+            )
 
-        if User.objects.filter(username=username).exists():
-            return Response({"error": "Username already exists"}, status=400)
+        user_service = UserService()
 
-        if User.objects.filter(email=email).exists():
-            return Response({"error": "Email already exists"}, status=400)
+        if not user_service.check_username_availability(username):
+            return JsonResponse({"error": "Username already exists"}, status=400)
 
         try:
-            user = User.objects.create_user(
-                username=username, email=email, password=password
-            )
-            return Response(
-                {"message": "User created successfully", "user_id": user.id}, status=201
+            user = user_service.create_user(username, password)
+            login(request, user)
+            return JsonResponse(
+                {"message": "Registration successful", "user_id": user.id}, status=201
             )
         except Exception as e:
-            return Response({"error": str(e)}, status=400)
+            logger.error(f"Registration error: {e}")
+            return JsonResponse({"error": str(e)}, status=500)
 
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        operation_summary="User logout",
-        operation_description="Logout the authenticated user",
-        responses={200: openapi.Response("Success")},
+        operation_summary="Logout",
+        operation_description="End the user session",
+        responses={
+            200: openapi.Response("Logout successful"),
+        },
     )
     def post(self, request):
         logout(request)
-        return Response({"message": "Logout successful"})
+        return JsonResponse({"message": "Logged out successfully"}, status=200)
 
 
-# Additional API endpoints
-@swagger_auto_schema(
-    operation_summary="Get user ID",
-    operation_description="Get the ID of the authenticated user",
-    responses={
-        200: openapi.Response("Success", examples={"application/json": {"userID": 1}})
-    },
-)
 @login_required
+@require_http_methods(["GET"])
 def get_user_id(request: HttpRequest):
-    return JsonResponse({"userID": request.user.pk})
+    """
+    Get the user ID of the currently logged-in user.
+    Useful for frontend to verify session state.
+    """
+    return JsonResponse({"user_id": request.user.id})
 
 
-@swagger_auto_schema(
-    operation_summary="Check username availability",
-    operation_description="Check if a username is available for registration",
-    request_body=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            "username": openapi.Schema(
-                type=openapi.TYPE_STRING, description="Username to check"
-            ),
-        },
-        required=["username"],
-    ),
-    responses={
-        200: openapi.Response(
-            "Success", examples={"application/json": {"available": True}}
-        )
-    },
-)
-@csrf_exempt
+@login_required
 @require_http_methods(["POST"])
 def check_username_availability(request):
-    data = json.loads(request.body)
-    username = data.get("username")
+    """
+    Check if a username is available.
+    Request body: {"username": "someusername"}
+    """
+    try:
+        data = json.loads(request.body)
+        username = data.get("username")
+        if not username:
+            return JsonResponse({"error": "Username is required"}, status=400)
 
-    if not username:
-        return JsonResponse({"error": "Username is required"}, status=400)
+        user_service = UserService()
+        available = user_service.check_username_availability(username)
+        return JsonResponse({"available": available})
+    except Exception as e:
+        logger.error(f"Error checking username availability: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
 
-    is_available = not User.objects.filter(username=username).exists()
-    return JsonResponse({"available": is_available})
 
-
-@swagger_auto_schema(
-    operation_summary="Update username",
-    operation_description="Update the username of the authenticated user",
-    request_body=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            "new_username": openapi.Schema(
-                type=openapi.TYPE_STRING, description="New username"
-            ),
-        },
-        required=["new_username"],
-    ),
-    responses={200: openapi.Response("Success"), 400: openapi.Response("Bad Request")},
-)
 @login_required
 @require_http_methods(["POST"])
 def update_username(request):
-    data = json.loads(request.body)
-    new_username = data.get("new_username")
+    """
+    Update the current user's username.
+    Request body: {"new_username": "newusername"}
+    """
+    try:
+        data = json.loads(request.body)
+        new_username = data.get("new_username")
+        if not new_username:
+            return JsonResponse({"error": "New username is required"}, status=400)
 
-    if not new_username:
-        return JsonResponse({"error": "New username is required"}, status=400)
+        user_service = UserService()
+        try:
+            user_service.update_username(request.user, new_username)
+            return JsonResponse(
+                {"message": "Username updated successfully", "username": new_username}
+            )
+        except ValueError as e:
+            return JsonResponse({"error": str(e)}, status=400)
 
-    if User.objects.filter(username=new_username).exists():
-        return JsonResponse({"error": "Username already exists"}, status=400)
-
-    request.user.username = new_username
-    request.user.save()
-
-    return JsonResponse({"message": "Username updated successfully"})
+    except Exception as e:
+        logger.error(f"Error updating username: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
 
 
-@swagger_auto_schema(
-    operation_summary="Change password",
-    operation_description="Change the password of the authenticated user",
-    request_body=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            "old_password": openapi.Schema(
-                type=openapi.TYPE_STRING, description="Current password"
-            ),
-            "new_password": openapi.Schema(
-                type=openapi.TYPE_STRING, description="New password"
-            ),
-        },
-        required=["old_password", "new_password"],
-    ),
-    responses={200: openapi.Response("Success"), 400: openapi.Response("Bad Request")},
-)
 @login_required
 @require_http_methods(["POST"])
 def change_password(request):
-    data = json.loads(request.body)
-    old_password = data.get("old_password")
-    new_password = data.get("new_password")
+    """
+    Change the current user's password.
+    Request body: {"current_password": "...", "new_password": "..."}
+    """
+    try:
+        data = json.loads(request.body)
+        current_password = data.get("current_password")
+        new_password = data.get("new_password")
 
-    if not old_password or not new_password:
-        return JsonResponse(
-            {"error": "Both old and new passwords are required"}, status=400
-        )
+        if not current_password or not new_password:
+            return JsonResponse(
+                {"error": "Both current and new password are required"}, status=400
+            )
 
-    if not request.user.check_password(old_password):
-        return JsonResponse({"error": "Current password is incorrect"}, status=400)
+        # Verify current password
+        user_service = UserService()
+        user = user_service.authenticate_user(request.user.username, current_password)
+        if not user:
+            return JsonResponse({"error": "Current password is incorrect"}, status=400)
 
-    request.user.set_password(new_password)
-    request.user.save()
+        # Update password
+        user_service.update_password(request.user, new_password)
+        return JsonResponse({"message": "Password changed successfully"})
 
-    return JsonResponse({"message": "Password changed successfully"})
+    except Exception as e:
+        logger.error(f"Error changing password: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
 
 
-@swagger_auto_schema(
-    operation_summary="Update user preferences",
-    operation_description="Update user preferences and settings",
-    request_body=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            "preferences": openapi.Schema(
-                type=openapi.TYPE_OBJECT, description="User preferences object"
-            ),
-        },
-        required=["preferences"],
-    ),
-    responses={200: openapi.Response("Success"), 400: openapi.Response("Bad Request")},
-)
 @login_required
 @require_http_methods(["POST"])
 def update_preferences(request):
-    data = json.loads(request.body)
-    preferences = data.get("preferences", {})
+    """
+    Update user preferences (theme, currency, etc.)
+    """
+    try:
+        data = json.loads(request.body)
+        preferences, created = UserPreference.objects.get_or_create(user=request.user)
 
-    # Update user preferences here based on your User model
-    # This is a placeholder implementation
-    request.user.save()
+        if "theme" in data:
+            preferences.theme = data["theme"]
+        if "currency" in data:
+            preferences.currency = data["currency"]
+        if "date_format" in data:
+            preferences.date_format = data["date_format"]
 
-    return JsonResponse({"message": "Preferences updated successfully"})
+        preferences.save()
+        return JsonResponse({"message": "Preferences updated successfully"})
+
+    except Exception as e:
+        logger.error(f"Error updating preferences: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
 
 
-@swagger_auto_schema(
-    operation_summary="Delete account",
-    operation_description="Delete the authenticated user's account",
-    responses={200: openapi.Response("Success"), 400: openapi.Response("Bad Request")},
-)
 @login_required
 @require_http_methods(["POST"])
 def delete_account(request):
-    # Add confirmation logic here if needed
-    request.user.delete()
-    return JsonResponse({"message": "Account deleted successfully"})
-
-
-# Demo login for development
-@swagger_auto_schema(
-    operation_summary="Demo login",
-    operation_description="Login with demo user for development/testing",
-    responses={200: openapi.Response("Success"), 400: openapi.Response("Bad Request")},
-)
-@csrf_exempt
-def demo_login(request):
-    """Demo login for development purposes"""
+    """Delete the current user's account."""
     try:
-        # Create or get demo user
-        demo_user, created = User.objects.get_or_create(
-            username="demo_user",
-            defaults={"email": "demo@richtato.local", "is_active": True},
-        )
+        user_service = UserService()
+        user_service.delete_user(request.user)
+        logout(request)
+        return JsonResponse({"message": "Account deleted successfully"})
+    except Exception as e:
+        logger.error(f"Error deleting account: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
 
-        if created:
-            demo_user.set_password("demo_password")
-            demo_user.save()
 
-        # Login the demo user
+@require_http_methods(["POST"])
+def demo_login(request):
+    """Create or login as a demo user."""
+    from apps.richtato_user.demo_user_factory import create_demo_user
+
+    try:
+        demo_user = create_demo_user()
         login(request, demo_user)
-
         return JsonResponse(
             {
-                "message": "Demo login successful",
+                "message": "Demo user created and logged in",
                 "user_id": demo_user.id,
                 "username": demo_user.username,
             }
         )
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        logger.error(f"Error creating demo user: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
 
 
-# API Authentication endpoints
+# API Authentication Views
 class APILoginView(APIView):
-    permission_classes = []  # Allow unauthenticated access for API login
-
+    @method_decorator(csrf_exempt)
     @swagger_auto_schema(
         operation_summary="API Login",
-        operation_description="Login via API and return authentication token",
+        operation_description="Authenticate a user via API",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                "username": openapi.Schema(
-                    type=openapi.TYPE_STRING, description="Username"
-                ),
-                "password": openapi.Schema(
-                    type=openapi.TYPE_STRING, description="Password"
-                ),
+                "username": openapi.Schema(type=openapi.TYPE_STRING),
+                "password": openapi.Schema(type=openapi.TYPE_STRING),
             },
             required=["username", "password"],
         ),
         responses={
-            200: openapi.Response("Success"),
-            401: openapi.Response("Unauthorized"),
+            200: openapi.Response("Login successful"),
+            400: openapi.Response("Missing credentials"),
+            401: openapi.Response("Invalid credentials"),
         },
     )
     def post(self, request):
         username = request.data.get("username")
         password = request.data.get("password")
 
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            # Generate a token for the user
-            from rest_framework.authtoken.models import Token
-
-            token, created = Token.objects.get_or_create(user=user)
-
-            login(request, user)
-
-            # Prepare user data in the format expected by frontend
-            user_data = {
-                "id": user.id,
-                "username": user.username,
-                "email": user.email or "",
-                "first_name": "",  # Custom User model doesn't have first_name
-                "last_name": "",  # Custom User model doesn't have last_name
-                "is_staff": user.is_staff,
-                "is_superuser": user.is_superuser,
-                "is_active": user.is_active,
-                "date_joined": user.date_joined.isoformat()
-                if user.date_joined
-                else None,
-                "last_login": None,  # Custom User model doesn't have last_login
-            }
-
+        if not username or not password:
             return Response(
-                {
-                    "success": True,
-                    "message": "Login successful",
-                    "user": user_data,
-                    "token": token.key,
-                    "organization": None,  # TODO: Add organization support
-                }
+                {"error": "Username and password are required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        else:
-            return Response({"error": "Invalid credentials"}, status=401)
+
+        user_service = UserService()
+        user = user_service.authenticate_user(username, password)
+
+        if user:
+            login(request, user)
+            profile_data = user_service.get_user_profile_data(user)
+            return Response(
+                {"message": "Login successful", "user": profile_data}, status=200
+            )
+
+        return Response(
+            {"error": "Invalid username or password"},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
 
 
 class APILogoutView(APIView):
@@ -872,117 +817,52 @@ class APILogoutView(APIView):
 
     @swagger_auto_schema(
         operation_summary="API Logout",
-        operation_description="Logout via API",
-        responses={200: openapi.Response("Success")},
+        operation_description="End the user session via API",
+        responses={200: openapi.Response("Logout successful")},
     )
     def post(self, request):
         logout(request)
-        return Response({"message": "Logout successful"})
+        return Response({"message": "Logout successful"}, status=200)
 
 
 class APIProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.user_service = UserService()
+
     @swagger_auto_schema(
         operation_summary="Get user profile",
-        operation_description="Get profile information for the authenticated user",
-        responses={
-            200: openapi.Response(
-                "Success",
-                examples={"application/json": {"user_id": 1, "username": "user"}},
-            )
-        },
+        operation_description="Retrieve the authenticated user's profile",
+        responses={200: openapi.Response("Profile data")},
     )
     def get(self, request):
-        user = request.user
-
-        # Prepare user data in the format expected by frontend
-        user_data = {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email or "",
-            "first_name": "",  # Custom User model doesn't have first_name
-            "last_name": "",  # Custom User model doesn't have last_name
-            "is_staff": user.is_staff,
-            "is_superuser": user.is_superuser,
-            "is_active": user.is_active,
-            "date_joined": user.date_joined.isoformat() if user.date_joined else None,
-            "last_login": None,  # Custom User model doesn't have last_login
-        }
-
-        return Response(
-            {
-                "success": True,
-                "user": user_data,
-                "organization": None,  # TODO: Add organization support
-            }
-        )
+        profile_data = self.user_service.get_user_profile_data(request.user)
+        return Response(profile_data)
 
 
-@method_decorator(csrf_exempt, name="dispatch")
 class APIDemoLoginView(APIView):
-    permission_classes = []  # Allow unauthenticated access for demo login
-
+    @method_decorator(csrf_exempt)
     @swagger_auto_schema(
-        operation_summary="API Demo Login",
-        operation_description="Login with demo user via API",
+        operation_summary="Demo Login",
+        operation_description="Create and login as a demo user",
         responses={
-            200: openapi.Response("Success"),
-            400: openapi.Response("Bad Request"),
+            200: openapi.Response("Demo user created and logged in"),
+            500: openapi.Response("Error creating demo user"),
         },
     )
     def post(self, request):
+        from apps.richtato_user.demo_user_factory import create_demo_user
+
         try:
-            logger.info("Demo login request received")
-            logger.info(f"Request method: {request.method}")
-            logger.info(f"Request headers: {dict(request.headers)}")
-            logger.info(f"Request user: {request.user}")
-            logger.info(f"Request authenticated: {request.user.is_authenticated}")
-
-            demo_user, created = User.objects.get_or_create(
-                username="demo_user",
-                defaults={"email": "demo@richtato.local", "is_active": True},
-            )
-            logger.info(f"Demo user created: {created}, user: {demo_user.username}")
-
-            if created:
-                demo_user.set_password("demo_password")
-                demo_user.save()
-                logger.info("Demo user password set")
-
-            # Login the demo user
+            demo_user = create_demo_user()
             login(request, demo_user)
-            logger.info("Demo user logged in successfully")
-
-            # Prepare user data in the format expected by frontend
-            user_data = {
-                "id": demo_user.id,
-                "username": demo_user.username,
-                "email": demo_user.email or "",
-                "first_name": "",  # Custom User model doesn't have first_name
-                "last_name": "",  # Custom User model doesn't have last_name
-                "is_staff": demo_user.is_staff,
-                "is_superuser": demo_user.is_superuser,
-                "is_active": demo_user.is_active,
-                "date_joined": demo_user.date_joined.isoformat()
-                if demo_user.date_joined
-                else None,
-                "last_login": None,  # Custom User model doesn't have last_login
-            }
-
+            user_service = UserService()
+            profile_data = user_service.get_user_profile_data(demo_user)
             return Response(
-                {
-                    "success": True,
-                    "message": "Demo login successful",
-                    "user": user_data,
-                    "token": "session-based",  # Using session authentication
-                    "organization": None,  # Demo user doesn't have organization
-                }
+                {"message": "Demo user created and logged in", "user": profile_data}
             )
         except Exception as e:
-            logger.error(f"Demo login error: {str(e)}")
-            logger.error(f"Exception type: {type(e)}")
-            import traceback
-
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            return Response({"success": False, "error": str(e)}, status=400)
+            logger.error(f"Error creating demo user: {e}")
+            return Response({"error": str(e)}, status=500)

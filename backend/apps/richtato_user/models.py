@@ -102,63 +102,14 @@ class Category(models.Model):
     def __str__(self):
         return f"[{self.user}] {self.name} ({self.type})"
 
-    @classmethod
-    def create_default_categories_for_user(cls, user):
-        """Create all supported categories for a user"""
-        categories_to_create = []
-        category_essentials = {
-            "Travel": "nonessential",
-            "Shopping": "nonessential",
-            "Online Shopping": "nonessential",
-            "Groceries": "essential",
-            "Entertainment": "nonessential",
-            "Utilities": "essential",
-            "Housing": "essential",
-            "Medical": "essential",
-            "Education": "essential",
-            "Savings": "essential",
-            "Gifts": "nonessential",
-            "Dining": "nonessential",
-            "Investments": "essential",
-            "Subscriptions": "nonessential",
-            "Charity": "nonessential",
-            "Pet": "nonessential",
-            "Wholesale": "essential",
-            "Car": "essential",
-            "Phone": "essential",
-            "Miscellaneous": "nonessential",
-            "Payments": "essential",
-            "Unknown": "nonessential",
-        }
-
-        # Policy: Essentials enabled by default, plus common non-essentials
-        def _default_enabled(display_name: str) -> bool:
-            return (
-                category_essentials.get(display_name) == "essential"
-                or display_name in {"Dining", "Shopping", "Travel"}
-                or display_name == "Unknown"
-            )
-
-        for category_key, category_display in cls.supported_categories:
-            # Check if category already exists for this user
-            if not cls.objects.filter(user=user, name=category_key).exists():
-                categories_to_create.append(
-                    cls(
-                        user=user,
-                        name=category_key,
-                        type=category_essentials.get(category_key),
-                        enabled=_default_enabled(category_display),
-                    )
-                )
-
-        if categories_to_create:
-            cls.objects.bulk_create(categories_to_create)
-
     @receiver(post_save, sender=User)
     def create_user_categories(sender, instance, created, **kwargs):
         """Signal to create categories when a new user is created"""
         if created:  # Only for newly created users
-            Category.create_default_categories_for_user(instance)
+            from apps.richtato_user.services.category_service import CategoryService
+
+            category_service = CategoryService()
+            category_service.create_default_categories_for_user(instance)
 
 
 class UserPreference(models.Model):
