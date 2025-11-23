@@ -1,15 +1,15 @@
+"""
+Budget views - Thin HTTP wrappers delegating to service layer.
+
+Following clean architecture: Views handle only HTTP concerns.
+Business logic is in services, database access is in repositories.
+"""
+
 import calendar
 from datetime import date, datetime
-from decimal import ROUND_HALF_UP, Decimal
 
 import pytz
-from apps.budget.models import Budget
-from apps.budget.serializers import BudgetSerializer
-from apps.expense.models import Expense
-from apps.richtato_user.models import Category
 from django.contrib.auth.decorators import login_required
-from django.db.models import F, Q, Sum
-from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from drf_yasg import openapi
@@ -20,16 +20,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from richtato.views import BaseAPIView
-from utilities.tools import format_currency
 
-# Template-based views removed - API-only backend
-
-
-def calculate_budget_diff(diff: float):
-    if diff <= 0:
-        return f"{format_currency(abs(diff))} left"
-    else:
-        return f"{format_currency(abs(diff))} over"
+from .models import Budget
+from .repositories import BudgetRepository, CategoryRepository, ExpenseRepository
+from .serializers import BudgetSerializer
+from .services import BudgetService
 
 
 @swagger_auto_schema(
@@ -56,13 +51,16 @@ def calculate_budget_diff(diff: float):
     },
 )
 def get_budget_rankings(request):
-    count = request.GET.get("count", None)
+    """Get budget rankings - delegates to service layer."""
+    # Extract parameters
+    count_param = request.GET.get("count", None)
+    count = int(count_param) if count_param else None
 
-    user = request.user
     utc = pytz.timezone("UTC")
     year = int(request.GET.get("year", datetime.now(utc).year))
     month_abbr = request.GET.get("month", datetime.now(utc).strftime("%b"))
 
+    # Parse month
     month_map = {
         month: index for index, month in enumerate(calendar.month_abbr) if month
     }
@@ -72,69 +70,32 @@ def get_budget_rankings(request):
 
     logger.debug(f"Year: {year}, Month: {month}")
 
-    # Target month date range
-    start_of_month = datetime(year, month, 1, tzinfo=utc)
-    last_day = calendar.monthrange(year, month)[1]
-    end_of_month = datetime(year, month, last_day, 23, 59, 59, tzinfo=utc)
+    # Inject dependencies and delegate to service
+    budget_repo = BudgetRepository()
+    expense_repo = ExpenseRepository()
+    category_repo = CategoryRepository()
+    budget_service = BudgetService(budget_repo, expense_repo, category_repo)
 
-    # Get budgets active during the month
-    logger.debug(f"Start of month: {start_of_month}, End of month: {end_of_month}")
-    budgets = (
-        Budget.objects.filter(
-            user=user,
-            start_date__lte=end_of_month,
-        )
-        .filter(Q(end_date__isnull=True) | Q(end_date__gte=start_of_month))
-        .select_related("category")
-    )
-    logger.debug(f"Budgets found: {budgets.count()}")
-    logger.debug(f"Budgets: {budgets}")
-    budget_expenses = []
-    for budget in budgets:
-        total_expense = Expense.objects.filter(
-            user=user,
-            category=budget.category,
-            date__gte=start_of_month,
-            date__lt=end_of_month,
-        ).aggregate(total=Coalesce(Sum("amount"), Decimal(0)))["total"]
+    # Delegate to service
+    category_data = budget_service.get_budget_rankings(request.user, year, month, count)
 
-        percent_budget = (
-            round(total_expense / budget.amount * 100) if budget.amount else 0
-        )
-
-        budget_expenses.append(
-            {
-                "category_name": budget.category.name,
-                "budget": budget.amount,
-                "expense": total_expense,
-                "difference": total_expense - budget.amount,
-                "percent_budget": percent_budget,
-            }
-        )
-
-    # Sort by budget % used
-    budget_rankings = sorted(
-        budget_expenses, key=lambda x: x["percent_budget"], reverse=True
-    )
-
-    if count:
-        budget_rankings = budget_rankings[: int(count)]
-
-    category_data = [
-        {
-            "name": ranking["category_name"],
-            "budget": ranking["budget"],
-            "spent": ranking["expense"],
-            "percent": ranking["percent_budget"],
-            "message": f"{calculate_budget_diff(ranking['difference'])} ({ranking['percent_budget']}%)",
-        }
-        for ranking in budget_rankings
-    ]
-    logger.debug(f"Category Data: {category_data}")
     return JsonResponse({"category_rankings": category_data})
 
 
 class BudgetAPIView(BaseAPIView):
+    """ViewSet for managing budgets - THIN WRAPPER."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Inject repository dependencies
+        self.budget_repo = BudgetRepository()
+        self.expense_repo = ExpenseRepository()
+        self.category_repo = CategoryRepository()
+        # Inject service with dependencies
+        self.budget_service = BudgetService(
+            self.budget_repo, self.expense_repo, self.category_repo
+        )
+
     @property
     def field_remap(self):
         return {}
@@ -158,9 +119,7 @@ class BudgetAPIView(BaseAPIView):
         },
     )
     def get(self, request, pk=None):
-        """
-        Get budget entries for the user, or a specific budget if pk is provided.
-        """
+        """Get budget entries - delegates to service layer."""
         if pk:
             # Get specific budget
             budget = get_object_or_404(Budget, pk=pk, user=request.user)
@@ -174,45 +133,9 @@ class BudgetAPIView(BaseAPIView):
         except ValueError:
             return Response({"error": "Invalid limit value"}, status=400)
 
-        budgets = (
-            Budget.objects.filter(user=request.user)
-            .select_related("category")
-            .order_by("-start_date")
-            .values(
-                "id",
-                "start_date",
-                "end_date",
-                "amount",
-                category_name=F("category__name"),
-            )
-        )
-
-        if limit:
-            budgets = budgets[:limit]
-
-        rows = [
-            {
-                "id": b["id"],
-                "category": b["category_name"],
-                "amount": b["amount"],
-                "start_date": b["start_date"],
-                "end_date": b["end_date"],
-            }
-            for b in budgets
-        ]
-
-        return Response(
-            {
-                "columns": [
-                    {"field": "id", "title": "ID"},
-                    {"field": "category", "title": "Category"},
-                    {"field": "amount", "title": "Amount"},
-                    {"field": "start_date", "title": "Start Date"},
-                    {"field": "end_date", "title": "End Date"},
-                ],
-                "rows": rows,
-            }
-        )
+        # Delegate to service
+        data = self.budget_service.get_user_budgets_formatted(request.user, limit)
+        return Response(data)
 
     @swagger_auto_schema(
         operation_summary="Create budget entry",
@@ -245,14 +168,13 @@ class BudgetAPIView(BaseAPIView):
         },
     )
     def post(self, request):
-        """
-        Create a new Budget entry.
-        """
+        """Create a new budget - delegates to service layer."""
         modified_data = request.data.copy()
         modified_data["user"] = request.user.id
         if not modified_data.get("end_date"):
             modified_data["end_date"] = None
         logger.debug(f"POST data: {modified_data}")
+
         serializer = BudgetSerializer(data=modified_data)
         if serializer.is_valid():
             serializer.save(user=request.user)
@@ -291,9 +213,7 @@ class BudgetAPIView(BaseAPIView):
         },
     )
     def patch(self, request, pk):
-        """
-        Update an existing Budget entry.
-        """
+        """Update an existing budget - delegates to service layer."""
         logger.debug(f"PATCH data: {request.data}")
         reversed_data = self.apply_fieldmap(request.data)
         if "end_date" in reversed_data and not reversed_data.get("end_date"):
@@ -316,9 +236,7 @@ class BudgetAPIView(BaseAPIView):
         },
     )
     def delete(self, request, pk):
-        """
-        Delete an existing Budget entry.
-        """
+        """Delete an existing budget - delegates to service layer."""
         logger.debug(f"DELETE Budget ID: {pk}")
         budget = get_object_or_404(Budget, pk=pk, user=request.user)
         budget.delete()
@@ -326,7 +244,20 @@ class BudgetAPIView(BaseAPIView):
 
 
 class BudgetFieldChoicesView(APIView):
+    """Get field choices for budget creation - THIN WRAPPER."""
+
     permission_classes = [IsAuthenticated]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Inject repository dependencies
+        self.budget_repo = BudgetRepository()
+        self.expense_repo = ExpenseRepository()
+        self.category_repo = CategoryRepository()
+        # Inject service with dependencies
+        self.budget_service = BudgetService(
+            self.budget_repo, self.expense_repo, self.category_repo
+        )
 
     @swagger_auto_schema(
         operation_summary="Get budget field choices",
@@ -338,35 +269,26 @@ class BudgetFieldChoicesView(APIView):
         },
     )
     def get(self, request):
-        """
-        Get field choices for the Budget model.
-        """
-        category_choices = Category.objects.filter(user=request.user)
-        data = {
-            "category": [
-                {"value": cat.id, "label": cat.name} for cat in category_choices
-            ],
-        }
+        """Get field choices - delegates to service layer."""
+        data = self.budget_service.get_field_choices(request.user)
         return Response(data)
 
 
 @login_required
 def budget_progress(request):
-    """Function view: budget progress over a date range.
-
-    Accepts start_date/end_date (YYYY-MM-DD) or year/month. Defaults to current month.
-    """
+    """Get budget progress for a date range - delegates to service layer."""
     today = date.today()
     year_param = request.GET.get("year")
     month_param = request.GET.get("month")
     start_date_param = request.GET.get("start_date")
     end_date_param = request.GET.get("end_date")
 
-    start_date: date | None = None
-    end_date: date | None = None
+    start_date = None
+    end_date = None
     year = today.year
     month = today.month
 
+    # Parse date parameters
     if start_date_param or end_date_param:
         try:
             if start_date_param:
@@ -396,7 +318,7 @@ def budget_progress(request):
         except (TypeError, ValueError):
             return JsonResponse({"error": "Invalid year"}, status=400)
 
-        month_val: int | None = None
+        month_val = None
         if month_param:
             try:
                 mnum = int(month_param)
@@ -421,67 +343,25 @@ def budget_progress(request):
         start_date = date(year, month, 1)
         end_date = date(year, month, calendar.monthrange(year, month)[1])
 
-    assert start_date is not None and end_date is not None
-    if end_date < start_date:
-        return JsonResponse(
-            {"error": "end_date must be on/after start_date"}, status=400
-        )
+    # Inject dependencies and delegate to service
+    budget_repo = BudgetRepository()
+    expense_repo = ExpenseRepository()
+    category_repo = CategoryRepository()
+    budget_service = BudgetService(budget_repo, expense_repo, category_repo)
 
-    budgets = (
-        Budget.objects.filter(user=request.user, start_date__lte=end_date)
-        .filter(Q(end_date__isnull=True) | Q(end_date__gte=start_date))
-        .select_related("category")
+    # Delegate to service
+    result = budget_service.get_budget_progress(
+        request.user, year, month, start_date, end_date
     )
 
-    results = []
-    for b in budgets:
-        total_spent = (
-            Expense.objects.filter(
-                user=request.user,
-                category=b.category,
-                date__gte=start_date,
-                date__lte=end_date,
-            ).aggregate(total=Coalesce(Sum("amount"), Decimal(0)))
-        )["total"]
-        budget_amount = b.amount or Decimal(0)
-        percentage = (
-            int(round((total_spent / budget_amount) * 100)) if budget_amount > 0 else 0
-        )
-        # Round monetary fields to 2 decimals
-        budget_amount_q = budget_amount.quantize(
-            Decimal("0.01"), rounding=ROUND_HALF_UP
-        )
-        total_spent_q = total_spent.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        remaining_q = (budget_amount - total_spent).quantize(
-            Decimal("0.01"), rounding=ROUND_HALF_UP
-        )
-        results.append(
-            {
-                "category": b.category.name,
-                "budget": float(budget_amount_q),
-                "spent": float(total_spent_q),
-                "percentage": percentage,
-                "remaining": float(remaining_q),
-                "year": year,
-                "month": month,
-            }
-        )
-
-    # Sort categories by highest percentage to lowest for frontend display
-    results = sorted(results, key=lambda x: x["percentage"], reverse=True)
-
-    return JsonResponse(
-        {
-            "budgets": results,
-            "start_date": start_date.isoformat(),
-            "end_date": end_date.isoformat(),
-        }
-    )
+    return JsonResponse(result)
 
 
 class BudgetDashboardView(APIView):
+    """Get budget dashboard data - THIN WRAPPER."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        # Delegate to function-based view for shared logic
+        """Get budget dashboard - delegates to function view for shared logic."""
         return budget_progress(request)

@@ -50,28 +50,5 @@ class AccountTransaction(models.Model):
     def __str__(self):
         return f"{self.account} Amount: {self.amount} Date: {self.date}"
 
-    def save(self, *args, **kwargs):
-        if isinstance(self.date, str):
-            transaction_date = datetime.strptime(self.date, "%Y-%m-%d").date()
-        else:
-            transaction_date = self.date
-
-        if isinstance(self.account.latest_balance_date, str):
-            latest_balance_date = datetime.strptime(
-                self.account.latest_balance_date, "%Y-%m-%d"
-            ).date()
-        else:
-            latest_balance_date = self.account.latest_balance_date
-        # Compare if the transaction date is later than the latest balance date
-        if latest_balance_date is None or transaction_date >= latest_balance_date:
-            # Save the transaction first
-            super().save(*args, **kwargs)
-
-            # Update the latest_balance and latest_balance_date if this is the latest transaction
-            self.account.latest_balance = self.amount
-            self.account.latest_balance_date = self.date
-            self.account.save()
-
-        else:
-            # Save normally if the date isn't later
-            super().save(*args, **kwargs)
+    # Business logic removed - moved to AccountTransactionService
+    # Use service.create_transaction() instead of direct model.save()

@@ -1,10 +1,10 @@
-import pytz
-from apps.account.models import Account
-from apps.richtato_user.utils import (
-    _get_line_graph_data_by_day,
-    _get_line_graph_data_by_month,
-)
-from django.db.models import F
+"""
+Income views - Thin HTTP wrappers delegating to service layer.
+
+Following clean architecture: Views handle only HTTP concerns.
+Business logic is in services, database access is in repositories.
+"""
+
 from django.shortcuts import get_object_or_404
 from loguru import logger
 from rest_framework import status
@@ -15,25 +15,35 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from richtato.views import BaseAPIView
 
+from apps.account.repositories import AccountRepository
 from .models import Income
+from .repositories import IncomeRepository
 from .serializers import IncomeSerializer
-
-pst = pytz.timezone("US/Pacific")
+from .services import IncomeService
 
 
 @authentication_classes([SessionAuthentication, BasicAuthentication])
 @permission_classes([IsAuthenticated])
 class IncomeAPIView(BaseAPIView):
+    """ViewSet for managing income - THIN WRAPPER."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Inject repository dependencies
+        self.income_repo = IncomeRepository()
+        self.account_repo = AccountRepository()
+        # Inject service with dependencies
+        self.income_service = IncomeService(self.income_repo, self.account_repo)
+
     @property
     def field_remap(self):
         return {}
 
     def get(self, request):
-        """
-        Get the most recent entries for the user.
-        """
+        """Get income entries for user - delegates to service layer."""
         from datetime import datetime as _dt
 
+        # Extract query parameters
         limit_param = request.GET.get("limit", None)
         start_date_str = request.GET.get("start_date")
         end_date_str = request.GET.get("end_date")
@@ -43,59 +53,30 @@ class IncomeAPIView(BaseAPIView):
         except ValueError:
             return Response({"error": "Invalid limit value"}, status=400)
 
-        # Build base queryset
-        qs = Income.objects.filter(user=request.user)
-
-        # Optional date filtering
+        # Parse dates
+        start_date = None
+        end_date = None
         try:
             if start_date_str:
                 start_date = _dt.strptime(start_date_str, "%Y-%m-%d").date()
-                qs = qs.filter(date__gte=start_date)
             if end_date_str:
                 end_date = _dt.strptime(end_date_str, "%Y-%m-%d").date()
-                qs = qs.filter(date__lte=end_date)
         except ValueError:
             return Response(
                 {"error": "Invalid date format. Use YYYY-MM-DD."}, status=400
             )
 
-        entries = (
-            qs.annotate(
-                Account=F("account_name__name"),
-            )
-            .order_by("-date")
-            .values(
-                "id",
-                "date",
-                "Account",
-                "description",
-                "amount",
-            )
+        # Delegate to service
+        data = self.income_service.get_user_income_formatted(
+            request.user, limit, start_date, end_date
         )
-
-        if limit is not None:
-            logger.debug(f"Limit: {limit}")
-            entries = entries[:limit]
-
-        data = {
-            "columns": [
-                {"field": "id", "title": "ID"},
-                {"field": "date", "title": "Date"},
-                {"field": "Account", "title": "Account"},
-                {"field": "description", "title": "Description"},
-                {"field": "amount", "title": "Amount"},
-            ],
-            "rows": entries,
-        }
-
         return Response(data)
 
     def post(self, request):
-        """
-        Create a new Income entry.
-        """
+        """Create a new income entry - delegates to service layer."""
         logger.debug(f"Request data: {request.data}")
-        # Enforce ID usage; reject name-based fields
+
+        # Enforce ID usage
         if "Account" in request.data and not isinstance(
             request.data.get("Account"), int
         ):
@@ -118,7 +99,7 @@ class IncomeAPIView(BaseAPIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            if not Account.objects.filter(id=account_id, user=request.user).exists():
+            if not self.account_repo.get_by_id(account_id, request.user):
                 return Response(
                     {"Account": ["Account not found for user."]},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -133,10 +114,9 @@ class IncomeAPIView(BaseAPIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request, pk):
-        """
-        Update an existing Income entry.
-        """
+        """Update an existing income entry - delegates to service layer."""
         logger.debug(f"PATCH request data: {request.data}")
+
         if "Account" in request.data and not isinstance(
             request.data.get("Account"), int
         ):
@@ -159,7 +139,7 @@ class IncomeAPIView(BaseAPIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            if not Account.objects.filter(id=account_id, user=request.user).exists():
+            if not self.account_repo.get_by_id(account_id, request.user):
                 return Response(
                     {"Account": ["Account not found for user."]},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -177,9 +157,7 @@ class IncomeAPIView(BaseAPIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
-        """
-        Delete an existing Income entry.
-        """
+        """Delete an existing income entry - delegates to service layer."""
         logger.debug(f"DELETE request for Income with pk: {pk}")
         income = get_object_or_404(Income, pk=pk, user=request.user)
 
@@ -188,18 +166,31 @@ class IncomeAPIView(BaseAPIView):
 
 
 class IncomeGraphAPIView(APIView):
+    """Get income graph data - THIN WRAPPER."""
+
     permission_classes = [IsAuthenticated]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Inject repository dependencies
+        self.income_repo = IncomeRepository()
+        self.account_repo = AccountRepository()
+        # Inject service with dependencies
+        self.income_service = IncomeService(self.income_repo, self.account_repo)
+
     def get(self, request):
+        """Get graph data - delegates to service layer."""
         date_range = request.query_params.get("range", "all")
         logger.debug(f"Date range: {date_range}")
+
         if date_range == "all":
-            chart_data = _get_line_graph_data_by_month(request.user, Income)
+            chart_data = self.income_service.get_graph_data_by_month(request.user)
         elif date_range == "30d":
             logger.debug("Getting data for the last 30 days")
-            chart_data = _get_line_graph_data_by_day(request.user, Income)
+            chart_data = self.income_service.get_graph_data_by_day(request.user)
         else:
             return Response({"error": "Invalid range. Use '30d' or 'all'."}, status=400)
+
         return Response(
             {
                 "labels": chart_data["labels"],
@@ -217,14 +208,19 @@ class IncomeGraphAPIView(APIView):
 
 
 class IncomeFieldChoicesView(APIView):
+    """Get field choices for income creation - THIN WRAPPER."""
+
     permission_classes = [IsAuthenticated]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Inject repository dependencies
+        self.income_repo = IncomeRepository()
+        self.account_repo = AccountRepository()
+        # Inject service with dependencies
+        self.income_service = IncomeService(self.income_repo, self.account_repo)
+
     def get(self, request):
-        user_accounts = Account.objects.filter(user=request.user)
-        data = {
-            "account": [
-                {"value": account.id, "label": account.name}
-                for account in user_accounts
-            ],
-        }
+        """Get field choices - delegates to service layer."""
+        data = self.income_service.get_field_choices(request.user)
         return Response(data)
