@@ -1,12 +1,10 @@
-import pytz
-from apps.expense.imports import ExpenseManager
-from apps.richtato_user.models import CardAccount, Category
-from apps.richtato_user.utils import (
-    _get_line_graph_data_by_day,
-    _get_line_graph_data_by_month,
-)
-from artificial_intelligence.ai import OpenAI
-from django.db.models import F
+"""
+Expense views - Thin HTTP wrappers delegating to service layer.
+
+Following clean architecture: Views handle only HTTP concerns.
+Business logic is in services, database access is in repositories.
+"""
+
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
@@ -22,15 +20,33 @@ from rest_framework.views import APIView
 from richtato.views import BaseAPIView
 from statement_imports.cards.card_factory import CardStatement
 
+from artificial_intelligence.ai import OpenAI
 from .models import Expense
+from .repositories import (
+    CardAccountRepository,
+    CategoryRepository,
+    ExpenseRepository,
+)
 from .serializers import ExpenseSerializer
-
-pst = pytz.timezone("US/Pacific")
+from .services import ExpenseImportService, ExpenseService
 
 
 @authentication_classes([SessionAuthentication, BasicAuthentication])
 @permission_classes([IsAuthenticated])
 class ExpenseAPIView(BaseAPIView):
+    """ViewSet for managing expenses - THIN WRAPPER."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Inject repository dependencies
+        self.expense_repo = ExpenseRepository()
+        self.account_repo = CardAccountRepository()
+        self.category_repo = CategoryRepository()
+        # Inject services with dependencies
+        self.expense_service = ExpenseService(
+            self.expense_repo, self.account_repo, self.category_repo
+        )
+
     @property
     def field_remap(self):
         return {
@@ -56,11 +72,10 @@ class ExpenseAPIView(BaseAPIView):
         },
     )
     def get(self, request):
-        """
-        Get the most recent entries for the user.
-        """
+        """Get expense entries - delegates to service layer."""
         from datetime import datetime as _dt
 
+        # Extract parameters
         limit_param = request.GET.get("limit", None)
         start_date_str = request.GET.get("start_date")
         end_date_str = request.GET.get("end_date")
@@ -70,53 +85,23 @@ class ExpenseAPIView(BaseAPIView):
         except ValueError:
             return Response({"error": "Invalid limit value"}, status=400)
 
-        # Build base queryset
-        qs = Expense.objects.filter(user=request.user)
-
-        # Optional date filtering
+        # Parse dates
+        start_date = None
+        end_date = None
         try:
             if start_date_str:
                 start_date = _dt.strptime(start_date_str, "%Y-%m-%d").date()
-                qs = qs.filter(date__gte=start_date)
             if end_date_str:
                 end_date = _dt.strptime(end_date_str, "%Y-%m-%d").date()
-                qs = qs.filter(date__lte=end_date)
         except ValueError:
             return Response(
                 {"error": "Invalid date format. Use YYYY-MM-DD."}, status=400
             )
 
-        entries = (
-            qs.annotate(
-                Account=F("account_name__name"),
-                Category=F("category__name"),
-            )
-            .order_by("-date")
-            .values(
-                "id",
-                "date",
-                "description",
-                "amount",
-                "Account",
-                "Category",
-            )
+        # Delegate to service
+        data = self.expense_service.get_user_expenses_formatted(
+            request.user, limit, start_date, end_date
         )
-
-        if limit is not None:
-            logger.debug(f"Limit: {limit}")
-            entries = entries[:limit]
-
-        data = {
-            "columns": [
-                {"field": "id", "title": "ID"},
-                {"field": "date", "title": "Date"},
-                {"field": "description", "title": "Description"},
-                {"field": "amount", "title": "Amount"},
-                {"field": "Account", "title": "Account"},
-                {"field": "Category", "title": "Category"},
-            ],
-            "rows": entries,
-        }
         return Response(data)
 
     @swagger_auto_schema(
@@ -155,11 +140,10 @@ class ExpenseAPIView(BaseAPIView):
         },
     )
     def post(self, request):
-        """
-        Create a new expense entry.
-        """
+        """Create a new expense - delegates to service layer."""
         logger.debug(f"Request data: {request.data}")
         modified_data = request.data.copy()
+
         # Deprecate name-based fields; enforce ID usage only
         if any(k in modified_data for k in ("Account", "Category")):
             return Response(
@@ -176,6 +160,7 @@ class ExpenseAPIView(BaseAPIView):
         # Attach user for serializer validation
         modified_data["user"] = request.user.id
         logger.debug(f"Normalized data: {modified_data}")
+
         # Support both account_name and account_id keys (prefer account_name)
         account_id = modified_data.get("account_name") or modified_data.get(
             "account_id"
@@ -197,7 +182,7 @@ class ExpenseAPIView(BaseAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if not CardAccount.objects.filter(id=account_id, user=request.user).exists():
+        if not self.account_repo.get_by_id(account_id, request.user):
             return Response(
                 {"account_name": ["Account not found for user."]},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -211,7 +196,7 @@ class ExpenseAPIView(BaseAPIView):
                     {"category": ["Must be an integer ID."]},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            if not Category.objects.filter(id=category_id, user=request.user).exists():
+            if not self.category_repo.get_by_id(category_id, request.user):
                 return Response(
                     {"category": ["Category not found for user."]},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -223,25 +208,12 @@ class ExpenseAPIView(BaseAPIView):
             modified_data["category"] = category_id
 
         logger.debug(f"Modified data: {modified_data}")
-        try:
-            print(
-                "[ExpensePOST] Payload",
-                {
-                    k: (v if k != "details" else "<details>")
-                    for k, v in modified_data.items()
-                },
-            )
-        except Exception:
-            pass
 
         serializer = ExpenseSerializer(data=modified_data)
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        try:
-            print("[ExpensePOST] Serializer errors", serializer.errors)
-        except Exception:
-            pass
+
         logger.error(f"Serializer errors: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -281,10 +253,9 @@ class ExpenseAPIView(BaseAPIView):
         },
     )
     def patch(self, request, pk):
-        """
-        Update an existing expense entry.
-        """
+        """Update an existing expense - delegates to service layer."""
         logger.debug(f"PATCH request data: {request.data}")
+
         # Enforce ID-based updates only
         if any(k in request.data for k in ("Account", "Category")):
             return Response(
@@ -297,6 +268,7 @@ class ExpenseAPIView(BaseAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
         reversed_data = request.data
         expense = get_object_or_404(Expense, pk=pk, user=request.user)
 
@@ -317,9 +289,7 @@ class ExpenseAPIView(BaseAPIView):
         },
     )
     def delete(self, request, pk):
-        """
-        Delete an existing expense entry.
-        """
+        """Delete an existing expense - delegates to service layer."""
         logger.debug(f"DELETE request for expense with pk: {pk}")
         expense = get_object_or_404(Expense, pk=pk, user=request.user)
 
@@ -328,7 +298,20 @@ class ExpenseAPIView(BaseAPIView):
 
 
 class ExpenseGraphAPIView(APIView):
+    """Get expense graph data - THIN WRAPPER."""
+
     permission_classes = [IsAuthenticated]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Inject repository dependencies
+        self.expense_repo = ExpenseRepository()
+        self.account_repo = CardAccountRepository()
+        self.category_repo = CategoryRepository()
+        # Inject service with dependencies
+        self.expense_service = ExpenseService(
+            self.expense_repo, self.account_repo, self.category_repo
+        )
 
     @swagger_auto_schema(
         operation_summary="Get expense graph data",
@@ -348,14 +331,15 @@ class ExpenseGraphAPIView(APIView):
         },
     )
     def get(self, request):
+        """Get graph data - delegates to service layer."""
         date_range = request.query_params.get("range", "all")
         logger.debug(f"Date range: {date_range}")
 
         if date_range == "all":
-            chart_data = _get_line_graph_data_by_month(request.user, Expense)
+            chart_data = self.expense_service.get_graph_data_by_month(request.user)
         elif date_range == "30d":
             logger.debug("Getting data for the last 30 days")
-            chart_data = _get_line_graph_data_by_day(request.user, Expense)
+            chart_data = self.expense_service.get_graph_data_by_day(request.user)
         else:
             return Response({"error": "Invalid range. Use '30d' or 'all'."}, status=400)
 
@@ -376,7 +360,20 @@ class ExpenseGraphAPIView(APIView):
 
 
 class ExpenseFieldChoicesView(APIView):
+    """Get field choices for expense creation - THIN WRAPPER."""
+
     permission_classes = [IsAuthenticated]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Inject repository dependencies
+        self.expense_repo = ExpenseRepository()
+        self.account_repo = CardAccountRepository()
+        self.category_repo = CategoryRepository()
+        # Inject service with dependencies
+        self.expense_service = ExpenseService(
+            self.expense_repo, self.account_repo, self.category_repo
+        )
 
     @swagger_auto_schema(
         operation_summary="Get expense field choices",
@@ -389,27 +386,28 @@ class ExpenseFieldChoicesView(APIView):
         },
     )
     def get(self, request):
-        user_card_accounts = CardAccount.objects.filter(user=request.user).order_by(
-            "name"
-        )
-        user_categories = Category.objects.filter(user=request.user).order_by("name")
-        data = {
-            "account": [
-                {"value": account.id, "label": account.name}
-                for account in user_card_accounts
-            ],
-            "category": [
-                {"value": category.id, "label": category.name}
-                for category in user_categories
-            ],
-        }
+        """Get field choices - delegates to service layer."""
+        data = self.expense_service.get_field_choices(request.user)
         return Response(data)
 
 
 @method_decorator(csrf_exempt, name="dispatch")
 class CategorizeTransactionView(APIView):
+    """Categorize transaction using AI - THIN WRAPPER."""
+
     permission_classes = [IsAuthenticated]
     authentication_classes = [SessionAuthentication, BasicAuthentication]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Inject repository dependencies
+        self.expense_repo = ExpenseRepository()
+        self.account_repo = CardAccountRepository()
+        self.category_repo = CategoryRepository()
+        # Inject service with dependencies
+        self.import_service = ExpenseImportService(
+            self.expense_repo, self.account_repo, self.category_repo
+        )
 
     @swagger_auto_schema(
         operation_summary="Categorize transaction",
@@ -429,36 +427,39 @@ class CategorizeTransactionView(APIView):
         },
     )
     def post(self, request):
-        """
-        Categorize a transaction based on the description.
-        """
+        """Categorize a transaction - delegates to service layer."""
         description = request.data.get("description")
         if not description:
             return Response({"error": "Description is required."}, status=400)
 
-        # Use AI to categorize the transaction
-        try:
-            category_name = OpenAI().categorize_transaction(request.user, description)
-        except Exception as e:
-            logger.exception(f"AI categorize failed, falling back to 'Unknown': {e}")
-            category_name = "Unknown"
-        # Resolve to a Category ID for this user, with safe fallbacks
-        category_obj = (
-            Category.objects.filter(user=request.user, name=category_name).first()
-            or Category.objects.filter(
-                user=request.user, name__iexact=category_name
-            ).first()
-            or Category.objects.filter(user=request.user, name="Unknown").first()
+        # Delegate to service (passing AI service as dependency)
+        ai_service = OpenAI()
+        category_id, error = self.import_service.categorize_transaction(
+            request.user, description, ai_service
         )
-        if category_obj is None:
-            # As an ultimate fallback, create Unknown for the user (should normally exist)
-            category_obj = Category.objects.create(user=request.user, name="Unknown")
-        logger.debug(f"Categorized as: {category_name} -> id={category_obj.id}")
-        return Response({"category": category_obj.id})
+
+        if error:
+            return Response({"error": error}, status=400)
+
+        logger.debug(f"Categorized as category_id={category_id}")
+        return Response({"category": category_id})
 
 
 class ImportStatementsView(APIView):
+    """Import bank statements - THIN WRAPPER."""
+
     permission_classes = [IsAuthenticated]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Inject repository dependencies
+        self.expense_repo = ExpenseRepository()
+        self.account_repo = CardAccountRepository()
+        self.category_repo = CategoryRepository()
+        # Inject service with dependencies
+        self.import_service = ExpenseImportService(
+            self.expense_repo, self.account_repo, self.category_repo
+        )
 
     @swagger_auto_schema(
         operation_summary="Import statements",
@@ -485,11 +486,8 @@ class ImportStatementsView(APIView):
         },
     )
     def post(self, request):
-        """
-        Import statements and categorize transactions.
-        """
+        """Import statements and categorize transactions - delegates to service layer."""
 
-        # Assuming the request contains a file with transactions
         def ensure_list(obj):
             if obj is None:
                 return []
@@ -497,43 +495,22 @@ class ImportStatementsView(APIView):
                 return obj
             return [obj]
 
-        # Usage
-        files = ensure_list(request.FILES.getlist("files"))  # For files specifically
+        # Get files and card accounts from request
+        files = ensure_list(request.FILES.getlist("files"))
         card_accounts = ensure_list(request.data.getlist("card_accounts"))
         logger.debug(f"Files: {files}")
         logger.debug(f"Card Accounts: {card_accounts}")
 
-        # Helper to persist uploaded file to a temporary path if needed
-        def _save_uploaded_to_temp(uploaded_file):
-            import os
-            import tempfile
-
-            suffix = ""
-            try:
-                name = getattr(uploaded_file, "name", "") or ""
-                _, ext = os.path.splitext(name)
-                suffix = ext if ext else ""
-            except Exception:
-                suffix = ""
-
-            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-            for chunk in (
-                uploaded_file.chunks()
-                if hasattr(uploaded_file, "chunks")
-                else [uploaded_file.read()]
-            ):
-                tmp.write(chunk)
-            tmp.flush()
-            tmp.close()
-            return tmp.name
-
-        # Process the files and categorize transactions
+        # Process files
         for file, card_account in zip(files, card_accounts):
-            card = CardAccount.objects.get(id=card_account, user=request.user)
+            card = self.account_repo.get_by_id(int(card_account), request.user)
+            if not card:
+                continue
+
             logger.debug(f"Card: {card}")
             name_lower = (getattr(file, "name", "") or "").lower()
 
-            # Only support CSV/XLSX files now
+            # Only support CSV/XLSX files
             if not (name_lower.endswith((".csv", ".xlsx", ".xls"))):
                 logger.warning(
                     f"Unsupported file type: {name_lower}. Only CSV and XLSX files are supported."
@@ -548,8 +525,18 @@ class ImportStatementsView(APIView):
                 file,
             )
             logger.debug("Card Statement formatted")
-            ExpenseManager.import_from_dataframe(
+
+            # Delegate to import service
+            (
+                success_count,
+                error_count,
+                errors,
+            ) = self.import_service.import_from_dataframe(
                 card_statement.formatted_df, request.user
+            )
+
+            logger.debug(
+                f"Import completed: {success_count} success, {error_count} errors"
             )
 
         return Response({"message": "File processed successfully."})
