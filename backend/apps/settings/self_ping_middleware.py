@@ -19,9 +19,12 @@ class SelfPingMiddleware:
     def ping_self_periodically(self):
         while self.keep_running:
             try:
-                new_prod = os.getenv("NEW_PROD_URL")
-                response = requests.get(new_prod)
-                print(f"Pinged {new_prod} Status code: {response.status_code}")
+                prod_url = os.getenv("PROD_URL")
+                if prod_url:
+                    response = requests.get(prod_url)
+                    print(f"Pinged {prod_url} Status code: {response.status_code}")
+                else:
+                    print("No production URL found")
 
             except requests.RequestException as e:
                 print(f"Failed to ping self: {e}")
