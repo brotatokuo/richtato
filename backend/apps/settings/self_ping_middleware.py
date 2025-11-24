@@ -1,7 +1,11 @@
+import os
 import threading
 import time
 
+import dotenv
 import requests
+
+dotenv.load_dotenv()
 
 
 class SelfPingMiddleware:
@@ -15,7 +19,7 @@ class SelfPingMiddleware:
     def ping_self_periodically(self):
         while self.keep_running:
             try:
-                new_prod = "https://richtato.com"
+                new_prod = os.getenv("NEW_PROD_URL")
                 response = requests.get(new_prod)
                 print(f"Pinged {new_prod} Status code: {response.status_code}")
 
