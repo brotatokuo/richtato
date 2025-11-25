@@ -19,8 +19,7 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, JsonResponse
 from django.middleware.csrf import get_token
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -513,9 +512,9 @@ def get_csrf_token(request):
     return JsonResponse({"csrfToken": get_token(request)})
 
 
-@method_decorator(csrf_exempt, name="dispatch")
 class LoginView(APIView):
     permission_classes = []  # Allow unauthenticated access
+    authentication_classes = []  # Disable authentication but keep CSRF via middleware
 
     @swagger_auto_schema(
         operation_summary="Login",
@@ -548,9 +547,9 @@ class LoginView(APIView):
         return JsonResponse({"error": "Invalid credentials"}, status=401)
 
 
-@method_decorator(csrf_exempt, name="dispatch")
 class RegisterView(APIView):
     permission_classes = []  # Allow unauthenticated access
+    authentication_classes = []  # Disable authentication but keep CSRF via middleware
 
     @swagger_auto_schema(
         operation_summary="Register",
@@ -758,9 +757,9 @@ def demo_login(request):
 
 
 # API Authentication Views
-@method_decorator(csrf_exempt, name="dispatch")
 class APILoginView(APIView):
     permission_classes = []  # Allow unauthenticated access
+    authentication_classes = []  # Disable authentication but keep CSRF via middleware
 
     @swagger_auto_schema(
         operation_summary="API Login",
@@ -841,9 +840,9 @@ class APIProfileView(APIView):
         return Response(profile_data)
 
 
-@method_decorator(csrf_exempt, name="dispatch")
 class APIDemoLoginView(APIView):
     permission_classes = []  # Allow unauthenticated access
+    authentication_classes = []  # Disable authentication but keep CSRF via middleware
 
     @swagger_auto_schema(
         operation_summary="Demo Login",

@@ -210,11 +210,15 @@ CORS_ALLOW_CREDENTIALS = True
 # CSRF Configuration for session authentication
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to access CSRF token
+CSRF_COOKIE_NAME = "csrftoken"  # Default Django CSRF cookie name
+CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"  # Header name for CSRF token
 CSRF_TRUSTED_ORIGINS = [
     "https://richtato-latest.onrender.com",
     "https://richtato.com",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:5173",  # Vite dev server
+    "http://127.0.0.1:5173",  # Vite dev server
     "http://0.0.0.0:8000",
 ]
 
