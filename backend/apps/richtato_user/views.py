@@ -1,14 +1,11 @@
 # API-only views for richtato_user app
-import datetime
 import json
 
 import pytz
 from apps.expense.models import Expense
 from apps.income.models import Income
 from apps.richtato_user.models import (
-    CardAccount,
     Category,
-    User,
     UserPreference,
 )
 from apps.richtato_user.serializers import CategorySerializer, UserPreferenceSerializer
@@ -18,11 +15,10 @@ from apps.richtato_user.services.graph_service import GraphService
 from apps.richtato_user.services.user_service import UserService
 from apps.settings.serializers import CardAccountSerializer
 from categories.categories import BaseCategory
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, JsonResponse
 from django.middleware.csrf import get_token
-from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
@@ -400,6 +396,7 @@ class CategorySettingsAPIView(APIView):
 
         # Handle budgets: create/update/delete as needed
         from decimal import Decimal
+
         from apps.budget.models import Budget
 
         cat_map = {
@@ -516,8 +513,10 @@ def get_csrf_token(request):
     return JsonResponse({"csrfToken": get_token(request)})
 
 
+@method_decorator(csrf_exempt, name="dispatch")
 class LoginView(APIView):
-    @method_decorator(csrf_exempt)
+    permission_classes = []  # Allow unauthenticated access
+
     @swagger_auto_schema(
         operation_summary="Login",
         operation_description="Authenticate a user and start a session",
@@ -535,13 +534,8 @@ class LoginView(APIView):
         },
     )
     def post(self, request):
-        data = (
-            json.loads(request.body)
-            if isinstance(request.body, bytes)
-            else request.data
-        )
-        username = data.get("username")
-        password = data.get("password")
+        username = request.data.get("username")
+        password = request.data.get("password")
 
         user_service = UserService()
         user = user_service.authenticate_user(username, password)
@@ -554,8 +548,10 @@ class LoginView(APIView):
         return JsonResponse({"error": "Invalid credentials"}, status=401)
 
 
+@method_decorator(csrf_exempt, name="dispatch")
 class RegisterView(APIView):
-    @method_decorator(csrf_exempt)
+    permission_classes = []  # Allow unauthenticated access
+
     @swagger_auto_schema(
         operation_summary="Register",
         operation_description="Register a new user",
@@ -573,13 +569,8 @@ class RegisterView(APIView):
         },
     )
     def post(self, request):
-        data = (
-            json.loads(request.body)
-            if isinstance(request.body, bytes)
-            else request.data
-        )
-        username = data.get("username")
-        password = data.get("password")
+        username = request.data.get("username")
+        password = request.data.get("password")
 
         if not username or not password:
             return JsonResponse(
@@ -767,8 +758,10 @@ def demo_login(request):
 
 
 # API Authentication Views
+@method_decorator(csrf_exempt, name="dispatch")
 class APILoginView(APIView):
-    @method_decorator(csrf_exempt)
+    permission_classes = []  # Allow unauthenticated access
+
     @swagger_auto_schema(
         operation_summary="API Login",
         operation_description="Authenticate a user via API",
@@ -803,11 +796,17 @@ class APILoginView(APIView):
             login(request, user)
             profile_data = user_service.get_user_profile_data(user)
             return Response(
-                {"message": "Login successful", "user": profile_data}, status=200
+                {
+                    "success": True,
+                    "message": "Login successful",
+                    "user": profile_data,
+                    "token": "session-based",  # Using session authentication
+                },
+                status=200,
             )
 
         return Response(
-            {"error": "Invalid username or password"},
+            {"success": False, "error": "Invalid username or password"},
             status=status.HTTP_401_UNAUTHORIZED,
         )
 
@@ -842,8 +841,10 @@ class APIProfileView(APIView):
         return Response(profile_data)
 
 
+@method_decorator(csrf_exempt, name="dispatch")
 class APIDemoLoginView(APIView):
-    @method_decorator(csrf_exempt)
+    permission_classes = []  # Allow unauthenticated access
+
     @swagger_auto_schema(
         operation_summary="Demo Login",
         operation_description="Create and login as a demo user",
@@ -861,8 +862,13 @@ class APIDemoLoginView(APIView):
             user_service = UserService()
             profile_data = user_service.get_user_profile_data(demo_user)
             return Response(
-                {"message": "Demo user created and logged in", "user": profile_data}
+                {
+                    "success": True,
+                    "message": "Demo user created and logged in",
+                    "user": profile_data,
+                    "token": "session-based",  # Using session authentication
+                }
             )
         except Exception as e:
             logger.error(f"Error creating demo user: {e}")
-            return Response({"error": str(e)}, status=500)
+            return Response({"success": False, "error": str(e)}, status=500)

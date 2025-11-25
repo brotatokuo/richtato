@@ -5,9 +5,6 @@ from . import views
 urlpatterns = [
     # Authentication endpoints
     path("csrf/", views.get_csrf_token, name="csrf_token"),
-    path("login/", views.LoginView.as_view(), name="login"),
-    path("register/", views.RegisterView.as_view(), name="register"),
-    path("logout/", views.LogoutView.as_view(), name="logout"),
     # User management endpoints
     path("get-user-id/", views.get_user_id, name="get_user_id"),
     path("profile/", views.APIProfileView.as_view(), name="profile"),
@@ -40,8 +37,8 @@ urlpatterns = [
     ),
     path("preferences/", views.UserPreferenceAPIView.as_view(), name="preferences"),
     # API Authentication endpoints (no nested 'api/' segment)
-    path("login/", views.APILoginView.as_view(), name="api_login"),
-    path("logout/", views.APILogoutView.as_view(), name="api_logout"),
-    path("profile/", views.APIProfileView.as_view(), name="api_profile"),
-    path("demo-login/", views.APIDemoLoginView.as_view(), name="api_demo_login"),
+    path("login/", views.APILoginView.as_view(), name="login"),
+    path("register/", views.RegisterView.as_view(), name="register"),
+    path("logout/", views.APILogoutView.as_view(), name="logout"),
+    path("demo-login/", views.APIDemoLoginView.as_view(), name="demo_login"),
 ]
