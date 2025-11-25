@@ -4,6 +4,7 @@ import json
 import pytz
 from apps.expense.models import Expense
 from apps.income.models import Income
+from apps.richtato_user.demo_user_factory import DemoUserFactory
 from apps.richtato_user.models import (
     Category,
     UserPreference,
@@ -739,21 +740,15 @@ def delete_account(request):
 @require_http_methods(["POST"])
 def demo_login(request):
     """Create or login as a demo user."""
-    from apps.richtato_user.demo_user_factory import create_demo_user
-
     try:
-        demo_user = create_demo_user()
+        demo_user = DemoUserFactory().create_or_reset()
+        user_service = UserService()
         login(request, demo_user)
-        return JsonResponse(
-            {
-                "message": "Demo user created and logged in",
-                "user_id": demo_user.id,
-                "username": demo_user.username,
-            }
-        )
+        profile_data = user_service.get_user_profile_data(demo_user)
+        return Response(profile_data)
     except Exception as e:
         logger.error(f"Error creating demo user: {e}")
-        return JsonResponse({"error": str(e)}, status=500)
+        return Response({"success": False, "error": str(e)}, status=500)
 
 
 # API Authentication Views
@@ -853,10 +848,9 @@ class APIDemoLoginView(APIView):
         },
     )
     def post(self, request):
-        from apps.richtato_user.demo_user_factory import create_demo_user
 
         try:
-            demo_user = create_demo_user()
+            demo_user = DemoUserFactory().create_or_reset()
             login(request, demo_user)
             user_service = UserService()
             profile_data = user_service.get_user_profile_data(demo_user)

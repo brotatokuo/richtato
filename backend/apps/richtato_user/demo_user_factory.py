@@ -2,13 +2,12 @@ import random
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db import transaction
-
 from apps.account.models import Account, AccountTransaction
 from apps.budget.models import Budget
 from apps.expense.models import Expense
 from apps.income.models import Income
 from apps.richtato_user.models import CardAccount, Category, User
+from django.db import transaction
 
 
 class DemoUserFactory:
