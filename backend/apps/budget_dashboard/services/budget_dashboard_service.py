@@ -2,7 +2,7 @@
 
 import calendar
 from datetime import date
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 
 from utilities.tools import format_currency
 
@@ -225,9 +225,9 @@ class BudgetDashboardService:
 
     def get_budget_utilization(self, user, start_date: date, end_date: date) -> str:
         """
-        Calculate average budget utilization percentage.
+        Calculate budget utilization percentage.
 
-        Business logic: Averages utilization across all active budgets.
+        Business logic: Total Spent / Total Budget across all active budgets.
 
         Returns:
             Formatted string like "75%" or "N/A"
@@ -236,18 +236,20 @@ class BudgetDashboardService:
             user, start_date, end_date
         )
 
-        utilizations = []
-        for budget in budgets:
-            cat_expense = self.repo.get_category_expense_sum(
-                user, budget.category, start_date, end_date
-            )
-            if budget.amount > 0:
-                utilization = (Decimal(cat_expense) / budget.amount) * Decimal(100)
-                utilizations.append(float(utilization))
+        total_budget = Decimal(0)
+        total_spent = Decimal(0)
 
-        if utilizations:
-            avg_utilization = round(sum(utilizations) / len(utilizations), 1)
-            return f"{avg_utilization}%"
+        for budget in budgets:
+            if budget.amount > 0:
+                total_budget += budget.amount
+                cat_expense = self.repo.get_category_expense_sum(
+                    user, budget.category, start_date, end_date
+                )
+                total_spent += Decimal(cat_expense)
+
+        if total_budget > 0:
+            utilization = (total_spent / total_budget) * Decimal(100)
+            return f"{round(float(utilization), 1)}%"
         else:
             return "N/A"
 
