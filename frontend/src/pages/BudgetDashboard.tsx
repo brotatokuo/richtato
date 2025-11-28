@@ -8,7 +8,7 @@ import {
 import { budgetDashboardApiService } from '@/lib/api/budget-dashboard';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { AlertTriangle, Gauge, Percent } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // Removed non-dropdown global date inputs; dropdown range is inside BudgetDashboard
 
@@ -100,86 +100,76 @@ function DashboardContent() {
   >([]);
   const lastRangeRef = useRef<string | null>(null);
 
-  const loadDashboardData = async () => {
+  const loadAllDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      // Initial load complete
+
+      // Fetch all data in parallel
+      const [budgetProgressData, categories, expenseData] = await Promise.all([
+        budgetDashboardApiService.getBudgetProgress({
+          startDate,
+          endDate,
+        }),
+        transactionsApiService.getCategories(),
+        budgetDashboardApiService.getExpenseCategoriesData({
+          startDate,
+          endDate,
+        }),
+      ]);
+
+      // Set budget progress
+      setBudgetProgress(budgetProgressData.budgets);
+
+      // Calculate budget utilization
+      const totalBudget = budgetProgressData.budgets.reduce(
+        (sum: number, b: any) => sum + (b.budget || 0),
+        0
+      );
+      const totalSpent = budgetProgressData.budgets.reduce(
+        (sum: number, b: any) => sum + (b.spent || 0),
+        0
+      );
+      const budgetPct =
+        totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+      setBudgetUtilizationPct(`${budgetPct}%`);
+
+      // Calculate non-essential spending percentage
+      const nonEssentialNames = new Set(
+        categories
+          .filter((c: any) => c.type === 'nonessential')
+          .map((c: any) => c.name)
+      );
+      const labels: string[] = expenseData.labels || [];
+      const values: number[] =
+        (expenseData.datasets?.[0]?.data as number[]) || [];
+      let total = 0;
+      let nonEssential = 0;
+      for (let i = 0; i < labels.length; i++) {
+        const v = Number(values[i] || 0);
+        total += v;
+        if (nonEssentialNames.has(labels[i])) nonEssential += v;
+      }
+      const nonEssentialPctValue =
+        total > 0 ? Math.round((nonEssential / total) * 100) : 0;
+      setNonEssentialPct(`${nonEssentialPctValue}%`);
+
       setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
-    } finally {
       setLoading(false);
     }
-  };
+  }, [startDate, endDate]);
 
+  // Load all data when date range changes
   useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  // Recompute budget utilization when global date range changes
-  useEffect(() => {
-    const computeBudgetUtilization = async () => {
-      try {
-        const data = await budgetDashboardApiService.getBudgetProgress({
-          startDate,
-          endDate,
-        });
-        setBudgetProgress(data.budgets);
-
-        const totalBudget = data.budgets.reduce(
-          (sum: number, b: any) => sum + (b.budget || 0),
-          0
-        );
-        const totalSpent = data.budgets.reduce(
-          (sum: number, b: any) => sum + (b.spent || 0),
-          0
-        );
-        const pct =
-          totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
-        setBudgetUtilizationPct(`${pct}%`);
-      } catch {
-        setBudgetUtilizationPct('N/A');
-      }
-    };
     // Deduplicate same-range fetches (avoids StrictMode double-invoke)
     const key = `${startDate}|${endDate}`;
     if (lastRangeRef.current === key) return;
     lastRangeRef.current = key;
-    computeBudgetUtilization();
-  }, [startDate, endDate]);
 
-  // Recompute non-essential spending percentage from range-filtered data
-  useEffect(() => {
-    const computeNonEssentialPct = async () => {
-      try {
-        const [categories, expenseData] = await Promise.all([
-          transactionsApiService.getCategories(),
-          budgetDashboardApiService.getExpenseCategoriesData({ startDate, endDate }),
-        ]);
-        const nonEssentialNames = new Set(
-          categories
-            .filter((c: any) => c.type === 'nonessential')
-            .map(c => c.name)
-        );
-        const labels: string[] = expenseData.labels || [];
-        const values: number[] =
-          (expenseData.datasets?.[0]?.data as number[]) || [];
-        let total = 0;
-        let nonEssential = 0;
-        for (let i = 0; i < labels.length; i++) {
-          const v = Number(values[i] || 0);
-          total += v;
-          if (nonEssentialNames.has(labels[i])) nonEssential += v;
-        }
-        const pct = total > 0 ? Math.round((nonEssential / total) * 100) : 0;
-        setNonEssentialPct(`${pct}%`);
-      } catch {
-        setNonEssentialPct('N/A');
-      }
-    };
-    computeNonEssentialPct();
-  }, [startDate, endDate]);
+    loadAllDashboardData();
+  }, [startDate, endDate, loadAllDashboardData]);
 
   if (loading) {
     return (
@@ -196,7 +186,7 @@ function DashboardContent() {
           <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
           <p className="text-red-600 mb-4">Error loading dashboard: {error}</p>
           <button
-            onClick={loadDashboardData}
+            onClick={loadAllDashboardData}
             className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
           >
             Retry
