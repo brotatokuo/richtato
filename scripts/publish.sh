@@ -7,12 +7,13 @@ set -euo pipefail
 #   ./publish.sh [tag] [VITE_API_BASE_URL] [PLATFORMS]
 #
 # Examples:
-#   ./publish.sh latest /api                     # amd64 only (Render)
-#   ./publish.sh react /api "linux/amd64,linux/arm64"  # multi-arch (Mac + Render)
+#   ./publish.sh                                 # multi-arch cloud publish (default)
+#   ./publish.sh latest /api                     # multi-arch with defaults
+#   ./publish.sh react /api "linux/amd64"        # single arch (amd64 only)
 
 TAG=${1:-latest}
 VITE_API_BASE_URL=${2:-/api}
-PLATFORMS=${3:-linux/amd64}
+PLATFORMS=${3:-linux/amd64,linux/arm64}
 IMAGE="bropotato/richtato:${TAG}"
 
 echo "[publish] Building ${IMAGE} for ${PLATFORMS} with VITE_API_BASE_URL='${VITE_API_BASE_URL}'"
