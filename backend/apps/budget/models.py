@@ -26,41 +26,9 @@ class Budget(models.Model):
             "start_date",
         )
 
-    def clean(self):
-        super().clean()
-
-        # Ensure start_date is before end_date
-        if self.end_date and self.start_date >= self.end_date:
-            raise ValidationError("Start date must be before end date.")
-
-        # Check for overlapping budgets
-        self._validate_no_overlaps()
-
-    def _validate_no_overlaps(self):
-        """Check for overlapping date ranges with same user/category"""
-        overlapping_budgets = Budget.objects.filter(
-            user=self.user, category=self.category
-        ).exclude(pk=self.pk if self.pk else None)
-
-        for budget in overlapping_budgets:
-            if self._ranges_overlap(budget):
-                raise ValidationError(
-                    f"Budget overlaps with existing budget from "
-                    f"{budget.start_date} to {budget.end_date or '∞'}"
-                )
-
-    def _ranges_overlap(self, other_budget):
-        """Check if two budget date ranges overlap"""
-        # Convert None end_dates to far future for comparison
-        self_end = self.end_date or datetime.date(9999, 12, 31)
-        other_end = other_budget.end_date or datetime.date(9999, 12, 31)
-
-        # Two ranges overlap if: start1 < end2 AND start2 < end1
-        return self.start_date < other_end and other_budget.start_date < self_end
-
-    def save(self, *args, **kwargs):
-        self.full_clean()  # This calls clean() and validates
-        super().save(*args, **kwargs)
+    # Business logic removed - moved to BudgetService
+    # Use service.create_budget() or service.update_budget() instead
+    # of direct model operations to ensure validation
 
     def __str__(self):
         return f"[{self.user}] {self.category.name} - {self.amount} from {self.start_date} to {self.end_date or '∞'}"
