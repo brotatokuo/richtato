@@ -1,21 +1,20 @@
 """
-Dashboard views - Thin HTTP wrappers delegating to service layer.
+Asset Dashboard views - Thin HTTP wrappers delegating to service layer.
 
 Following clean architecture: Views handle only HTTP concerns.
 Business logic is in services, database access is in repositories.
 """
 
-import calendar
-from datetime import date
+from datetime import datetime, date
 
-from apps.expense.utils import sankey_cash_flow_overview
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from loguru import logger
+from apps.expense.utils import sankey_cash_flow_overview
 from utilities.postgres.pg_client import PostgresClient
 
-from .repositories import DashboardRepository
-from .services import DashboardService
+from .repositories import AssetDashboardRepository
+from .services import AssetDashboardService
 
 
 @login_required
@@ -26,67 +25,15 @@ def cash_flow_data(request):
         period = request.GET.get("period", "6m")
 
         # Inject dependencies and delegate to service
-        dashboard_repo = DashboardRepository()
-        dashboard_service = DashboardService(dashboard_repo)
+        repo = AssetDashboardRepository()
+        service = AssetDashboardService(repo)
 
         # Delegate to service
-        data = dashboard_service.get_cash_flow_data(request.user, period)
+        data = service.get_cash_flow_data(request.user, period)
         return JsonResponse(data)
 
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
-
-
-@login_required
-def expense_categories_data(request):
-    """Get expense breakdown by category - delegates to service layer."""
-    try:
-        # Extract parameters
-        start_date_param = request.GET.get("start_date")
-        end_date_param = request.GET.get("end_date")
-        year = request.GET.get("year")
-        month = request.GET.get("month")
-
-        # Parse dates if provided
-        start_date = None
-        end_date = None
-        if start_date_param or end_date_param:
-            try:
-                if start_date_param:
-                    y, m, d = map(int, start_date_param.split("-"))
-                    start_date = date(y, m, d)
-                if end_date_param:
-                    y2, m2, d2 = map(int, end_date_param.split("-"))
-                    end_date = date(y2, m2, d2)
-            except Exception:
-                return JsonResponse(
-                    {"error": "Invalid start_date or end_date"}, status=400
-                )
-
-            if start_date and not end_date:
-                end_date = date(
-                    start_date.year,
-                    start_date.month,
-                    calendar.monthrange(start_date.year, start_date.month)[1],
-                )
-            if end_date and not start_date:
-                start_date = date(end_date.year, end_date.month, 1)
-
-        # Parse year/month if provided
-        year_int = int(year) if year else None
-        month_int = int(month) if month else None
-
-        # Inject dependencies and delegate to service
-        dashboard_repo = DashboardRepository()
-        dashboard_service = DashboardService(dashboard_repo)
-
-        # Delegate to service
-        data = dashboard_service.get_expense_categories_data(
-            request.user, start_date, end_date, year_int, month_int
-        )
-        return JsonResponse(data)
-
-    except Exception as e:
+        logger.error(f"Error in cash_flow_data: {e}")
         return JsonResponse({"error": str(e)}, status=500)
 
 
@@ -101,25 +48,20 @@ def income_expenses_data(request):
         start_date = None
         end_date = None
         if start_date_param:
-            from datetime import datetime
-
             start_date = datetime.strptime(start_date_param, "%Y-%m-%d").date()
         if end_date_param:
-            from datetime import datetime
-
             end_date = datetime.strptime(end_date_param, "%Y-%m-%d").date()
 
         # Inject dependencies and delegate to service
-        dashboard_repo = DashboardRepository()
-        dashboard_service = DashboardService(dashboard_repo)
+        repo = AssetDashboardRepository()
+        service = AssetDashboardService(repo)
 
         # Delegate to service
-        data = dashboard_service.get_income_expenses_data(
-            request.user, start_date, end_date
-        )
+        data = service.get_income_expenses_data(request.user, start_date, end_date)
         return JsonResponse(data)
 
     except Exception as e:
+        logger.error(f"Error in income_expenses_data: {e}")
         return JsonResponse({"error": str(e)}, status=500)
 
 
@@ -128,28 +70,32 @@ def savings_data(request):
     """Get savings accumulation data - delegates to service layer."""
     try:
         # Inject dependencies and delegate to service
-        dashboard_repo = DashboardRepository()
-        dashboard_service = DashboardService(dashboard_repo)
+        repo = AssetDashboardRepository()
+        service = AssetDashboardService(repo)
 
         # Delegate to service
-        data = dashboard_service.get_savings_data(request.user)
+        data = service.get_savings_data(request.user)
         return JsonResponse(data)
 
     except Exception as e:
+        logger.error(f"Error in savings_data: {e}")
         return JsonResponse({"error": str(e)}, status=500)
 
 
 @login_required
-def budget_progress_data(request):
-    """
-    Get budget progress data - delegates to budget app.
+def dashboard_metrics(request):
+    """Get dashboard metrics - delegates to service layer."""
+    try:
+        # Inject dependencies and delegate to service
+        repo = AssetDashboardRepository()
+        service = AssetDashboardService(repo)
 
-    Note: This functionality is already implemented in the budget app's
-    budget_progress view. This is a wrapper for the dashboard.
-    """
-    from apps.budget.views import budget_progress
-
-    return budget_progress(request)
+        # Delegate to service
+        context = service.get_dashboard_metrics(request.user)
+        return JsonResponse(context)
+    except Exception as e:
+        logger.error(f"Error getting dashboard metrics: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 @login_required
@@ -164,7 +110,7 @@ def top_categories_data(request):
         period = request.GET.get("period", "30d")
 
         # Calculate date range based on period
-        from datetime import datetime, timedelta
+        from datetime import timedelta
         from dateutil.relativedelta import relativedelta
 
         end_date = datetime.now().date()
@@ -223,19 +169,8 @@ def top_categories_data(request):
         return JsonResponse({"categories": categories})
 
     except Exception as e:
+        logger.error(f"Error in top_categories_data: {e}")
         return JsonResponse({"error": str(e)}, status=500)
-
-
-@login_required
-def expense_years(request):
-    """Get list of years with expenses - delegates to service layer."""
-    # Inject dependencies and delegate to service
-    dashboard_repo = DashboardRepository()
-    dashboard_service = DashboardService(dashboard_repo)
-
-    # Delegate to service
-    years = dashboard_service.get_expense_years(request.user)
-    return JsonResponse({"years": years})
 
 
 @login_required
@@ -258,19 +193,3 @@ def sankey_data(request):
             {"success": False, "error": "Failed to generate Sankey diagram data"},
             status=500,
         )
-
-
-@login_required
-def dashboard_metrics(request):
-    """Get dashboard metrics - delegates to service layer."""
-    try:
-        # Inject dependencies and delegate to service
-        dashboard_repo = DashboardRepository()
-        dashboard_service = DashboardService(dashboard_repo)
-
-        # Delegate to service
-        context = dashboard_service.get_dashboard_metrics(request.user)
-        return JsonResponse(context)
-    except Exception as e:
-        logger.error(f"Error getting dashboard metrics: {e}")
-        return JsonResponse({"error": str(e)}, status=500)

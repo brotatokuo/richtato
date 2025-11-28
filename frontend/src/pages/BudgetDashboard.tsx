@@ -5,7 +5,7 @@ import {
   BudgetDateRangeProvider,
   useBudgetDateRange,
 } from '@/contexts/BudgetDateRangeContext';
-import { dashboardApiService, DashboardData } from '@/lib/api/dashboard';
+import { budgetDashboardApiService } from '@/lib/api/budget-dashboard';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { AlertTriangle, Gauge, Percent } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -81,9 +81,6 @@ function MonthYearControls({
 }
 
 function DashboardContent() {
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
-    null
-  );
   const { startDate, endDate, setRange } = useBudgetDateRange();
   const [budgetUtilizationPct, setBudgetUtilizationPct] =
     useState<string>('N/A');
@@ -107,10 +104,8 @@ function DashboardContent() {
     try {
       setLoading(true);
       setError(null);
-
-      // Fetch dashboard metrics and income/expense data from the backend
-      const metricsData = await dashboardApiService.getDashboardMetrics();
-      setDashboardData(metricsData);
+      // Initial load complete
+      setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
@@ -126,17 +121,17 @@ function DashboardContent() {
   useEffect(() => {
     const computeBudgetUtilization = async () => {
       try {
-        const { budgets } = await transactionsApiService.getBudgetDashboard({
+        const data = await budgetDashboardApiService.getBudgetProgress({
           startDate,
           endDate,
         });
-        setBudgetProgress(budgets);
+        setBudgetProgress(data.budgets);
 
-        const totalBudget = budgets.reduce(
+        const totalBudget = data.budgets.reduce(
           (sum: number, b: any) => sum + (b.budget || 0),
           0
         );
-        const totalSpent = budgets.reduce(
+        const totalSpent = data.budgets.reduce(
           (sum: number, b: any) => sum + (b.spent || 0),
           0
         );
@@ -160,7 +155,7 @@ function DashboardContent() {
       try {
         const [categories, expenseData] = await Promise.all([
           transactionsApiService.getCategories(),
-          dashboardApiService.getExpenseCategoriesData({ startDate, endDate }),
+          budgetDashboardApiService.getExpenseCategoriesData({ startDate, endDate }),
         ]);
         const nonEssentialNames = new Set(
           categories
@@ -186,7 +181,7 @@ function DashboardContent() {
     computeNonEssentialPct();
   }, [startDate, endDate]);
 
-  if (loading && !dashboardData) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-muted-foreground">Loading dashboard data...</div>
@@ -209,10 +204,6 @@ function DashboardContent() {
         </div>
       </div>
     );
-  }
-
-  if (!dashboardData) {
-    return null;
   }
 
   return (

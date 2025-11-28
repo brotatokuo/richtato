@@ -57,7 +57,8 @@ urlpatterns = [
     path("api/budget/", include("apps.budget.urls")),
     path("api/income/", include("apps.income.urls")),
     path("api/expense/", include("apps.expense.urls")),
-    path("api/dashboard/", include("apps.dashboard.urls")),
+    path("api/budget-dashboard/", include("apps.budget_dashboard.urls")),
+    path("api/asset-dashboard/", include("apps.asset_dashboard.urls")),
     path("api/settings/", include("apps.settings.urls")),
     # Demo login for development
     path("demo-login/", user_views.demo_login, name="demo_login"),

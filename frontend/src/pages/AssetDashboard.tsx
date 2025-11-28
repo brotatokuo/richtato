@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { dashboardApiService } from '@/lib/api/dashboard';
+import { assetDashboardApiService } from '@/lib/api/asset-dashboard';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { AlertTriangle, PiggyBank, TrendingUp } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -49,61 +49,18 @@ export function AssetDashboard() {
       setLoading(true);
       setError(null);
 
-      // Fetch data from multiple APIs
-      const [
-        dashboardMetrics,
-        accounts,
-        incomeTransactions,
-        expenseTransactions,
-      ] = await Promise.all([
-        dashboardApiService.getDashboardMetrics(),
-        transactionsApiService.getAccounts(),
-        transactionsApiService.getIncomeTransactions(),
-        transactionsApiService.getExpenseTransactions(),
-      ]);
-
-      // Helper to coerce currency strings or numbers to a number
-      const parseAmountToNumber = (value: unknown): number => {
-        if (typeof value === 'number') return value;
-        if (typeof value === 'string') {
-          const normalized = value.replace(/[^0-9.-]+/g, '');
-          const parsed = parseFloat(normalized);
-          return isNaN(parsed) ? 0 : parsed;
-        }
-        if (typeof value === 'bigint') return Number(value);
-        return 0;
-      };
-
-      // Calculate total assets from accounts
-      const totalAssets = accounts.reduce((sum, account) => {
-        const balanceNumber = parseAmountToNumber((account as any).balance);
-        return sum + balanceNumber;
-      }, 0);
-
-      // Calculate total income and expenses
-      const totalIncome = incomeTransactions.reduce(
-        (sum, transaction) =>
-          sum + parseAmountToNumber((transaction as any).amount),
-        0
-      );
-      const totalExpenses = expenseTransactions.reduce(
-        (sum, transaction) =>
-          sum + parseAmountToNumber((transaction as any).amount),
-        0
-      );
-
-      // Calculate net worth (simplified as total assets for now)
-      const netWorth = totalAssets;
+      // Fetch data from asset dashboard API
+      const dashboardMetrics = await assetDashboardApiService.getDashboardMetrics();
 
       setDashboardData({
-        networth: `$${netWorth.toLocaleString()}`,
+        networth: dashboardMetrics.networth,
         networth_growth: dashboardMetrics.networth_growth,
         networth_growth_class: dashboardMetrics.networth_growth_class,
         savings_rate: dashboardMetrics.savings_rate,
         savings_rate_class: dashboardMetrics.savings_rate_class,
         savings_rate_context: dashboardMetrics.savings_rate_context,
-        total_income: `$${totalIncome.toLocaleString()}`,
-        total_expenses: `$${totalExpenses.toLocaleString()}`,
+        total_income: dashboardMetrics.income_sum,
+        total_expenses: dashboardMetrics.expense_sum,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
