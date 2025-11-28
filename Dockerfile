@@ -56,7 +56,7 @@ RUN mkdir -p /app/backend/staticfiles /app/backend/media
 # Copy Nginx template and startup script
 WORKDIR /app
 COPY nginx.template.conf /etc/nginx/templates/default.conf.template
-COPY cloudstart.sh /app/start.sh
+COPY scripts/cloudstart.sh /app/start.sh
 RUN chmod +x /app/start.sh \
     && rm -f /etc/nginx/sites-enabled/default /etc/nginx/conf.d/default.conf || true
 

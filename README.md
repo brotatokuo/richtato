@@ -209,7 +209,7 @@ You can deploy with a single container that serves the React SPA via Nginx and p
 
 ```bash
 # Build the multi-stage Docker image (inject the API base URL used by Vite build)
-./build.sh richtato:latest https://your-hostname/api
+./scripts/build.sh richtato:latest https://your-hostname/api
 
 # Run locally (expects a Postgres instance; update DATABASE_URL as needed)
 ./start.sh richtato:latest 10000
