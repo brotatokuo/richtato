@@ -2,10 +2,9 @@
 
 from datetime import date
 from decimal import Decimal
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 
 import pytest
-
 from apps.budget_dashboard.repositories import BudgetDashboardRepository
 from apps.budget_dashboard.services import BudgetDashboardService
 
@@ -105,22 +104,35 @@ class TestBudgetDashboardService:
         assert result[1]["percent"] == 80
 
     def test_get_budget_utilization(self, service, mock_repo, mock_user):
-        """Test budget utilization calculation."""
-        # Setup
-        mock_budget = Mock()
-        mock_budget.category.name = "Food"
-        mock_budget.amount = Decimal("200.00")
+        """Test budget utilization calculation with multiple budgets."""
+        # Setup - Food: $200 budget, $150 spent (75%)
+        #         Transport: $100 budget, $50 spent (50%)
+        #         Total: $300 budget, $200 spent = 66.7% utilization
+        mock_budget_food = Mock()
+        mock_budget_food.category.name = "Food"
+        mock_budget_food.amount = Decimal("200.00")
 
-        mock_repo.get_active_budgets_for_date_range.return_value = [mock_budget]
-        mock_repo.get_category_expense_sum.return_value = Decimal("150.00")
+        mock_budget_transport = Mock()
+        mock_budget_transport.category.name = "Transport"
+        mock_budget_transport.amount = Decimal("100.00")
+
+        mock_repo.get_active_budgets_for_date_range.return_value = [
+            mock_budget_food,
+            mock_budget_transport,
+        ]
+
+        mock_repo.get_category_expense_sum.side_effect = [
+            Decimal("150.00"),  # Food: 150
+            Decimal("50.00"),  # Transport: 50
+        ]
 
         # Execute
         start = date(2024, 1, 1)
         end = date(2024, 1, 31)
         result = service.get_budget_utilization(mock_user, start, end)
 
-        # Assert
-        assert result == "75.0%"
+        # Assert - (150 + 50) / (200 + 100) * 100 = 66.7%
+        assert result == "66.7%" == f"{str(round((150 + 50) / (200 + 100) * 100, 1))}%"
 
     def test_get_nonessential_spending_pct(self, service, mock_repo, mock_user):
         """Test non-essential spending percentage calculation."""
