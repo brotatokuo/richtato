@@ -43,6 +43,8 @@ ALLOWED_HOSTS = [
 
 INSTALLED_APPS = [
     "apps.richtato_user",
+    "apps.category",
+    "apps.card",
     "apps.account",
     "apps.budget",
     "apps.income",

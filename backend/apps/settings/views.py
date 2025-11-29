@@ -10,12 +10,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.account.models import Account
-from apps.richtato_user.models import (
-    CardAccount,
-    Category,
-    supported_card_banks,
-)
-from apps.richtato_user.services.card_account_service import CardAccountService
+from apps.category.models import Category
+from apps.card.models import CardAccount
+from apps.card.constants import SUPPORTED_CARD_BANKS
+from apps.card.services.card_account_service import CardAccountService
 
 from .serializers import CardAccountSerializer
 

@@ -5,13 +5,12 @@ Following clean architecture: Views handle only HTTP concerns.
 Business logic is in services, database access is in repositories.
 """
 
-from datetime import datetime, date
+from datetime import datetime
 
+from apps.expense.utils import sankey_cash_flow_overview
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from loguru import logger
-from apps.expense.utils import sankey_cash_flow_overview
-from utilities.postgres.pg_client import PostgresClient
 
 from .repositories import AssetDashboardRepository
 from .services import AssetDashboardService
@@ -111,6 +110,7 @@ def top_categories_data(request):
 
         # Calculate date range based on period
         from datetime import timedelta
+
         from dateutil.relativedelta import relativedelta
 
         end_date = datetime.now().date()

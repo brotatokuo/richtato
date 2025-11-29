@@ -1,7 +1,7 @@
 """Repository for CardAccount data access."""
 
 from django.db.models import QuerySet
-from apps.richtato_user.models import CardAccount
+from apps.card.models import CardAccount
 
 
 class CardAccountRepository:

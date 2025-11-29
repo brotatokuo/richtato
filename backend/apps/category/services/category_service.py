@@ -1,7 +1,7 @@
 """Service layer for Category operations."""
 
-from apps.richtato_user.repositories.category_repository import CategoryRepository
-from apps.richtato_user.models import Category
+from apps.category.repositories.category_repository import CategoryRepository
+from apps.category.models import Category
 from categories.categories import BaseCategory
 
 

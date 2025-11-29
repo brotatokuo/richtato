@@ -1,9 +1,7 @@
 """Service layer for CardAccount operations."""
 
-from apps.richtato_user.repositories.card_account_repository import (
-    CardAccountRepository,
-)
-from apps.richtato_user.models import supported_card_banks
+from apps.card.repositories.card_account_repository import CardAccountRepository
+from apps.card.constants import SUPPORTED_CARD_BANKS
 
 
 class CardAccountService:
@@ -57,6 +55,6 @@ class CardAccountService:
         return {
             "bank": [
                 {"value": value, "label": label}
-                for value, label in supported_card_banks
+                for value, label in SUPPORTED_CARD_BANKS
             ]
         }

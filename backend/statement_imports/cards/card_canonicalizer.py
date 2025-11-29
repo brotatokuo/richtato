@@ -5,7 +5,8 @@ from loguru import logger
 import re
 
 from apps.expense.models import Expense
-from apps.richtato_user.models import CardAccount, Category
+from apps.category.models import Category
+from apps.card.models import CardAccount
 from artificial_intelligence.ai import OpenAI
 from categories.categories_manager import CategoriesManager
 

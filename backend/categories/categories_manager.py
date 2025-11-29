@@ -1,4 +1,4 @@
-from apps.richtato_user.models import Category
+from apps.category.models import Category
 from categories.categories import BaseCategory
 
 

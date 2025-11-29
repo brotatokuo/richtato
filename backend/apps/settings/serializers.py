@@ -1,4 +1,4 @@
-from apps.richtato_user.models import CardAccount
+from apps.card.models import CardAccount
 from rest_framework import serializers
 
 

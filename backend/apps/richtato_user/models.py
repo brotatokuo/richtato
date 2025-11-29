@@ -1,22 +1,11 @@
-from categories.categories import BaseCategory
+"""User authentication models for Richtato application."""
+
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
     PermissionsMixin,
-    User,
 )
 from django.db import models
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-
-supported_card_banks = [
-    ("american_express", "American Express"),
-    ("bank_of_america", "Bank of America"),
-    ("bilt", "BILT"),
-    ("chase", "Chase"),
-    ("citibank", "Citibank"),
-    ("other", "Other"),
-]
 
 
 # Custom user manager
@@ -43,6 +32,8 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
+    """Custom user model for Richtato application."""
+
     id = models.AutoField(primary_key=True)
     email = models.EmailField(max_length=255, unique=True, blank=True, null=True)
     username = models.CharField(max_length=150, unique=True)
@@ -50,9 +41,24 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
-    import_path = models.CharField(max_length=100, default="", blank=True, null=True)
-    is_demo = models.BooleanField(default=False)
-    demo_expires_at = models.DateTimeField(null=True, blank=True)
+
+    # Import/migration field - stores path to user's CSV import directory
+    import_path = models.CharField(
+        max_length=100,
+        default="",
+        blank=True,
+        null=True,
+        help_text="Directory path for CSV data imports",
+    )
+
+    # Demo user fields - for temporary trial accounts
+    is_demo = models.BooleanField(
+        default=False, help_text="Whether this is a temporary demo account"
+    )
+    demo_expires_at = models.DateTimeField(
+        null=True, blank=True, help_text="Expiration timestamp for demo accounts"
+    )
+
     objects = UserManager()
 
     USERNAME_FIELD = "username"  # Only username is used for login
@@ -62,57 +68,9 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.username
 
 
-class CardAccount(models.Model):
-    id = models.AutoField(primary_key=True)
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="card_account"
-    )
-    name = models.CharField(max_length=100)
-    bank = models.CharField(choices=supported_card_banks, max_length=50)
-
-    def __str__(self):
-        return f"[{self.user}] {self.name}"
-
-    @property
-    def card_bank_title(self):
-        """Returns the human-readable bank name."""
-        return dict(supported_card_banks).get(self.bank, self.bank)
-
-
-class Category(models.Model):
-    CATEGORY_TYPES = [
-        ("essential", "Essential"),
-        ("nonessential", "Non Essential"),
-    ]
-    supported_categories = [
-        (category.name.replace("/", "_"), category.name)
-        for category in BaseCategory._registered_categories
-    ]
-
-    id = models.AutoField(primary_key=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="categories")
-    name = models.CharField(max_length=100, choices=supported_categories)
-    type = models.CharField(max_length=50, choices=CATEGORY_TYPES, default="essential")
-    enabled = models.BooleanField(default=True)
-
-    class Meta:
-        unique_together = ("user", "name")
-        verbose_name_plural = "Categories"
-
-    def __str__(self):
-        return f"[{self.user}] {self.name} ({self.type})"
-
-    @receiver(post_save, sender=User)
-    def create_user_categories(sender, instance, created, **kwargs):
-        """Signal to create categories when a new user is created"""
-        if created:  # Only for newly created users
-            from apps.richtato_user.services.category_service import CategoryService
-
-            category_service = CategoryService()
-            category_service.create_default_categories_for_user(instance)
-
-
 class UserPreference(models.Model):
+    """User preferences and settings."""
+
     THEME_CHOICES = [
         ("light", "Light"),
         ("dark", "Dark"),
@@ -128,11 +86,40 @@ class UserPreference(models.Model):
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="preferences"
     )
-    theme = models.CharField(max_length=10, choices=THEME_CHOICES, default="system")
-    currency = models.CharField(max_length=3, default="USD")
-    date_format = models.CharField(
-        max_length=20, choices=DATE_FORMAT_CHOICES, default="MM/DD/YYYY"
+
+    # Display preferences
+    theme = models.CharField(
+        max_length=10,
+        choices=THEME_CHOICES,
+        default="system",
+        help_text="UI theme preference",
     )
+
+    # Regional preferences
+    currency = models.CharField(
+        max_length=3,
+        default="USD",
+        help_text="Preferred currency code (e.g., USD, EUR, GBP)",
+    )
+    date_format = models.CharField(
+        max_length=20,
+        choices=DATE_FORMAT_CHOICES,
+        default="MM/DD/YYYY",
+        help_text="Preferred date display format",
+    )
+    timezone = models.CharField(
+        max_length=50,
+        default="UTC",
+        help_text="User timezone (e.g., America/New_York, Europe/London)",
+    )
+
+    # Notification preferences
+    notifications_enabled = models.BooleanField(
+        default=True, help_text="Whether to receive notifications"
+    )
+
+    class Meta:
+        verbose_name_plural = "User Preferences"
 
     def __str__(self):
         return f"Preferences for {self.user}"

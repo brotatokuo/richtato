@@ -4,7 +4,8 @@ from abc import ABC, abstractmethod
 
 import httpx
 import pandas as pd
-from apps.richtato_user.models import Category, User
+from apps.richtato_user.models import User
+from apps.category.models import Category
 from dotenv import load_dotenv
 from loguru import logger
 
