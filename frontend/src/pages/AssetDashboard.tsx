@@ -9,23 +9,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { usePreferences } from '@/contexts/PreferencesContext';
+import { formatCurrency } from '@/lib/format';
 import { assetDashboardApiService } from '@/lib/api/asset-dashboard';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { AlertTriangle, PiggyBank, TrendingUp } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 interface AssetDashboardData {
-  networth: string;
+  networth: number;
   networth_growth: string;
   networth_growth_class: string;
   savings_rate: string;
   savings_rate_class: string;
   savings_rate_context: string;
-  total_income: string;
-  total_expenses: string;
+  total_income: number;
+  total_expenses: number;
 }
 
 export function AssetDashboard() {
+  const { preferences } = usePreferences();
   const [dashboardData, setDashboardData] = useState<AssetDashboardData | null>(
     null
   );
@@ -191,7 +194,7 @@ export function AssetDashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 w-full min-w-0">
         <MetricCard
           title="Net Worth"
-          value={dashboardData.networth}
+          value={formatCurrency(dashboardData.networth, preferences.currency, 0)}
           subtitle={dashboardData.networth_growth}
           icon={<TrendingUp className="h-4 w-4" />}
           info={

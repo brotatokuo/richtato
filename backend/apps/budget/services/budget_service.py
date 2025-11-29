@@ -4,8 +4,6 @@ import calendar
 from datetime import date, datetime
 from decimal import Decimal, ROUND_HALF_UP
 
-from utilities.tools import format_currency
-
 
 class BudgetService:
     """Service for managing Budget business logic - no ORM calls."""

@@ -4,8 +4,6 @@ import calendar
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
-from utilities.tools import format_currency
-
 
 class BudgetDashboardService:
     """Service for Budget Dashboard calculations and aggregations - no ORM calls."""
@@ -294,19 +292,19 @@ class BudgetDashboardService:
         """
         Calculate budget difference message.
 
-        Business logic: Formats message showing over/under budget.
+        Business logic: Returns raw difference amount and percentage for frontend formatting.
 
         Args:
             difference: Amount over/under budget
             percent: Percentage of budget used
 
         Returns:
-            Formatted message string
+            Message string with raw amount
         """
         if difference <= 0:
-            return f"{format_currency(abs(difference))} left ({percent}%)"
+            return f"{float(abs(difference))} left ({percent}%)"
         else:
-            return f"{format_currency(abs(difference))} over ({percent}%)"
+            return f"{float(abs(difference))} over ({percent}%)"
 
     def _determine_date_range(
         self,

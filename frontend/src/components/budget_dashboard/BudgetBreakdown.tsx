@@ -1,5 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useBudgetDateRange } from '@/contexts/BudgetDateRangeContext';
+import { usePreferences } from '@/contexts/PreferencesContext';
+import { formatCurrency } from '@/lib/format';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -36,6 +38,7 @@ export function BudgetDashboard({
     month: number;
   }>;
 }) {
+  const { preferences } = usePreferences();
   const { startDate, endDate } = useBudgetDateRange();
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>(
     []
@@ -340,7 +343,7 @@ export function BudgetDashboard({
         chartOptions={chartOptions}
         centerPrimary={`${overallPercentage}%`}
         centerSecondaryLabel="Used"
-        centerTertiaryLabel={`$${totalSpent.toLocaleString()} / $${totalBudget.toLocaleString()}`}
+        centerTertiaryLabel={`${formatCurrency(totalSpent, preferences.currency)} / ${formatCurrency(totalBudget, preferences.currency)}`}
         legend={<CategoryBreakdown categories={budgetCategories} />}
         height="20rem"
       />

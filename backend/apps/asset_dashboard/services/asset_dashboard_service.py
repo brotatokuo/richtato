@@ -4,7 +4,6 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta
-from utilities.tools import format_currency
 
 
 class AssetDashboardService:
@@ -251,11 +250,11 @@ class AssetDashboardService:
         )
 
         return {
-            "networth": format_currency(networth, 0),
+            "networth": float(networth),
             "networth_growth": networth_growth,
             "networth_growth_class": networth_growth_class,
-            "expense_sum": format_currency(expense_30_days),
-            "income_sum": format_currency(income_30_days),
+            "expense_sum": float(expense_30_days),
+            "income_sum": float(income_30_days),
             "savings_rate": savings_rate_str,
             "savings_rate_context": savings_rate_context,
             "savings_rate_class": savings_rate_class,

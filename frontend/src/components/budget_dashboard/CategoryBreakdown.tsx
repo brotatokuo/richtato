@@ -1,3 +1,6 @@
+import { usePreferences } from '@/contexts/PreferencesContext';
+import { formatCurrency } from '@/lib/format';
+
 interface BudgetCategory {
   name: string;
   budget: number;
@@ -12,6 +15,7 @@ interface CategoryBreakdownProps {
 }
 
 export function CategoryBreakdown({ categories }: CategoryBreakdownProps) {
+  const { preferences } = usePreferences();
   return (
     <div className="h-80 overflow-y-auto">
       <div className="text-sm font-medium text-muted-foreground mb-4">
@@ -62,8 +66,7 @@ export function CategoryBreakdown({ categories }: CategoryBreakdownProps) {
                   {category.name}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  ${category.spent.toLocaleString()}/$
-                  {category.budget.toLocaleString()}
+                  {formatCurrency(category.spent, preferences.currency)}/{formatCurrency(category.budget, preferences.currency)}
                 </div>
               </div>
             </div>
@@ -79,10 +82,10 @@ export function CategoryBreakdown({ categories }: CategoryBreakdownProps) {
               >
                 {category.remaining < 0 ? (
                   <span>
-                    Over ${Math.abs(category.remaining).toLocaleString()}
+                    Over {formatCurrency(Math.abs(category.remaining), preferences.currency)}
                   </span>
                 ) : (
-                  <span>${category.remaining.toLocaleString()} left</span>
+                  <span>{formatCurrency(category.remaining, preferences.currency)} left</span>
                 )}
               </div>
             </div>

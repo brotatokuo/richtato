@@ -1,4 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { usePreferences } from '@/contexts/PreferencesContext';
+import { formatCurrency, formatDate, formatSignedCurrency } from '@/lib/format';
 import { Account, transactionsApiService } from '@/lib/api/transactions';
 import {
   AlertCircle,
@@ -103,6 +105,7 @@ export function AccountsSection({
   onAccountClick?: (account: AccountWithBalance) => void;
   reloadKey?: string | number;
 }) {
+  const { preferences } = usePreferences();
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -249,8 +252,7 @@ export function AccountsSection({
                     grandTotal >= 0 ? 'text-green-600' : 'text-red-600'
                   }`}
                 >
-                  {grandTotal >= 0 ? '+' : ''}$
-                  {Math.abs(grandTotal).toLocaleString()}
+                  {formatSignedCurrency(grandTotal, preferences.currency, true)}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {accountTypeTotals.length} account type
@@ -281,8 +283,7 @@ export function AccountsSection({
                           typeTotal >= 0 ? 'text-green-600' : 'text-red-600'
                         }`}
                       >
-                        {typeTotal >= 0 ? '+' : ''}$
-                        {Math.abs(typeTotal).toLocaleString()}
+                        {formatSignedCurrency(typeTotal, preferences.currency, true)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {((typeTotal / grandTotal) * 100).toFixed(1)}% of total
@@ -321,15 +322,12 @@ export function AccountsSection({
                                 : 'text-red-600'
                             }`}
                           >
-                            {account.balance >= 0 ? '+' : ''}$
-                            {Math.abs(account.balance).toLocaleString()}
+                            {formatSignedCurrency(account.balance, preferences.currency, true)}
                           </p>
                           <div className="flex items-center justify-between text-xs text-muted-foreground">
                             <span>
                               Updated{' '}
-                              {new Date(
-                                account.lastUpdated
-                              ).toLocaleDateString()}
+                              {formatDate(account.lastUpdated, preferences.date_format)}
                             </span>
                             <span className="capitalize">{account.type}</span>
                           </div>
