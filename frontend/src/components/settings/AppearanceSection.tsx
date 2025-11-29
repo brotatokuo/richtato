@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import { useTheme } from '@/contexts/useTheme';
 import { preferencesApi, type PreferenceFieldChoices } from '@/lib/api/user';
 import { Palette } from 'lucide-react';
@@ -20,35 +21,38 @@ import { useEffect, useState } from 'react';
 
 export function AppearanceSection() {
   const { setTheme } = useTheme();
+  const { preferences, updatePreferences } = usePreferences();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [settings, setSettings] = useState({
-    theme: 'system',
-    currency: 'USD',
-    dateFormat: 'MM/DD/YYYY',
-    timezone: 'UTC',
-  });
   const [fieldChoices, setFieldChoices] =
     useState<PreferenceFieldChoices | null>(null);
+
+  // Sync local state with context preferences
+  const [settings, setSettings] = useState({
+    theme: preferences.theme || 'system',
+    currency: preferences.currency || 'USD',
+    dateFormat: preferences.date_format || 'MM/DD/YYYY',
+    timezone: preferences.timezone || 'UTC',
+  });
+
+  // Update local state when context preferences change
+  useEffect(() => {
+    setSettings({
+      theme: preferences.theme || 'system',
+      currency: preferences.currency || 'USD',
+      dateFormat: preferences.date_format || 'MM/DD/YYYY',
+      timezone: preferences.timezone || 'UTC',
+    });
+  }, [preferences]);
 
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
-        const [pref, choices] = await Promise.all([
-          preferencesApi.get(),
-          preferencesApi.getFieldChoices(),
-        ]);
+        const choices = await preferencesApi.getFieldChoices();
         setFieldChoices(choices);
-        setSettings(prev => ({
-          ...prev,
-          theme: (pref.theme as any) || prev.theme,
-          currency: pref.currency || prev.currency,
-          dateFormat: (pref.date_format as any) || prev.dateFormat,
-          timezone: pref.timezone || prev.timezone,
-        }));
       } catch (e: any) {
-        setError(e?.message ?? 'Failed to load preferences');
+        setError(e?.message ?? 'Failed to load field choices');
       } finally {
         setLoading(false);
       }
@@ -59,7 +63,7 @@ export function AppearanceSection() {
     const updated = { ...settings, ...next };
     setSettings(updated);
     try {
-      await preferencesApi.update({
+      await updatePreferences({
         theme: updated.theme as any,
         currency: updated.currency,
         date_format: updated.dateFormat,

@@ -277,7 +277,10 @@ class PreferencesApiService {
   async update(
     payload: UserPreferencesPayload
   ): Promise<UserPreferencesPayload> {
+    // Always refresh CSRF token before write operations to avoid 403 errors
+    await csrfService.refreshToken();
     const csrfHeaders = await csrfService.getHeaders();
+
     const res = await fetch(`${this.baseUrl}/`, {
       method: 'PUT',
       credentials: 'include',
@@ -285,25 +288,9 @@ class PreferencesApiService {
       body: JSON.stringify(payload),
     });
 
-    // If CSRF token is invalid, try to refresh it and retry once
-    if (res.status === 403) {
-      console.log('CSRF token invalid, refreshing...');
-      const refreshedCsrfHeaders = await csrfService
-        .refreshToken()
-        .then(() => csrfService.getHeaders());
-
-      const retryResponse = await fetch(`${this.baseUrl}/`, {
-        method: 'PUT',
-        credentials: 'include',
-        headers: refreshedCsrfHeaders,
-        body: JSON.stringify(payload),
-      });
-
-      if (!retryResponse.ok) throw new Error('Failed to update preferences');
-      return retryResponse.json();
+    if (!res.ok) {
+      throw new Error(`Failed to update preferences: ${res.status}`);
     }
-
-    if (!res.ok) throw new Error('Failed to update preferences');
     return res.json();
   }
 
