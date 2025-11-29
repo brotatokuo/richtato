@@ -9,14 +9,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { usePreferences } from '@/contexts/PreferencesContext';
+import { formatDate } from '@/lib/format';
 import {
   Account,
   Category,
   transactionsApiService,
 } from '@/lib/api/transactions';
 import { TransactionFormData, TransactionType } from '@/types/transactions';
-import { Minus, Plus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Calendar, Minus, Plus } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 interface TransactionFormProps {
   type: TransactionType;
@@ -77,6 +78,7 @@ export function TransactionForm({
     formData.amount || ''
   );
   const [isAmountFocused, setIsAmountFocused] = useState<boolean>(false);
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // When external form data changes (e.g., opening modal), reflect as currency unless focused or expression
@@ -293,18 +295,31 @@ export function TransactionForm({
         </div>
         <div>
           <Label htmlFor={`${type}-date`}>Date</Label>
-          <Input
-            id={`${type}-date`}
-            type="date"
-            value={formData.date}
-            onChange={e =>
-              onFormChange({
-                ...formData,
-                date: e.target.value,
-              })
-            }
-            required
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              ref={dateInputRef}
+              id={`${type}-date`}
+              type="date"
+              value={formData.date}
+              onChange={e =>
+                onFormChange({
+                  ...formData,
+                  date: e.target.value,
+                })
+              }
+              className="flex-1"
+              required
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => dateInputRef.current?.showPicker?.()}
+              title="Open calendar"
+            >
+              <Calendar className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <div>
           <Label htmlFor={`${type}-account`}>Account</Label>
