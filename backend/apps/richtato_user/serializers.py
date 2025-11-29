@@ -15,4 +15,10 @@ class CategorySerializer(serializers.ModelSerializer):
 class UserPreferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserPreference
-        fields = ["theme", "currency", "date_format"]
+        fields = [
+            "theme",
+            "currency",
+            "date_format",
+            "timezone",
+            "notifications_enabled",
+        ]

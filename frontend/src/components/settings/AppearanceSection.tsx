@@ -13,8 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/contexts/useTheme';
-import { preferencesApi } from '@/lib/api/user';
+import { preferencesApi, type PreferenceFieldChoices } from '@/lib/api/user';
 import { Palette } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -26,18 +27,29 @@ export function AppearanceSection() {
     theme: 'system',
     currency: 'USD',
     dateFormat: 'MM/DD/YYYY',
+    timezone: 'UTC',
+    notificationsEnabled: true,
   });
+  const [fieldChoices, setFieldChoices] =
+    useState<PreferenceFieldChoices | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
-        const pref = await preferencesApi.get();
+        const [pref, choices] = await Promise.all([
+          preferencesApi.get(),
+          preferencesApi.getFieldChoices(),
+        ]);
+        setFieldChoices(choices);
         setSettings(prev => ({
           ...prev,
           theme: (pref.theme as any) || prev.theme,
           currency: pref.currency || prev.currency,
           dateFormat: (pref.date_format as any) || prev.dateFormat,
+          timezone: pref.timezone || prev.timezone,
+          notificationsEnabled:
+            pref.notifications_enabled ?? prev.notificationsEnabled,
         }));
       } catch (e: any) {
         setError(e?.message ?? 'Failed to load preferences');
@@ -55,6 +67,8 @@ export function AppearanceSection() {
         theme: updated.theme as any,
         currency: updated.currency,
         date_format: updated.dateFormat,
+        timezone: updated.timezone,
+        notifications_enabled: updated.notificationsEnabled,
       });
       if (updated.theme === 'light' || updated.theme === 'dark') {
         setTheme(updated.theme);
@@ -80,39 +94,99 @@ export function AppearanceSection() {
       </CardHeader>
       <CardContent className="space-y-4">
         {error && <div className="text-sm text-red-600">{error}</div>}
-        <div>
-          <Label htmlFor="theme">Theme</Label>
-          <Select
-            value={settings.theme}
-            onValueChange={value => savePrefs({ theme: value })}
-            disabled={loading}
-          >
-            <SelectTrigger id="theme">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="light">Light</SelectItem>
-              <SelectItem value="dark">Dark</SelectItem>
-              <SelectItem value="system">System</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="theme">Theme</Label>
+            <Select
+              value={settings.theme}
+              onValueChange={value => savePrefs({ theme: value })}
+              disabled={loading || !fieldChoices}
+            >
+              <SelectTrigger id="theme">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {fieldChoices?.theme.map(choice => (
+                  <SelectItem key={choice.value} value={choice.value}>
+                    {choice.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="date-format">Date Format</Label>
+            <Select
+              value={settings.dateFormat}
+              onValueChange={value => savePrefs({ dateFormat: value })}
+              disabled={loading || !fieldChoices}
+            >
+              <SelectTrigger id="date-format">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {fieldChoices?.date_format.map(choice => (
+                  <SelectItem key={choice.value} value={choice.value}>
+                    {choice.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="currency">Currency</Label>
+            <Select
+              value={settings.currency}
+              onValueChange={value => savePrefs({ currency: value })}
+              disabled={loading || !fieldChoices}
+            >
+              <SelectTrigger id="currency">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {fieldChoices?.currency.map(choice => (
+                  <SelectItem key={choice.value} value={choice.value}>
+                    {choice.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="timezone">Timezone</Label>
+            <Select
+              value={settings.timezone}
+              onValueChange={value => savePrefs({ timezone: value })}
+              disabled={loading || !fieldChoices}
+            >
+              <SelectTrigger id="timezone">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {fieldChoices?.timezone.map(choice => (
+                  <SelectItem key={choice.value} value={choice.value}>
+                    {choice.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div>
-          <Label htmlFor="date-format">Date Format</Label>
-          <Select
-            value={settings.dateFormat}
-            onValueChange={value => savePrefs({ dateFormat: value })}
+        <div className="flex items-center justify-between pt-2">
+          <div className="space-y-0.5">
+            <Label htmlFor="notifications">Notifications</Label>
+            <div className="text-sm text-muted-foreground">
+              Receive notifications about your finances
+            </div>
+          </div>
+          <Switch
+            id="notifications"
+            checked={settings.notificationsEnabled}
+            onCheckedChange={value =>
+              savePrefs({ notificationsEnabled: value })
+            }
             disabled={loading}
-          >
-            <SelectTrigger id="date-format">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
-              <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-              <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
-            </SelectContent>
-          </Select>
+          />
         </div>
       </CardContent>
     </Card>

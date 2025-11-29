@@ -245,6 +245,20 @@ export interface UserPreferencesPayload {
   theme?: ThemePref;
   currency?: string;
   date_format?: string;
+  timezone?: string;
+  notifications_enabled?: boolean;
+}
+
+export interface FieldChoice {
+  value: string;
+  label: string;
+}
+
+export interface PreferenceFieldChoices {
+  theme: FieldChoice[];
+  date_format: FieldChoice[];
+  currency: FieldChoice[];
+  timezone: FieldChoice[];
 }
 
 class PreferencesApiService {
@@ -270,6 +284,16 @@ class PreferencesApiService {
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('Failed to update preferences');
+    return res.json();
+  }
+
+  async getFieldChoices(): Promise<PreferenceFieldChoices> {
+    const res = await fetch(`${this.baseUrl}/field-choices/`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: await csrfService.getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to load field choices');
     return res.json();
   }
 }

@@ -83,6 +83,32 @@ class UserPreference(models.Model):
         ("YYYY-MM-DD", "YYYY-MM-DD"),
     ]
 
+    CURRENCY_CHOICES = [
+        ("USD", "USD ($)"),
+        ("EUR", "EUR (€)"),
+        ("GBP", "GBP (£)"),
+        ("CAD", "CAD (C$)"),
+        ("AUD", "AUD (A$)"),
+        ("JPY", "JPY (¥)"),
+        ("CNY", "CNY (¥)"),
+        ("INR", "INR (₹)"),
+    ]
+
+    TIMEZONE_CHOICES = [
+        ("UTC", "UTC"),
+        ("America/New_York", "Eastern Time"),
+        ("America/Chicago", "Central Time"),
+        ("America/Denver", "Mountain Time"),
+        ("America/Los_Angeles", "Pacific Time"),
+        ("Europe/London", "London"),
+        ("Europe/Paris", "Paris"),
+        ("Europe/Berlin", "Berlin"),
+        ("Asia/Tokyo", "Tokyo"),
+        ("Asia/Shanghai", "Shanghai"),
+        ("Asia/Singapore", "Singapore"),
+        ("Australia/Sydney", "Sydney"),
+    ]
+
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="preferences"
     )

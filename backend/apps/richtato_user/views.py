@@ -505,6 +505,49 @@ class UserPreferenceAPIView(APIView):
         return Response(serializer.errors, status=400)
 
 
+class UserPreferenceFieldChoicesAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Get user preference field choices",
+        operation_description="Get available choices for user preference fields",
+        responses={
+            200: openapi.Response(
+                "Success",
+                examples={
+                    "application/json": {
+                        "theme": [],
+                        "date_format": [],
+                        "currency": [],
+                        "timezone": [],
+                    }
+                },
+            )
+        },
+    )
+    def get(self, request):
+        return Response(
+            {
+                "theme": [
+                    {"value": val, "label": label}
+                    for val, label in UserPreference.THEME_CHOICES
+                ],
+                "date_format": [
+                    {"value": val, "label": label}
+                    for val, label in UserPreference.DATE_FORMAT_CHOICES
+                ],
+                "currency": [
+                    {"value": val, "label": label}
+                    for val, label in UserPreference.CURRENCY_CHOICES
+                ],
+                "timezone": [
+                    {"value": val, "label": label}
+                    for val, label in UserPreference.TIMEZONE_CHOICES
+                ],
+            }
+        )
+
+
 # Django views (CSRF-based authentication)
 @ensure_csrf_cookie
 def get_csrf_token(request):
