@@ -260,102 +260,86 @@ export function AccountsSection({
             </div>
           </div>
 
-          {/* Account Type Summary Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {accountTypeTotals.map(({ type, total, count }) => (
-              <div
-                key={type}
-                className="p-4 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <div
-                    className={`p-2 rounded-lg ${getAccountTypeColor(type)} text-white`}
-                  >
-                    {getAccountIcon(type)}
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-foreground">
-                      {getAccountTypeLabel(type)}
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      {count} account{count !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p
-                    className={`text-xl font-bold ${
-                      total >= 0 ? 'text-green-600' : 'text-red-600'
-                    }`}
-                  >
-                    {total >= 0 ? '+' : ''}${Math.abs(total).toLocaleString()}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {((total / grandTotal) * 100).toFixed(1)}% of total
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-
           {/* Detailed Account List */}
           <div className="space-y-6">
-            {Object.entries(groupedAccounts).map(([type, accounts]) => (
-              <div key={type} className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                    {getAccountIcon(type)}
-                    {getAccountTypeLabel(type)}
-                  </h3>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {accounts.map(account => (
-                    <div
-                      key={account.id}
-                      className="p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
-                      onClick={() => onAccountClick?.(account)}
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`p-2 rounded-lg ${getAccountTypeColor(account.type)} text-white group-hover:scale-105 transition-transform`}
-                          >
-                            {getAccountIcon(account.type)}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <h4 className="font-medium text-foreground truncate">
-                              {account.name}
-                            </h4>
-                            <p className="text-sm text-muted-foreground truncate">
-                              {account.entity || 'Unknown Entity'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <p
-                          className={`text-xl font-semibold ${
-                            account.balance >= 0
-                              ? 'text-green-600'
-                              : 'text-red-600'
-                          }`}
-                        >
-                          {account.balance >= 0 ? '+' : ''}$
-                          {Math.abs(account.balance).toLocaleString()}
-                        </p>
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>
-                            Updated{' '}
-                            {new Date(account.lastUpdated).toLocaleDateString()}
-                          </span>
-                          <span className="capitalize">{account.type}</span>
-                        </div>
-                      </div>
+            {Object.entries(groupedAccounts).map(([type, accounts]) => {
+              const typeTotal = accounts.reduce(
+                (sum, account) => sum + account.balance,
+                0
+              );
+
+              return (
+                <div key={type} className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                      {getAccountIcon(type)}
+                      {getAccountTypeLabel(type)}
+                    </h3>
+                    <div className="text-right">
+                      <p
+                        className={`text-xl font-bold ${
+                          typeTotal >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}
+                      >
+                        {typeTotal >= 0 ? '+' : ''}$
+                        {Math.abs(typeTotal).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {((typeTotal / grandTotal) * 100).toFixed(1)}% of total
+                      </p>
                     </div>
-                  ))}
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {accounts.map(account => (
+                      <div
+                        key={account.id}
+                        className="p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
+                        onClick={() => onAccountClick?.(account)}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`p-2 rounded-lg ${getAccountTypeColor(account.type)} text-white group-hover:scale-105 transition-transform`}
+                            >
+                              {getAccountIcon(account.type)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h4 className="font-medium text-foreground truncate">
+                                {account.name}
+                              </h4>
+                              <p className="text-sm text-muted-foreground truncate">
+                                {account.entity || 'Unknown Entity'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <p
+                            className={`text-xl font-semibold ${
+                              account.balance >= 0
+                                ? 'text-green-600'
+                                : 'text-red-600'
+                            }`}
+                          >
+                            {account.balance >= 0 ? '+' : ''}$
+                            {Math.abs(account.balance).toLocaleString()}
+                          </p>
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>
+                              Updated{' '}
+                              {new Date(
+                                account.lastUpdated
+                              ).toLocaleDateString()}
+                            </span>
+                            <span className="capitalize">{account.type}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </CardContent>
