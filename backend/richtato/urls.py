@@ -46,12 +46,21 @@ urlpatterns = [
         "swagger<format>/", schema_view.without_ui(cache_timeout=0), name="schema-json"
     ),
     path(
-        "swagger/",
+        "api/docs/",
         schema_view.with_ui("swagger", cache_timeout=0),
         name="schema-swagger-ui",
     ),
     path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
-    # API URLs - organized by resource
+    # API URLs - organized by resource (v1)
+    path("api/v1/auth/", include("apps.richtato_user.urls")),
+    path("api/v1/accounts/", include("apps.account.urls")),
+    path("api/v1/budget/", include("apps.budget.urls")),
+    path("api/v1/income/", include("apps.income.urls")),
+    path("api/v1/expense/", include("apps.expense.urls")),
+    path("api/v1/budget-dashboard/", include("apps.budget_dashboard.urls")),
+    path("api/v1/asset-dashboard/", include("apps.asset_dashboard.urls")),
+    path("api/v1/card-accounts/", include("apps.card.urls")),
+    # Legacy API URLs (redirect or keep for backward compatibility)
     path("api/auth/", include("apps.richtato_user.urls")),
     path("api/accounts/", include("apps.account.urls")),
     path("api/budget/", include("apps.budget.urls")),
@@ -59,7 +68,7 @@ urlpatterns = [
     path("api/expense/", include("apps.expense.urls")),
     path("api/budget-dashboard/", include("apps.budget_dashboard.urls")),
     path("api/asset-dashboard/", include("apps.asset_dashboard.urls")),
-    path("api/settings/", include("apps.settings.urls")),
+    path("api/card-accounts/", include("apps.card.urls")),
     # Demo login for development
     path("demo-login/", user_views.demo_login, name="demo_login"),
 ]

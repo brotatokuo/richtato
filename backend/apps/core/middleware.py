@@ -1,3 +1,5 @@
+"""Infrastructure middleware."""
+
 import os
 import threading
 import time
@@ -9,6 +11,8 @@ dotenv.load_dotenv()
 
 
 class SelfPingMiddleware:
+    """Middleware that periodically pings the production server to keep it awake."""
+
     def __init__(self, get_response):
         self.get_response = get_response
         self.keep_running = True
@@ -40,5 +44,4 @@ class SelfPingMiddleware:
         """Stop the background thread."""
         self.keep_running = False
         if self.thread.is_alive():
-            self.thread.join()
             self.thread.join()

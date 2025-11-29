@@ -45,11 +45,11 @@ INSTALLED_APPS = [
     "apps.richtato_user",
     "apps.category",
     "apps.card",
+    "apps.core",
     "apps.account",
     "apps.budget",
     "apps.income",
     "apps.expense",
-    "apps.settings",
     "apps.budget_dashboard",
     "apps.asset_dashboard",
     "django.contrib.humanize",
@@ -74,11 +74,11 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "apps.settings.cleanup_demo_users_middleware.CleanupDemoUsersMiddleware",
+    "apps.richtato_user.middleware.CleanupDemoUsersMiddleware",
 ]
 
 if DEPLOY_STAGE == "PROD":
-    MIDDLEWARE.insert(5, "apps.settings.self_ping_middleware.SelfPingMiddleware")
+    MIDDLEWARE.insert(5, "apps.core.middleware.SelfPingMiddleware")
 
 
 ROOT_URLCONF = "richtato.urls"

@@ -2,17 +2,17 @@
 import json
 
 import pytz
+from apps.card.serializers import CardAccountSerializer
+from apps.card.services.card_account_service import CardAccountService
+from apps.category.models import Category
+from apps.category.services.category_service import CategoryService
 from apps.expense.models import Expense
 from apps.income.models import Income
 from apps.richtato_user.demo_user_factory import DemoUserFactory
 from apps.richtato_user.models import UserPreference
-from apps.category.models import Category
 from apps.richtato_user.serializers import CategorySerializer, UserPreferenceSerializer
-from apps.card.services.card_account_service import CardAccountService
-from apps.category.services.category_service import CategoryService
 from apps.richtato_user.services.graph_service import GraphService
 from apps.richtato_user.services.user_service import UserService
-from apps.settings.serializers import CardAccountSerializer
 from categories.categories import BaseCategory
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required

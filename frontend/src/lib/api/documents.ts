@@ -163,7 +163,7 @@ class DocumentsApiService {
 
   constructor() {
     // Use environment variable or default to in-cluster /api
-    this.baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+    this.baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
   }
 
   private getToken(): string | null {

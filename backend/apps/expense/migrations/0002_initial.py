@@ -12,6 +12,8 @@ class Migration(migrations.Migration):
     dependencies = [
         ("expense", "0001_initial"),
         ("richtato_user", "0001_initial"),
+        ("card", "0001_initial"),
+        ("category", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -22,7 +24,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.CASCADE,
                 related_name="transactions",
-                to="richtato_user.cardaccount",
+                to="card.cardaccount",
             ),
         ),
         migrations.AddField(
@@ -31,7 +33,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 on_delete=django.db.models.deletion.CASCADE,
                 related_name="transactions",
-                to="richtato_user.category",
+                to="category.category",
             ),
         ),
         migrations.AddField(

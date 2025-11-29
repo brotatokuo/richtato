@@ -1,10 +1,7 @@
-from datetime import datetime
+"""Card account API views."""
 
-from apps.account.models import Account
 from apps.card.models import CardAccount
 from apps.card.services.card_account_service import CardAccountService
-from apps.category.models import Category
-from django.shortcuts import render
 from loguru import logger
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
@@ -14,20 +11,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .serializers import CardAccountSerializer
-
-
-def main(request):
-    category_list = list(Category.objects.filter(user=request.user))
-    return render(
-        request,
-        "old_settings.html",
-        {
-            "account_types": Account.account_types,
-            "category_list": category_list,
-            "today_date": datetime.today().strftime("%Y-%m-%d"),
-            "category_types": Category.CATEGORY_TYPES,
-        },
-    )
 
 
 @authentication_classes([SessionAuthentication, BasicAuthentication])

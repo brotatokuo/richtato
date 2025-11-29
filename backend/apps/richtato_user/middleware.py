@@ -1,13 +1,17 @@
+"""Middleware for user-related functionality."""
+
 import threading
 import time
 
 from django.db import close_old_connections
 from django.utils import timezone
 
-from apps.richtato_user.models import User
+from .models import User
 
 
 class CleanupDemoUsersMiddleware:
+    """Middleware that periodically cleans up expired demo users."""
+
     def __init__(self, get_response):
         self.get_response = get_response
         self.keep_running = True

@@ -12,6 +12,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("richtato_user", "0017_delete_budget"),
+        ("category", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -41,7 +42,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="budgets",
-                        to="richtato_user.category",
+                        to="category.category",
                     ),
                 ),
                 (
