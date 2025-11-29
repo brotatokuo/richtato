@@ -139,7 +139,7 @@ export interface CategoryCatalogItem {
 }
 
 export class CategorySettingsApi {
-  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/category-settings`;
+  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/auth/category-settings`;
 
   private async getHeaders(): Promise<HeadersInit> {
     const headers = await csrfService.getHeaders();
@@ -187,7 +187,7 @@ export interface CardAccountItem {
 }
 
 class CardsApiService {
-  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/card-accounts`;
+  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/auth/card-accounts`;
 
   async list(): Promise<CardAccountItem[]> {
     const res = await fetch(`${this.baseUrl}/`, {
@@ -262,7 +262,7 @@ export interface PreferenceFieldChoices {
 }
 
 class PreferencesApiService {
-  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/preferences`;
+  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/auth/preferences`;
 
   async get(): Promise<UserPreferencesPayload> {
     const res = await fetch(`${this.baseUrl}/`, {
@@ -277,12 +277,32 @@ class PreferencesApiService {
   async update(
     payload: UserPreferencesPayload
   ): Promise<UserPreferencesPayload> {
+    const csrfHeaders = await csrfService.getHeaders();
     const res = await fetch(`${this.baseUrl}/`, {
       method: 'PUT',
       credentials: 'include',
-      headers: await csrfService.getHeaders(),
+      headers: csrfHeaders,
       body: JSON.stringify(payload),
     });
+
+    // If CSRF token is invalid, try to refresh it and retry once
+    if (res.status === 403) {
+      console.log('CSRF token invalid, refreshing...');
+      const refreshedCsrfHeaders = await csrfService
+        .refreshToken()
+        .then(() => csrfService.getHeaders());
+
+      const retryResponse = await fetch(`${this.baseUrl}/`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: refreshedCsrfHeaders,
+        body: JSON.stringify(payload),
+      });
+
+      if (!retryResponse.ok) throw new Error('Failed to update preferences');
+      return retryResponse.json();
+    }
+
     if (!res.ok) throw new Error('Failed to update preferences');
     return res.json();
   }

@@ -32,7 +32,7 @@ class AssetDashboardApiService {
   private baseUrl: string;
 
   constructor() {
-    const root = import.meta.env.VITE_API_BASE_URL || '/api';
+    const root = import.meta.env.VITE_API_BASE_URL || '/api/v1';
     this.baseUrl = `${root}/asset-dashboard`;
   }
 
