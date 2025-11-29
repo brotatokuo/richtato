@@ -42,14 +42,14 @@ const navigationItems = [
     icon: Table,
   },
   {
-    name: 'Preferences',
-    href: '/preferences',
-    icon: SettingsIcon,
-  },
-  {
     name: 'Setup',
     href: '/setup',
     icon: SlidersHorizontal,
+  },
+  {
+    name: 'Preferences',
+    href: '/preferences',
+    icon: SettingsIcon,
   },
   // {
   //   name: 'Upload',
