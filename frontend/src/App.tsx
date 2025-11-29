@@ -7,9 +7,11 @@ import { Dashboard } from './pages/BudgetDashboard';
 import { Cashflow } from './pages/Cashflow';
 import { DataTable } from './pages/DataTable';
 import { Login } from './pages/Login';
+import { Preferences } from './pages/Preferences';
 import { Profile } from './pages/Profile';
 import { Register } from './pages/Register';
 import { Settings } from './pages/Settings';
+import { Setup } from './pages/Setup';
 import { Upload } from './pages/Upload';
 import { Welcome } from './pages/Welcome';
 
@@ -36,7 +38,9 @@ function App() {
             <Route path="cashflow" element={<Cashflow />} />
             <Route path="upload" element={<Upload />} />
             <Route path="profile" element={<Profile />} />
-            <Route path="settings" element={<Settings />} />
+            <Route path="preferences" element={<Preferences />} />
+            <Route path="setup" element={<Setup />} />
+            <Route path="settings" element={<Navigate to="/preferences" replace />} />
           </Route>
         </Routes>
       </BrowserRouter>
