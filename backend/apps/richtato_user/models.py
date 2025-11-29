@@ -85,6 +85,7 @@ class UserPreference(models.Model):
 
     CURRENCY_CHOICES = [
         ("USD", "USD ($)"),
+        ("NTD", "NTD (NT$)"),
         ("EUR", "EUR (€)"),
         ("GBP", "GBP (£)"),
         ("CAD", "CAD (C$)"),
