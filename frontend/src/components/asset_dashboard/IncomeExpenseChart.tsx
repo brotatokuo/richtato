@@ -7,7 +7,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CashFlowData, dashboardApiService } from '@/lib/api/dashboard';
+import {
+  CashFlowData,
+  assetDashboardApiService,
+} from '@/lib/api/asset-dashboard';
 import { useEffect, useMemo, useState } from 'react';
 
 export function IncomeExpenseChart() {
@@ -38,7 +41,7 @@ export function IncomeExpenseChart() {
         setLoading(true);
         setError(null);
         const { startDate, endDate } = computeRange(period);
-        const resp = await dashboardApiService.getIncomeExpensesData({
+        const resp = await assetDashboardApiService.getIncomeExpensesData({
           startDate,
           endDate,
         });
