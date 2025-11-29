@@ -100,9 +100,7 @@ def dashboard_metrics(request):
 @login_required
 def top_categories_data(request):
     """
-    Get top spending destinations - delegates to expense repository.
-
-    Note: Uses PostgresClient for specialized DataFrame operations.
+    Get top spending categories - uses Django ORM for aggregation.
     """
     try:
         # Extract period parameter
@@ -111,7 +109,9 @@ def top_categories_data(request):
         # Calculate date range based on period
         from datetime import timedelta
 
+        from apps.expense.models import Expense
         from dateutil.relativedelta import relativedelta
+        from django.db.models import Count, Sum
 
         end_date = datetime.now().date()
 
@@ -129,41 +129,28 @@ def top_categories_data(request):
             # Default to 30 days
             start_date = end_date - timedelta(days=30)
 
-        # Use PostgresClient for DataFrame operations
-        import pandas as pd
+        # Build queryset with filters
+        expenses = Expense.objects.filter(user=request.user)
 
-        pg_client = PostgresClient()
-        expense_df = pg_client.get_expense_df(request.user.pk)
-
-        if expense_df.empty:
-            return JsonResponse({"categories": []})
-
-        # Filter by date range
-        expense_df["date"] = pd.to_datetime(expense_df["date"]).dt.date
         if start_date is not None:
-            expense_df = expense_df[
-                (expense_df["date"] >= start_date) & (expense_df["date"] <= end_date)
-            ]
+            expenses = expenses.filter(date__gte=start_date, date__lte=end_date)
 
-        # Group and aggregate
-        grouped = (
-            expense_df.groupby("category_name")
-            .agg(amount_sum=("amount", "sum"), transaction_count=("amount", "count"))
-            .reset_index()
+        # Group by category and aggregate
+        top_categories = (
+            expenses.values("category__name")
+            .annotate(amount_sum=Sum("amount"), transaction_count=Count("id"))
+            .order_by("-amount_sum")[:5]
         )
-
-        # Sort and select top 5
-        top_categories = grouped.sort_values("amount_sum", ascending=False).head(5)
 
         # Prepare response
         categories = [
             {
-                "name": row["category_name"],
-                "amount": float(row["amount_sum"]),
-                "transactions": int(row["transaction_count"]),
-                "category": row["category_name"],
+                "name": cat["category__name"] or "Uncategorized",
+                "amount": float(cat["amount_sum"] or 0),
+                "transactions": cat["transaction_count"],
+                "category": cat["category__name"] or "Uncategorized",
             }
-            for _, row in top_categories.iterrows()
+            for cat in top_categories
         ]
 
         return JsonResponse({"categories": categories})
