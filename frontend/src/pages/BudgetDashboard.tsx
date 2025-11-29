@@ -2,6 +2,13 @@ import { MetricCard } from '@/components/asset_dashboard/MetricCard';
 import { BudgetDashboard } from '@/components/budget_dashboard/BudgetBreakdown';
 import { ExpenseBreakdown } from '@/components/budget_dashboard/ExpenseBreakdown';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   BudgetDateRangeProvider,
   useBudgetDateRange,
 } from '@/contexts/BudgetDateRangeContext';
@@ -40,42 +47,44 @@ function MonthYearControls({
     Number(startDate.split('-')[1])
   );
 
-  const handleYear = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const y = Number(e.target.value);
+  const handleYear = (value: string) => {
+    const y = Number(value);
     setYear(y);
     onChange(y, month);
   };
-  const handleMonth = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const m = Number(e.target.value);
+  const handleMonth = (value: string) => {
+    const m = Number(value);
     setMonth(m);
     onChange(year, m);
   };
   return (
     <div className="flex items-center flex-wrap gap-3">
-      <select
-        className="border rounded-md px-3 py-2 bg-background text-lg"
-        value={year}
-        onChange={handleYear}
-      >
-        {years.map(y => (
-          <option key={y} value={y}>
-            {y}
-          </option>
-        ))}
-      </select>
-      <select
-        className="border rounded-md px-3 py-2 bg-background text-lg"
-        value={month}
-        onChange={handleMonth}
-      >
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
-          <option key={m} value={m}>
-            {new Date(2000, m - 1, 1).toLocaleString('default', {
-              month: 'short',
-            })}
-          </option>
-        ))}
-      </select>
+      <Select value={String(year)} onValueChange={handleYear}>
+        <SelectTrigger className="w-[120px] text-lg">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {years.map(y => (
+            <SelectItem key={y} value={String(y)}>
+              {y}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={String(month)} onValueChange={handleMonth}>
+        <SelectTrigger className="w-[120px] text-lg">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
+            <SelectItem key={m} value={String(m)}>
+              {new Date(2000, m - 1, 1).toLocaleString('default', {
+                month: 'short',
+              })}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
