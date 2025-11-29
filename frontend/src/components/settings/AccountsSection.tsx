@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Account, transactionsApiService } from '@/lib/api/transactions';
-import { Plus } from 'lucide-react';
+import { Landmark, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export function AccountsSection() {
@@ -141,7 +141,10 @@ export function AccountsSection() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Accounts</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Landmark className="h-5 w-5" />
+              Accounts
+            </CardTitle>
             <CardDescription>All financial accounts on file</CardDescription>
           </div>
           <Button type="button" variant="outline" onClick={openCreate}>

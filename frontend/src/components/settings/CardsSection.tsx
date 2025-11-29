@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cardsApi } from '@/lib/api/user';
-import { Plus } from 'lucide-react';
+import { CreditCard, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface CardAccountItem {
@@ -120,7 +120,10 @@ export function CardsSection() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Cards</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Cards
+            </CardTitle>
             <CardDescription>Linked card accounts</CardDescription>
           </div>
           <Button type="button" variant="outline" onClick={openCreate}>

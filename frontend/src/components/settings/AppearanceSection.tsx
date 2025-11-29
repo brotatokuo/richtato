@@ -13,7 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/contexts/useTheme';
 import { preferencesApi, type PreferenceFieldChoices } from '@/lib/api/user';
 import { Palette } from 'lucide-react';
@@ -28,7 +27,6 @@ export function AppearanceSection() {
     currency: 'USD',
     dateFormat: 'MM/DD/YYYY',
     timezone: 'UTC',
-    notificationsEnabled: true,
   });
   const [fieldChoices, setFieldChoices] =
     useState<PreferenceFieldChoices | null>(null);
@@ -48,8 +46,6 @@ export function AppearanceSection() {
           currency: pref.currency || prev.currency,
           dateFormat: (pref.date_format as any) || prev.dateFormat,
           timezone: pref.timezone || prev.timezone,
-          notificationsEnabled:
-            pref.notifications_enabled ?? prev.notificationsEnabled,
         }));
       } catch (e: any) {
         setError(e?.message ?? 'Failed to load preferences');
@@ -68,7 +64,6 @@ export function AppearanceSection() {
         currency: updated.currency,
         date_format: updated.dateFormat,
         timezone: updated.timezone,
-        notifications_enabled: updated.notificationsEnabled,
       });
       if (updated.theme === 'light' || updated.theme === 'dark') {
         setTheme(updated.theme);
@@ -171,22 +166,6 @@ export function AppearanceSection() {
               </SelectContent>
             </Select>
           </div>
-        </div>
-        <div className="flex items-center justify-between pt-2">
-          <div className="space-y-0.5">
-            <Label htmlFor="notifications">Notifications</Label>
-            <div className="text-sm text-muted-foreground">
-              Receive notifications about your finances
-            </div>
-          </div>
-          <Switch
-            id="notifications"
-            checked={settings.notificationsEnabled}
-            onCheckedChange={value =>
-              savePrefs({ notificationsEnabled: value })
-            }
-            disabled={loading}
-          />
         </div>
       </CardContent>
     </Card>
