@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import {
   Account,
   Category,
@@ -16,13 +17,6 @@ import {
 import { TransactionFormData, TransactionType } from '@/types/transactions';
 import { Minus, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
-
-const currencyFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 2,
-  minimumFractionDigits: 2,
-});
 
 interface TransactionFormProps {
   type: TransactionType;
@@ -45,11 +39,19 @@ export function TransactionForm({
   submitLabel,
   onDelete,
 }: TransactionFormProps) {
+  const { preferences, getCurrencySymbol } = usePreferences();
   const isIncome = type === 'income';
   const title = isIncome ? 'Income' : 'Expense';
   const placeholder = isIncome
     ? 'e.g., Salary, Freelance work'
     : 'e.g., Groceries, Gas, Coffee';
+
+  // Create number formatter for displaying amounts (without currency symbol)
+  const numberFormatter = new Intl.NumberFormat('en-US', {
+    style: 'decimal',
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+  });
 
   const evaluateExpression = (expr: string): number | null => {
     const trimmed = expr.trim().replace(/\s+/g, '');
@@ -67,7 +69,8 @@ export function TransactionForm({
   };
 
   const normalizeNumericString = (val: string): string => {
-    return val.replace(/[,$\s]/g, '');
+    // Remove common currency symbols, commas, and spaces
+    return val.replace(/[,$€£¥₹\s]/g, '');
   };
 
   const [amountDisplay, setAmountDisplay] = useState<string>(
@@ -85,7 +88,7 @@ export function TransactionForm({
       } else {
         const num = parseFloat(normalizeNumericString(String(formData.amount)));
         if (!isNaN(num)) {
-          setAmountDisplay(currencyFormatter.format(Math.abs(num)));
+          setAmountDisplay(numberFormatter.format(Math.abs(num)));
         } else {
           setAmountDisplay(formData.amount);
         }
@@ -143,59 +146,64 @@ export function TransactionForm({
         <div>
           <Label htmlFor={`${type}-amount`}>Amount</Label>
           {isIncome ? (
-            <Input
-              id={`${type}-amount`}
-              type="text"
-              value={amountDisplay}
-              onFocus={() => {
-                setIsAmountFocused(true);
-                if (!amountDisplay) return;
-                // Show raw numeric for editing if currently formatted currency
-                if (!amountDisplay.trim().startsWith('=')) {
-                  const raw = normalizeNumericString(amountDisplay);
-                  setAmountDisplay(raw);
-                }
-              }}
-              onChange={e => {
-                const rawInput = e.target.value;
-                setAmountDisplay(rawInput);
-                if (rawInput.trim().startsWith('=')) {
-                  onFormChange({
-                    ...formData,
-                    amount: rawInput,
-                  });
-                } else {
-                  const normalized = normalizeNumericString(rawInput);
-                  onFormChange({
-                    ...formData,
-                    amount: normalized,
-                  });
-                }
-              }}
-              onBlur={e => {
-                setIsAmountFocused(false);
-                const val = e.target.value;
-                if (val.trim().startsWith('=')) {
-                  const result = evaluateExpression(val.trim().slice(1));
-                  if (result !== null) {
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground px-3 py-2 bg-muted rounded-md border border-input">
+                {getCurrencySymbol(preferences.currency)}
+              </span>
+              <Input
+                id={`${type}-amount`}
+                type="text"
+                value={amountDisplay}
+                onFocus={() => {
+                  setIsAmountFocused(true);
+                  if (!amountDisplay) return;
+                  // Show raw numeric for editing if currently formatted currency
+                  if (!amountDisplay.trim().startsWith('=')) {
+                    const raw = normalizeNumericString(amountDisplay);
+                    setAmountDisplay(raw);
+                  }
+                }}
+                onChange={e => {
+                  const rawInput = e.target.value;
+                  setAmountDisplay(rawInput);
+                  if (rawInput.trim().startsWith('=')) {
+                    onFormChange({
+                      ...formData,
+                      amount: rawInput,
+                    });
+                  } else {
+                    const normalized = normalizeNumericString(rawInput);
+                    onFormChange({
+                      ...formData,
+                      amount: normalized,
+                    });
+                  }
+                }}
+                onBlur={e => {
+                  setIsAmountFocused(false);
+                  const val = e.target.value;
+                  if (val.trim().startsWith('=')) {
+                    const result = evaluateExpression(val.trim().slice(1));
+                    if (result !== null) {
                     const normalized = Math.abs(result); // don't affect sign toggle elsewhere
                     const numericString = formatAmount(normalized);
                     onFormChange({ ...formData, amount: numericString });
-                    setAmountDisplay(currencyFormatter.format(normalized));
+                    setAmountDisplay(numberFormatter.format(normalized));
+                    }
+                    return;
                   }
-                  return;
-                }
-                const normalized = normalizeNumericString(val);
+                  const normalized = normalizeNumericString(val);
                 const num = parseFloat(normalized);
                 if (!isNaN(num)) {
                   const numericString = formatAmount(Math.abs(num));
                   onFormChange({ ...formData, amount: numericString });
-                  setAmountDisplay(currencyFormatter.format(Math.abs(num)));
+                  setAmountDisplay(numberFormatter.format(Math.abs(num)));
                 }
               }}
               placeholder="0.00"
               required
             />
+            </div>
           ) : (
             <div className="flex items-center gap-2">
               <Button
@@ -225,6 +233,9 @@ export function TransactionForm({
                   <Minus className="h-4 w-4" />
                 )}
               </Button>
+              <span className="text-sm font-medium text-muted-foreground px-3 py-2 bg-muted rounded-md border border-input">
+                {getCurrencySymbol(preferences.currency)}
+              </span>
               <Input
                 id={`${type}-amount`}
                 type="text"
@@ -262,7 +273,7 @@ export function TransactionForm({
                       const normalized = Math.abs(result); // do not change sign toggle
                       const numericString = formatAmount(normalized);
                       onFormChange({ ...formData, amount: numericString });
-                      setAmountDisplay(currencyFormatter.format(normalized));
+                      setAmountDisplay(numberFormatter.format(normalized));
                     }
                     return;
                   }
@@ -271,7 +282,7 @@ export function TransactionForm({
                   if (!isNaN(num)) {
                     const numericString = formatAmount(Math.abs(num));
                     onFormChange({ ...formData, amount: numericString });
-                    setAmountDisplay(currencyFormatter.format(Math.abs(num)));
+                    setAmountDisplay(numberFormatter.format(Math.abs(num)));
                   }
                 }}
                 placeholder="0.00"

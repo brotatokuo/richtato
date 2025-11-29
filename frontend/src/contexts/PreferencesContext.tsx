@@ -4,10 +4,12 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 
 interface PreferencesContextType {
   preferences: UserPreferencesPayload;
+  currencySymbols: Record<string, string>;
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
   updatePreferences: (updates: Partial<UserPreferencesPayload>) => Promise<void>;
+  getCurrencySymbol: (code: string) => string;
 }
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined);
@@ -20,6 +22,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     date_format: 'MM/DD/YYYY',
     timezone: 'UTC',
   });
+  const [currencySymbols, setCurrencySymbols] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,13 +35,28 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       setError(null);
-      const prefs = await preferencesApi.get();
+      const [prefs, fieldChoices] = await Promise.all([
+        preferencesApi.get(),
+        preferencesApi.getFieldChoices(),
+      ]);
+
       setPreferences({
         theme: prefs.theme || 'system',
         currency: prefs.currency || 'USD',
         date_format: prefs.date_format || 'MM/DD/YYYY',
         timezone: prefs.timezone || 'UTC',
       });
+
+      // Parse currency symbols from field choices
+      // Labels look like "USD ($)", "NTD (NT$)", etc.
+      const symbols: Record<string, string> = {};
+      fieldChoices.currency.forEach(choice => {
+        const match = choice.label.match(/\(([^)]+)\)/);
+        if (match && match[1]) {
+          symbols[choice.value] = match[1];
+        }
+      });
+      setCurrencySymbols(symbols);
     } catch (e: any) {
       setError(e?.message ?? 'Failed to load preferences');
       console.error('Failed to load preferences:', e);
@@ -69,6 +87,10 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const getCurrencySymbol = (code: string): string => {
+    return currencySymbols[code] || '$';
+  };
+
   useEffect(() => {
     fetchPreferences();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -78,10 +100,12 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     <PreferencesContext.Provider
       value={{
         preferences,
+        currencySymbols,
         loading,
         error,
         refetch: fetchPreferences,
         updatePreferences,
+        getCurrencySymbol,
       }}
     >
       {children}

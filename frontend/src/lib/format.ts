@@ -5,6 +5,7 @@
 // Currency symbols mapping
 export const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: '$',
+  NTD: 'NT$',
   EUR: '€',
   GBP: '£',
   CAD: 'C$',
@@ -92,9 +93,7 @@ export function formatSignedCurrency(
     return formatCurrency(0, currency);
   }
 
-  const sign = numAmount >= 0
-    ? (showPositiveSign ? '+' : '')
-    : '-';
+  const sign = numAmount >= 0 ? (showPositiveSign ? '+' : '') : '-';
 
   return `${sign}${formatCurrency(Math.abs(numAmount), currency)}`;
 }
