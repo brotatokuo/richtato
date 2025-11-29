@@ -1,6 +1,10 @@
 from datetime import datetime
 
-from django.shortcuts import get_object_or_404, render
+from apps.account.models import Account
+from apps.card.models import CardAccount
+from apps.card.services.card_account_service import CardAccountService
+from apps.category.models import Category
+from django.shortcuts import render
 from loguru import logger
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
@@ -8,12 +12,6 @@ from rest_framework.decorators import authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from apps.account.models import Account
-from apps.category.models import Category
-from apps.card.models import CardAccount
-from apps.card.constants import SUPPORTED_CARD_BANKS
-from apps.card.services.card_account_service import CardAccountService
 
 from .serializers import CardAccountSerializer
 
