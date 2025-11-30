@@ -17,7 +17,7 @@ const SPECIFIC_CARD_IMAGES: Record<string, string> = {
 
 // Mapping of bank identifiers to bank logos
 const BANK_LOGOS: Record<string, string> = {
-  american_express: '/images/logos/amex.avif',
+  american_express: '/images/logos/amex.png',
   bank_of_america: '/images/logos/bofa.png',
   chase: '/images/logos/chase.webp',
   citibank: '/images/logos/chase.webp', // Using chase as fallback, could add citi logo
