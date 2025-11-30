@@ -1,4 +1,3 @@
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -223,24 +222,24 @@ export function CardsSection() {
               onChange={e => setForm({ ...form, name: e.target.value })}
             />
           </div>
-            <div>
-              <Label htmlFor="edit-card-bank">Bank</Label>
-              <Select
-                value={form.bank}
-                onValueChange={v => setForm({ ...form, bank: v })}
-              >
-                <SelectTrigger id="edit-card-bank">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {bankOptions.map(b => (
-                    <SelectItem key={b.value} value={b.value}>
-                      {b.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label htmlFor="edit-card-bank">Bank</Label>
+            <Select
+              value={form.bank}
+              onValueChange={v => setForm({ ...form, bank: v })}
+            >
+              <SelectTrigger id="edit-card-bank">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {bankOptions.map(b => (
+                  <SelectItem key={b.value} value={b.value}>
+                    {b.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex justify-between gap-2">
             <Button
               variant="destructive"
