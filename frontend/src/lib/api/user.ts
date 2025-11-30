@@ -187,7 +187,7 @@ export interface CardAccountItem {
 }
 
 class CardsApiService {
-  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/auth/card-accounts`;
+  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/card-accounts`;
 
   async list(): Promise<CardAccountItem[]> {
     const res = await fetch(`${this.baseUrl}/`, {
@@ -196,7 +196,20 @@ class CardsApiService {
     });
     if (!res.ok) throw new Error('Failed to load card accounts');
     const data = await res.json();
-    return data as CardAccountItem[];
+    // Handle both direct array and wrapped response formats
+    if (Array.isArray(data)) {
+      return data;
+    }
+    // If wrapped in an object, try common keys
+    if (data && typeof data === 'object') {
+      if (Array.isArray(data.rows)) return data.rows;
+      if (Array.isArray(data.cards)) return data.cards;
+      if (Array.isArray(data.results)) return data.results;
+      if (Array.isArray(data.data)) return data.data;
+    }
+    // Return empty array if format is unexpected
+    console.warn('Unexpected card accounts API response format:', data);
+    return [];
   }
 
   async create(payload: {
@@ -234,6 +247,17 @@ class CardsApiService {
       headers: await csrfService.getHeaders(),
     });
     if (!res.ok) throw new Error('Failed to delete card account');
+  }
+
+  async getFieldChoices(): Promise<{
+    bank: Array<{ value: string; label: string }>;
+  }> {
+    const res = await fetch(`${this.baseUrl}/field-choices/`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('Failed to load field choices');
+    return res.json();
   }
 }
 

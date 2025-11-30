@@ -36,19 +36,12 @@ export function AccountsSection() {
     entity: 'other',
   });
 
-  const accountTypeOptions = [
-    'checking',
-    'savings',
-    'retirement',
-    'investment',
-  ];
-  const entityOptions = [
-    'bank_of_america',
-    'chase',
-    'citibank',
-    'marcus',
-    'other',
-  ];
+  const [accountTypeOptions, setAccountTypeOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
+  const [entityOptions, setEntityOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
 
   const refresh = async () => {
     try {
@@ -63,8 +56,43 @@ export function AccountsSection() {
     }
   };
 
+  const fetchFieldChoices = async () => {
+    try {
+      const choices = await transactionsApiService.getAccountFieldChoices();
+      setAccountTypeOptions(choices.type || []);
+      setEntityOptions(choices.entity || []);
+    } catch (e: any) {
+      console.error('Failed to load field choices:', e);
+      // Set default options if fetch fails
+      setAccountTypeOptions([
+        { value: 'checking', label: 'Checking' },
+        { value: 'savings', label: 'Savings' },
+        { value: 'retirement', label: 'Retirement' },
+        { value: 'investment', label: 'Investment' },
+      ]);
+      setEntityOptions([
+        { value: 'bank_of_america', label: 'Bank of America' },
+        { value: 'chase', label: 'Chase' },
+        { value: 'citibank', label: 'Citibank' },
+        { value: 'marcus', label: 'Marcus by Goldman Sachs' },
+        { value: 'other', label: 'Other' },
+      ]);
+    }
+  };
+
+  const getTypeLabel = (value: string): string => {
+    const option = accountTypeOptions.find(opt => opt.value === value);
+    return option?.label || value;
+  };
+
+  const getEntityLabel = (value: string): string => {
+    const option = entityOptions.find(opt => opt.value === value);
+    return option?.label || value;
+  };
+
   useEffect(() => {
     refresh();
+    fetchFieldChoices();
   }, []);
 
   const openCreate = () => {
@@ -173,10 +201,14 @@ export function AccountsSection() {
                   {((acc as any).type || (acc as any).entity) && (
                     <>
                       {(acc as any).type && (
-                        <Badge variant="outline">{(acc as any).type}</Badge>
+                        <Badge variant="outline">
+                          {getTypeLabel((acc as any).type)}
+                        </Badge>
                       )}
                       {(acc as any).entity && (
-                        <Badge variant="outline">{(acc as any).entity}</Badge>
+                        <Badge variant="outline">
+                          {getEntityLabel((acc as any).entity)}
+                        </Badge>
                       )}
                     </>
                   )}
@@ -214,8 +246,8 @@ export function AccountsSection() {
               </SelectTrigger>
               <SelectContent>
                 {accountTypeOptions.map(t => (
-                  <SelectItem key={t} value={t}>
-                    {t}
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -232,8 +264,8 @@ export function AccountsSection() {
               </SelectTrigger>
               <SelectContent>
                 {entityOptions.map(e => (
-                  <SelectItem key={e} value={e}>
-                    {e}
+                  <SelectItem key={e.value} value={e.value}>
+                    {e.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -276,8 +308,8 @@ export function AccountsSection() {
               </SelectTrigger>
               <SelectContent>
                 {accountTypeOptions.map(t => (
-                  <SelectItem key={t} value={t}>
-                    {t}
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -294,8 +326,8 @@ export function AccountsSection() {
               </SelectTrigger>
               <SelectContent>
                 {entityOptions.map(e => (
-                  <SelectItem key={e} value={e}>
-                    {e}
+                  <SelectItem key={e.value} value={e.value}>
+                    {e.label}
                   </SelectItem>
                 ))}
               </SelectContent>

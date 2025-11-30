@@ -1,6 +1,9 @@
+import { AccountHistoryTable } from '@/components/accounts/AccountHistoryTable';
+import { AccountTiles } from '@/components/accounts/AccountTiles';
 import { TransactionTable } from '@/components/transactions/TransactionTable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import {
   Account,
   Category,
@@ -11,6 +14,7 @@ import { useEffect, useState } from 'react';
 
 // Main DataTable Component
 export function DataTable() {
+  const { preferences } = usePreferences();
   const [incomeTransactions, setIncomeTransactions] = useState<
     DisplayTransaction[]
   >([]);
@@ -19,10 +23,16 @@ export function DataTable() {
   >([]);
   const [incomeAccounts, setIncomeAccounts] = useState<Account[]>([]);
   const [expenseAccounts, setExpenseAccounts] = useState<Account[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'income' | 'expense'>('income');
+  const [activeTab, setActiveTab] = useState<'income' | 'expense' | 'accounts'>(
+    'income'
+  );
+  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(
+    null
+  );
 
   const loadData = async () => {
     try {
@@ -43,6 +53,7 @@ export function DataTable() {
       setExpenseTransactions(expenseData.map(transformTransaction));
       setExpenseAccounts(expenseChoices.accounts);
       setIncomeAccounts(incomeAccts);
+      setAccounts(incomeAccts);
       setCategories(expenseChoices.categories);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -96,6 +107,15 @@ export function DataTable() {
           >
             Expense
           </Button>
+          <Button
+            type="button"
+            variant={activeTab === 'accounts' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveTab('accounts')}
+            aria-pressed={activeTab === 'accounts'}
+          >
+            Accounts
+          </Button>
         </div>
 
         {/* Unified view: show one table at a time based on active tab */}
@@ -112,7 +132,7 @@ export function DataTable() {
                 onRefresh={loadData}
               />
             </div>
-          ) : (
+          ) : activeTab === 'expense' ? (
             <div className="min-w-0 max-w-full">
               <TransactionTable
                 type="expense"
@@ -122,6 +142,20 @@ export function DataTable() {
                 categories={categories}
                 loading={loading}
                 onRefresh={loadData}
+              />
+            </div>
+          ) : (
+            <div className="min-w-0 max-w-full space-y-6">
+              <AccountTiles
+                accounts={accounts}
+                selectedAccountId={selectedAccountId}
+                onAccountSelect={setSelectedAccountId}
+                currency={preferences.currency || 'USD'}
+              />
+              <AccountHistoryTable
+                accountId={selectedAccountId}
+                accounts={accounts}
+                onDataChange={loadData}
               />
             </div>
           )}

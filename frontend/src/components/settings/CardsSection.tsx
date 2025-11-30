@@ -37,14 +37,9 @@ export function CardsSection() {
   const [showDelete, setShowDelete] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [form, setForm] = useState({ name: '', bank: 'other' });
-  const bankOptions = [
-    'american_express',
-    'bank_of_america',
-    'bilt',
-    'chase',
-    'citibank',
-    'other',
-  ];
+  const [bankOptions, setBankOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
 
   const refresh = async () => {
     try {
@@ -54,13 +49,29 @@ export function CardsSection() {
       setError(null);
     } catch (e: any) {
       setError(e?.message ?? 'Failed to load cards');
+      setCards([]);
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchFieldChoices = async () => {
+    try {
+      const choices = await cardsApi.getFieldChoices();
+      setBankOptions(choices.bank || []);
+    } catch (e: unknown) {
+      setError((e as Error).message ?? 'Failed to load field choices');
+    }
+  };
+
+  const getBankLabel = (value: string): string => {
+    const option = bankOptions.find(opt => opt.value === value);
+    return option?.label || value;
+  };
+
   useEffect(() => {
     refresh();
+    fetchFieldChoices();
   }, []);
 
   const openCreate = () => {
@@ -149,7 +160,7 @@ export function CardsSection() {
               >
                 <div className="text-sm font-medium mb-1">{card.name}</div>
                 <div className="text-xs text-muted-foreground">
-                  <Badge variant="outline">{card.bank}</Badge>
+                  <Badge variant="outline">{getBankLabel(card.bank)}</Badge>
                 </div>
               </button>
             ))}
@@ -183,8 +194,8 @@ export function CardsSection() {
               </SelectTrigger>
               <SelectContent>
                 {bankOptions.map(b => (
-                  <SelectItem key={b} value={b}>
-                    {b}
+                  <SelectItem key={b.value} value={b.value}>
+                    {b.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -215,24 +226,24 @@ export function CardsSection() {
               onChange={e => setForm({ ...form, name: e.target.value })}
             />
           </div>
-          <div>
-            <Label htmlFor="edit-card-bank">Bank</Label>
-            <Select
-              value={form.bank}
-              onValueChange={v => setForm({ ...form, bank: v })}
-            >
-              <SelectTrigger id="edit-card-bank">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {bankOptions.map(b => (
-                  <SelectItem key={b} value={b}>
-                    {b}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div>
+              <Label htmlFor="edit-card-bank">Bank</Label>
+              <Select
+                value={form.bank}
+                onValueChange={v => setForm({ ...form, bank: v })}
+              >
+                <SelectTrigger id="edit-card-bank">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {bankOptions.map(b => (
+                    <SelectItem key={b.value} value={b.value}>
+                      {b.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           <div className="flex justify-between gap-2">
             <Button
               variant="destructive"
