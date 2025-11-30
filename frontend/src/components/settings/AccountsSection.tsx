@@ -80,16 +80,6 @@ export function AccountsSection() {
     }
   };
 
-  const getTypeLabel = (value: string): string => {
-    const option = accountTypeOptions.find(opt => opt.value === value);
-    return option?.label || value;
-  };
-
-  const getEntityLabel = (value: string): string => {
-    const option = entityOptions.find(opt => opt.value === value);
-    return option?.label || value;
-  };
-
   useEffect(() => {
     refresh();
     fetchFieldChoices();
@@ -198,17 +188,13 @@ export function AccountsSection() {
               >
                 <div className="text-sm font-medium mb-1">{acc.name}</div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  {((acc as any).type || (acc as any).entity) && (
+                  {(acc.type_display || acc.entity_display) && (
                     <>
-                      {(acc as any).type && (
-                        <Badge variant="outline">
-                          {getTypeLabel((acc as any).type)}
-                        </Badge>
+                      {acc.type_display && (
+                        <Badge variant="outline">{acc.type_display}</Badge>
                       )}
-                      {(acc as any).entity && (
-                        <Badge variant="outline">
-                          {getEntityLabel((acc as any).entity)}
-                        </Badge>
+                      {acc.entity_display && (
+                        <Badge variant="outline">{acc.entity_display}</Badge>
                       )}
                     </>
                   )}

@@ -36,8 +36,14 @@ class AccountService:
             rows.append(
                 {
                     **account,
-                    "type": account["type"].title(),
-                    "entity": account["entity"].title(),
+                    "type": account["type"],  # Raw value for forms
+                    "type_display": dict(account_types).get(
+                        account["type"], account["type"]
+                    ),  # Display value
+                    "entity": account["entity"],  # Raw value for forms
+                    "entity_display": dict(supported_asset_accounts).get(
+                        account["entity"], account["entity"]
+                    ),  # Display value
                     "balance": float(account["balance"]),
                     "date": account["date"].isoformat() if account["date"] else None,
                 }

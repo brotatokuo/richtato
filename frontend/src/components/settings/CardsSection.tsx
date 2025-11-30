@@ -159,9 +159,6 @@ export function CardsSection() {
                 aria-label={`Open ${card.name}`}
               >
                 <div className="text-sm font-medium mb-1">{card.name}</div>
-                <div className="text-xs text-muted-foreground">
-                  <Badge variant="outline">{getBankLabel(card.bank)}</Badge>
-                </div>
               </button>
             ))}
           </div>
