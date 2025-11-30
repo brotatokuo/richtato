@@ -35,7 +35,7 @@ export function CardEditModal({
   React.useEffect(() => {
     if (isOpen && card) {
       setName(card.name);
-      setBank(String(card.bank).toLowerCase());
+      setBank(card.bank);
     }
   }, [isOpen, card]);
 

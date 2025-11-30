@@ -29,7 +29,7 @@ class CardAccountAPIView(APIView):
                 {
                     "id": card.id,
                     "name": card.name,
-                    "bank": card.card_bank_title,
+                    "bank": card.bank,
                 }
             )
         data = {

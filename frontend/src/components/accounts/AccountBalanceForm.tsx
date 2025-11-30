@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 interface AccountBalanceFormProps {
   accountId: number;
   accountName: string;
-  initialData?: { balance: string; date: string; id?: number };
+  initialData?: { balance: string | number; date: string; id?: number };
   onSubmit: (data: { balance: number; date: string; id?: number }) => Promise<void>;
   onDelete?: () => Promise<void>;
   onCancel: () => void;
@@ -23,7 +23,9 @@ export function AccountBalanceForm({
   onCancel,
 }: AccountBalanceFormProps) {
   const { preferences, getCurrencySymbol } = usePreferences();
-  const [balance, setBalance] = useState(initialData?.balance || '');
+  const [balance, setBalance] = useState(
+    initialData?.balance ? String(initialData.balance) : ''
+  );
   const [date, setDate] = useState(initialData?.date || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const dateInputRef = useRef<HTMLInputElement>(null);
@@ -50,7 +52,8 @@ export function AccountBalanceForm({
 
   useEffect(() => {
     if (!isBalanceFocused && balance) {
-      const num = parseFloat(balance.replace(/[,$€£¥₹\s]/g, ''));
+      const balanceStr = String(balance);
+      const num = parseFloat(balanceStr.replace(/[,$€£¥₹\s]/g, ''));
       if (!isNaN(num)) {
         setBalanceDisplay(numberFormatter.format(Math.abs(num)));
       }
