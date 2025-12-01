@@ -26,6 +26,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
 
+# Teller API Configuration
+TELLER_CERT_PATH = os.getenv("TELLER_CERT_PATH")
+TELLER_KEY_PATH = os.getenv("TELLER_KEY_PATH")
+TELLER_ACCESS_TOKEN = os.getenv("TELLER_ACCESS_TOKEN")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True  # Force DEBUG to True for local development
 # DEBUG = False
