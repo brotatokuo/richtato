@@ -53,3 +53,4 @@ coverage
 .env.production.local
 
 .vscode
+certs/

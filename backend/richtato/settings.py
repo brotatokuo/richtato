@@ -27,9 +27,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY")
 
 # Teller API Configuration
-TELLER_CERT_PATH = os.getenv("TELLER_CERT_PATH")
-TELLER_KEY_PATH = os.getenv("TELLER_KEY_PATH")
-TELLER_ACCESS_TOKEN = os.getenv("TELLER_ACCESS_TOKEN")
+TELLER_CERT_PATH = os.path.join(BASE_DIR, "certs", "certificate.pem")
+TELLER_KEY_PATH = os.path.join(BASE_DIR, "certs", "private_key.pem")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True  # Force DEBUG to True for local development
