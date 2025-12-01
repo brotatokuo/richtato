@@ -60,6 +60,7 @@ urlpatterns = [
     path("api/v1/budget-dashboard/", include("apps.budget_dashboard.urls")),
     path("api/v1/asset-dashboard/", include("apps.asset_dashboard.urls")),
     path("api/v1/card-accounts/", include("apps.card.urls")),
+    path("api/v1/teller/", include("apps.teller.urls")),
     # Legacy API URLs (redirect or keep for backward compatibility)
     path("api/auth/", include("apps.richtato_user.urls")),
     path("api/accounts/", include("apps.account.urls")),

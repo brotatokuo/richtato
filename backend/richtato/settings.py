@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "apps.expense",
     "apps.budget_dashboard",
     "apps.asset_dashboard",
+    "apps.teller",
     "django.contrib.humanize",
     "django.contrib.admin",
     "django.contrib.auth",
