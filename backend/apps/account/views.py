@@ -143,13 +143,11 @@ class AccountTransactionsAPIView(APIView):
             )
 
         # Format response
-        from utilities.tools import format_currency, format_date
-
         return Response(
             {
                 "id": updated_transaction.id,
-                "date": format_date(updated_transaction.date),
-                "amount": format_currency(updated_transaction.amount),
+                "date": updated_transaction.date.isoformat(),
+                "amount": float(updated_transaction.amount),
             }
         )
 

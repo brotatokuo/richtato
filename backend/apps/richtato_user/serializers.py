@@ -1,6 +1,7 @@
+from apps.category.models import Category
 from rest_framework import serializers
 
-from .models import Category, UserPreference
+from .models import UserPreference
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -14,4 +15,10 @@ class CategorySerializer(serializers.ModelSerializer):
 class UserPreferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserPreference
-        fields = ["theme", "currency", "date_format"]
+        fields = [
+            "theme",
+            "currency",
+            "date_format",
+            "timezone",
+            "notifications_enabled",
+        ]

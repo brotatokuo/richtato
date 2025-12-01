@@ -139,7 +139,7 @@ export interface CategoryCatalogItem {
 }
 
 export class CategorySettingsApi {
-  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/category-settings`;
+  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/auth/category-settings`;
 
   private async getHeaders(): Promise<HeadersInit> {
     const headers = await csrfService.getHeaders();
@@ -187,7 +187,7 @@ export interface CardAccountItem {
 }
 
 class CardsApiService {
-  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/card-accounts`;
+  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/card-accounts`;
 
   async list(): Promise<CardAccountItem[]> {
     const res = await fetch(`${this.baseUrl}/`, {
@@ -196,7 +196,20 @@ class CardsApiService {
     });
     if (!res.ok) throw new Error('Failed to load card accounts');
     const data = await res.json();
-    return data as CardAccountItem[];
+    // Handle both direct array and wrapped response formats
+    if (Array.isArray(data)) {
+      return data;
+    }
+    // If wrapped in an object, try common keys
+    if (data && typeof data === 'object') {
+      if (Array.isArray(data.rows)) return data.rows;
+      if (Array.isArray(data.cards)) return data.cards;
+      if (Array.isArray(data.results)) return data.results;
+      if (Array.isArray(data.data)) return data.data;
+    }
+    // Return empty array if format is unexpected
+    console.warn('Unexpected card accounts API response format:', data);
+    return [];
   }
 
   async create(payload: {
@@ -235,6 +248,17 @@ class CardsApiService {
     });
     if (!res.ok) throw new Error('Failed to delete card account');
   }
+
+  async getFieldChoices(): Promise<{
+    bank: Array<{ value: string; label: string }>;
+  }> {
+    const res = await fetch(`${this.baseUrl}/field-choices/`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('Failed to load field choices');
+    return res.json();
+  }
 }
 
 export const cardsApi = new CardsApiService();
@@ -245,10 +269,24 @@ export interface UserPreferencesPayload {
   theme?: ThemePref;
   currency?: string;
   date_format?: string;
+  timezone?: string;
+  notifications_enabled?: boolean;
+}
+
+export interface FieldChoice {
+  value: string;
+  label: string;
+}
+
+export interface PreferenceFieldChoices {
+  theme: FieldChoice[];
+  date_format: FieldChoice[];
+  currency: FieldChoice[];
+  timezone: FieldChoice[];
 }
 
 class PreferencesApiService {
-  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/preferences`;
+  private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/auth/preferences`;
 
   async get(): Promise<UserPreferencesPayload> {
     const res = await fetch(`${this.baseUrl}/`, {
@@ -263,13 +301,30 @@ class PreferencesApiService {
   async update(
     payload: UserPreferencesPayload
   ): Promise<UserPreferencesPayload> {
+    // Always refresh CSRF token before write operations to avoid 403 errors
+    await csrfService.refreshToken();
+    const csrfHeaders = await csrfService.getHeaders();
+
     const res = await fetch(`${this.baseUrl}/`, {
       method: 'PUT',
       credentials: 'include',
-      headers: await csrfService.getHeaders(),
+      headers: csrfHeaders,
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to update preferences');
+
+    if (!res.ok) {
+      throw new Error(`Failed to update preferences: ${res.status}`);
+    }
+    return res.json();
+  }
+
+  async getFieldChoices(): Promise<PreferenceFieldChoices> {
+    const res = await fetch(`${this.baseUrl}/field-choices/`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: await csrfService.getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to load field choices');
     return res.json();
   }
 }

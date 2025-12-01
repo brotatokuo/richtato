@@ -1,5 +1,6 @@
 from apps.budget.models import Budget
-from apps.richtato_user.models import Category, User
+from apps.richtato_user.models import User
+from apps.category.models import Category
 from rest_framework import serializers
 
 

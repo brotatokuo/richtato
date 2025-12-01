@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock
 from django.test import SimpleTestCase
-from apps.richtato_user.services.card_account_service import CardAccountService
+from apps.card.services.card_account_service import CardAccountService
 
 
 class TestCardAccountService(SimpleTestCase):

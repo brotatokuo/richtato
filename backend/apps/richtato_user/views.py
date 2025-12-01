@@ -2,19 +2,17 @@
 import json
 
 import pytz
+from apps.card.serializers import CardAccountSerializer
+from apps.card.services.card_account_service import CardAccountService
+from apps.category.models import Category
+from apps.category.services.category_service import CategoryService
 from apps.expense.models import Expense
 from apps.income.models import Income
 from apps.richtato_user.demo_user_factory import DemoUserFactory
-from apps.richtato_user.models import (
-    Category,
-    UserPreference,
-)
+from apps.richtato_user.models import UserPreference
 from apps.richtato_user.serializers import CategorySerializer, UserPreferenceSerializer
-from apps.richtato_user.services.card_account_service import CardAccountService
-from apps.richtato_user.services.category_service import CategoryService
 from apps.richtato_user.services.graph_service import GraphService
 from apps.richtato_user.services.user_service import UserService
-from apps.settings.serializers import CardAccountSerializer
 from categories.categories import BaseCategory
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
@@ -505,6 +503,49 @@ class UserPreferenceAPIView(APIView):
             serializer.save(user=request.user)
             return Response(serializer.data)
         return Response(serializer.errors, status=400)
+
+
+class UserPreferenceFieldChoicesAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Get user preference field choices",
+        operation_description="Get available choices for user preference fields",
+        responses={
+            200: openapi.Response(
+                "Success",
+                examples={
+                    "application/json": {
+                        "theme": [],
+                        "date_format": [],
+                        "currency": [],
+                        "timezone": [],
+                    }
+                },
+            )
+        },
+    )
+    def get(self, request):
+        return Response(
+            {
+                "theme": [
+                    {"value": val, "label": label}
+                    for val, label in UserPreference.THEME_CHOICES
+                ],
+                "date_format": [
+                    {"value": val, "label": label}
+                    for val, label in UserPreference.DATE_FORMAT_CHOICES
+                ],
+                "currency": [
+                    {"value": val, "label": label}
+                    for val, label in UserPreference.CURRENCY_CHOICES
+                ],
+                "timezone": [
+                    {"value": val, "label": label}
+                    for val, label in UserPreference.TIMEZONE_CHOICES
+                ],
+            }
+        )
 
 
 # Django views (CSRF-based authentication)

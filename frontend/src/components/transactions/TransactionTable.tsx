@@ -13,6 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { usePreferences } from '@/contexts/PreferencesContext';
+import { formatCurrency, formatDate, formatSignedCurrency } from '@/lib/format';
 import {
   Account,
   Category,
@@ -48,14 +50,6 @@ const getLocalDateString = (): string => {
   return `${year}-${month}-${day}`;
 };
 
-// Format an ISO date (YYYY-MM-DD) in local time without UTC shift
-const formatLocalDate = (isoDate: string): string => {
-  if (!isoDate) return '';
-  const [y, m, d] = isoDate.split('-').map(Number);
-  const date = new Date(y, (m ?? 1) - 1, d ?? 1);
-  return date.toLocaleDateString();
-};
-
 export function TransactionTable({
   type,
   transactions,
@@ -70,6 +64,7 @@ export function TransactionTable({
   loading: boolean;
   onRefresh: () => void;
 }) {
+  const { preferences } = usePreferences();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -201,7 +196,7 @@ export function TransactionTable({
           .sort()
           .reverse(); // Most recent first
         return dates.map(date => ({
-          label: formatLocalDate(date),
+          label: formatDate(date, preferences.date_format),
           value: date,
           count: transactions.filter(t => t.date === date).length,
         }));
@@ -527,7 +522,7 @@ export function TransactionTable({
       case 'date':
         return (
           <TableCell key={String(field)} className="font-medium">
-            {formatLocalDate(transaction.date)}
+            {formatDate(transaction.date, preferences.date_format)}
           </TableCell>
         );
       case 'description':
@@ -563,7 +558,7 @@ export function TransactionTable({
             key={String(field)}
             className={`text-right font-medium ${color}`}
           >
-            {sign}${Math.abs(amount).toFixed(2)}
+            {sign}{formatCurrency(Math.abs(amount), preferences.currency)}
           </TableCell>
         );
       }
@@ -594,7 +589,7 @@ export function TransactionTable({
               {dateFilter && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/15 text-primary text-xs rounded-full dark:bg-primary/20 dark:text-primary">
                   <Calendar className="h-3 w-3" />
-                  {formatLocalDate(dateFilter)}
+                  {formatDate(dateFilter, preferences.date_format)}
                 </span>
               )}
               {!isIncome && filterCategory && (
@@ -688,14 +683,14 @@ export function TransactionTable({
                           {t.description}
                         </div>
                         <div className="text-xs text-muted-foreground whitespace-normal break-words">
-                          {formatLocalDate(t.date)} • {t.account}
+                          {formatDate(t.date, preferences.date_format)} • {t.account}
                           {!isIncome && t.category ? ` • ${t.category}` : ''}
                         </div>
                       </div>
                       <div
                         className={`sm:ml-4 sm:text-right text-sm font-semibold ${color}`}
                       >
-                        {sign}${Math.abs(amount).toFixed(2)}
+                        {sign}{formatCurrency(Math.abs(amount), preferences.currency)}
                       </div>
                     </div>
                   );

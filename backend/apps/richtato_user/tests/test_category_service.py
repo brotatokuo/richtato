@@ -2,8 +2,8 @@
 
 from unittest.mock import MagicMock, patch
 from django.test import SimpleTestCase
-from apps.richtato_user.services.category_service import CategoryService
-from apps.richtato_user.models import Category
+from apps.category.services.category_service import CategoryService
+from apps.category.models import Category
 
 
 class TestCategoryService(SimpleTestCase):

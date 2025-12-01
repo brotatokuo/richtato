@@ -1,7 +1,6 @@
 """Service layer for Account business logic."""
 
 from apps.account.models import account_types, supported_asset_accounts
-from utilities.tools import format_currency, format_date
 
 
 class AccountService:
@@ -22,7 +21,7 @@ class AccountService:
         """
         Get user accounts with formatted data for API response.
 
-        Business logic: Formats currency and dates for display.
+        Business logic: Returns raw data for frontend formatting.
 
         Args:
             user: User instance
@@ -37,10 +36,16 @@ class AccountService:
             rows.append(
                 {
                     **account,
-                    "type": account["type"].title(),
-                    "entity": account["entity"].title(),
-                    "balance": format_currency(account["balance"]),
-                    "date": format_date(account["date"]) if account["date"] else None,
+                    "type": account["type"],  # Raw value for forms
+                    "type_display": dict(account_types).get(
+                        account["type"], account["type"]
+                    ),  # Display value
+                    "entity": account["entity"],  # Raw value for forms
+                    "entity_display": dict(supported_asset_accounts).get(
+                        account["entity"], account["entity"]
+                    ),  # Display value
+                    "balance": float(account["balance"]),
+                    "date": account["date"].isoformat() if account["date"] else None,
                 }
             )
 

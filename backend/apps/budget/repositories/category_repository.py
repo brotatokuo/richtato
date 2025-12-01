@@ -1,7 +1,7 @@
 """Temporary repository for Category queries needed by Budget."""
 
 from django.db.models import QuerySet
-from apps.richtato_user.models import Category
+from apps.category.models import Category
 
 
 class CategoryRepository:

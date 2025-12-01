@@ -1,6 +1,6 @@
 import { BaseChart } from '@/components/asset_dashboard/BaseChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { dashboardApiService } from '@/lib/api/dashboard';
+import { assetDashboardApiService } from '@/lib/api/asset-dashboard';
 import { AlertTriangle } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -14,7 +14,7 @@ export function SavingsChart() {
   const fetchSavings = async () => {
     try {
       setError(null);
-      const data = await dashboardApiService.getSavingsData();
+      const data = await assetDashboardApiService.getSavingsData();
       const nextLabels = data.labels || [];
       // Map datasets to ECharts series, preserving types/colors where possible
       const mappedSeries = (data.datasets || []).map((ds: any) => ({

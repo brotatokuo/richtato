@@ -1,4 +1,6 @@
-from apps.richtato_user.models import CardAccount, Category, User
+from apps.richtato_user.models import User
+from apps.category.models import Category
+from apps.card.models import CardAccount
 from django.db import models
 
 

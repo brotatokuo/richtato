@@ -19,15 +19,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const login = async (username: string, password: string) => {
     try {
-      console.log('Login attempt:', username, password);
       const response = await authApi.login({ username, password });
 
       if (response.success) {
         setUser(response.user);
         setOrganization(response.organization || null);
-        console.log('Login successful:', response.user);
       } else {
-        console.error('Login failed:', response.message);
         throw new Error(response.message);
       }
     } catch (error) {

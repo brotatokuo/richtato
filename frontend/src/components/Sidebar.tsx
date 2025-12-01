@@ -7,6 +7,7 @@ import {
   LogOut,
   PieChart,
   Settings as SettingsIcon,
+  SlidersHorizontal,
   Table,
   TrendingUp,
   Wallet,
@@ -41,8 +42,13 @@ const navigationItems = [
     icon: Table,
   },
   {
-    name: 'Settings',
-    href: '/settings',
+    name: 'Setup',
+    href: '/setup',
+    icon: SlidersHorizontal,
+  },
+  {
+    name: 'Preferences',
+    href: '/preferences',
     icon: SettingsIcon,
   },
   // {

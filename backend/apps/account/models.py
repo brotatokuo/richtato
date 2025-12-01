@@ -1,9 +1,7 @@
-from datetime import datetime
 from decimal import Decimal
 
-from django.db import models
-
 from apps.richtato_user.models import User
+from django.db import models
 
 supported_asset_accounts = [
     ("bank_of_america", "Bank of America"),

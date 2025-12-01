@@ -1,5 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePreferences } from '@/contexts/PreferencesContext';
+import { formatDate } from '@/lib/format';
 import { Download, Edit, Trash2 } from 'lucide-react';
 import { FileItem } from './types';
 import {
@@ -114,14 +116,14 @@ export const AccessGroupCell = ({ accessGroup }: { accessGroup: string }) => (
   </Badge>
 );
 
-export const UploadDateCell = ({ date }: { date: Date }) => (
-  <span className="text-sm text-muted-foreground">
-    {date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    })}
-  </span>
-);
+export const UploadDateCell = ({ date }: { date: Date }) => {
+  const { preferences } = usePreferences();
+  return (
+    <span className="text-sm text-muted-foreground">
+      {formatDate(date, preferences.date_format)}
+    </span>
+  );
+};
 
 export const ActionsCell = ({
   file,

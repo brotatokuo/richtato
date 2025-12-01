@@ -3,8 +3,6 @@
 from datetime import datetime
 from decimal import Decimal
 
-from utilities.tools import format_currency, format_date
-
 
 class AccountTransactionService:
     """Service for managing AccountTransaction business logic - no ORM calls."""
@@ -151,8 +149,8 @@ class AccountTransactionService:
         rows = [
             {
                 "id": t.id,
-                "date": format_date(t.date),
-                "amount": format_currency(t.amount),
+                "date": t.date.isoformat(),
+                "amount": float(t.amount),
             }
             for t in transactions
         ]
@@ -173,7 +171,7 @@ class AccountTransactionService:
         """
         Get all transactions for all user's accounts with formatting.
 
-        Business logic: Formats transaction data for display.
+        Business logic: Returns raw transaction data for frontend formatting.
 
         Args:
             user: User instance
@@ -187,8 +185,8 @@ class AccountTransactionService:
         rows = [
             {
                 "id": t.id,
-                "date": format_date(t.date),
-                "amount": format_currency(t.amount),
+                "date": t.date.isoformat(),
+                "amount": float(t.amount),
                 "account": t.account.name,
             }
             for t in transactions

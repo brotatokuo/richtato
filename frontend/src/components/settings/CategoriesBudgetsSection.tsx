@@ -129,7 +129,10 @@ export function CategoriesBudgetsSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Categories & Budgets</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Calendar className="h-5 w-5" />
+          Categories & Budgets
+        </CardTitle>
         <CardDescription>
           Enable categories and set optional budgets per category. Budgets have
           no expiry by default.

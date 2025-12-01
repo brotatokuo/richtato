@@ -1,6 +1,9 @@
+import { AccountHistoryTable } from '@/components/accounts/AccountHistoryTable';
+import { AccountTiles } from '@/components/accounts/AccountTiles';
 import { TransactionTable } from '@/components/transactions/TransactionTable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import {
   Account,
   Category,
@@ -11,6 +14,7 @@ import { useEffect, useState } from 'react';
 
 // Main DataTable Component
 export function DataTable() {
+  const { preferences } = usePreferences();
   const [incomeTransactions, setIncomeTransactions] = useState<
     DisplayTransaction[]
   >([]);
@@ -19,11 +23,15 @@ export function DataTable() {
   >([]);
   const [incomeAccounts, setIncomeAccounts] = useState<Account[]>([]);
   const [expenseAccounts, setExpenseAccounts] = useState<Account[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeMobileTab, setActiveMobileTab] = useState<'income' | 'expense'>(
+  const [activeTab, setActiveTab] = useState<'income' | 'expense' | 'accounts'>(
     'income'
+  );
+  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(
+    null
   );
 
   const loadData = async () => {
@@ -45,6 +53,7 @@ export function DataTable() {
       setExpenseTransactions(expenseData.map(transformTransaction));
       setExpenseAccounts(expenseChoices.accounts);
       setIncomeAccounts(incomeAccts);
+      setAccounts(incomeAccts);
       setCategories(expenseChoices.categories);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -78,31 +87,40 @@ export function DataTable() {
   return (
     <div className="min-h-screen bg-background">
       <div className="w-full max-w-full mx-auto space-y-8 sm:space-y-12 min-w-0">
-        {/* Mobile toggle */}
-        <div className="md:hidden flex items-center gap-2">
+        {/* Tab toggle for both mobile and desktop */}
+        <div className="flex items-center gap-2">
           <Button
             type="button"
-            variant={activeMobileTab === 'income' ? 'default' : 'outline'}
+            variant={activeTab === 'income' ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setActiveMobileTab('income')}
-            aria-pressed={activeMobileTab === 'income'}
+            onClick={() => setActiveTab('income')}
+            aria-pressed={activeTab === 'income'}
           >
             Income
           </Button>
           <Button
             type="button"
-            variant={activeMobileTab === 'expense' ? 'default' : 'outline'}
+            variant={activeTab === 'expense' ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setActiveMobileTab('expense')}
-            aria-pressed={activeMobileTab === 'expense'}
+            onClick={() => setActiveTab('expense')}
+            aria-pressed={activeTab === 'expense'}
           >
             Expense
           </Button>
+          <Button
+            type="button"
+            variant={activeTab === 'accounts' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveTab('accounts')}
+            aria-pressed={activeTab === 'accounts'}
+          >
+            Accounts
+          </Button>
         </div>
 
-        {/* Mobile view: show one table at a time */}
-        <div className="md:hidden overflow-x-auto min-w-0">
-          {activeMobileTab === 'income' ? (
+        {/* Unified view: show one table at a time based on active tab */}
+        <div className="overflow-x-auto min-w-0">
+          {activeTab === 'income' ? (
             <div className="min-w-0 max-w-full">
               <TransactionTable
                 type="income"
@@ -114,7 +132,7 @@ export function DataTable() {
                 onRefresh={loadData}
               />
             </div>
-          ) : (
+          ) : activeTab === 'expense' ? (
             <div className="min-w-0 max-w-full">
               <TransactionTable
                 type="expense"
@@ -126,38 +144,21 @@ export function DataTable() {
                 onRefresh={loadData}
               />
             </div>
+          ) : (
+            <div className="min-w-0 max-w-full space-y-6">
+              <AccountTiles
+                accounts={accounts}
+                selectedAccountId={selectedAccountId}
+                onAccountSelect={setSelectedAccountId}
+                currency={preferences.currency || 'USD'}
+              />
+              <AccountHistoryTable
+                accountId={selectedAccountId}
+                accounts={accounts}
+                onDataChange={loadData}
+              />
+            </div>
           )}
-        </div>
-
-        {/* Desktop/tablet: show both tables stacked */}
-        <div className="hidden md:block overflow-x-auto min-w-0">
-          {/* Income Table */}
-          <div className="min-w-0 max-w-full">
-            <TransactionTable
-              type="income"
-              transactions={incomeTransactions}
-              onTransactionsChange={setIncomeTransactions}
-              accounts={incomeAccounts}
-              categories={categories}
-              loading={loading}
-              onRefresh={loadData}
-            />
-          </div>
-        </div>
-
-        <div className="hidden md:block overflow-x-auto min-w-0">
-          {/* Expense Table */}
-          <div className="min-w-0 max-w-full">
-            <TransactionTable
-              type="expense"
-              transactions={expenseTransactions}
-              onTransactionsChange={setExpenseTransactions}
-              accounts={expenseAccounts}
-              categories={categories}
-              loading={loading}
-              onRefresh={loadData}
-            />
-          </div>
         </div>
       </div>
     </div>

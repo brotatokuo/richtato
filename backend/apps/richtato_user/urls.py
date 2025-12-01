@@ -36,6 +36,11 @@ urlpatterns = [
         name="card_account_detail",
     ),
     path("preferences/", views.UserPreferenceAPIView.as_view(), name="preferences"),
+    path(
+        "preferences/field-choices/",
+        views.UserPreferenceFieldChoicesAPIView.as_view(),
+        name="preference_field_choices",
+    ),
     # API Authentication endpoints (no nested 'api/' segment)
     path("login/", views.APILoginView.as_view(), name="login"),
     path("register/", views.RegisterView.as_view(), name="register"),

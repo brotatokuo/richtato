@@ -6,7 +6,9 @@ from apps.account.models import Account, AccountTransaction
 from apps.budget.models import Budget
 from apps.expense.models import Expense
 from apps.income.models import Income
-from apps.richtato_user.models import CardAccount, Category, User
+from apps.richtato_user.models import User
+from apps.category.models import Category
+from apps.card.models import CardAccount
 from django.db import transaction
 
 

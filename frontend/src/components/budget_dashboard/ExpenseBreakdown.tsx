@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useBudgetDateRange } from '@/contexts/BudgetDateRangeContext';
-import { dashboardApiService } from '@/lib/api/dashboard';
+import { budgetDashboardApiService } from '@/lib/api/budget-dashboard';
 import { AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { PieWithDetailedLegend } from './PieWithDetailedLegend';
@@ -36,7 +36,7 @@ export function ExpenseBreakdown() {
     try {
       setLoading(true);
       setError(null);
-      const data = await dashboardApiService.getExpenseCategoriesData({
+      const data = await budgetDashboardApiService.getExpenseCategoriesData({
         startDate,
         endDate,
       });

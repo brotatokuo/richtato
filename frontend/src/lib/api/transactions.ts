@@ -32,8 +32,10 @@ export interface Account {
   id: number;
   name: string;
   type: string;
+  type_display?: string;
   balance?: number;
   entity?: string;
+  entity_display?: string;
   date?: string;
 }
 
@@ -65,7 +67,7 @@ class TransactionsApiService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+    this.baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
   }
 
   private getHeaders(): HeadersInit {
@@ -551,6 +553,22 @@ class TransactionsApiService {
       );
     }
     return this.handleResponse<{ category: number }>(response);
+  }
+
+  /**
+   * Get account field choices (types and entities)
+   */
+  async getAccountFieldChoices(): Promise<{
+    type: Array<{ value: string; label: string }>;
+    entity: Array<{ value: string; label: string }>;
+  }> {
+    const response = await fetch(`${this.baseUrl}/accounts/field-choices/`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
+
+    return this.handleResponse(response);
   }
 }
 

@@ -3,6 +3,7 @@ import {
   Menu,
   PieChart,
   Settings,
+  SlidersHorizontal,
   Table,
   TrendingUp,
   Wallet,
@@ -21,6 +22,8 @@ const routeConfig: Record<
   '/data': { title: 'Data', icon: Table },
   '/cashflow': { title: 'Cashflow', icon: TrendingUp },
   '/upload': { title: 'Upload', icon: CloudUpload },
+  '/preferences': { title: 'Preferences', icon: Settings },
+  '/setup': { title: 'Setup', icon: SlidersHorizontal },
   '/settings': { title: 'Settings', icon: Settings },
 };
 

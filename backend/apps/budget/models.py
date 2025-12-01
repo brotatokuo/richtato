@@ -1,7 +1,8 @@
 import datetime
 from decimal import Decimal
 
-from apps.richtato_user.models import Category, User
+from apps.richtato_user.models import User
+from apps.category.models import Category
 from django.core.exceptions import ValidationError
 from django.db import models
 

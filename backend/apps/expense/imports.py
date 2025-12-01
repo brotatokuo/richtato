@@ -3,7 +3,8 @@ from django.db import models
 from loguru import logger
 
 from apps.expense.serializers import ExpenseSerializer
-from apps.richtato_user.models import CardAccount, Category
+from apps.category.models import Category
+from apps.card.models import CardAccount
 
 
 class ExpenseManager(models.Manager):
