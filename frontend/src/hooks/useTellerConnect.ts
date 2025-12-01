@@ -28,7 +28,7 @@ interface TellerConnectInstance {
 
 interface TellerEnrollment {
   accessToken: string;
-  user: {
+  user?: {
     id: string;
   };
   enrollment: {
@@ -37,14 +37,16 @@ interface TellerEnrollment {
       name: string;
     };
   };
-  signatures: string[];
-  accounts: Array<{
-    id: string;
-    name: string;
-    type: string;
-    subtype: string;
-    status: string;
-  }>;
+  signatures?: string[];
+  accounts?:
+    | Array<{
+        id: string;
+        name?: string;
+        type?: string;
+        subtype?: string;
+        status?: string;
+      }>
+    | Record<string, any>;
 }
 
 export function useTellerConnect() {
@@ -74,16 +76,57 @@ export function useTellerConnect() {
         setError(null);
 
         try {
-          // Save each account as a separate connection
-          for (const account of enrollment.accounts) {
+          // The enrollment object structure from Teller
+          const accessToken = enrollment.accessToken;
+          const enrollmentId = enrollment.enrollment?.id || '';
+          const institutionName =
+            enrollment.enrollment?.institution?.name || 'Unknown Bank';
+
+          // Accounts might be in different formats - normalize to array
+          let accountsArray: Array<{
+            id: string;
+            name?: string;
+            type?: string;
+            subtype?: string;
+            status?: string;
+          }> = [];
+
+          if (enrollment.accounts) {
+            if (Array.isArray(enrollment.accounts)) {
+              accountsArray = enrollment.accounts;
+            } else if (typeof enrollment.accounts === 'object') {
+              // If accounts is an object, convert to array
+              accountsArray = Object.values(enrollment.accounts);
+            }
+          }
+
+          console.log('Processing accounts:', accountsArray);
+
+          // If no accounts available, save a generic connection
+          if (accountsArray.length === 0) {
+            console.log(
+              'No accounts array, saving enrollment as single connection'
+            );
             await tellerApiService.saveTellerConnection({
-              access_token: enrollment.accessToken,
-              enrollment_id: enrollment.enrollment.id,
-              teller_account_id: account.id,
-              institution_name: enrollment.enrollment.institution.name,
-              account_name: account.name || account.type,
-              account_type: account.type,
+              access_token: accessToken,
+              enrollment_id: enrollmentId,
+              teller_account_id: enrollmentId, // Use enrollment ID as fallback
+              institution_name: institutionName,
+              account_name: institutionName,
+              account_type: 'depository',
             });
+          } else {
+            // Save each account as a separate connection
+            for (const account of accountsArray) {
+              await tellerApiService.saveTellerConnection({
+                access_token: accessToken,
+                enrollment_id: enrollmentId,
+                teller_account_id: account.id,
+                institution_name: institutionName,
+                account_name: account.name || account.type || 'Account',
+                account_type: account.type || 'depository',
+              });
+            }
           }
 
           if (onSuccess) {
