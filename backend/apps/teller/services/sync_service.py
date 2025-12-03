@@ -160,7 +160,7 @@ class TellerSyncService:
         try:
             # Try to find existing account by name
             account_name = f"{connection.institution_name} - {connection.account_name}"
-            accounts = self.account_repository.filter_by_user(user)
+            accounts = self.account_repository.get_user_accounts(user)
             existing_account = None
 
             for acc in accounts:
@@ -174,7 +174,7 @@ class TellerSyncService:
             if existing_account:
                 # Update existing account
                 balance = Decimal(str(teller_account.get("balance", 0)))
-                self.account_repository.update(
+                self.account_repository.update_account(
                     existing_account,
                     latest_balance=balance,
                     latest_balance_date=datetime.now().date(),
@@ -185,7 +185,7 @@ class TellerSyncService:
             else:
                 # Create new account
                 balance = Decimal(str(teller_account.get("balance", 0)))
-                new_account = self.account_repository.create(
+                new_account = self.account_repository.create_account(
                     user=user,
                     name=account_name,
                     type=account_type,
@@ -237,7 +237,7 @@ class TellerSyncService:
                 txn_description = txn.get("description", "")
 
                 # Check for duplicates
-                existing_expenses = self.expense_repository.filter_by_user(user)
+                existing_expenses = self.expense_repository.get_user_expenses(user)
                 is_duplicate = False
                 for exp in existing_expenses:
                     if (
@@ -253,13 +253,13 @@ class TellerSyncService:
 
                 # Only sync debit transactions (expenses)
                 if txn["amount"] < 0:  # Negative amount = debit/expense
-                    self.expense_repository.create(
+                    self.expense_repository.create_expense(
                         user=user,
+                        account=card_account,
+                        category=None,  # Will need to be categorized later
                         description=txn_description,
                         amount=txn_amount,
                         date=txn_date,
-                        account_name=card_account,
-                        category=None,  # Will need to be categorized later
                     )
                     synced_count += 1
 
@@ -284,7 +284,9 @@ class TellerSyncService:
 
         # Create new card account
         bank = self._map_institution_name(connection.institution_name)
-        return self.card_repository.create(user=user, name=account_name, bank=bank)
+        return self.card_repository.create_card_account(
+            user=user, name=account_name, bank=bank
+        )
 
     def _map_account_type(self, teller_type: str) -> str:
         """Map Teller account type to our account types."""

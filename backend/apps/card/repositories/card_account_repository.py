@@ -14,9 +14,13 @@ class CardAccountRepository:
         except CardAccount.DoesNotExist:
             return None
 
-    def get_user_card_accounts(self, user) -> QuerySet[CardAccount]:
+    def get_by_user(self, user) -> QuerySet[CardAccount]:
         """Get all card accounts for a user."""
         return CardAccount.objects.filter(user=user).order_by("name")
+
+    def get_user_card_accounts(self, user) -> QuerySet[CardAccount]:
+        """Get all card accounts for a user (alias for backwards compatibility)."""
+        return self.get_by_user(user)
 
     def create_card_account(self, user, name: str, bank: str) -> CardAccount:
         """Create a new card account."""
