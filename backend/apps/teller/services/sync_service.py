@@ -233,7 +233,10 @@ class TellerSyncService:
             try:
                 # Skip if transaction already exists (check by date + amount + description)
                 txn_date = datetime.strptime(txn["date"], "%Y-%m-%d").date()
-                txn_amount = abs(Decimal(str(txn["amount"])))
+                txn_amount_raw = Decimal(
+                    str(txn["amount"])
+                )  # Convert to Decimal for comparison
+                txn_amount = abs(txn_amount_raw)  # Store absolute value for expense
                 txn_description = txn.get("description", "")
 
                 # Check for duplicates
@@ -252,7 +255,7 @@ class TellerSyncService:
                     continue
 
                 # Only sync debit transactions (expenses)
-                if txn["amount"] < 0:  # Negative amount = debit/expense
+                if txn_amount_raw < 0:  # Negative amount = debit/expense
                     self.expense_repository.create_expense(
                         user=user,
                         account=card_account,

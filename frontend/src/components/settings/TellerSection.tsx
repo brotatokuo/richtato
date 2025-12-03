@@ -12,7 +12,7 @@ import {
   TellerSyncResult,
   tellerApiService,
 } from '@/lib/api/teller';
-import { Building2, Plus } from 'lucide-react';
+import { Building2, Plus, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { TellerConnectionCard } from './TellerConnectionCard';
 import { TellerDisconnectModal } from './TellerDisconnectModal';
@@ -30,6 +30,7 @@ export function TellerSection() {
 
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncResult, setSyncResult] = useState<TellerSyncResult | null>(null);
+  const [syncAllLoading, setSyncAllLoading] = useState(false);
 
   const {
     openTellerConnect,
@@ -120,6 +121,70 @@ export function TellerSection() {
     setSelectedConnection(null);
   };
 
+  const handleSyncAll = async () => {
+    const activeConnections = connections.filter(
+      c => c.status === 'active'
+    );
+
+    if (activeConnections.length === 0) {
+      setError('No active connections to sync');
+      return;
+    }
+
+    setSyncAllLoading(true);
+    setShowSync(true);
+    setSyncLoading(true);
+    setSyncResult(null);
+
+    try {
+      let totalAccountsSynced = 0;
+      let totalTransactionsSynced = 0;
+      const allErrors: string[] = [];
+
+      // Sync each connection sequentially
+      for (const connection of activeConnections) {
+        try {
+          const result = await tellerApiService.syncTellerConnection(
+            connection.id,
+            30
+          );
+          totalAccountsSynced += result.accounts_synced;
+          totalTransactionsSynced += result.transactions_synced;
+          allErrors.push(...result.errors);
+        } catch (e: any) {
+          allErrors.push(
+            `${connection.institution_name}: ${e?.message ?? 'Failed to sync'}`
+          );
+        }
+      }
+
+      setSyncResult({
+        success: allErrors.length === 0,
+        accounts_synced: totalAccountsSynced,
+        transactions_synced: totalTransactionsSynced,
+        errors: allErrors,
+        message:
+          allErrors.length === 0
+            ? `Successfully synced ${activeConnections.length} connection(s)`
+            : `Synced with ${allErrors.length} error(s)`,
+      });
+
+      // Refresh connections to update last_sync times
+      await refresh();
+    } catch (e: any) {
+      setSyncResult({
+        success: false,
+        accounts_synced: 0,
+        transactions_synced: 0,
+        errors: [e?.message ?? 'Failed to sync connections'],
+        message: 'Sync failed',
+      });
+    } finally {
+      setSyncLoading(false);
+      setSyncAllLoading(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -133,15 +198,34 @@ export function TellerSection() {
               Connect and sync your bank accounts via Teller
             </CardDescription>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleConnect}
-            disabled={tellerLoading || loading}
-          >
-            <Plus className="h-4 w-4 mr-2" />{' '}
-            {tellerLoading ? 'Connecting...' : 'Connect Bank'}
-          </Button>
+          <div className="flex gap-2">
+            {connections.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSyncAll}
+                disabled={
+                  syncAllLoading ||
+                  loading ||
+                  connections.filter(c => c.status === 'active').length === 0
+                }
+              >
+                <RefreshCw
+                  className={`h-4 w-4 mr-2 ${syncAllLoading ? 'animate-spin' : ''}`}
+                />
+                {syncAllLoading ? 'Syncing...' : 'Sync All'}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleConnect}
+              disabled={tellerLoading || loading}
+            >
+              <Plus className="h-4 w-4 mr-2" />{' '}
+              {tellerLoading ? 'Connecting...' : 'Connect Bank'}
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>

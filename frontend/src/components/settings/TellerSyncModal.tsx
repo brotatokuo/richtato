@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { TellerSyncResult } from '@/lib/api/teller';
-import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
 
 interface TellerSyncModalProps {
   isOpen: boolean;
@@ -23,6 +23,10 @@ export function TellerSyncModal({
   loading,
   result,
 }: TellerSyncModalProps) {
+  const handleRefresh = () => {
+    window.location.reload();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
@@ -86,12 +90,33 @@ export function TellerSyncModal({
                   </ul>
                 </div>
               )}
+
+              {result.success &&
+                (result.accounts_synced > 0 || result.transactions_synced > 0) && (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-md border border-blue-200">
+                    <div className="text-sm text-blue-800">
+                      <strong>💡 Note:</strong> New accounts and transactions have
+                      been added. Refresh the page to see them in the Accounts and
+                      Data sections.
+                    </div>
+                  </div>
+                )}
             </div>
           )}
         </div>
 
         <DialogFooter>
-          <Button onClick={onClose} disabled={loading}>
+          {!loading && result?.success && (
+            <Button
+              onClick={handleRefresh}
+              variant="default"
+              className="mr-2"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh Page
+            </Button>
+          )}
+          <Button onClick={onClose} disabled={loading} variant="outline">
             Close
           </Button>
         </DialogFooter>
