@@ -57,6 +57,12 @@ INSTALLED_APPS = [
     "apps.budget_dashboard",
     "apps.asset_dashboard",
     "apps.teller",
+    # New redesigned apps
+    "apps.financial_account",
+    "apps.transaction",
+    "apps.categorization",
+    "apps.sync",
+    "apps.budget_v2",
     "django.contrib.humanize",
     "django.contrib.admin",
     "django.contrib.auth",

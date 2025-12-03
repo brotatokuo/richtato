@@ -51,7 +51,12 @@ urlpatterns = [
         name="schema-swagger-ui",
     ),
     path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
-    # API URLs - organized by resource (v1)
+    # New Redesigned API URLs
+    path("api/accounts/", include("apps.financial_account.urls")),
+    path("api/transactions/", include("apps.transaction.urls")),
+    path("api/sync/", include("apps.sync.urls")),
+    path("api/budgets/", include("apps.budget_v2.urls")),
+    # Legacy API URLs - organized by resource (v1)
     path("api/v1/auth/", include("apps.richtato_user.urls")),
     path("api/v1/accounts/", include("apps.account.urls")),
     path("api/v1/budget/", include("apps.budget.urls")),
@@ -61,9 +66,8 @@ urlpatterns = [
     path("api/v1/asset-dashboard/", include("apps.asset_dashboard.urls")),
     path("api/v1/card-accounts/", include("apps.card.urls")),
     path("api/v1/teller/", include("apps.teller.urls")),
-    # Legacy API URLs (redirect or keep for backward compatibility)
+    # Legacy API URLs (keep for backward compatibility)
     path("api/auth/", include("apps.richtato_user.urls")),
-    path("api/accounts/", include("apps.account.urls")),
     path("api/budget/", include("apps.budget.urls")),
     path("api/income/", include("apps.income.urls")),
     path("api/expense/", include("apps.expense.urls")),
