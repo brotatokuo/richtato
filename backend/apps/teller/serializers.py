@@ -20,6 +20,8 @@ class TellerConnectionSerializer(serializers.ModelSerializer):
             "status",
             "last_sync",
             "last_sync_error",
+            "initial_backfill_complete",
+            "oldest_transaction_date",
             "created_at",
         ]
         read_only_fields = [
@@ -27,6 +29,8 @@ class TellerConnectionSerializer(serializers.ModelSerializer):
             "status",
             "last_sync",
             "last_sync_error",
+            "initial_backfill_complete",
+            "oldest_transaction_date",
             "created_at",
         ]
 
@@ -48,5 +52,6 @@ class TellerSyncResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
     accounts_synced = serializers.IntegerField(default=0)
     transactions_synced = serializers.IntegerField(default=0)
+    batches_processed = serializers.IntegerField(default=0, required=False)
     errors = serializers.ListField(child=serializers.CharField(), default=list)
     message = serializers.CharField()

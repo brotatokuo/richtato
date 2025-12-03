@@ -66,6 +66,15 @@ class TellerConnection(models.Model):
         blank=True,
         help_text="Last sync error message if any",
     )
+    initial_backfill_complete = models.BooleanField(
+        default=False,
+        help_text="Whether the initial historical transaction backfill has been completed",
+    )
+    oldest_transaction_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date of the oldest transaction synced",
+    )
 
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
@@ -82,11 +91,23 @@ class TellerConnection(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.institution_name} ({self.account_name})"
 
-    def mark_synced(self):
-        """Mark connection as successfully synced."""
+    def mark_synced(self, backfill_complete: bool = False, oldest_date=None):
+        """Mark connection as successfully synced.
+
+        Args:
+            backfill_complete: Whether to mark initial backfill as complete
+            oldest_date: Date of the oldest transaction synced (optional)
+        """
         self.last_sync = timezone.now()
         self.status = "active"
         self.last_sync_error = ""
+
+        if backfill_complete:
+            self.initial_backfill_complete = True
+
+        if oldest_date:
+            self.oldest_transaction_date = oldest_date
+
         self.save()
 
     def mark_error(self, error_message: str):

@@ -146,13 +146,20 @@ class TellerSyncAPIView(APIView):
         except (ValueError, TypeError):
             days = 30
 
+        # Check if full sync is requested
+        force_full_sync = request.data.get("full_sync", False)
+        if isinstance(force_full_sync, str):
+            force_full_sync = force_full_sync.lower() in ["true", "1", "yes"]
+
         logger.info(
             f"Starting sync for connection {pk}, user {request.user.username}, "
-            f"days={days}"
+            f"days={days}, force_full_sync={force_full_sync}"
         )
 
         # Perform sync
-        result = self.sync_service.sync_connection(connection, days=days)
+        result = self.sync_service.sync_connection(
+            connection, days=days, force_full_sync=force_full_sync
+        )
 
         # Serialize and return result
         serializer = TellerSyncResponseSerializer(data=result)

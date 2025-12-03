@@ -2,14 +2,12 @@
 
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Dict, List
+from typing import Any, Dict, List
 
-from apps.account.models import Account
 from apps.account.repositories.account_repository import AccountRepository
-from apps.expense.models import Expense
-from apps.expense.repositories.expense_repository import ExpenseRepository
 from apps.card.models import CardAccount
 from apps.card.repositories.card_account_repository import CardAccountRepository
+from apps.expense.repositories.expense_repository import ExpenseRepository
 from apps.richtato_user.models import User
 from apps.teller.models import TellerConnection
 from django.conf import settings
@@ -48,18 +46,36 @@ class TellerSyncService:
         )
 
     def sync_connection(
-        self, connection: TellerConnection, days: int = 30
-    ) -> Dict[str, any]:
+        self,
+        connection: TellerConnection,
+        days: int = 30,
+        force_full_sync: bool = False,
+    ) -> Dict[str, Any]:
         """
         Sync transactions from Teller for a specific connection.
+
+        On first sync (when initial_backfill_complete is False), this will
+        automatically trigger a full historical sync. Subsequent syncs will
+        only fetch recent transactions (last N days).
 
         Args:
             connection: TellerConnection to sync
             days: Number of days to fetch transactions for (default 30)
+            force_full_sync: If True, perform full historical sync regardless of backfill status
 
         Returns:
             Dict with sync results including counts and errors
         """
+        # Check if this is the first sync or a forced full sync
+        if not connection.initial_backfill_complete or force_full_sync:
+            logger.info(
+                f"Triggering historical transaction sync for connection {connection.id} "
+                f"(first_sync={not connection.initial_backfill_complete}, "
+                f"force_full_sync={force_full_sync})"
+            )
+            return self.sync_historical_transactions(connection)
+
+        # Regular incremental sync for subsequent syncs
         user = connection.user
         results = {
             "success": False,
@@ -143,6 +159,155 @@ class TellerSyncService:
 
         return results
 
+    def sync_historical_transactions(
+        self, connection: TellerConnection
+    ) -> Dict[str, Any]:
+        """
+        Sync all available historical transactions from Teller using pagination.
+
+        This method fetches transactions in batches until all available history
+        is retrieved. It's designed for initial backfill or full re-sync.
+
+        Args:
+            connection: TellerConnection to sync
+
+        Returns:
+            Dict with sync results including counts and errors
+        """
+        user = connection.user
+        results = {
+            "success": False,
+            "accounts_synced": 0,
+            "transactions_synced": 0,
+            "batches_processed": 0,
+            "errors": [],
+            "message": "",
+        }
+
+        try:
+            # Initialize Teller client
+            client = self._get_teller_client(connection)
+
+            # Fetch accounts from Teller
+            teller_accounts = client.get_accounts()
+            logger.info(
+                f"Fetched {len(teller_accounts)} accounts from Teller "
+                f"for connection {connection.id}"
+            )
+
+            # Find the specific account for this connection
+            teller_account = None
+            for acc in teller_accounts:
+                if acc.get("id") == connection.teller_account_id:
+                    teller_account = acc
+                    break
+
+            if not teller_account:
+                error_msg = (
+                    f"Account {connection.teller_account_id} not found in Teller"
+                )
+                logger.error(error_msg)
+                results["errors"].append(error_msg)
+                connection.mark_error(error_msg)
+                return results
+
+            # Sync account balance
+            account_synced = self._sync_account_balance(
+                user, connection, teller_account
+            )
+            if account_synced:
+                results["accounts_synced"] += 1
+
+            # Get or create CardAccount for these transactions
+            card_account = self._get_or_create_card_account(user, connection)
+
+            # Track the oldest transaction date we've synced
+            oldest_date = None
+            total_synced = 0
+
+            # Fetch transactions in batches using pagination
+            logger.info(
+                f"Starting historical transaction sync for account "
+                f"{connection.teller_account_id}"
+            )
+
+            for batch in client.get_transactions_paginated(
+                account_id=connection.teller_account_id,
+                batch_size=500,
+            ):
+                results["batches_processed"] += 1
+                batch_synced = 0
+
+                logger.info(
+                    f"Processing batch {results['batches_processed']} "
+                    f"with {len(batch)} transactions"
+                )
+
+                for txn in batch:
+                    try:
+                        txn_date = datetime.strptime(txn["date"], "%Y-%m-%d").date()
+                        txn_amount_raw = Decimal(str(txn["amount"]))
+                        txn_amount = abs(txn_amount_raw)
+                        txn_description = txn.get("description", "")
+
+                        # Track oldest transaction date
+                        if oldest_date is None or txn_date < oldest_date:
+                            oldest_date = txn_date
+
+                        # Check for duplicates
+                        if self._is_duplicate_transaction(
+                            user, txn_date, txn_amount, txn_description
+                        ):
+                            continue
+
+                        # Only sync debit transactions (expenses)
+                        if txn_amount_raw < 0:  # Negative amount = debit/expense
+                            self.expense_repository.create_expense(
+                                user=user,
+                                account=card_account,
+                                category=None,  # Will need to be categorized later
+                                description=txn_description,
+                                amount=txn_amount,
+                                date=txn_date,
+                            )
+                            batch_synced += 1
+                            total_synced += 1
+
+                    except Exception as e:
+                        logger.error(
+                            f"Error syncing transaction {txn.get('id')}: {str(e)}"
+                        )
+                        continue
+
+                logger.info(
+                    f"Batch {results['batches_processed']}: synced {batch_synced} "
+                    f"new transactions"
+                )
+
+            results["transactions_synced"] = total_synced
+
+            # Mark connection as successfully synced with backfill complete
+            connection.mark_synced(backfill_complete=True, oldest_date=oldest_date)
+
+            results["success"] = True
+            results["message"] = (
+                f"Successfully synced {results['accounts_synced']} accounts and "
+                f"{results['transactions_synced']} transactions across "
+                f"{results['batches_processed']} batches. "
+                f"Oldest transaction: {oldest_date if oldest_date else 'N/A'}"
+            )
+
+            logger.info(results["message"])
+
+        except Exception as e:
+            error_msg = f"Error syncing historical transactions for connection {connection.id}: {str(e)}"
+            logger.error(error_msg)
+            results["errors"].append(error_msg)
+            results["message"] = error_msg
+            connection.mark_error(error_msg)
+
+        return results
+
     def _sync_account_balance(
         self, user: User, connection: TellerConnection, teller_account: Dict
     ) -> bool:
@@ -205,6 +370,31 @@ class TellerSyncService:
             logger.error(f"Error syncing account balance: {str(e)}")
             return False
 
+    def _is_duplicate_transaction(
+        self, user: User, txn_date, txn_amount: Decimal, txn_description: str
+    ) -> bool:
+        """
+        Check if a transaction already exists in the database.
+
+        Args:
+            user: User instance
+            txn_date: Transaction date
+            txn_amount: Transaction amount (absolute value)
+            txn_description: Transaction description
+
+        Returns:
+            True if transaction is a duplicate, False otherwise
+        """
+        existing_expenses = self.expense_repository.get_user_expenses(user)
+        for exp in existing_expenses:
+            if (
+                exp.date == txn_date
+                and abs(exp.amount - txn_amount) < Decimal("0.01")
+                and exp.description == txn_description
+            ):
+                return True
+        return False
+
     def _sync_transactions(
         self,
         user: User,
@@ -240,18 +430,9 @@ class TellerSyncService:
                 txn_description = txn.get("description", "")
 
                 # Check for duplicates
-                existing_expenses = self.expense_repository.get_user_expenses(user)
-                is_duplicate = False
-                for exp in existing_expenses:
-                    if (
-                        exp.date == txn_date
-                        and abs(exp.amount - txn_amount) < Decimal("0.01")
-                        and exp.description == txn_description
-                    ):
-                        is_duplicate = True
-                        break
-
-                if is_duplicate:
+                if self._is_duplicate_transaction(
+                    user, txn_date, txn_amount, txn_description
+                ):
                     continue
 
                 # Only sync debit transactions (expenses)

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Generator, List, Optional
 
 import requests
 
@@ -36,14 +36,22 @@ class TellerClient:
         return self._get("/accounts")
 
     def get_transactions(
-        self, account_id: str, count: Optional[int] = None
+        self,
+        account_id: str,
+        count: Optional[int] = None,
+        from_id: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         Fetch transactions for a specific account.
 
         Args:
             account_id: The ID of the account to fetch transactions for.
-            count: Optional number of transactions to retrieve (default is API default).
+            count: Optional number of transactions to retrieve (default is API default, max 500).
+            from_id: Transaction ID to start pagination from (returns older transactions).
+            start_date: Start date in 'YYYY-MM-DD' format (inclusive).
+            end_date: End date in 'YYYY-MM-DD' format (inclusive).
 
         Returns:
             List of transaction objects.
@@ -51,8 +59,65 @@ class TellerClient:
         params = {}
         if count is not None:
             params["count"] = count
+        if from_id is not None:
+            params["from_id"] = from_id
+        if start_date is not None:
+            params["start_date"] = start_date
+        if end_date is not None:
+            params["end_date"] = end_date
 
         return self._get(f"/accounts/{account_id}/transactions", params=params)
+
+    def get_transactions_paginated(
+        self,
+        account_id: str,
+        batch_size: int = 500,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> Generator[List[Dict[str, Any]], None, None]:
+        """
+        Fetch transactions in batches using pagination.
+
+        This method yields batches of transactions, automatically handling pagination
+        using the from_id parameter. It will continue fetching until no more
+        transactions are available.
+
+        Args:
+            account_id: The ID of the account to fetch transactions for.
+            batch_size: Number of transactions per batch (max 500).
+            start_date: Start date in 'YYYY-MM-DD' format (inclusive).
+            end_date: End date in 'YYYY-MM-DD' format (inclusive).
+
+        Yields:
+            Batches of transaction objects (list of dicts).
+        """
+        from_id = None
+        batch_size = min(batch_size, 500)  # Enforce API maximum
+
+        while True:
+            # Fetch a batch of transactions
+            batch = self.get_transactions(
+                account_id=account_id,
+                count=batch_size,
+                from_id=from_id,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+            # If no transactions returned, we're done
+            if not batch:
+                break
+
+            yield batch
+
+            # If we got fewer transactions than requested, we've reached the end
+            if len(batch) < batch_size:
+                break
+
+            # Get the ID of the last (oldest) transaction for pagination
+            from_id = batch[-1].get("id")
+            if not from_id:
+                break
 
     def filter_transactions(
         self,
