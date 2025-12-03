@@ -29,6 +29,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # Teller API Configuration
 TELLER_CERT_PATH = os.path.join(BASE_DIR, "certs", "certificate.pem")
 TELLER_KEY_PATH = os.path.join(BASE_DIR, "certs", "private_key.pem")
+TELLER_TRANSACTION_LIMIT = int(os.getenv("TELLER_TRANSACTION_LIMIT", "500"))
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True  # Force DEBUG to True for local development

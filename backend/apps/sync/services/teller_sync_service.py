@@ -2,10 +2,11 @@
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Dict
+from typing import Dict, List
 
-from apps.categorization.services.ai_categorization_service import (
-    AICategorizationService,
+from apps.categorization.models import CategorizationQueue
+from apps.categorization.services.batch_ai_service import (
+    BatchAICategorizationService,
 )
 from apps.categorization.services.rule_based_service import (
     RuleBasedCategorizationService,
@@ -13,6 +14,7 @@ from apps.categorization.services.rule_based_service import (
 from apps.financial_account.repositories.account_repository import (
     FinancialAccountRepository,
 )
+from apps.richtato_user.models import User
 from apps.sync.models import SyncConnection, SyncJob
 from apps.sync.repositories.sync_job_repository import SyncJobRepository
 from apps.transaction.repositories.merchant_repository import MerchantRepository
@@ -31,7 +33,7 @@ class TellerSyncService:
         self.merchant_repository = MerchantRepository()
         self.job_repository = SyncJobRepository()
         self.rule_categorization = RuleBasedCategorizationService()
-        self.ai_categorization = AICategorizationService()
+        self.batch_ai_categorization = BatchAICategorizationService()
 
     def _get_teller_client(self, connection: SyncConnection) -> TellerClient:
         """Create a TellerClient instance for the connection."""
@@ -106,6 +108,9 @@ class TellerSyncService:
             oldest_date = None
             total_synced = 0
             total_skipped = 0
+            pending_ai_categorization = (
+                []
+            )  # Track transactions needing AI categorization
 
             logger.info(
                 f"Starting historical sync for connection {connection.id} "
@@ -113,9 +118,10 @@ class TellerSyncService:
             )
 
             # Fetch transactions in batches using pagination
+            batch_size = getattr(settings, "TELLER_TRANSACTION_LIMIT", 500)
             for batch in client.get_transactions_paginated(
                 account_id=connection.external_account_id,
-                batch_size=500,
+                batch_size=batch_size,
             ):
                 results["batches_processed"] += 1
                 batch_synced = 0
@@ -177,8 +183,12 @@ class TellerSyncService:
                             raw_data=txn,
                         )
 
-                        # Try to auto-categorize
-                        self._auto_categorize_transaction(transaction)
+                        # Try rule-based categorization (fast)
+                        if not self._auto_categorize_transaction(transaction):
+                            # If not categorized by rules, mark for AI processing
+                            transaction.categorization_status = "pending_ai"
+                            transaction.save()
+                            pending_ai_categorization.append(transaction.id)
 
                         batch_synced += 1
                         total_synced += 1
@@ -205,6 +215,15 @@ class TellerSyncService:
 
             results["transactions_synced"] = total_synced
             results["transactions_skipped"] = total_skipped
+            results["pending_ai_categorization"] = len(pending_ai_categorization)
+
+            # Queue uncategorized transactions for batch AI processing
+            if pending_ai_categorization:
+                self._queue_for_ai_categorization(pending_ai_categorization, user)
+                logger.info(
+                    f"Queued {len(pending_ai_categorization)} transactions "
+                    f"for AI categorization"
+                )
 
             # Mark connection as successfully synced
             connection.mark_synced(backfill_complete=True, oldest_date=oldest_date)
@@ -217,7 +236,8 @@ class TellerSyncService:
                 f"Successfully synced {total_synced} transactions, "
                 f"skipped {total_skipped} duplicates across "
                 f"{results['batches_processed']} batches. "
-                f"Oldest transaction: {oldest_date if oldest_date else 'N/A'}"
+                f"Oldest transaction: {oldest_date if oldest_date else 'N/A'}. "
+                f"{len(pending_ai_categorization)} queued for AI categorization."
             )
 
             logger.info(results["message"])
@@ -260,10 +280,14 @@ class TellerSyncService:
             client = self._get_teller_client(connection)
             user = connection.user
             account = connection.account
+            pending_ai_categorization = []  # Track transactions needing AI
 
             # Fetch recent transactions
+            transaction_limit = min(
+                getattr(settings, "TELLER_TRANSACTION_LIMIT", 500), 100
+            )
             transactions = client.get_transactions(
-                connection.external_account_id, count=100
+                connection.external_account_id, count=transaction_limit
             )
 
             logger.info(
@@ -320,8 +344,12 @@ class TellerSyncService:
                         raw_data=txn,
                     )
 
-                    # Try to auto-categorize
-                    self._auto_categorize_transaction(transaction)
+                    # Try rule-based categorization (fast)
+                    if not self._auto_categorize_transaction(transaction):
+                        # If not categorized by rules, mark for AI processing
+                        transaction.categorization_status = "pending_ai"
+                        transaction.save()
+                        pending_ai_categorization.append(transaction.id)
 
                     synced_count += 1
 
@@ -332,6 +360,15 @@ class TellerSyncService:
 
             results["transactions_synced"] = synced_count
             results["transactions_skipped"] = skipped_count
+            results["pending_ai_categorization"] = len(pending_ai_categorization)
+
+            # Queue uncategorized transactions for batch AI processing
+            if pending_ai_categorization:
+                self._queue_for_ai_categorization(pending_ai_categorization, user)
+                logger.info(
+                    f"Queued {len(pending_ai_categorization)} transactions "
+                    f"for AI categorization"
+                )
 
             # Mark connection as synced
             connection.mark_synced()
@@ -342,7 +379,8 @@ class TellerSyncService:
             results["success"] = True
             results["message"] = (
                 f"Successfully synced {synced_count} new transactions, "
-                f"skipped {skipped_count} duplicates"
+                f"skipped {skipped_count} duplicates. "
+                f"{len(pending_ai_categorization)} queued for AI categorization."
             )
 
             logger.info(results["message"])
@@ -357,24 +395,58 @@ class TellerSyncService:
 
         return results
 
-    def _auto_categorize_transaction(self, transaction):
-        """Attempt to auto-categorize a transaction."""
+    def _auto_categorize_transaction(self, transaction) -> bool:
+        """
+        Attempt rule-based categorization during sync (fast path).
+
+        Args:
+            transaction: Transaction to categorize
+
+        Returns:
+            True if categorized, False if needs AI categorization
+        """
         try:
-            # First try rule-based categorization
+            # Try rule-based categorization (< 1ms)
             rule_result = self.rule_categorization.categorize_transaction(transaction)
             if rule_result:
                 category, rule = rule_result
                 self.rule_categorization.apply_categorization(
                     transaction, category, rule
                 )
-                return
+                # Mark as categorized
+                transaction.categorization_status = "categorized"
+                transaction.save()
+                return True
 
-            # If no rule match, try AI categorization with low confidence threshold
-            # (Don't auto-apply AI suggestions during sync to avoid errors)
-            # Instead, just log that it needs categorization
-            logger.debug(
-                f"Transaction {transaction.id} needs categorization: {transaction.description}"
-            )
+            # No rule match - needs AI categorization
+            return False
 
         except Exception as e:
-            logger.error(f"Error auto-categorizing transaction: {str(e)}")
+            logger.error(f"Error in rule-based categorization: {str(e)}")
+            return False
+
+    def _queue_for_ai_categorization(
+        self, transaction_ids: List[int], user: User
+    ) -> CategorizationQueue:
+        """
+        Queue transactions for batch AI categorization.
+
+        Args:
+            transaction_ids: List of transaction IDs to categorize
+            user: User who owns the transactions
+
+        Returns:
+            Created CategorizationQueue instance
+        """
+        queue_item = CategorizationQueue.objects.create(
+            user=user,
+            transaction_ids=transaction_ids,
+            status="pending",
+        )
+
+        logger.info(
+            f"Created categorization queue item {queue_item.id} "
+            f"with {len(transaction_ids)} transactions for user {user.username}"
+        )
+
+        return queue_item

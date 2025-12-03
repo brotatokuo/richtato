@@ -7,6 +7,11 @@ from typing import Any, Dict, List
 from apps.account.repositories.account_repository import AccountRepository
 from apps.card.models import CardAccount
 from apps.card.repositories.card_account_repository import CardAccountRepository
+from apps.categorization.models import CategorizationQueue
+from apps.categorization.services.rule_based_service import (
+    RuleBasedCategorizationService,
+)
+from apps.expense.models import Expense
 from apps.expense.repositories.expense_repository import ExpenseRepository
 from apps.richtato_user.models import User
 from apps.teller.models import TellerConnection
@@ -22,6 +27,7 @@ class TellerSyncService:
         self.account_repository = AccountRepository()
         self.expense_repository = ExpenseRepository()
         self.card_repository = CardAccountRepository()
+        self.rule_categorization = RuleBasedCategorizationService()
 
     def _get_teller_client(self, connection: TellerConnection) -> TellerClient:
         """
@@ -66,6 +72,8 @@ class TellerSyncService:
         Returns:
             Dict with sync results including counts and errors
         """
+        user = connection.user
+
         # Check if this is the first sync or a forced full sync
         if not connection.initial_backfill_complete or force_full_sync:
             logger.info(
@@ -73,7 +81,13 @@ class TellerSyncService:
                 f"(first_sync={not connection.initial_backfill_complete}, "
                 f"force_full_sync={force_full_sync})"
             )
-            return self.sync_historical_transactions(connection)
+            results = self.sync_historical_transactions(connection)
+            # Queue uncategorized transactions for AI
+            if results.get("pending_categorization"):
+                self._queue_for_ai_categorization(
+                    results["pending_categorization"], user
+                )
+            return results
 
         # Regular incremental sync for subsequent syncs
         user = connection.user
@@ -119,9 +133,10 @@ class TellerSyncService:
             if account_synced:
                 results["accounts_synced"] += 1
 
-            # Fetch transactions
+            # Fetch transactions with configured limit
+            transaction_limit = getattr(settings, "TELLER_TRANSACTION_LIMIT", 500)
             transactions = client.get_transactions(
-                connection.teller_account_id, count=100
+                connection.teller_account_id, count=transaction_limit
             )
 
             # Filter transactions by date range
@@ -224,16 +239,18 @@ class TellerSyncService:
             # Track the oldest transaction date we've synced
             oldest_date = None
             total_synced = 0
+            pending_categorization = []  # Track expenses needing AI categorization
 
-            # Fetch transactions in batches using pagination
+            # Fetch transactions in batches using pagination with configured batch size
+            batch_size = getattr(settings, "TELLER_TRANSACTION_LIMIT", 500)
             logger.info(
                 f"Starting historical transaction sync for account "
-                f"{connection.teller_account_id}"
+                f"{connection.teller_account_id} with batch_size={batch_size}"
             )
 
             for batch in client.get_transactions_paginated(
                 account_id=connection.teller_account_id,
-                batch_size=500,
+                batch_size=batch_size,
             ):
                 results["batches_processed"] += 1
                 batch_synced = 0
@@ -262,14 +279,20 @@ class TellerSyncService:
 
                         # Only sync debit transactions (expenses)
                         if txn_amount_raw < 0:  # Negative amount = debit/expense
-                            self.expense_repository.create_expense(
+                            expense = self.expense_repository.create_expense(
                                 user=user,
                                 account=card_account,
-                                category=None,  # Will need to be categorized later
+                                category=None,  # Will be categorized
                                 description=txn_description,
                                 amount=txn_amount,
                                 date=txn_date,
                             )
+
+                            # Try rule-based categorization (fast)
+                            if not self._auto_categorize_expense(expense):
+                                # Mark for AI categorization
+                                pending_categorization.append(expense.id)
+
                             batch_synced += 1
                             total_synced += 1
 
@@ -290,11 +313,15 @@ class TellerSyncService:
             connection.mark_synced(backfill_complete=True, oldest_date=oldest_date)
 
             results["success"] = True
+            results[
+                "pending_categorization"
+            ] = pending_categorization  # Return list for queuing
             results["message"] = (
                 f"Successfully synced {results['accounts_synced']} accounts and "
                 f"{results['transactions_synced']} transactions across "
                 f"{results['batches_processed']} batches. "
-                f"Oldest transaction: {oldest_date if oldest_date else 'N/A'}"
+                f"Oldest transaction: {oldest_date if oldest_date else 'N/A'}. "
+                f"{len(pending_categorization)} queued for AI categorization."
             )
 
             logger.info(results["message"])
@@ -415,6 +442,7 @@ class TellerSyncService:
             Number of transactions synced
         """
         synced_count = 0
+        pending_categorization = []  # Track expenses needing AI categorization
 
         # Get or create CardAccount for these transactions
         card_account = self._get_or_create_card_account(user, connection)
@@ -437,21 +465,34 @@ class TellerSyncService:
 
                 # Only sync debit transactions (expenses)
                 if txn_amount_raw < 0:  # Negative amount = debit/expense
-                    self.expense_repository.create_expense(
+                    expense = self.expense_repository.create_expense(
                         user=user,
                         account=card_account,
-                        category=None,  # Will need to be categorized later
+                        category=None,  # Will be categorized
                         description=txn_description,
                         amount=txn_amount,
                         date=txn_date,
                     )
+
+                    # Try rule-based categorization (fast)
+                    if not self._auto_categorize_expense(expense):
+                        # Mark for AI categorization
+                        pending_categorization.append(expense.id)
+
                     synced_count += 1
 
             except Exception as e:
                 logger.error(f"Error syncing transaction {txn.get('id')}: {str(e)}")
                 continue
 
-        logger.info(f"Synced {synced_count} transactions")
+        logger.info(
+            f"Synced {synced_count} transactions, {len(pending_categorization)} pending AI categorization"
+        )
+
+        # Queue uncategorized transactions for AI
+        if pending_categorization:
+            self._queue_for_ai_categorization(pending_categorization, user)
+
         return synced_count
 
     def _get_or_create_card_account(
@@ -495,3 +536,58 @@ class TellerSyncService:
             return "marcus"
         else:
             return "other"
+
+    def _auto_categorize_expense(self, expense: Expense) -> bool:
+        """
+        Attempt rule-based categorization during sync (fast path).
+
+        Args:
+            expense: Expense to categorize
+
+        Returns:
+            True if categorized, False if needs AI categorization
+        """
+        try:
+            # Try rule-based categorization (< 1ms)
+            rule_result = self.rule_categorization.categorize_expense(expense)
+            if rule_result:
+                category, rule = rule_result
+                expense.category = category
+                expense.save()
+                logger.debug(
+                    f"Rule-based categorized expense {expense.id}: {category.name}"
+                )
+                return True
+
+            # No rule match - needs AI categorization
+            return False
+
+        except Exception as e:
+            logger.error(f"Error in rule-based categorization: {str(e)}")
+            return False
+
+    def _queue_for_ai_categorization(
+        self, expense_ids: List[int], user: User
+    ) -> CategorizationQueue:
+        """
+        Queue expenses for batch AI categorization.
+
+        Args:
+            expense_ids: List of expense IDs to categorize
+            user: User who owns the expenses
+
+        Returns:
+            Created CategorizationQueue instance
+        """
+        queue_item = CategorizationQueue.objects.create(
+            user=user,
+            transaction_ids=expense_ids,  # For now, storing expense IDs
+            status="pending",
+        )
+
+        logger.info(
+            f"Created categorization queue item {queue_item.id} "
+            f"with {len(expense_ids)} expenses for user {user.username}"
+        )
+
+        return queue_item

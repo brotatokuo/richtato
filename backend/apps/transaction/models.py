@@ -97,6 +97,12 @@ class Transaction(models.Model):
         ("csv", "CSV Import"),
     ]
 
+    CATEGORIZATION_STATUS_CHOICES = [
+        ("uncategorized", "Uncategorized"),
+        ("pending_ai", "Pending AI Categorization"),
+        ("categorized", "Categorized"),
+    ]
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -144,6 +150,12 @@ class Transaction(models.Model):
     raw_data = models.JSONField(
         null=True, blank=True, help_text="Raw transaction data from external source"
     )
+    categorization_status = models.CharField(
+        max_length=20,
+        choices=CATEGORIZATION_STATUS_CHOICES,
+        default="uncategorized",
+        help_text="Status of categorization for this transaction",
+    )
 
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
@@ -159,6 +171,7 @@ class Transaction(models.Model):
             models.Index(fields=["merchant"]),
             models.Index(fields=["external_id"]),
             models.Index(fields=["sync_source"]),
+            models.Index(fields=["categorization_status"]),
         ]
 
     def __str__(self):

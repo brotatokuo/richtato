@@ -50,6 +50,9 @@ class TransactionSerializer(serializers.ModelSerializer):
     transaction_type_display = serializers.CharField(
         source="get_transaction_type_display", read_only=True
     )
+    categorization_status_display = serializers.CharField(
+        source="get_categorization_status_display", read_only=True
+    )
 
     class Meta:
         model = Transaction
@@ -70,10 +73,18 @@ class TransactionSerializer(serializers.ModelSerializer):
             "status",
             "is_recurring",
             "sync_source",
+            "categorization_status",
+            "categorization_status_display",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "sync_source", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "sync_source",
+            "categorization_status",
+            "created_at",
+            "updated_at",
+        ]
 
 
 class TransactionCreateSerializer(serializers.Serializer):
