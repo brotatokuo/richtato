@@ -102,15 +102,17 @@ export function useTellerConnect() {
 
           console.log('Processing accounts:', accountsArray);
 
-          // If no accounts available, save a generic connection
+          // If no accounts available from the enrollment response,
+          // send enrollment ID and let backend fetch accounts from Teller
           if (accountsArray.length === 0) {
             console.log(
-              'No accounts array, saving enrollment as single connection'
+              'No accounts in enrollment response, sending enrollment ID to backend'
             );
+            // Backend will detect the enrollment ID and fetch accounts
             await tellerApiService.saveTellerConnection({
               access_token: accessToken,
               enrollment_id: enrollmentId,
-              teller_account_id: enrollmentId, // Use enrollment ID as fallback
+              teller_account_id: enrollmentId, // Backend will detect this is an enrollment ID
               institution_name: institutionName,
               account_name: institutionName,
               account_type: 'depository',

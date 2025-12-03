@@ -104,7 +104,7 @@ class TellerApiService {
    * Disconnect a Teller connection
    */
   async deleteTellerConnection(id: number): Promise<void> {
-    const response = await fetch(
+    let response = await fetch(
       `${this.baseUrl}/teller/connections/${id}/`,
       {
         method: 'DELETE',
@@ -112,6 +112,20 @@ class TellerApiService {
         credentials: 'include',
       }
     );
+
+    // If CSRF token is invalid, refresh it and retry once
+    if (response.status === 403) {
+      console.log('CSRF token invalid for Teller delete, refreshing...');
+      await csrfService.refreshToken();
+      response = await fetch(
+        `${this.baseUrl}/teller/connections/${id}/`,
+        {
+          method: 'DELETE',
+          headers: await csrfService.getHeaders(),
+          credentials: 'include',
+        }
+      );
+    }
 
     if (!response.ok) {
       throw new Error(`Failed to disconnect Teller connection: ${response.status}`);

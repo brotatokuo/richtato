@@ -53,18 +53,46 @@ class TellerConnectionAPIView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            connection = self.teller_service.create_connection(
-                user=request.user,
-                access_token=serializer.validated_data["access_token"],
-                teller_account_id=serializer.validated_data["teller_account_id"],
-                institution_name=serializer.validated_data["institution_name"],
-                account_name=serializer.validated_data["account_name"],
-                enrollment_id=serializer.validated_data.get("enrollment_id", ""),
-                account_type=serializer.validated_data.get("account_type", ""),
-            )
+            teller_account_id = serializer.validated_data["teller_account_id"]
+            access_token = serializer.validated_data["access_token"]
+            institution_name = serializer.validated_data["institution_name"]
+            enrollment_id = serializer.validated_data.get("enrollment_id", "")
 
-            response_serializer = TellerConnectionSerializer(connection)
-            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+            # Check if the teller_account_id is actually an enrollment ID
+            # Enrollment IDs start with "enr_", account IDs start with "acc_"
+            if teller_account_id.startswith("enr_"):
+                logger.info(
+                    f"Enrollment ID detected, fetching accounts from Teller for user {request.user.username}"
+                )
+                # Fetch accounts from Teller and create connections for each
+                connections = self.teller_service.create_connections_from_enrollment(
+                    user=request.user,
+                    access_token=access_token,
+                    enrollment_id=enrollment_id or teller_account_id,
+                    institution_name=institution_name,
+                )
+
+                # Return all created connections
+                response_serializer = TellerConnectionSerializer(connections, many=True)
+                return Response(
+                    response_serializer.data, status=status.HTTP_201_CREATED
+                )
+            else:
+                # Single account connection
+                connection = self.teller_service.create_connection(
+                    user=request.user,
+                    access_token=access_token,
+                    teller_account_id=teller_account_id,
+                    institution_name=institution_name,
+                    account_name=serializer.validated_data["account_name"],
+                    enrollment_id=enrollment_id,
+                    account_type=serializer.validated_data.get("account_type", ""),
+                )
+
+                response_serializer = TellerConnectionSerializer(connection)
+                return Response(
+                    response_serializer.data, status=status.HTTP_201_CREATED
+                )
 
         except Exception as e:
             logger.error(f"Error creating Teller connection: {str(e)}")

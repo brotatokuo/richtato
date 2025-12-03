@@ -12,13 +12,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="userpreference",
-            name="language",
-            field=models.CharField(
-                default="en", help_text="User interface language", max_length=5
-            ),
-        ),
-        migrations.AddField(
-            model_name="userpreference",
             name="timezone",
             field=models.CharField(
                 default="UTC",
