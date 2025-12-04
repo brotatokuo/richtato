@@ -1,12 +1,11 @@
 """Management command to process categorization queue."""
 
-from django.core.management.base import BaseCommand
-from django.utils import timezone
-
 from apps.categorization.models import CategorizationQueue
 from apps.categorization.services.batch_ai_service import (
     BatchAICategorizationService,
 )
+from django.core.management.base import BaseCommand
+from django.utils import timezone
 from loguru import logger
 
 

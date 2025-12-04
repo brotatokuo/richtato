@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Dict, List
 
-from apps.budget_v2.models import Budget, BudgetCategory, BudgetProgress
+from apps.budget.models import Budget, BudgetCategory, BudgetProgress
 from apps.transaction.repositories.transaction_repository import TransactionRepository
 from loguru import logger
 

@@ -48,22 +48,15 @@ ALLOWED_HOSTS = [
 
 INSTALLED_APPS = [
     "apps.richtato_user",
-    "apps.category",
-    "apps.card",
     "apps.core",
-    "apps.account",
-    "apps.budget",
-    "apps.income",
-    "apps.expense",
     "apps.budget_dashboard",
     "apps.asset_dashboard",
-    "apps.teller",
-    # New redesigned apps
+    # Unified models
     "apps.financial_account",
     "apps.transaction",
     "apps.categorization",
     "apps.sync",
-    "apps.budget_v2",
+    "apps.budget",
     "django.contrib.humanize",
     "django.contrib.admin",
     "django.contrib.auth",

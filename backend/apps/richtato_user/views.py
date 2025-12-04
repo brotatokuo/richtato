@@ -1,18 +1,14 @@
 # API-only views for richtato_user app
 import json
+from decimal import Decimal
 
 import pytz
-from apps.card.serializers import CardAccountSerializer
-from apps.card.services.card_account_service import CardAccountService
-from apps.category.models import Category
-from apps.category.services.category_service import CategoryService
-from apps.expense.models import Expense
-from apps.income.models import Income
 from apps.richtato_user.demo_user_factory import DemoUserFactory
 from apps.richtato_user.models import UserPreference
-from apps.richtato_user.serializers import CategorySerializer, UserPreferenceSerializer
-from apps.richtato_user.services.graph_service import GraphService
+from apps.richtato_user.serializers import UserPreferenceSerializer
 from apps.richtato_user.services.user_service import UserService
+from apps.transaction.models import Transaction, TransactionCategory
+from apps.budget.models import Budget, BudgetCategory
 from categories.categories import BaseCategory
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
@@ -31,311 +27,54 @@ from rest_framework.views import APIView
 pst = pytz.timezone("US/Pacific")
 
 
-# API Views
-class CardBanksAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.card_account_service = CardAccountService()
-
-    @swagger_auto_schema(
-        operation_summary="Get user card accounts",
-        operation_description="Retrieve all card accounts for the authenticated user",
-        responses={
-            200: openapi.Response(
-                "Success", examples={"application/json": {"data": []}}
-            )
-        },
-    )
-    def get(self, request, **kwargs):
-        pk = kwargs.get("pk")
-        if pk is not None:
-            card_data = self.card_account_service.get_card_account_by_id(
-                pk, request.user
-            )
-            if not card_data:
-                return Response(
-                    {"error": "Card account not found"},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
-            return Response(card_data)
-
-        data = self.card_account_service.get_user_card_accounts_formatted(request.user)
-        return Response(data)
-
-    @swagger_auto_schema(
-        operation_summary="Create a new card account",
-        operation_description="Create a new card account for the authenticated user",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                "name": openapi.Schema(type=openapi.TYPE_STRING),
-                "bank": openapi.Schema(type=openapi.TYPE_STRING),
-            },
-            required=["name", "bank"],
-        ),
-        responses={
-            201: openapi.Response("Card account created successfully"),
-            400: openapi.Response("Invalid input data"),
-        },
-    )
-    def post(self, request):
-        serializer = CardAccountSerializer(data=request.data)
-        if serializer.is_valid():
-            name = serializer.validated_data["name"]
-            bank = serializer.validated_data["bank"]
-            card_data = self.card_account_service.create_card_account(
-                request.user, name, bank
-            )
-            logger.debug(f"Created card account: {card_data}")
-            return Response(card_data, status=status.HTTP_201_CREATED)
-        logger.error(f"Error creating card account: {serializer.errors}")
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @swagger_auto_schema(
-        operation_summary="Update a card account",
-        operation_description="Update an existing card account for the authenticated user",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                "name": openapi.Schema(type=openapi.TYPE_STRING),
-                "bank": openapi.Schema(type=openapi.TYPE_STRING),
-            },
-        ),
-        responses={
-            200: openapi.Response("Card account updated successfully"),
-            400: openapi.Response("Invalid input data"),
-            404: openapi.Response("Card account not found"),
-        },
-    )
-    def patch(self, request, **kwargs):
-        pk = kwargs.get("pk")
-        serializer = CardAccountSerializer(data=request.data, partial=True)
-        if serializer.is_valid():
-            try:
-                card_data = self.card_account_service.update_card_account(
-                    pk, request.user, **serializer.validated_data
-                )
-                logger.debug(f"Updated card account {pk}: {card_data}")
-                return Response(card_data)
-            except ValueError as e:
-                return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
-        logger.error(f"Error updating card account {pk}: {serializer.errors}")
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @swagger_auto_schema(
-        operation_summary="Delete a card account",
-        operation_description="Delete a card account for the authenticated user",
-        responses={
-            204: openapi.Response("Card account deleted successfully"),
-            404: openapi.Response("Card account not found"),
-        },
-    )
-    def delete(self, request, **kwargs):
-        pk = kwargs.get("pk")
-        try:
-            self.card_account_service.delete_card_account(pk, request.user)
-            logger.debug(f"Deleted card account {pk}")
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
-
-
-class CombinedGraphAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.graph_service = GraphService()
-
-    @swagger_auto_schema(
-        operation_summary="Get combined income/expense graph data",
-        operation_description="Retrieve chart data for income and expenses by month",
-        responses={
-            200: openapi.Response(
-                "Success", examples={"application/json": {"labels": [], "datasets": []}}
-            )
-        },
-    )
-    def get(self, request):
-        chart_data = self.graph_service.get_combined_graph_data(
-            request.user, Expense, Income
-        )
-        logger.debug(f"Combined chart data: {chart_data}")
-        return Response(chart_data)
-
-
-class CategoryView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.category_service = CategoryService()
-
-    @swagger_auto_schema(
-        operation_summary="Get user categories",
-        operation_description="Retrieve all categories that have been used in transactions",
-        responses={
-            200: openapi.Response(
-                "Success", examples={"application/json": {"columns": [], "rows": []}}
-            )
-        },
-    )
-    def get(self, request) -> Response:
-        # Return enabled categories for the user in a simple list format
-        results = self.category_service.get_enabled_categories(request.user)
-        return Response({"results": results})
-
-    @swagger_auto_schema(
-        operation_summary="Create new category",
-        operation_description="Create a new category for the authenticated user",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                "name": openapi.Schema(
-                    type=openapi.TYPE_STRING, description="Category name"
-                ),
-                "type": openapi.Schema(
-                    type=openapi.TYPE_STRING, description="Category type"
-                ),
-            },
-            required=["name", "type"],
-        ),
-        responses={
-            201: openapi.Response("Created"),
-            400: openapi.Response("Bad Request"),
-        },
-    )
-    def post(self, request):
-        serializer = CategorySerializer(data=request.data)
-        if serializer.is_valid():
-            name = serializer.validated_data["name"]
-            category_type = serializer.validated_data["type"]
-            enabled = serializer.validated_data.get("enabled", True)
-            category_data = self.category_service.create_category(
-                request.user, name, category_type, enabled
-            )
-            return Response(category_data, status=201)
-        else:
-            return Response(serializer.errors, status=400)
-
-    @swagger_auto_schema(
-        operation_summary="Update category",
-        operation_description="Update an existing category",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                "name": openapi.Schema(
-                    type=openapi.TYPE_STRING, description="Category name"
-                ),
-                "type": openapi.Schema(
-                    type=openapi.TYPE_STRING, description="Category type"
-                ),
-            },
-        ),
-        responses={
-            200: openapi.Response("Success"),
-            400: openapi.Response("Bad Request"),
-            404: openapi.Response("Not Found"),
-        },
-    )
-    def put(self, request, pk):
-        serializer = CategorySerializer(data=request.data, partial=True)
-        if serializer.is_valid():
-            try:
-                category_data = self.category_service.update_category(
-                    pk, request.user, **serializer.validated_data
-                )
-                return Response(category_data)
-            except ValueError as e:
-                return Response({"error": str(e)}, status=404)
-        return Response(serializer.errors, status=400)
-
-    @swagger_auto_schema(
-        operation_summary="Delete category",
-        operation_description="Delete a category",
-        responses={
-            204: openapi.Response("No Content"),
-            404: openapi.Response("Not Found"),
-        },
-    )
-    def delete(self, request, pk):
-        try:
-            self.category_service.delete_category(pk, request.user)
-            return Response(status=204)
-        except ValueError as e:
-            return Response({"error": str(e)}, status=404)
-
-
-class CategoryFieldChoicesAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.category_service = CategoryService()
-
-    @swagger_auto_schema(
-        operation_summary="Get category field choices",
-        operation_description="Get available choices for category fields",
-        responses={
-            200: openapi.Response(
-                "Success", examples={"application/json": {"type_choices": []}}
-            )
-        },
-    )
-    def get(self, request):
-        choices = self.category_service.get_field_choices()
-        return Response({"type_choices": choices["type"]})
-
-
 class CategorySettingsAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    """API view for managing transaction categories and budgets."""
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.category_service = CategoryService()
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_summary="Get full category catalog with enabled flags",
         responses={200: openapi.Response("Success")},
     )
     def get(self, request):
+        """Get all available categories with their settings."""
         registry = BaseCategory.get_registry()
-        user_cats = {c.name: c for c in Category.objects.filter(user=request.user)}
-        # Gather existing budgets keyed by category name
-        from apps.budget.models import Budget
-
-        cat_to_budget = {
-            b.category.name: b
-            for b in Budget.objects.filter(user=request.user).select_related("category")
+        user_cats = {
+            c.slug: c for c in TransactionCategory.objects.filter(user=request.user)
         }
+
+        # Get current active budgets
+        cat_to_budget = {}
+        active_budgets = Budget.objects.filter(
+            user=request.user, is_active=True
+        ).prefetch_related("budget_categories__category")
+        for budget in active_budgets:
+            for bc in budget.budget_categories.all():
+                cat_to_budget[bc.category.slug] = {
+                    "id": bc.id,
+                    "amount": float(bc.allocated_amount),
+                    "start_date": budget.start_date.isoformat(),
+                    "end_date": budget.end_date.isoformat()
+                    if budget.end_date
+                    else None,
+                }
+
         catalog = []
         for display_name, cls in registry.items():
-            normalized = display_name.replace("/", "_")
+            slug = display_name.lower().replace("/", "-").replace(" ", "-")
             instance = cls()
-            existing = user_cats.get(normalized)
-            budget = cat_to_budget.get(normalized)
+            existing = user_cats.get(slug)
+            budget_info = cat_to_budget.get(slug)
             catalog.append(
                 {
-                    "name": normalized,
+                    "name": slug,
                     "display": display_name,
                     "icon": instance.icon,
                     "color": instance.color,
-                    "type": existing.type if existing else None,
-                    "enabled": existing.enabled if existing else False,
-                    "budget": (
-                        {
-                            "id": budget.id,
-                            "amount": float(budget.amount),
-                            "start_date": budget.start_date.isoformat(),
-                            "end_date": budget.end_date.isoformat()
-                            if budget.end_date
-                            else None,
-                        }
-                        if budget
-                        else None
-                    ),
+                    "is_expense": existing.is_expense if existing else True,
+                    "is_income": existing.is_income if existing else False,
+                    "enabled": existing is not None,
+                    "budget": budget_info,
                 }
             )
         return Response({"categories": catalog})
@@ -349,110 +88,98 @@ class CategorySettingsAPIView(APIView):
         },
     )
     def put(self, request):
+        """Update category settings and budgets."""
         enabled = set(request.data.get("enabled", []))
         disabled = set(request.data.get("disabled", []))
-        budgets = request.data.get(
-            "budgets", {}
-        )  # name -> { amount, start_date?, end_date? | null }
+        budgets = request.data.get("budgets", {})
 
-        # Enforce Unknown stays enabled
-        enabled.add("Unknown")
-
-        valid_names = {k.replace("/", "_") for k in BaseCategory.get_registry().keys()}
-        bad = (enabled | disabled) - valid_names
-        if bad:
-            return Response({"error": f"Unknown categories: {sorted(bad)}"}, status=400)
-
-        # Ensure Category rows exist for enabled names
+        # Create categories that don't exist
         existing = {
-            c.name: c
-            for c in Category.objects.filter(
-                user=request.user, name__in=list(enabled | disabled)
-            )
+            c.slug: c for c in TransactionCategory.objects.filter(user=request.user)
         }
+
         to_create = []
-        for name in enabled:
-            if name not in existing:
-                # Default type: essential unless listed as nonessential in defaults
-                # We can reuse create_default_categories_for_user mapping quickly:
-                # Fall back to essential if unknown
-                default_type = "essential"
+        for slug in enabled:
+            if slug not in existing:
                 to_create.append(
-                    Category(
-                        user=request.user, name=name, type=default_type, enabled=True
+                    TransactionCategory(
+                        user=request.user,
+                        name=slug.replace("-", " ").replace("_", " ").title(),
+                        slug=slug,
+                        is_expense=True,
                     )
                 )
         if to_create:
-            Category.objects.bulk_create(to_create)
+            TransactionCategory.objects.bulk_create(to_create)
 
-        Category.objects.filter(user=request.user, name__in=list(enabled)).update(
-            enabled=True
-        )
-        Category.objects.filter(user=request.user, name__in=list(disabled)).update(
-            enabled=False
-        )
+        # Delete disabled categories (or just remove from user's list)
+        TransactionCategory.objects.filter(
+            user=request.user, slug__in=list(disabled)
+        ).delete()
 
-        # Handle budgets: create/update/delete as needed
-        from decimal import Decimal
+        # Handle budgets
+        if budgets:
+            # Get or create a monthly budget for the user
+            from datetime import date, timedelta
 
-        from apps.budget.models import Budget
-
-        cat_map = {
-            c.name: c
-            for c in Category.objects.filter(user=request.user, name__in=budgets.keys())
-        }
-        existing_budgets = {
-            b.category.name: b
-            for b in Budget.objects.filter(user=request.user).select_related("category")
-        }
-
-        for name, bdata in budgets.items():
-            if bdata is None:
-                # Delete existing budget if present
-                if name in existing_budgets:
-                    existing_budgets[name].delete()
+            today = date.today()
+            start_date = today.replace(day=1)
+            if start_date.month == 12:
+                end_date = start_date.replace(
+                    year=start_date.year + 1, month=1, day=1
+                ) - timedelta(days=1)
             else:
-                # Create or update budget
-                amount = bdata.get("amount")
-                start_date_str = bdata.get("start_date")
-                end_date_str = bdata.get("end_date")
-                if amount is None:
-                    continue
-                amount = Decimal(str(amount))
+                end_date = start_date.replace(
+                    month=start_date.month + 1, day=1
+                ) - timedelta(days=1)
 
-                # Parse dates
-                import datetime
+            budget, _ = Budget.objects.get_or_create(
+                user=request.user,
+                start_date=start_date,
+                end_date=end_date,
+                defaults={
+                    "name": f"Monthly Budget - {start_date.strftime('%B %Y')}",
+                    "period_type": "monthly",
+                    "is_active": True,
+                },
+            )
 
-                start_date = (
-                    datetime.date.fromisoformat(start_date_str)
-                    if start_date_str
-                    else datetime.date.today()
+            cat_map = {
+                c.slug: c
+                for c in TransactionCategory.objects.filter(
+                    user=request.user, slug__in=budgets.keys()
                 )
-                end_date = (
-                    datetime.date.fromisoformat(end_date_str) if end_date_str else None
-                )
+            }
 
-                cat = cat_map.get(name)
-                if not cat:
-                    # If category doesn't exist yet, skip
-                    continue
+            existing_bc = {
+                bc.category.slug: bc
+                for bc in BudgetCategory.objects.filter(budget=budget)
+            }
 
-                if name in existing_budgets:
-                    # Update existing budget
-                    b = existing_budgets[name]
-                    b.amount = amount
-                    b.start_date = start_date
-                    b.end_date = end_date
-                    b.save()
+            for slug, bdata in budgets.items():
+                if bdata is None:
+                    # Delete existing budget category if present
+                    if slug in existing_bc:
+                        existing_bc[slug].delete()
                 else:
-                    # Create new budget
-                    Budget.objects.create(
-                        user=request.user,
-                        category=cat,
-                        amount=amount,
-                        start_date=start_date,
-                        end_date=end_date,
-                    )
+                    amount = bdata.get("amount")
+                    if amount is None:
+                        continue
+
+                    cat = cat_map.get(slug)
+                    if not cat:
+                        continue
+
+                    if slug in existing_bc:
+                        bc = existing_bc[slug]
+                        bc.allocated_amount = Decimal(str(amount))
+                        bc.save()
+                    else:
+                        BudgetCategory.objects.create(
+                            budget=budget,
+                            category=cat,
+                            allocated_amount=Decimal(str(amount)),
+                        )
 
         return Response({"message": "Category settings updated"})
 
