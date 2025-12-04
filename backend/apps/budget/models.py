@@ -1,4 +1,4 @@
-"""Redesigned budget models integrated with unified transaction system."""
+"""Budget models integrated with unified transaction system."""
 
 from django.conf import settings
 from django.db import models

@@ -67,9 +67,9 @@ class TellerApiService {
     });
 
     const data = await this.handleResponse<{
-      rows: TellerConnection[];
+      connections: TellerConnection[];
     }>(response);
-    return data.rows || [];
+    return data.connections || [];
   }
 
   /**

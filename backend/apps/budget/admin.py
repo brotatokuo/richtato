@@ -1,4 +1,4 @@
-"""Admin configuration for budget v2."""
+"""Admin configuration for budgets."""
 
 from django.contrib import admin
 

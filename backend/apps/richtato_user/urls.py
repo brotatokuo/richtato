@@ -13,6 +13,8 @@ urlpatterns = [
     path("change-password/", views.change_password, name="change_password"),
     path("update-preferences/", views.update_preferences, name="update_preferences"),
     path("delete-account/", views.delete_account, name="delete_account"),
+    # Category endpoints
+    path("categories/", views.CategoriesAPIView.as_view(), name="categories"),
     # Category settings endpoint
     path(
         "category-settings/",

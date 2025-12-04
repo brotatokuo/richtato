@@ -1,4 +1,4 @@
-"""Serializers for budget v2."""
+"""Serializers for budgets."""
 
 from rest_framework import serializers
 

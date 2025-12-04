@@ -44,7 +44,8 @@ class FinancialAccountListCreateAPIView(APIView):
             )
 
         serializer = FinancialAccountSerializer(accounts, many=True)
-        return Response({"accounts": serializer.data})
+        # Return both formats for compatibility
+        return Response({"accounts": serializer.data, "rows": serializer.data})
 
     def post(self, request):
         """Create a new manual financial account."""
@@ -190,3 +191,243 @@ class AccountSummaryAPIView(APIView):
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class AccountFieldChoicesAPIView(APIView):
+    """Get field choices for account forms."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Get available account types and entities."""
+        from apps.financial_account.models import FinancialAccount, FinancialInstitution
+
+        # Account type choices
+        type_choices = [
+            {"value": choice[0], "label": choice[1]}
+            for choice in FinancialAccount.ACCOUNT_TYPE_CHOICES
+        ]
+
+        # Entity/institution choices
+        entity_choices = [
+            {"value": inst.id, "label": inst.name}
+            for inst in FinancialInstitution.objects.all().order_by("name")
+        ]
+
+        return Response({"type": type_choices, "entity": entity_choices})
+
+
+class AccountTransactionsAPIView(APIView):
+    """Get transactions for a specific account."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.account_service = AccountService()
+
+    def get(self, request, pk):
+        """Get paginated transactions for an account."""
+        from apps.transaction.models import Transaction
+
+        account = self.account_service.get_account_by_id(pk, request.user)
+
+        if not account:
+            return Response(
+                {"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        page = int(request.query_params.get("page", 1))
+        page_size = int(request.query_params.get("page_size", 10))
+
+        transactions = Transaction.objects.filter(account=account).order_by("-date")
+        total = transactions.count()
+
+        start = (page - 1) * page_size
+        end = start + page_size
+        transactions = transactions[start:end]
+
+        columns = [
+            {"field": "id", "title": "ID"},
+            {"field": "date", "title": "Date"},
+            {"field": "amount", "title": "Amount"},
+        ]
+
+        rows = [
+            {
+                "id": t.id,
+                "date": t.date.isoformat() if t.date else None,
+                "amount": str(t.amount),
+            }
+            for t in transactions
+        ]
+
+        return Response(
+            {
+                "columns": columns,
+                "rows": rows,
+                "page": page,
+                "page_size": page_size,
+                "total": total,
+            }
+        )
+
+    def patch(self, request, pk):
+        """Update a transaction."""
+        from apps.transaction.models import Transaction
+
+        account = self.account_service.get_account_by_id(pk, request.user)
+        if not account:
+            return Response(
+                {"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        transaction_id = request.data.get("id")
+        if not transaction_id:
+            return Response(
+                {"error": "Transaction ID required"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            transaction = Transaction.objects.get(id=transaction_id, account=account)
+            if "amount" in request.data:
+                transaction.amount = request.data["amount"]
+            if "date" in request.data:
+                transaction.date = request.data["date"]
+            transaction.save()
+            return Response(
+                {
+                    "id": transaction.id,
+                    "amount": str(transaction.amount),
+                    "date": str(transaction.date),
+                }
+            )
+        except Transaction.DoesNotExist:
+            return Response(
+                {"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+    def delete(self, request, pk):
+        """Delete a transaction."""
+        from apps.transaction.models import Transaction
+
+        account = self.account_service.get_account_by_id(pk, request.user)
+        if not account:
+            return Response(
+                {"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        transaction_id = request.data.get("id")
+        if not transaction_id:
+            return Response(
+                {"error": "Transaction ID required"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            transaction = Transaction.objects.get(id=transaction_id, account=account)
+            transaction.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Transaction.DoesNotExist:
+            return Response(
+                {"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+
+class AccountBalanceUpdateAPIView(APIView):
+    """Create balance updates (transactions) for accounts."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.account_service = AccountService()
+
+    def post(self, request):
+        """Create a balance update transaction."""
+        from apps.transaction.models import Transaction
+        from decimal import Decimal
+
+        account_id = request.data.get("account")
+        amount = request.data.get("amount")
+        date = request.data.get("date")
+
+        if not all([account_id, amount, date]):
+            return Response(
+                {"error": "account, amount, and date are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        account = self.account_service.get_account_by_id(account_id, request.user)
+        if not account:
+            return Response(
+                {"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Determine transaction type based on amount sign
+        amount_decimal = Decimal(str(amount))
+        transaction_type = "credit" if amount_decimal >= 0 else "debit"
+        amount_decimal = abs(amount_decimal)
+
+        transaction = Transaction.objects.create(
+            user=request.user,
+            account=account,
+            amount=amount_decimal,
+            date=date,
+            transaction_type=transaction_type,
+            description="Balance update",
+            sync_source="manual",
+        )
+
+        return Response(
+            {
+                "id": transaction.id,
+                "amount": str(transaction.amount),
+                "date": str(transaction.date),
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class CardAccountListAPIView(APIView):
+    """List credit card accounts (for backward compatibility with card-accounts endpoint)."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.account_service = AccountService()
+
+    def get(self, request):
+        """List all credit card accounts for the user."""
+        accounts = self.account_service.get_accounts_by_type(
+            request.user, "credit_card"
+        )
+        serializer = FinancialAccountSerializer(accounts, many=True)
+        # Return in rows format for backward compatibility
+        return Response({"rows": serializer.data})
+
+
+class CardAccountFieldChoicesAPIView(APIView):
+    """Get field choices for credit card accounts (for backward compatibility)."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Get available card account choices."""
+        from apps.financial_account.models import FinancialAccount
+
+        # Get credit card accounts for the user
+        accounts = FinancialAccount.objects.filter(
+            user=request.user,
+            account_type="credit_card",
+            is_active=True,
+        )
+
+        account_choices = [{"value": acc.id, "label": acc.name} for acc in accounts]
+
+        return Response({"account": account_choices})

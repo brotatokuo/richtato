@@ -56,6 +56,12 @@ urlpatterns = [
     path("api/transactions/", include("apps.transaction.urls")),
     path("api/sync/", include("apps.sync.urls")),
     path("api/budgets/", include("apps.budget.urls")),
+    # V1 API URLs (for frontend compatibility)
+    path("api/v1/accounts/", include("apps.financial_account.urls")),
+    path("api/v1/card-accounts/", include("apps.financial_account.urls_card_accounts")),
+    path("api/v1/transactions/", include("apps.transaction.urls")),
+    path("api/v1/teller/", include("apps.sync.urls")),
+    path("api/v1/budgets/", include("apps.budget.urls")),
     # Auth and User management
     path("api/auth/", include("apps.richtato_user.urls")),
     path("api/v1/auth/", include("apps.richtato_user.urls")),

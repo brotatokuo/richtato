@@ -11,6 +11,11 @@ urlpatterns = [
         name="account-list-create",
     ),
     path(
+        "field-choices/",
+        views.AccountFieldChoicesAPIView.as_view(),
+        name="account-field-choices",
+    ),
+    path(
         "<int:pk>/",
         views.FinancialAccountDetailAPIView.as_view(),
         name="account-detail",
@@ -20,5 +25,15 @@ urlpatterns = [
         views.AccountBalanceHistoryAPIView.as_view(),
         name="account-balance-history",
     ),
+    path(
+        "<int:pk>/transactions/",
+        views.AccountTransactionsAPIView.as_view(),
+        name="account-transactions",
+    ),
     path("summary/", views.AccountSummaryAPIView.as_view(), name="account-summary"),
+    path(
+        "details/",
+        views.AccountBalanceUpdateAPIView.as_view(),
+        name="account-balance-update",
+    ),
 ]

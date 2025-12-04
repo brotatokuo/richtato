@@ -633,3 +633,26 @@ class APIDemoLoginView(APIView):
         except Exception as e:
             logger.error(f"Error creating demo user: {e}")
             return Response({"success": False, "error": str(e)}, status=500)
+
+
+class CategoriesAPIView(APIView):
+    """API view for listing transaction categories."""
+
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Get all transaction categories",
+        responses={200: openapi.Response("Success")},
+    )
+    def get(self, request):
+        """Get all transaction categories for the user."""
+        categories = TransactionCategory.objects.filter(user=request.user)
+        results = [
+            {
+                "id": cat.id,
+                "name": cat.name,
+                "type": "expense" if cat.is_expense else "income",
+            }
+            for cat in categories
+        ]
+        return Response({"results": results})
