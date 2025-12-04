@@ -30,6 +30,14 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
     account_type_display = serializers.CharField(
         source="get_account_type_display", read_only=True
     )
+    # Backward compatibility aliases
+    type = serializers.CharField(source="account_type", read_only=True)
+    type_display = serializers.CharField(
+        source="get_account_type_display", read_only=True
+    )
+    entity = serializers.SerializerMethodField()
+    entity_display = serializers.CharField(source="institution.name", read_only=True)
+    date = serializers.DateTimeField(source="updated_at", read_only=True)
 
     class Meta:
         model = FinancialAccount
@@ -47,8 +55,22 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
             "sync_source",
             "created_at",
             "updated_at",
+            # Backward compatibility
+            "type",
+            "type_display",
+            "entity",
+            "entity_display",
+            "date",
         ]
         read_only_fields = ["id", "created_at", "updated_at", "sync_source"]
+
+    def get_entity(self, obj):
+        """Return institution slug or name for backward compatibility."""
+        if obj.institution:
+            return obj.institution.slug or obj.institution.name.lower().replace(
+                " ", "_"
+            )
+        return "manual"
 
 
 class FinancialAccountCreateSerializer(serializers.Serializer):

@@ -89,23 +89,23 @@ export function Cashflow() {
 
       // Calculate total income and expenses
       const totalIncome = incomeTransactions.reduce(
-        (sum, transaction) => sum + transaction.amount,
+        (sum, transaction) => sum + Number(transaction.amount),
         0
       );
       const totalExpenses = expenseTransactions.reduce(
-        (sum, transaction) => sum + transaction.amount,
+        (sum, transaction) => sum + Number(transaction.amount),
         0
       );
       const netFlow = totalIncome - totalExpenses;
 
-      // Group income by source (using Account field as source)
+      // Group income by source (using account_name field as source)
       const incomeBySource = incomeTransactions.reduce(
         (acc, transaction) => {
-          const source = transaction.Account || 'Unknown';
+          const source = transaction.account_name || 'Unknown';
           if (!acc[source]) {
             acc[source] = 0;
           }
-          acc[source] += transaction.amount;
+          acc[source] += Number(transaction.amount);
           return acc;
         },
         {} as Record<string, number>
@@ -114,11 +114,11 @@ export function Cashflow() {
       // Group expenses by category
       const expensesByCategory = expenseTransactions.reduce(
         (acc, transaction) => {
-          const category = transaction.Category || 'Uncategorized';
+          const category = transaction.category_name || 'Uncategorized';
           if (!acc[category]) {
             acc[category] = 0;
           }
-          acc[category] += transaction.amount;
+          acc[category] += Number(transaction.amount);
           return acc;
         },
         {} as Record<string, number>

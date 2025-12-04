@@ -14,13 +14,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { formatCurrency, formatDate, formatSignedCurrency } from '@/lib/format';
+import { formatCurrency, formatDate } from '@/lib/format';
 import {
   Account,
   Category,
-  CreateExpenseTransactionInput,
-  CreateIncomeTransactionInput,
-  Transaction,
   transactionsApiService,
 } from '@/lib/api/transactions';
 import {
@@ -293,33 +290,15 @@ export function TransactionTable({
 
       const rawAmount = evaluateAmountField(formData.amount);
       const amountNum = parseFloat(rawAmount);
-      const signedAmount = isIncome
-        ? amountNum
-        : formData.isPositive
-          ? amountNum
-          : -amountNum;
 
-      let newTransaction: Transaction;
-      if (isIncome) {
-        const incomePayload: CreateIncomeTransactionInput = {
-          description: formData.description,
-          date: formData.date,
-          amount: signedAmount,
-          Account: account.id,
-        };
-        newTransaction =
-          await transactionsApiService.createIncomeTransaction(incomePayload);
-      } else {
-        const expensePayload: CreateExpenseTransactionInput = {
-          description: formData.description,
-          date: formData.date,
-          amount: signedAmount,
-          account_name: account.id,
-          category: categoryId,
-        };
-        newTransaction =
-          await transactionsApiService.createExpenseTransaction(expensePayload);
-      }
+      const newTransaction = await transactionsApiService.createTransaction({
+        account_id: account.id,
+        date: formData.date,
+        amount: amountNum,
+        description: formData.description,
+        transaction_type: isIncome ? 'credit' : 'debit',
+        category_id: categoryId,
+      });
 
       // Transform and add to local state
       const transformedTransaction = transformTransaction(newTransaction);
@@ -387,63 +366,18 @@ export function TransactionTable({
         }
       }
 
-      let payload: any;
       const rawEditAmount = evaluateAmountField(editFormData.amount);
       const amountValue = parseFloat(rawEditAmount);
-      const signedAmount = isIncome
-        ? amountValue
-        : editFormData.isPositive
-          ? amountValue
-          : -amountValue;
-      if (isIncome) {
-        // Income expects Account as primary key id
-        payload = {
-          description: editFormData.description,
-          date: editFormData.date,
-          amount: signedAmount,
-          Account: account.id,
-        };
-      } else {
-        // Expense expects account_name (id) and optional category (id)
-        payload = {
-          description: editFormData.description,
-          date: editFormData.date,
-          amount: signedAmount,
-          account_name: account.id,
-          ...(categoryId !== undefined ? { category: categoryId } : {}),
-        };
-      }
 
       const idNum = Number(selectedTransaction.id);
-      let updated: Transaction;
-      if (isIncome) {
-        updated = await transactionsApiService.updateIncomeTransaction(
-          idNum,
-          payload
-        );
-      } else {
-        updated = await transactionsApiService.updateExpenseTransaction(
-          idNum,
-          payload
-        );
-      }
+      const updated = await transactionsApiService.updateTransaction(idNum, {
+        description: editFormData.description,
+        date: editFormData.date,
+        amount: amountValue,
+        category_id: categoryId ?? null,
+      });
 
-      // Enrich with names for consistent display mapping
-      const categoryName =
-        !isIncome && categoryId
-          ? categories.find(cat => cat.id === categoryId)?.name ||
-            selectedTransaction.category
-          : selectedTransaction.category;
-      const enriched = (
-        isIncome
-          ? { ...updated, Account: account.name }
-          : {
-              ...updated,
-              Account: account.name,
-              Category: categoryName,
-            }
-      ) as any;
-      const transformed = transformTransaction(enriched);
+      const transformed = transformTransaction(updated);
       const next = transactions.map(t =>
         t.id === selectedTransaction.id ? transformed : t
       );
@@ -463,11 +397,7 @@ export function TransactionTable({
     if (!confirmDelete) return;
     try {
       const idNum = Number(selectedTransaction.id);
-      if (isIncome) {
-        await transactionsApiService.deleteIncomeTransaction(idNum);
-      } else {
-        await transactionsApiService.deleteExpenseTransaction(idNum);
-      }
+      await transactionsApiService.deleteTransaction(idNum);
       const next = transactions.filter(t => t.id !== selectedTransaction.id);
       onTransactionsChange(next);
       setShowEditModal(false);

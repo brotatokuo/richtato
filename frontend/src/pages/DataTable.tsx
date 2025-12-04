@@ -21,8 +21,6 @@ export function DataTable() {
   const [expenseTransactions, setExpenseTransactions] = useState<
     DisplayTransaction[]
   >([]);
-  const [incomeAccounts, setIncomeAccounts] = useState<Account[]>([]);
-  const [expenseAccounts, setExpenseAccounts] = useState<Account[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,21 +38,19 @@ export function DataTable() {
       setError(null);
 
       // Load all data in parallel
-      const [incomeData, expenseData, expenseChoices, incomeAccts] =
+      const [incomeData, expenseData, categoriesData, accountsData] =
         await Promise.all([
           transactionsApiService.getIncomeTransactions(),
           transactionsApiService.getExpenseTransactions(),
-          transactionsApiService.getExpenseFieldChoices(),
+          transactionsApiService.getCategories(),
           transactionsApiService.getAccounts(),
         ]);
 
       // Transform and set data
       setIncomeTransactions(incomeData.map(transformTransaction));
       setExpenseTransactions(expenseData.map(transformTransaction));
-      setExpenseAccounts(expenseChoices.accounts);
-      setIncomeAccounts(incomeAccts);
-      setAccounts(incomeAccts);
-      setCategories(expenseChoices.categories);
+      setAccounts(accountsData);
+      setCategories(categoriesData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
       console.error('Error loading data:', err);
@@ -126,7 +122,7 @@ export function DataTable() {
                 type="income"
                 transactions={incomeTransactions}
                 onTransactionsChange={setIncomeTransactions}
-                accounts={incomeAccounts}
+                accounts={accounts}
                 categories={categories}
                 loading={loading}
                 onRefresh={loadData}
@@ -138,7 +134,7 @@ export function DataTable() {
                 type="expense"
                 transactions={expenseTransactions}
                 onTransactionsChange={setExpenseTransactions}
-                accounts={expenseAccounts}
+                accounts={accounts}
                 categories={categories}
                 loading={loading}
                 onRefresh={loadData}

@@ -112,33 +112,15 @@ export function TransactionForm({
                 description: e.target.value,
               })
             }
-            onBlur={async e => {
+            onBlur={e => {
               const val = e.target.value || '';
               if (!isIncome) {
                 const hasRefundWord = /\brefund\b/i.test(val);
                 // Flip sign based on "refund" presence
-                let next = {
+                onFormChange({
                   ...formData,
                   isPositive: hasRefundWord ? true : false,
-                };
-                try {
-                  if (val.trim().length > 0) {
-                    const result =
-                      await transactionsApiService.categorizeExpenseDescription(
-                        { description: val }
-                      );
-                    if (
-                      result?.category !== undefined &&
-                      result?.category !== null
-                    ) {
-                      next = { ...next, category: String(result.category) };
-                    }
-                  }
-                } catch {
-                  // Best-effort; ignore errors
-                  // console.debug('categorize failed', err);
-                }
-                onFormChange(next);
+                });
               }
             }}
             placeholder={placeholder}

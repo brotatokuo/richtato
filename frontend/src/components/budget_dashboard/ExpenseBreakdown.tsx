@@ -91,7 +91,6 @@ export function ExpenseBreakdown() {
           type: 'pie',
           radius: ['60%', '85%'],
           center: ['50%', '50%'],
-          hoverAnimation: false,
           selectedMode: false,
           data: expenseCategories.map(expense => ({
             value: expense.value,
@@ -100,7 +99,10 @@ export function ExpenseBreakdown() {
               color: expense.color,
             },
           })),
-          emphasis: { disabled: true },
+          emphasis: {
+            disabled: true,
+            scale: false,
+          },
           label: {
             show: false,
           },

@@ -50,8 +50,8 @@ export const transformTransaction = (
     id: apiTransaction.id.toString(),
     date: apiTransaction.date,
     description: apiTransaction.description,
-    category: apiTransaction.Category || 'Uncategorized',
-    amount: apiTransaction.amount,
-    account: apiTransaction.Account || 'Unknown',
+    category: apiTransaction.category_name || 'Uncategorized',
+    amount: Number(apiTransaction.amount),
+    account: apiTransaction.account_name || 'Unknown',
   };
 };

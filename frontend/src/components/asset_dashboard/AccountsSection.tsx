@@ -17,8 +17,8 @@ interface AccountWithBalance extends Account {
   lastUpdated: string;
 }
 
-const getAccountIcon = (type: string) => {
-  switch (type.toLowerCase()) {
+const getAccountIcon = (type: string | undefined) => {
+  switch ((type || '').toLowerCase()) {
     case 'checking':
     case 'checking_account':
       return <Building2 className="h-5 w-5" />;
@@ -44,8 +44,8 @@ const getAccountIcon = (type: string) => {
   }
 };
 
-const getAccountTypeColor = (type: string) => {
-  switch (type.toLowerCase()) {
+const getAccountTypeColor = (type: string | undefined) => {
+  switch ((type || '').toLowerCase()) {
     case 'checking':
     case 'checking_account':
       return 'bg-primary';
@@ -71,8 +71,8 @@ const getAccountTypeColor = (type: string) => {
   }
 };
 
-const getAccountTypeLabel = (type: string) => {
-  switch (type.toLowerCase()) {
+const getAccountTypeLabel = (type: string | undefined) => {
+  switch ((type || '').toLowerCase()) {
     case 'checking':
     case 'checking_account':
       return 'Checking Accounts';
