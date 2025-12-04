@@ -67,7 +67,7 @@ export function TellerSection() {
     openTellerConnect(refresh);
   };
 
-  const handleSync = async (connection: TellerConnection) => {
+  const handleSync = async (connection: TellerConnection, fullSync: boolean = false) => {
     setSelectedConnection(connection);
     setShowSync(true);
     setSyncLoading(true);
@@ -76,7 +76,7 @@ export function TellerSection() {
     try {
       const result = await tellerApiService.syncTellerConnection(
         connection.id,
-        30
+        fullSync
       );
       setSyncResult(result);
       // Refresh connections to update last_sync time
@@ -146,7 +146,7 @@ export function TellerSection() {
         try {
           const result = await tellerApiService.syncTellerConnection(
             connection.id,
-            30
+            false // incremental sync
           );
           totalAccountsSynced += result.accounts_synced;
           totalTransactionsSynced += result.transactions_synced;

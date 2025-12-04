@@ -1,11 +1,19 @@
+import time
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Optional
 
 import requests
+from loguru import logger
 
 
 class TellerClient:
     BASE_URL = "https://api.teller.io"
+
+    # Rate limiting settings
+    MAX_RETRIES = 5
+    BASE_DELAY = 2.0  # Base delay in seconds
+    MAX_DELAY = 60.0  # Maximum delay between retries
+    REQUEST_DELAY = 0.5  # Delay between normal requests to avoid rate limits
 
     def __init__(self, cert_path: str, key_path: str, access_token: str):
         """
@@ -18,13 +26,63 @@ class TellerClient:
         """
         self.cert = (cert_path, key_path)
         self.auth = (access_token, "")
+        self._last_request_time = 0.0
+
+    def _wait_for_rate_limit(self):
+        """Ensure minimum delay between requests."""
+        elapsed = time.time() - self._last_request_time
+        if elapsed < self.REQUEST_DELAY:
+            time.sleep(self.REQUEST_DELAY - elapsed)
+        self._last_request_time = time.time()
 
     def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Any:
-        """Internal method to make authenticated GET requests."""
+        """Internal method to make authenticated GET requests with retry logic."""
         url = f"{self.BASE_URL}{endpoint}"
-        response = requests.get(url, cert=self.cert, auth=self.auth, params=params)
-        response.raise_for_status()
-        return response.json()
+
+        for attempt in range(self.MAX_RETRIES):
+            self._wait_for_rate_limit()
+
+            try:
+                response = requests.get(
+                    url, cert=self.cert, auth=self.auth, params=params
+                )
+
+                if response.status_code == 429:
+                    # Rate limited - extract retry-after or use exponential backoff
+                    retry_after = response.headers.get("Retry-After")
+                    if retry_after:
+                        delay = float(retry_after)
+                    else:
+                        delay = min(self.BASE_DELAY * (2**attempt), self.MAX_DELAY)
+
+                    logger.warning(
+                        f"Rate limited by Teller API. Waiting {delay:.1f}s before retry "
+                        f"(attempt {attempt + 1}/{self.MAX_RETRIES})"
+                    )
+                    time.sleep(delay)
+                    continue
+
+                response.raise_for_status()
+                return response.json()
+
+            except requests.exceptions.HTTPError as e:
+                if response.status_code == 429 and attempt < self.MAX_RETRIES - 1:
+                    continue  # Already handled above, but just in case
+                raise
+            except requests.exceptions.RequestException as e:
+                if attempt < self.MAX_RETRIES - 1:
+                    delay = min(self.BASE_DELAY * (2**attempt), self.MAX_DELAY)
+                    logger.warning(
+                        f"Request failed: {e}. Retrying in {delay:.1f}s "
+                        f"(attempt {attempt + 1}/{self.MAX_RETRIES})"
+                    )
+                    time.sleep(delay)
+                    continue
+                raise
+
+        raise requests.exceptions.HTTPError(
+            f"Max retries ({self.MAX_RETRIES}) exceeded for {url}"
+        )
 
     def get_accounts(self) -> List[Dict[str, Any]]:
         """
@@ -82,6 +140,8 @@ class TellerClient:
         using the from_id parameter. It will continue fetching until no more
         transactions are available.
 
+        Includes rate limiting protection with delays between batch requests.
+
         Args:
             account_id: The ID of the account to fetch transactions for.
             batch_size: Number of transactions per batch (max 500).
@@ -93,8 +153,15 @@ class TellerClient:
         """
         from_id = None
         batch_size = min(batch_size, 500)  # Enforce API maximum
+        batch_count = 0
 
         while True:
+            # Add extra delay between pagination requests to avoid rate limits
+            if batch_count > 0:
+                time.sleep(1.0)  # 1 second between batches
+
+            batch_count += 1
+
             # Fetch a batch of transactions
             batch = self.get_transactions(
                 account_id=account_id,

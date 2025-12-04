@@ -76,10 +76,42 @@ class SyncJobSerializer(serializers.ModelSerializer):
 
 
 class SyncConnectionCreateSerializer(serializers.Serializer):
-    """Serializer for creating Teller sync connections."""
+    """Serializer for creating Teller sync connections.
 
-    account_id = serializers.IntegerField()
+    Supports two modes:
+    1. Enrollment mode: Provide access_token, institution_name, and external_enrollment_id.
+       Backend will fetch accounts from Teller and create connections for each.
+    2. Direct mode: Provide all fields including external_account_id for a single account.
+    """
+
+    # Either provide account_id OR account_name + account_type to auto-create
+    account_id = serializers.IntegerField(required=False)
+    account_name = serializers.CharField(required=False, allow_blank=True)
+    account_type = serializers.CharField(required=False, default="checking")
     access_token = serializers.CharField()
-    external_account_id = serializers.CharField()
+    # Optional - if not provided or starts with 'enr_', backend fetches accounts from Teller
+    external_account_id = serializers.CharField(required=False, allow_blank=True)
     institution_name = serializers.CharField()
     external_enrollment_id = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, data):
+        """Validate the request data."""
+        external_account_id = data.get("external_account_id", "")
+        external_enrollment_id = data.get("external_enrollment_id", "")
+
+        # If external_account_id is provided and NOT an enrollment ID,
+        # we need account info for direct creation
+        is_enrollment_mode = (
+            not external_account_id
+            or external_account_id.startswith("enr_")
+            or external_enrollment_id
+        )
+
+        if not is_enrollment_mode:
+            # Direct mode - need account info
+            if not data.get("account_id") and not data.get("account_name"):
+                raise serializers.ValidationError(
+                    "Either account_id or account_name must be provided for direct account creation"
+                )
+
+        return data

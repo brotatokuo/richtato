@@ -48,16 +48,14 @@ export function TellerConnectionCard({
           <span
             className={`text-xs font-medium ${statusColors[connection.status]}`}
           >
-            {connection.status}
+            {connection.status_display || connection.status}
           </span>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {connection.account_type && (
-          <div className="text-xs text-muted-foreground">
-            Type: {connection.account_type}
-          </div>
-        )}
+        <div className="text-xs text-muted-foreground">
+          Provider: {connection.provider_display || connection.provider}
+        </div>
         <div className="text-xs text-muted-foreground">
           Last synced: {lastSyncDate}
         </div>

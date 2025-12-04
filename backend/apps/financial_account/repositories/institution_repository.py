@@ -37,8 +37,8 @@ class FinancialInstitutionRepository:
         self,
         name: str,
         slug: str,
-        logo_url: str = None,
-        support_url: str = None,
+        logo_url: Optional[str] = None,
+        support_url: Optional[str] = None,
     ) -> FinancialInstitution:
         """Create a new financial institution."""
         return FinancialInstitution.objects.create(
@@ -46,10 +46,13 @@ class FinancialInstitutionRepository:
         )
 
     def get_or_create_institution(
-        self, name: str, slug: str, **kwargs
+        self, name: str, slug: Optional[str] = None, **kwargs
     ) -> FinancialInstitution:
-        """Get or create an institution."""
+        """Get or create an institution by name (which has unique constraint)."""
+        if slug is None:
+            slug = name.lower().replace(" ", "_").replace("-", "_")
+
         institution, created = FinancialInstitution.objects.get_or_create(
-            slug=slug, defaults={"name": name, **kwargs}
+            name=name, defaults={"slug": slug, **kwargs}
         )
         return institution

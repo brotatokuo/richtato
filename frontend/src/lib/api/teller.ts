@@ -5,24 +5,36 @@ import { csrfService } from './csrf';
 
 export interface TellerConnection {
   id: number;
-  teller_account_id: string;
-  enrollment_id: string;
-  institution_name: string;
+  account: number;
   account_name: string;
-  account_type: string;
+  provider: string;
+  provider_display: string;
+  institution_name: string;
+  external_account_id: string;
   status: 'active' | 'disconnected' | 'error';
+  status_display: string;
   last_sync: string | null;
-  last_sync_error: string;
+  sync_frequency: string;
+  initial_backfill_complete: boolean;
+  oldest_transaction_date: string | null;
+  last_sync_error: string | null;
   created_at: string;
 }
 
 export interface CreateTellerConnectionInput {
   access_token: string;
-  enrollment_id?: string;
-  teller_account_id: string;
+  external_enrollment_id?: string;
+  external_account_id?: string;
   institution_name: string;
-  account_name: string;
+  account_name?: string;
   account_type?: string;
+}
+
+export interface CreateTellerConnectionResponse {
+  connections?: TellerConnection[];
+  // Single connection response (backwards compatibility)
+  id?: number;
+  account?: number;
 }
 
 export interface TellerSyncResult {
@@ -73,11 +85,12 @@ class TellerApiService {
   }
 
   /**
-   * Create a new Teller connection
+   * Create Teller connections for all accounts in an enrollment.
+   * Backend fetches accounts from Teller and creates connections for each.
    */
   async saveTellerConnection(
     input: CreateTellerConnectionInput
-  ): Promise<TellerConnection> {
+  ): Promise<CreateTellerConnectionResponse> {
     let response = await fetch(`${this.baseUrl}/teller/connections/`, {
       method: 'POST',
       headers: await csrfService.getHeaders(),
@@ -97,7 +110,7 @@ class TellerApiService {
       });
     }
 
-    return this.handleResponse<TellerConnection>(response);
+    return this.handleResponse<CreateTellerConnectionResponse>(response);
   }
 
   /**
@@ -137,24 +150,24 @@ class TellerApiService {
    */
   async syncTellerConnection(
     id: number,
-    days: number = 30
+    fullSync: boolean = false
   ): Promise<TellerSyncResult> {
-    let response = await fetch(`${this.baseUrl}/teller/sync/${id}/`, {
+    let response = await fetch(`${this.baseUrl}/teller/connections/${id}/sync/`, {
       method: 'POST',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
-      body: JSON.stringify({ days }),
+      body: JSON.stringify({ full_sync: fullSync }),
     });
 
     // If CSRF token is invalid, refresh it and retry once
     if (response.status === 403) {
       console.log('CSRF token invalid for Teller sync, refreshing...');
       await csrfService.refreshToken();
-      response = await fetch(`${this.baseUrl}/teller/sync/${id}/`, {
+      response = await fetch(`${this.baseUrl}/teller/connections/${id}/sync/`, {
         method: 'POST',
         headers: await csrfService.getHeaders(),
         credentials: 'include',
-        body: JSON.stringify({ days }),
+        body: JSON.stringify({ full_sync: fullSync }),
       });
     }
 

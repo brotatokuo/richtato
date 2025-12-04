@@ -76,60 +76,23 @@ export function useTellerConnect() {
         setError(null);
 
         try {
-          // The enrollment object structure from Teller
+          // Extract enrollment data - backend will fetch all accounts from Teller
           const accessToken = enrollment.accessToken;
           const enrollmentId = enrollment.enrollment?.id || '';
           const institutionName =
             enrollment.enrollment?.institution?.name || 'Unknown Bank';
 
-          // Accounts might be in different formats - normalize to array
-          let accountsArray: Array<{
-            id: string;
-            name?: string;
-            type?: string;
-            subtype?: string;
-            status?: string;
-          }> = [];
+          console.log(
+            `Sending enrollment to backend: ${enrollmentId} for ${institutionName}`
+          );
 
-          if (enrollment.accounts) {
-            if (Array.isArray(enrollment.accounts)) {
-              accountsArray = enrollment.accounts;
-            } else if (typeof enrollment.accounts === 'object') {
-              // If accounts is an object, convert to array
-              accountsArray = Object.values(enrollment.accounts);
-            }
-          }
-
-          console.log('Processing accounts:', accountsArray);
-
-          // If no accounts available from the enrollment response,
-          // send enrollment ID and let backend fetch accounts from Teller
-          if (accountsArray.length === 0) {
-            console.log(
-              'No accounts in enrollment response, sending enrollment ID to backend'
-            );
-            // Backend will detect the enrollment ID and fetch accounts
-            await tellerApiService.saveTellerConnection({
-              access_token: accessToken,
-              enrollment_id: enrollmentId,
-              teller_account_id: enrollmentId, // Backend will detect this is an enrollment ID
-              institution_name: institutionName,
-              account_name: institutionName,
-              account_type: 'depository',
-            });
-          } else {
-            // Save each account as a separate connection
-            for (const account of accountsArray) {
-              await tellerApiService.saveTellerConnection({
-                access_token: accessToken,
-                enrollment_id: enrollmentId,
-                teller_account_id: account.id,
-                institution_name: institutionName,
-                account_name: account.name || account.type || 'Account',
-                account_type: account.type || 'depository',
-              });
-            }
-          }
+          // Send enrollment ID to backend - it will fetch all accounts from Teller
+          // and create a FinancialAccount + SyncConnection for each
+          await tellerApiService.saveTellerConnection({
+            access_token: accessToken,
+            external_enrollment_id: enrollmentId,
+            institution_name: institutionName,
+          });
 
           if (onSuccess) {
             onSuccess();
