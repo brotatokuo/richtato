@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { TellerSyncResult } from '@/lib/api/teller';
+import { SyncJobProgress, TellerSyncResult } from '@/lib/api/teller';
 import { AlertCircle, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
 
 interface TellerSyncModalProps {
@@ -15,6 +15,7 @@ interface TellerSyncModalProps {
   onClose: () => void;
   loading: boolean;
   result: TellerSyncResult | null;
+  progress?: SyncJobProgress | null;
 }
 
 export function TellerSyncModal({
@@ -22,6 +23,7 @@ export function TellerSyncModal({
   onClose,
   loading,
   result,
+  progress,
 }: TellerSyncModalProps) {
   const handleRefresh = () => {
     window.location.reload();
@@ -43,9 +45,47 @@ export function TellerSyncModal({
 
         <div className="py-4">
           {loading && (
-            <div className="flex items-center justify-center gap-3 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span>Please wait...</span>
+            <div className="space-y-4">
+              <div className="flex items-center justify-center gap-3 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>
+                  {progress?.status === 'running'
+                    ? 'Syncing transactions...'
+                    : 'Starting sync...'}
+                </span>
+              </div>
+              {progress?.status === 'running' && (
+                <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">
+                      Transactions synced:
+                    </span>
+                    <span className="text-lg font-semibold tabular-nums">
+                      {progress.transactions_synced.toLocaleString()}
+                    </span>
+                  </div>
+                  {progress.transactions_skipped > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">
+                        Skipped (duplicates):
+                      </span>
+                      <span className="text-sm tabular-nums text-muted-foreground">
+                        {progress.transactions_skipped.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  {progress.batches_processed > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">
+                        Batches processed:
+                      </span>
+                      <span className="text-sm tabular-nums text-muted-foreground">
+                        {progress.batches_processed}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -65,7 +105,9 @@ export function TellerSyncModal({
 
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Accounts synced:</span>
+                  <span className="text-muted-foreground">
+                    Accounts synced:
+                  </span>
                   <span className="font-medium">{result.accounts_synced}</span>
                 </div>
                 <div className="flex justify-between">
@@ -92,12 +134,13 @@ export function TellerSyncModal({
               )}
 
               {result.success &&
-                (result.accounts_synced > 0 || result.transactions_synced > 0) && (
+                (result.accounts_synced > 0 ||
+                  result.transactions_synced > 0) && (
                   <div className="mt-4 p-3 bg-blue-50 rounded-md border border-blue-200">
                     <div className="text-sm text-blue-800">
-                      <strong>💡 Note:</strong> New accounts and transactions have
-                      been added. Refresh the page to see them in the Accounts and
-                      Data sections.
+                      <strong>💡 Note:</strong> New accounts and transactions
+                      have been added. Refresh the page to see them in the
+                      Accounts and Data sections.
                     </div>
                   </div>
                 )}
@@ -107,11 +150,7 @@ export function TellerSyncModal({
 
         <DialogFooter>
           {!loading && result?.success && (
-            <Button
-              onClick={handleRefresh}
-              variant="default"
-              className="mr-2"
-            >
+            <Button onClick={handleRefresh} variant="default" className="mr-2">
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh Page
             </Button>

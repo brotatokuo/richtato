@@ -153,8 +153,17 @@ class TellerSyncService:
                             batch_skipped += 1
                             continue
 
-                        # Determine transaction type
-                        transaction_type = "credit" if txn_amount_raw > 0 else "debit"
+                        # Determine transaction type based on account type
+                        # For credit cards: positive = purchase (expense), negative = payment/refund
+                        # For bank accounts: positive = deposit (income), negative = withdrawal (expense)
+                        if account.account_type == "credit_card":
+                            transaction_type = (
+                                "debit" if txn_amount_raw > 0 else "credit"
+                            )
+                        else:
+                            transaction_type = (
+                                "credit" if txn_amount_raw > 0 else "debit"
+                            )
 
                         # Get or create merchant if available
                         merchant = None
@@ -314,8 +323,13 @@ class TellerSyncService:
                         skipped_count += 1
                         continue
 
-                    # Determine transaction type
-                    transaction_type = "credit" if txn_amount_raw > 0 else "debit"
+                    # Determine transaction type based on account type
+                    # For credit cards: positive = purchase (expense), negative = payment/refund
+                    # For bank accounts: positive = deposit (income), negative = withdrawal (expense)
+                    if account.account_type == "credit_card":
+                        transaction_type = "debit" if txn_amount_raw > 0 else "credit"
+                    else:
+                        transaction_type = "credit" if txn_amount_raw > 0 else "debit"
 
                     # Get or create merchant
                     merchant = None

@@ -296,7 +296,7 @@ export function TransactionTable({
         date: formData.date,
         amount: amountNum,
         description: formData.description,
-        transaction_type: isIncome ? 'credit' : 'debit',
+        transaction_type: isIncome ? 'credit' : (formData.isPositive ? 'credit' : 'debit'),
         category_id: categoryId,
       });
 
@@ -375,6 +375,7 @@ export function TransactionTable({
         date: editFormData.date,
         amount: amountValue,
         category_id: categoryId ?? null,
+        transaction_type: isIncome ? 'credit' : (editFormData.isPositive ? 'credit' : 'debit'),
       });
 
       const transformed = transformTransaction(updated);

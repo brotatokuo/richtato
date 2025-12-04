@@ -51,7 +51,7 @@ export const transformTransaction = (
     date: apiTransaction.date,
     description: apiTransaction.description,
     category: apiTransaction.category_name || 'Uncategorized',
-    amount: Number(apiTransaction.amount),
+    amount: Number(apiTransaction.signed_amount),
     account: apiTransaction.account_name || 'Unknown',
   };
 };

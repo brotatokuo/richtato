@@ -45,6 +45,21 @@ export interface TellerSyncResult {
   message: string;
 }
 
+export interface SyncJobProgress {
+  id: number;
+  connection: number;
+  status: 'running' | 'completed' | 'failed' | 'cancelled';
+  status_display: string;
+  is_full_sync: boolean;
+  started_at: string;
+  completed_at: string | null;
+  duration_seconds: number | null;
+  transactions_synced: number;
+  transactions_skipped: number;
+  batches_processed: number;
+  errors: string[] | null;
+}
+
 class TellerApiService {
   private baseUrl: string;
 
@@ -117,31 +132,27 @@ class TellerApiService {
    * Disconnect a Teller connection
    */
   async deleteTellerConnection(id: number): Promise<void> {
-    let response = await fetch(
-      `${this.baseUrl}/teller/connections/${id}/`,
-      {
-        method: 'DELETE',
-        headers: await csrfService.getHeaders(),
-        credentials: 'include',
-      }
-    );
+    let response = await fetch(`${this.baseUrl}/teller/connections/${id}/`, {
+      method: 'DELETE',
+      headers: await csrfService.getHeaders(),
+      credentials: 'include',
+    });
 
     // If CSRF token is invalid, refresh it and retry once
     if (response.status === 403) {
       console.log('CSRF token invalid for Teller delete, refreshing...');
       await csrfService.refreshToken();
-      response = await fetch(
-        `${this.baseUrl}/teller/connections/${id}/`,
-        {
-          method: 'DELETE',
-          headers: await csrfService.getHeaders(),
-          credentials: 'include',
-        }
-      );
+      response = await fetch(`${this.baseUrl}/teller/connections/${id}/`, {
+        method: 'DELETE',
+        headers: await csrfService.getHeaders(),
+        credentials: 'include',
+      });
     }
 
     if (!response.ok) {
-      throw new Error(`Failed to disconnect Teller connection: ${response.status}`);
+      throw new Error(
+        `Failed to disconnect Teller connection: ${response.status}`
+      );
     }
   }
 
@@ -152,12 +163,15 @@ class TellerApiService {
     id: number,
     fullSync: boolean = false
   ): Promise<TellerSyncResult> {
-    let response = await fetch(`${this.baseUrl}/teller/connections/${id}/sync/`, {
-      method: 'POST',
-      headers: await csrfService.getHeaders(),
-      credentials: 'include',
-      body: JSON.stringify({ full_sync: fullSync }),
-    });
+    let response = await fetch(
+      `${this.baseUrl}/teller/connections/${id}/sync/`,
+      {
+        method: 'POST',
+        headers: await csrfService.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ full_sync: fullSync }),
+      }
+    );
 
     // If CSRF token is invalid, refresh it and retry once
     if (response.status === 403) {
@@ -172,6 +186,27 @@ class TellerApiService {
     }
 
     return this.handleResponse<TellerSyncResult>(response);
+  }
+
+  /**
+   * Get the progress of the latest sync job for a connection
+   */
+  async getSyncJobProgress(
+    connectionId: number
+  ): Promise<SyncJobProgress | null> {
+    const response = await fetch(
+      `${this.baseUrl}/teller/connections/${connectionId}/progress/`,
+      {
+        method: 'GET',
+        headers: this.getHeaders(),
+        credentials: 'include',
+      }
+    );
+
+    const data = await this.handleResponse<{ job: SyncJobProgress | null }>(
+      response
+    );
+    return data.job;
   }
 }
 

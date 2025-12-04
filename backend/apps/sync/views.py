@@ -359,3 +359,33 @@ class SyncJobListAPIView(APIView):
         jobs = self.job_repository.get_by_connection(connection)
         serializer = SyncJobSerializer(jobs, many=True)
         return Response({"jobs": serializer.data})
+
+
+class SyncJobProgressAPIView(APIView):
+    """Get latest sync job progress for a connection (for polling during sync)."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.connection_repository = SyncConnectionRepository()
+        self.job_repository = SyncJobRepository()
+
+    def get(self, request, pk):
+        """Get the latest sync job progress."""
+        connection = self.connection_repository.get_by_id(pk)
+
+        if not connection or connection.user != request.user:
+            return Response(
+                {"error": "Connection not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Get the most recent job for this connection
+        jobs = self.job_repository.get_by_connection(connection)
+        if not jobs:
+            return Response({"job": None})
+
+        latest_job = jobs[0]  # Already ordered by -started_at
+        serializer = SyncJobSerializer(latest_job)
+        return Response({"job": serializer.data})

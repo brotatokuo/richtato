@@ -8,12 +8,13 @@ import {
 } from '@/components/ui/card';
 import { useTellerConnect } from '@/hooks/useTellerConnect';
 import {
+  SyncJobProgress,
   TellerConnection,
   TellerSyncResult,
   tellerApiService,
 } from '@/lib/api/teller';
 import { Building2, Plus, RefreshCw } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { TellerConnectionCard } from './TellerConnectionCard';
 import { TellerDisconnectModal } from './TellerDisconnectModal';
 import { TellerSyncModal } from './TellerSyncModal';
@@ -31,6 +32,10 @@ export function TellerSection() {
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncResult, setSyncResult] = useState<TellerSyncResult | null>(null);
   const [syncAllLoading, setSyncAllLoading] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<SyncJobProgress | null>(
+    null
+  );
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const {
     openTellerConnect,
@@ -63,15 +68,65 @@ export function TellerSection() {
     }
   }, [tellerError, clearTellerError]);
 
+  // Poll for sync progress
+  const pollProgress = useCallback(async (connectionId: number) => {
+    try {
+      const progress = await tellerApiService.getSyncJobProgress(connectionId);
+      if (progress) {
+        setSyncProgress(progress);
+      }
+    } catch (e) {
+      // Silently ignore polling errors
+      console.debug('Failed to poll sync progress:', e);
+    }
+  }, []);
+
+  // Start polling when sync starts
+  const startPolling = useCallback(
+    (connectionId: number) => {
+      // Poll immediately
+      pollProgress(connectionId);
+      // Then poll every 1 second
+      pollIntervalRef.current = setInterval(() => {
+        pollProgress(connectionId);
+      }, 1000);
+    },
+    [pollProgress]
+  );
+
+  // Stop polling when sync ends
+  const stopPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  }, []);
+
+  // Clean up polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
+
   const handleConnect = () => {
     openTellerConnect(refresh);
   };
 
-  const handleSync = async (connection: TellerConnection, fullSync: boolean = false) => {
+  const handleSync = async (
+    connection: TellerConnection,
+    fullSync: boolean = false
+  ) => {
     setSelectedConnection(connection);
     setShowSync(true);
     setSyncLoading(true);
     setSyncResult(null);
+    setSyncProgress(null);
+
+    // Start polling for progress
+    startPolling(connection.id);
 
     try {
       const result = await tellerApiService.syncTellerConnection(
@@ -90,6 +145,7 @@ export function TellerSection() {
         message: 'Sync failed',
       });
     } finally {
+      stopPolling();
       setSyncLoading(false);
     }
   };
@@ -118,13 +174,12 @@ export function TellerSection() {
   const closeSync = () => {
     setShowSync(false);
     setSyncResult(null);
+    setSyncProgress(null);
     setSelectedConnection(null);
   };
 
   const handleSyncAll = async () => {
-    const activeConnections = connections.filter(
-      c => c.status === 'active'
-    );
+    const activeConnections = connections.filter(c => c.status === 'active');
 
     if (activeConnections.length === 0) {
       setError('No active connections to sync');
@@ -135,14 +190,20 @@ export function TellerSection() {
     setShowSync(true);
     setSyncLoading(true);
     setSyncResult(null);
+    setSyncProgress(null);
 
     try {
       let totalAccountsSynced = 0;
       let totalTransactionsSynced = 0;
+      let totalSkipped = 0;
+      let totalBatches = 0;
       const allErrors: string[] = [];
 
       // Sync each connection sequentially
       for (const connection of activeConnections) {
+        // Start polling for this connection
+        startPolling(connection.id);
+
         try {
           const result = await tellerApiService.syncTellerConnection(
             connection.id,
@@ -151,11 +212,31 @@ export function TellerSection() {
           totalAccountsSynced += result.accounts_synced;
           totalTransactionsSynced += result.transactions_synced;
           allErrors.push(...result.errors);
+
+          // Update cumulative progress display
+          if (syncProgress) {
+            totalSkipped += syncProgress.transactions_skipped;
+            totalBatches += syncProgress.batches_processed;
+          }
+
+          // Update displayed progress with cumulative totals
+          setSyncProgress(prev =>
+            prev
+              ? {
+                  ...prev,
+                  transactions_synced: totalTransactionsSynced,
+                  transactions_skipped: totalSkipped,
+                  batches_processed: totalBatches,
+                }
+              : null
+          );
         } catch (e: any) {
           allErrors.push(
             `${connection.institution_name}: ${e?.message ?? 'Failed to sync'}`
           );
         }
+
+        stopPolling();
       }
 
       setSyncResult({
@@ -180,6 +261,7 @@ export function TellerSection() {
         message: 'Sync failed',
       });
     } finally {
+      stopPolling();
       setSyncLoading(false);
       setSyncAllLoading(false);
     }
@@ -263,6 +345,7 @@ export function TellerSection() {
         onClose={closeSync}
         loading={syncLoading}
         result={syncResult}
+        progress={syncProgress}
       />
     </Card>
   );

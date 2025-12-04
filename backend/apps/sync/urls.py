@@ -25,4 +25,9 @@ urlpatterns = [
         views.SyncJobListAPIView.as_view(),
         name="sync-job-list",
     ),
+    path(
+        "connections/<int:pk>/progress/",
+        views.SyncJobProgressAPIView.as_view(),
+        name="sync-job-progress",
+    ),
 ]
