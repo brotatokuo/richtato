@@ -61,6 +61,10 @@ class FinancialAccount(models.Model):
     )
     currency = models.CharField(max_length=3, default="USD")
     is_active = models.BooleanField(default=True)
+    is_liability = models.BooleanField(
+        default=False,
+        help_text="True for credit cards and other liability accounts (excluded from net worth)",
+    )
     sync_source = models.CharField(
         max_length=20, choices=SYNC_SOURCE_CHOICES, default="manual"
     )

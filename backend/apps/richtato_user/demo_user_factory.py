@@ -82,13 +82,14 @@ class DemoUserFactory:
             balance=Decimal("10000.00"),
         )
 
-        # Credit cards
+        # Credit cards (marked as liabilities)
         self.boa_card = FinancialAccount.objects.create(
             user=self.user,
             name="Bank of America Custom Cash",
             institution=boa,
             account_type="credit_card",
             balance=Decimal("0"),
+            is_liability=True,
         )
         self.amex_card = FinancialAccount.objects.create(
             user=self.user,
@@ -96,6 +97,7 @@ class DemoUserFactory:
             institution=amex,
             account_type="credit_card",
             balance=Decimal("0"),
+            is_liability=True,
         )
         self.chase_card = FinancialAccount.objects.create(
             user=self.user,
@@ -103,11 +105,14 @@ class DemoUserFactory:
             institution=chase,
             account_type="credit_card",
             balance=Decimal("0"),
+            is_liability=True,
         )
 
     def _create_categories(self):
         """Create transaction categories for the demo user."""
+        # Format: (name, slug, icon, color, is_income, is_expense)
         categories_data = [
+            # Expense categories
             ("Travel", "travel", "✈️", "#3B82F6", False, True),
             ("Shopping", "shopping", "🛍️", "#8B5CF6", False, True),
             ("Groceries", "groceries", "🛒", "#10B981", False, True),
@@ -118,7 +123,23 @@ class DemoUserFactory:
             ("Entertainment", "entertainment", "🎬", "#14B8A6", False, True),
             ("Subscriptions", "subscriptions", "📱", "#F97316", False, True),
             ("Car", "car", "🚗", "#84CC16", False, True),
+            # Income categories
             ("Salary", "salary", "💰", "#22C55E", True, False),
+            ("Freelance Income", "freelance-income", "💼", "#0D9488", True, False),
+            ("Interest Income", "interest-income", "🏦", "#2563EB", True, False),
+            ("Dividend Income", "dividend-income", "📊", "#7C3AED", True, False),
+            ("Tax Refund", "tax-refund", "🏛️", "#16A34A", True, False),
+            # Neither income nor expense
+            ("Refund", "refund", "↩️", "#EA580C", False, False),
+            ("Transfer", "transfer", "🔄", "#64748B", False, False),
+            (
+                "Credit Card Payment",
+                "credit-card-payment",
+                "💳",
+                "#475569",
+                False,
+                False,
+            ),
         ]
 
         for name, slug, icon, color, is_income, is_expense in categories_data:

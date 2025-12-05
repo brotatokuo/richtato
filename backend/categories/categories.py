@@ -28,6 +28,16 @@ class BaseCategory(ABC):
         """Get the color for the category."""
         raise NotImplementedError("Subclasses should implement this method.")
 
+    @property
+    def is_income(self):
+        """Whether this category represents income. Override in income categories."""
+        return False
+
+    @property
+    def is_expense(self):
+        """Whether this category represents an expense. Override in income categories."""
+        return True
+
     @abstractmethod
     def generate_keywords(self):
         """Generate keywords for the category."""
@@ -882,9 +892,346 @@ class UnknownCategory(BaseCategory):
         return []
 
 
+# region Income Categories
+class SalaryIncomeCategory(BaseCategory):
+    """Salary and payroll income."""
+
+    @property
+    def name(self):
+        return "Salary"
+
+    @property
+    def icon(self):
+        return "💰"
+
+    @property
+    def color(self):
+        return "green"
+
+    @property
+    def is_income(self):
+        return True
+
+    @property
+    def is_expense(self):
+        return False
+
+    def generate_keywords(self):
+        payroll = [
+            "payroll",
+            "direct deposit",
+            "direct dep",
+            "salary",
+            "wages",
+            "paycheck",
+            "compensation",
+            "net pay",
+            "pay period",
+        ]
+
+        payroll_providers = [
+            "adp",
+            "gusto",
+            "paychex",
+            "workday",
+            "paylocity",
+            "paycom",
+            "ceridian",
+            "ultipro",
+            "rippling",
+            "justworks",
+            "zenefits",
+        ]
+
+        return payroll + payroll_providers
+
+
+class FreelanceIncomeCategory(BaseCategory):
+    """Freelance and self-employment income."""
+
+    @property
+    def name(self):
+        return "Freelance Income"
+
+    @property
+    def icon(self):
+        return "💼"
+
+    @property
+    def color(self):
+        return "teal"
+
+    @property
+    def is_income(self):
+        return True
+
+    @property
+    def is_expense(self):
+        return False
+
+    def generate_keywords(self):
+        freelance = [
+            "freelance",
+            "contractor",
+            "consulting",
+            "1099",
+            "self-employment",
+            "client payment",
+            "invoice payment",
+        ]
+
+        platforms = [
+            "upwork",
+            "fiverr",
+            "toptal",
+            "freelancer",
+        ]
+
+        return freelance + platforms
+
+
+class InterestIncomeCategory(BaseCategory):
+    """Interest income from savings and bank accounts."""
+
+    @property
+    def name(self):
+        return "Interest Income"
+
+    @property
+    def icon(self):
+        return "🏦"
+
+    @property
+    def color(self):
+        return "blue"
+
+    @property
+    def is_income(self):
+        return True
+
+    @property
+    def is_expense(self):
+        return False
+
+    def generate_keywords(self):
+        interest = [
+            "interest payment",
+            "interest earned",
+            "interest credit",
+            "apy interest",
+            "savings interest",
+            "interest paid",
+            "interest income",
+            "accrued interest",
+        ]
+
+        return interest
+
+
+class DividendIncomeCategory(BaseCategory):
+    """Dividend income from investments."""
+
+    @property
+    def name(self):
+        return "Dividend Income"
+
+    @property
+    def icon(self):
+        return "📊"
+
+    @property
+    def color(self):
+        return "purple"
+
+    @property
+    def is_income(self):
+        return True
+
+    @property
+    def is_expense(self):
+        return False
+
+    def generate_keywords(self):
+        dividends = [
+            "dividend",
+            "div payment",
+            "quarterly dividend",
+            "stock dividend",
+            "fund distribution",
+            "capital gain dist",
+            "reinvested dividend",
+        ]
+
+        return dividends
+
+
+class RefundCategory(BaseCategory):
+    """Refunds and returns."""
+
+    @property
+    def name(self):
+        return "Refund"
+
+    @property
+    def icon(self):
+        return "↩️"
+
+    @property
+    def color(self):
+        return "orange"
+
+    @property
+    def is_income(self):
+        return False  # Refunds are NOT income, they're expense reversals
+
+    @property
+    def is_expense(self):
+        return False  # Also not an expense
+
+    def generate_keywords(self):
+        refunds = [
+            "refund",
+            "return",
+            "credit adjustment",
+            "reversal",
+            "reimbursement",
+            "chargeback",
+            "cashback",
+            "cash back",
+            "rebate",
+        ]
+
+        return refunds
+
+
+class TaxRefundCategory(BaseCategory):
+    """Tax refunds from government."""
+
+    @property
+    def name(self):
+        return "Tax Refund"
+
+    @property
+    def icon(self):
+        return "🏛️"
+
+    @property
+    def color(self):
+        return "green"
+
+    @property
+    def is_income(self):
+        return True
+
+    @property
+    def is_expense(self):
+        return False
+
+    def generate_keywords(self):
+        tax_refunds = [
+            "irs treas",
+            "tax refund",
+            "state tax refund",
+            "federal tax refund",
+            "tax ref",
+            "treasury",
+            "irs",
+        ]
+
+        return tax_refunds
+
+
+class TransferCategory(BaseCategory):
+    """Internal transfers between accounts - neither income nor expense."""
+
+    @property
+    def name(self):
+        return "Transfer"
+
+    @property
+    def icon(self):
+        return "🔄"
+
+    @property
+    def color(self):
+        return "gray"
+
+    @property
+    def is_income(self):
+        return False  # Transfers are not income
+
+    @property
+    def is_expense(self):
+        return False  # Transfers are not expenses
+
+    def generate_keywords(self):
+        transfers = [
+            "transfer",
+            "xfer",
+            "internal transfer",
+            "account transfer",
+            "wire transfer",
+            "ach transfer",
+            "online transfer",
+            "bank transfer",
+        ]
+
+        peer_to_peer = [
+            "zelle",
+            "venmo",
+            "cash app",
+            "paypal",
+            "apple cash",
+        ]
+
+        return transfers + peer_to_peer
+
+
+class CreditCardPaymentCategory(BaseCategory):
+    """Credit card payments - not an expense (paying off debt)."""
+
+    @property
+    def name(self):
+        return "Credit Card Payment"
+
+    @property
+    def icon(self):
+        return "💳"
+
+    @property
+    def color(self):
+        return "slate"
+
+    @property
+    def is_income(self):
+        return False
+
+    @property
+    def is_expense(self):
+        return False  # Paying off credit card is not an expense
+
+    def generate_keywords(self):
+        payments = [
+            "payment thank you",
+            "autopay",
+            "auto pay",
+            "credit card payment",
+            "card payment",
+            "online payment",
+            "payment received",
+            "payment - thank",
+        ]
+
+        return payments
+
+
+# endregion Income Categories
+
+
 # region Register Categories
 def register_categories():
     """Register all available categories."""
+    # Expense categories
     TravelCategory()
     ShoppingCategory()
     OnlineShopping()
@@ -907,6 +1254,18 @@ def register_categories():
     MiscellaneousCategory()
     PaymentsCategory()
     UnknownCategory()
+
+    # Income categories
+    SalaryIncomeCategory()
+    FreelanceIncomeCategory()
+    InterestIncomeCategory()
+    DividendIncomeCategory()
+    TaxRefundCategory()
+
+    # Neither income nor expense (transfers, refunds)
+    RefundCategory()
+    TransferCategory()
+    CreditCardPaymentCategory()
 
 
 register_categories()

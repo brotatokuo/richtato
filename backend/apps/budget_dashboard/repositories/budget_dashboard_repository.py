@@ -8,21 +8,44 @@ from django.db.models import Q, Sum
 from apps.budget.models import Budget
 from apps.transaction.models import Transaction
 
+# Canonical slug for Credit Card Payment category (excluded from expenses)
+CC_PAYMENT_CATEGORY_SLUG = "credit-card-payment"
+
 
 class BudgetDashboardRepository:
     """Repository for Budget Dashboard aggregation queries - ORM layer only."""
 
-    # Expense queries (debit transactions)
+    def _get_expense_filter(self):
+        """
+        Get Q filter for expense transactions.
+
+        Expense is determined by:
+        1. Transactions with category marked as is_expense=True, OR
+        2. Uncategorized debit transactions (fallback for backward compatibility)
+
+        Explicitly excludes Credit Card Payment category for safety.
+        """
+        expense_filter = Q(category__is_expense=True) | Q(
+            category__isnull=True, transaction_type="debit"
+        )
+        # Explicitly exclude Credit Card Payment category
+        cc_payment_exclusion = ~Q(category__slug=CC_PAYMENT_CATEGORY_SLUG)
+        return expense_filter & cc_payment_exclusion
+
+    # Expense queries (based on category.is_expense or debit transactions)
     def get_expense_sum_by_date_range(
         self, user, start_date: date, end_date: date
     ) -> Decimal:
-        """Get sum of expenses (debit transactions) for a date range."""
-        result = Transaction.objects.filter(
-            user=user,
-            transaction_type="debit",
-            date__gte=start_date,
-            date__lte=end_date,
-        ).aggregate(total=Sum("amount"))
+        """Get sum of expenses for a date range (based on category.is_expense)."""
+        result = (
+            Transaction.objects.filter(
+                user=user,
+                date__gte=start_date,
+                date__lte=end_date,
+            )
+            .filter(self._get_expense_filter())
+            .aggregate(total=Sum("amount"))
+        )
         return result["total"] or Decimal("0")
 
     def get_expenses_by_category(
@@ -32,10 +55,10 @@ class BudgetDashboardRepository:
         qs = (
             Transaction.objects.filter(
                 user=user,
-                transaction_type="debit",
                 date__gte=start_date,
                 date__lte=end_date,
             )
+            .filter(self._get_expense_filter())
             .values("category__name")
             .annotate(total=Sum("amount"))
             .order_by("-total")
@@ -48,9 +71,9 @@ class BudgetDashboardRepository:
         self, user, category, start_date: date, end_date: date
     ) -> Decimal:
         """Get sum of expenses for a specific category and date range."""
+        # When filtering by specific category, we trust the category's is_expense flag
         result = Transaction.objects.filter(
             user=user,
-            transaction_type="debit",
             category=category,
             date__gte=start_date,
             date__lte=end_date,
@@ -62,24 +85,27 @@ class BudgetDashboardRepository:
     ) -> Decimal:
         """Get sum of non-essential expenses for a date range.
 
-        Note: With TransactionCategory, we filter by is_expense=True and
-        could add additional filtering logic based on category properties.
+        Filters by category.is_expense=True for categorized transactions
+        or falls back to debit transactions for uncategorized.
         """
-        # For now, just return all debit transactions - category type filtering
-        # can be added when TransactionCategory has the relevant fields
-        result = Transaction.objects.filter(
-            user=user,
-            transaction_type="debit",
-            date__gte=start_date,
-            date__lte=end_date,
-        ).aggregate(total=Sum("amount"))
+        result = (
+            Transaction.objects.filter(
+                user=user,
+                date__gte=start_date,
+                date__lte=end_date,
+            )
+            .filter(self._get_expense_filter())
+            .aggregate(total=Sum("amount"))
+        )
         return result["total"] or Decimal("0")
 
     def get_expense_years(self, user) -> list[int]:
         """Get list of years where user has expenses."""
-        date_list = Transaction.objects.filter(
-            user=user, transaction_type="debit"
-        ).dates("date", "year", order="DESC")
+        date_list = (
+            Transaction.objects.filter(user=user)
+            .filter(self._get_expense_filter())
+            .dates("date", "year", order="DESC")
+        )
         return [d.year for d in date_list]
 
     # Budget queries (using budget_v2)

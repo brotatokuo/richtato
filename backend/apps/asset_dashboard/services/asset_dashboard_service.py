@@ -307,6 +307,7 @@ class AssetDashboardService:
         Calculate networth growth for the current month.
 
         Business logic: Compares current networth to previous month.
+        Only includes asset accounts (excludes liabilities like credit cards).
 
         Returns:
             Formatted string like "+5.2% this month"
@@ -316,14 +317,14 @@ class AssetDashboardService:
             current_month_start = current_date.replace(day=1)
             previous_month_end = current_month_start - timedelta(days=1)
 
-            # Get current networth
+            # Get current networth (excludes liability accounts)
             current_networth = self.repo.get_networth(user)
 
-            # Get previous month's networth
+            # Get previous month's networth (only asset accounts)
             previous_networth = Decimal("0")
-            accounts = self.repo.get_user_accounts(user)
+            asset_accounts = self.repo.get_user_asset_accounts(user)
 
-            for account in accounts:
+            for account in asset_accounts:
                 balance = self.repo.get_account_balance_before_date(
                     account, current_month_start
                 )

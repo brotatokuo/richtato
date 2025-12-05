@@ -181,6 +181,9 @@ class SyncConnectionListCreateAPIView(APIView):
                 account_number_last4=last_four,
             )
             financial_account.sync_source = "teller"
+            # Set is_liability for credit card accounts
+            if mapped_type == "credit_card":
+                financial_account.is_liability = True
             financial_account.save()
 
             # Create SyncConnection
@@ -236,6 +239,9 @@ class SyncConnectionListCreateAPIView(APIView):
                 institution_name=institution_name,
             )
             account.sync_source = "teller"
+            # Set is_liability for credit card accounts
+            if mapped_type == "credit_card":
+                account.is_liability = True
             account.save()
 
         connection = self.connection_repository.create_connection(

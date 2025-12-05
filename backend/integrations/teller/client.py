@@ -93,6 +93,21 @@ class TellerClient:
         """
         return self._get("/accounts")
 
+    def get_account_balance(self, account_id: str) -> Dict[str, Any]:
+        """
+        Fetch account balance from Teller.
+
+        Args:
+            account_id: The ID of the account to fetch balance for.
+
+        Returns:
+            Dictionary containing balance information:
+            - account_id: The account ID
+            - ledger: Posted transactions balance (string)
+            - available: Available to spend balance (string)
+        """
+        return self._get(f"/accounts/{account_id}/balances")
+
     def get_transactions(
         self,
         account_id: str,
