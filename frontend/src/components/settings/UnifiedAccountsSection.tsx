@@ -14,6 +14,12 @@ import {
   tellerApiService,
 } from '@/lib/api/teller';
 import {
+  getBankLogo,
+  getCardImage,
+  getEntityLogo,
+  hasSpecificCardImage,
+} from '@/lib/imageMapping';
+import {
   Building2,
   Cloud,
   CreditCard,
@@ -285,39 +291,168 @@ export function UnifiedAccountsSection() {
     refresh();
   };
 
-  const renderAccountTile = (account: Account) => {
+  // Sync status badge component
+  const SyncBadge = ({ account }: { account: Account }) => {
+    if (!account.has_connection) return null;
+
     const statusColors: Record<string, string> = {
-      active: 'text-green-500',
-      error: 'text-red-500',
-      disconnected: 'text-gray-400',
+      active: 'bg-green-500',
+      error: 'bg-red-500',
+      disconnected: 'bg-gray-400',
+    };
+
+    return (
+      <div
+        className={`absolute top-2 right-2 z-20 p-1 rounded-full ${statusColors[account.connection_status || 'active']} shadow-md`}
+        title={`Synced via Teller - ${account.connection_status}`}
+      >
+        <Cloud className="h-3 w-3 text-white" />
+      </div>
+    );
+  };
+
+  // Credit Card visual component (matches CardGrid.tsx CreditCardItem)
+  const CreditCardTile = ({ account }: { account: Account }) => {
+    const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+    const [isHovering, setIsHovering] = useState(false);
+
+    const cardName = account.name;
+    const bank = account.entity || '';
+    const hasSpecificImage = hasSpecificCardImage(cardName);
+    const cardImage = hasSpecificImage
+      ? getCardImage(cardName, bank)
+      : '/images/credit_cards/default.png';
+    const bankLogo = getBankLogo(bank);
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      setMousePosition({ x, y });
     };
 
     return (
       <button
-        key={account.id}
         type="button"
         onClick={() => handleAccountClick(account)}
-        className="rounded-lg border p-4 text-left hover:bg-accent hover:text-accent-foreground transition relative group"
+        onMouseMove={handleMouseMove}
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+        className="rounded-xl relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl group"
+        style={{
+          aspectRatio: '1.586',
+          width: '100%',
+          maxWidth: '220px',
+        }}
         aria-label={`Open ${account.name}`}
       >
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium mb-1 truncate">{account.name}</div>
-            <div className="text-xs text-muted-foreground">
-              {account.institution_name || account.entity_display || 'Manual'}
+        {/* Sync Badge */}
+        <SyncBadge account={account} />
+
+        {/* Background Image */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `url(${cardImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+          }}
+        />
+
+        {/* Glare Effect Overlay */}
+        {isHovering && (
+          <div
+            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+            style={{
+              background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 30%, transparent 60%)`,
+            }}
+          />
+        )}
+
+        {/* Dark Overlay for Better Text Readability (only when showing title) */}
+        {!hasSpecificImage && (
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+        )}
+
+        {/* Card Content */}
+        <div className="absolute inset-0 p-3 flex flex-col justify-between">
+          {/* Card Name at Top (only show when using default background) */}
+          {!hasSpecificImage && (
+            <div className="text-xs font-semibold text-white drop-shadow-lg relative z-10 pr-6">
+              {account.name}
+            </div>
+          )}
+
+          {/* Bank Logo and Last 4 at Bottom */}
+          {!hasSpecificImage && (
+            <div className="flex justify-between items-end">
+              {account.account_number_last4 && (
+                <div className="text-xs text-white/80 font-mono drop-shadow-md">
+                  ····{account.account_number_last4}
+                </div>
+              )}
+              {bankLogo && (
+                <img
+                  src={bankLogo}
+                  alt={`${bank} logo`}
+                  className="w-8 h-8 object-contain drop-shadow-md relative z-10"
+                />
+              )}
+            </div>
+          )}
+        </div>
+      </button>
+    );
+  };
+
+  // Bank Account visual component with prominent logo
+  const BankAccountTile = ({ account }: { account: Account }) => {
+    const entity = account.entity || '';
+    const entityLogo = getEntityLogo(entity);
+
+    return (
+      <button
+        type="button"
+        onClick={() => handleAccountClick(account)}
+        className="rounded-xl border bg-gradient-to-br from-card to-muted/30 p-4 text-left hover:shadow-lg hover:scale-[1.02] transition-all duration-200 relative overflow-hidden group"
+        style={{
+          minHeight: '100px',
+        }}
+        aria-label={`Open ${account.name}`}
+      >
+        {/* Sync Badge */}
+        <SyncBadge account={account} />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col h-full">
+          <div className="flex-1">
+            <div className="text-sm font-semibold mb-1 truncate pr-8">
+              {account.name}
+            </div>
+            <div className="text-xs text-muted-foreground mb-2">
+              {account.institution_name || account.entity_display || 'Manual Account'}
             </div>
             {account.account_number_last4 && (
-              <div className="text-xs text-muted-foreground mt-1">
+              <div className="text-xs text-muted-foreground font-mono">
                 ····{account.account_number_last4}
               </div>
             )}
+            {account.account_type_display && (
+              <div className="text-xs text-muted-foreground mt-1 capitalize">
+                {account.account_type_display}
+              </div>
+            )}
           </div>
-          {account.has_connection && (
-            <div
-              className={`flex items-center gap-1 ${statusColors[account.connection_status || 'active']}`}
-              title={`Synced via Teller - ${account.connection_status}`}
-            >
-              <Cloud className="h-4 w-4" />
+
+          {/* Bank Logo in bottom-right */}
+          {entityLogo && (
+            <div className="flex justify-end mt-2">
+              <img
+                src={entityLogo}
+                alt={`${account.institution_name || entity} logo`}
+                className="w-8 h-8 object-contain opacity-70 group-hover:opacity-100 transition-opacity"
+              />
             </div>
           )}
         </div>
@@ -377,8 +512,10 @@ export function UnifiedAccountsSection() {
                   <Landmark className="h-4 w-4" />
                   Bank Accounts
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {bankAccounts.map(renderAccountTile)}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {bankAccounts.map(account => (
+                    <BankAccountTile key={account.id} account={account} />
+                  ))}
                 </div>
               </div>
             )}
@@ -390,8 +527,10 @@ export function UnifiedAccountsSection() {
                   <CreditCard className="h-4 w-4" />
                   Credit Cards
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {creditCards.map(renderAccountTile)}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {creditCards.map(account => (
+                    <CreditCardTile key={account.id} account={account} />
+                  ))}
                 </div>
               </div>
             )}
