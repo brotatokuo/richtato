@@ -1,3 +1,4 @@
+import { AccountCreateModal } from '@/components/accounts/AccountCreateModal';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -7,27 +8,20 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { useTellerConnect } from '@/hooks/useTellerConnect';
-import { Account, transactionsApiService } from '@/lib/api/transactions';
 import {
   SyncJobProgress,
   TellerSyncResult,
   tellerApiService,
 } from '@/lib/api/teller';
+import { Account, transactionsApiService } from '@/lib/api/transactions';
 import {
   getBankLogo,
   getCardImage,
   getEntityLogo,
   hasSpecificCardImage,
 } from '@/lib/imageMapping';
-import {
-  Building2,
-  Cloud,
-  CreditCard,
-  Landmark,
-  Plus,
-} from 'lucide-react';
+import { Building2, Cloud, CreditCard, Landmark, Plus } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AccountCreateModal } from '@/components/accounts/AccountCreateModal';
 import { AccountDetailModal } from './AccountDetailModal';
 import { DisconnectConfirmModal } from './DisconnectConfirmModal';
 import { TellerSyncModal } from './TellerSyncModal';
@@ -71,7 +65,9 @@ export function UnifiedAccountsSection() {
   const bankAccounts = accounts.filter(
     acc => acc.account_type === 'checking' || acc.account_type === 'savings'
   );
-  const creditCards = accounts.filter(acc => acc.account_type === 'credit_card');
+  const creditCards = accounts.filter(
+    acc => acc.account_type === 'credit_card'
+  );
 
   const refresh = async () => {
     try {
@@ -170,7 +166,7 @@ export function UnifiedAccountsSection() {
       await transactionsApiService.createAccount({
         name: form.name,
         type: form.type,
-        asset_entity_name: form.entity,
+        institution_slug: form.entity,
       });
       await refresh();
       setShowCreate(false);
@@ -185,14 +181,14 @@ export function UnifiedAccountsSection() {
     name: string;
     type: string;
     entity: string;
+    image_key?: string | null;
   }) => {
     if (!selectedAccount) return;
     try {
       setLoading(true);
       await transactionsApiService.updateAccount(selectedAccount.id, {
         name: form.name,
-        type: form.type,
-        asset_entity_name: form.entity,
+        image_key: form.image_key,
       });
       await refresh();
       setShowDetail(false);
@@ -318,9 +314,10 @@ export function UnifiedAccountsSection() {
 
     const cardName = account.name;
     const bank = account.entity || '';
-    const hasSpecificImage = hasSpecificCardImage(cardName);
+    const imageKey = account.image_key;
+    const hasSpecificImage = hasSpecificCardImage(cardName, imageKey);
     const cardImage = hasSpecificImage
-      ? getCardImage(cardName, bank)
+      ? getCardImage(cardName, bank, imageKey)
       : '/images/credit_cards/default.png';
     const bankLogo = getBankLogo(bank);
 
@@ -431,7 +428,9 @@ export function UnifiedAccountsSection() {
               {account.name}
             </div>
             <div className="text-xs text-muted-foreground mb-2">
-              {account.institution_name || account.entity_display || 'Manual Account'}
+              {account.institution_name ||
+                account.entity_display ||
+                'Manual Account'}
             </div>
             {account.account_number_last4 && (
               <div className="text-xs text-muted-foreground font-mono">

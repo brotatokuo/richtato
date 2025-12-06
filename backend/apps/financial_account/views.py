@@ -209,11 +209,22 @@ class AccountFieldChoicesAPIView(APIView):
             for choice in FinancialAccount.ACCOUNT_TYPE_CHOICES
         ]
 
-        # Entity/institution choices
-        entity_choices = [
-            {"value": inst.id, "label": inst.name}
-            for inst in FinancialInstitution.objects.all().order_by("name")
-        ]
+        # Entity/institution choices - use slug as value for consistency with frontend
+        # Sort alphabetically but keep "Other" at the end
+        institutions = FinancialInstitution.objects.all().order_by("name")
+        entity_choices = []
+        other_choice = None
+
+        for inst in institutions:
+            choice = {"value": inst.slug, "label": inst.name}
+            if inst.slug == "other":
+                other_choice = choice
+            else:
+                entity_choices.append(choice)
+
+        # Add "Other" at the end if it exists
+        if other_choice:
+            entity_choices.append(other_choice)
 
         return Response({"type": type_choices, "entity": entity_choices})
 

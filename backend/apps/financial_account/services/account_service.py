@@ -50,6 +50,7 @@ class AccountService:
         name: str,
         account_type: str,
         institution_name: str = None,
+        institution_slug: str = None,
         account_number_last4: str = "",
         initial_balance: Decimal = Decimal("0"),
         currency: str = "USD",
@@ -61,7 +62,8 @@ class AccountService:
             user: Account owner
             name: Account nickname/name
             account_type: Type (checking/savings/credit_card)
-            institution_name: Optional bank/institution name
+            institution_name: Optional bank/institution name (for Teller accounts)
+            institution_slug: Optional institution slug (for manually selected preset banks)
             account_number_last4: Last 4 digits of account number
             initial_balance: Starting balance
             currency: Currency code
@@ -71,8 +73,14 @@ class AccountService:
         """
         # Get or create institution if provided
         institution = None
-        if institution_name:
-            slug = institution_name.lower().replace(" ", "_")
+
+        # First try to look up by slug (for preset banks selected from dropdown)
+        if institution_slug and institution_slug != "other":
+            institution = self.institution_repository.get_by_slug(institution_slug)
+
+        # If no slug match, try by name (for Teller accounts or custom entries)
+        if not institution and institution_name:
+            slug = institution_name.lower().replace(" ", "_").replace("-", "_")
             institution = self.institution_repository.get_or_create_institution(
                 name=institution_name, slug=slug
             )
@@ -100,7 +108,7 @@ class AccountService:
         if "institution_name" in kwargs:
             institution_name = kwargs.pop("institution_name")
             if institution_name:
-                slug = institution_name.lower().replace(" ", "_")
+                slug = institution_name.lower().replace(" ", "_").replace("-", "_")
                 institution = self.institution_repository.get_or_create_institution(
                     name=institution_name, slug=slug
                 )

@@ -69,6 +69,14 @@ class FinancialAccount(models.Model):
         max_length=20, choices=SYNC_SOURCE_CHOICES, default="manual"
     )
 
+    # Card customization
+    image_key = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Key for custom card image. When null, auto-detect from card name.",
+    )
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

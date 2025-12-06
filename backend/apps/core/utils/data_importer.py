@@ -71,7 +71,12 @@ class DataImporter:
             if pd.notna(row.get("institution")) and row["institution"]:
                 institution, _ = FinancialInstitution.objects.get_or_create(
                     name=row["institution"],
-                    defaults={"slug": row["institution"].lower().replace(" ", "-")},
+                    defaults={
+                        "slug": row["institution"]
+                        .lower()
+                        .replace(" ", "_")
+                        .replace("-", "_")
+                    },
                 )
 
             FinancialAccount.objects.create(

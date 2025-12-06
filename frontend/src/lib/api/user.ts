@@ -191,6 +191,25 @@ export interface CardAccountItem {
   id: number;
   name: string;
   bank: string;
+  imageKey?: string | null;
+}
+
+// API response format (snake_case from backend)
+interface CardAccountApiResponse {
+  id: number;
+  name: string;
+  entity: string;
+  image_key?: string | null;
+}
+
+// Transform API response to frontend format
+function transformCardAccount(apiItem: CardAccountApiResponse): CardAccountItem {
+  return {
+    id: apiItem.id,
+    name: apiItem.name,
+    bank: apiItem.entity,
+    imageKey: apiItem.image_key ?? null,
+  };
 }
 
 class CardsApiService {
@@ -203,20 +222,24 @@ class CardsApiService {
     });
     if (!res.ok) throw new Error('Failed to load card accounts');
     const data = await res.json();
-    // Handle both direct array and wrapped response formats
+
+    // Extract array from response
+    let rawItems: CardAccountApiResponse[] = [];
     if (Array.isArray(data)) {
-      return data;
+      rawItems = data;
+    } else if (data && typeof data === 'object') {
+      if (Array.isArray(data.rows)) rawItems = data.rows;
+      else if (Array.isArray(data.cards)) rawItems = data.cards;
+      else if (Array.isArray(data.results)) rawItems = data.results;
+      else if (Array.isArray(data.data)) rawItems = data.data;
+      else {
+        console.warn('Unexpected card accounts API response format:', data);
+        return [];
+      }
     }
-    // If wrapped in an object, try common keys
-    if (data && typeof data === 'object') {
-      if (Array.isArray(data.rows)) return data.rows;
-      if (Array.isArray(data.cards)) return data.cards;
-      if (Array.isArray(data.results)) return data.results;
-      if (Array.isArray(data.data)) return data.data;
-    }
-    // Return empty array if format is unexpected
-    console.warn('Unexpected card accounts API response format:', data);
-    return [];
+
+    // Transform snake_case to camelCase
+    return rawItems.map(transformCardAccount);
   }
 
   async create(payload: {
@@ -235,7 +258,7 @@ class CardsApiService {
 
   async update(
     id: number,
-    payload: Partial<{ name: string; bank: string }>
+    payload: Partial<{ name: string; bank: string; image_key: string | null }>
   ): Promise<CardAccountItem> {
     const res = await fetch(`${this.baseUrl}/${id}/`, {
       method: 'PATCH',

@@ -59,6 +59,7 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
             "currency",
             "is_active",
             "sync_source",
+            "image_key",
             "created_at",
             "updated_at",
             # Backward compatibility
@@ -130,6 +131,12 @@ class FinancialAccountCreateSerializer(serializers.Serializer):
     institution_name = serializers.CharField(
         max_length=255, required=False, allow_blank=True
     )
+    institution_slug = serializers.CharField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+        help_text="Slug of preset institution (e.g., 'chase', 'bank_of_america')",
+    )
     account_number_last4 = serializers.CharField(
         max_length=4, required=False, allow_blank=True
     )
@@ -151,3 +158,6 @@ class FinancialAccountUpdateSerializer(serializers.Serializer):
     )
     balance = serializers.DecimalField(max_digits=15, decimal_places=2, required=False)
     is_active = serializers.BooleanField(required=False)
+    image_key = serializers.CharField(
+        max_length=100, required=False, allow_blank=True, allow_null=True
+    )

@@ -11,6 +11,11 @@ urlpatterns = [
         name="card-account-list",
     ),
     path(
+        "<int:pk>/",
+        views.FinancialAccountDetailAPIView.as_view(),
+        name="card-account-detail",
+    ),
+    path(
         "field-choices/",
         views.CardAccountFieldChoicesAPIView.as_view(),
         name="card-account-field-choices",

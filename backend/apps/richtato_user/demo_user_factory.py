@@ -52,18 +52,18 @@ class DemoUserFactory:
 
     def _create_financial_accounts(self):
         """Create financial accounts for the demo user."""
-        # Create institutions
+        # Create institutions - use underscores in slugs to match migration 0004
         boa, _ = FinancialInstitution.objects.get_or_create(
-            slug="bank-of-america",
-            defaults={"name": "Bank of America"},
+            name="Bank of America",
+            defaults={"slug": "bank_of_america"},
         )
         chase, _ = FinancialInstitution.objects.get_or_create(
-            slug="chase",
-            defaults={"name": "Chase"},
+            name="Chase",
+            defaults={"slug": "chase"},
         )
         amex, _ = FinancialInstitution.objects.get_or_create(
-            slug="american-express",
-            defaults={"name": "American Express"},
+            name="American Express",
+            defaults={"slug": "american_express"},
         )
 
         # Create accounts

@@ -8,6 +8,16 @@ export default defineConfig({
     port: 3000,
     host: true,
     allowedHosts: ['localhost', '127.0.0.1'],
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/demo-login': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     outDir: 'dist',

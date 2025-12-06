@@ -5,6 +5,7 @@ export interface CardAccountItem {
   id: number;
   name: string;
   bank: string;
+  imageKey?: string | null;
 }
 
 interface BankOption {
@@ -54,10 +55,15 @@ export function useCards() {
     }
   };
 
-  const updateCard = async (id: number, name: string, bank: string) => {
+  const updateCard = async (
+    id: number,
+    name: string,
+    bank: string,
+    imageKey?: string | null
+  ) => {
     try {
       setLoading(true);
-      await cardsApi.update(id, { name, bank });
+      await cardsApi.update(id, { name, bank, image_key: imageKey });
       await refresh();
     } catch (e: any) {
       setError(e?.message ?? 'Failed to update card');
