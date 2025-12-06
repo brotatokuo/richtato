@@ -102,6 +102,43 @@ def dashboard_metrics(request):
 
 
 @login_required
+def networth_history(request):
+    """Get net worth history over time - delegates to service layer."""
+    try:
+        # Extract period parameter
+        period = request.GET.get("period", "6m")
+
+        # Inject dependencies and delegate to service
+        repo = AssetDashboardRepository()
+        service = AssetDashboardService(repo)
+
+        # Delegate to service
+        data = service.get_networth_history(request.user, period)
+        return JsonResponse(data)
+
+    except Exception as e:
+        logger.error(f"Error in networth_history: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@login_required
+def account_breakdown(request):
+    """Get account balances grouped by type - delegates to service layer."""
+    try:
+        # Inject dependencies and delegate to service
+        repo = AssetDashboardRepository()
+        service = AssetDashboardService(repo)
+
+        # Delegate to service
+        data = service.get_account_breakdown(request.user)
+        return JsonResponse(data)
+
+    except Exception as e:
+        logger.error(f"Error in account_breakdown: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@login_required
 def top_categories_data(request):
     """
     Get top spending categories - uses Django ORM for aggregation.

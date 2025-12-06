@@ -1,11 +1,13 @@
 """Repository for Asset Dashboard data aggregation queries."""
 
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
-from apps.financial_account.models import FinancialAccount
-from apps.transaction.models import Transaction
+from dateutil.relativedelta import relativedelta
 from django.db.models import Q, Sum
+
+from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
+from apps.transaction.models import Transaction
 
 # Canonical slug for Credit Card Payment category (excluded from expenses)
 CC_PAYMENT_CATEGORY_SLUG = "credit-card-payment"
@@ -137,3 +139,122 @@ class AssetDashboardRepository:
             account=account, date__lt=before_date, transaction_type="debit"
         ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
         return credits - debits
+
+    def get_networth_history(self, user, period: str = "6m") -> list[dict]:
+        """
+        Get net worth history over time based on AccountBalanceHistory records.
+
+        Returns list of {date, networth, assets, liabilities} for each date
+        where we have balance history records.
+        """
+        # Calculate date range based on period
+        end_date = date.today()
+        if period == "1m":
+            start_date = end_date - relativedelta(months=1)
+        elif period == "3m":
+            start_date = end_date - relativedelta(months=3)
+        elif period == "6m":
+            start_date = end_date - relativedelta(months=6)
+        elif period == "1y":
+            start_date = end_date - relativedelta(years=1)
+        elif period == "all":
+            start_date = None
+        else:
+            start_date = end_date - relativedelta(months=6)
+
+        # Get all user accounts
+        asset_accounts = self.get_user_asset_accounts(user)
+        liability_accounts = self.get_user_liability_accounts(user)
+
+        # Get all balance history entries
+        balance_query = AccountBalanceHistory.objects.filter(
+            account__user=user
+        ).order_by("date")
+
+        if start_date:
+            balance_query = balance_query.filter(date__gte=start_date)
+
+        balance_query = balance_query.filter(date__lte=end_date)
+
+        # Get unique dates from balance history
+        unique_dates = (
+            balance_query.values_list("date", flat=True).distinct().order_by("date")
+        )
+
+        # For each date, calculate total assets and liabilities
+        history = []
+        for record_date in unique_dates:
+            # Get the most recent balance for each asset account up to this date
+            total_assets = Decimal("0")
+            for account in asset_accounts:
+                latest_balance = (
+                    AccountBalanceHistory.objects.filter(
+                        account=account, date__lte=record_date
+                    )
+                    .order_by("-date")
+                    .first()
+                )
+                if latest_balance:
+                    total_assets += latest_balance.balance
+
+            # Get the most recent balance for each liability account up to this date
+            total_liabilities = Decimal("0")
+            for account in liability_accounts:
+                latest_balance = (
+                    AccountBalanceHistory.objects.filter(
+                        account=account, date__lte=record_date
+                    )
+                    .order_by("-date")
+                    .first()
+                )
+                if latest_balance:
+                    total_liabilities += abs(latest_balance.balance)
+
+            history.append(
+                {
+                    "date": record_date.isoformat(),
+                    "assets": float(total_assets),
+                    "liabilities": float(total_liabilities),
+                    "networth": float(total_assets - total_liabilities),
+                }
+            )
+
+        return history
+
+    def get_account_type_breakdown(self, user) -> list[dict]:
+        """
+        Get account balances grouped by account type.
+
+        Returns list of {type, type_display, total, count, is_liability}
+        """
+        accounts = FinancialAccount.objects.filter(user=user, is_active=True)
+
+        # Group by account type
+        breakdown = {}
+        for account in accounts:
+            acc_type = account.account_type
+            if acc_type not in breakdown:
+                breakdown[acc_type] = {
+                    "type": acc_type,
+                    "type_display": account.get_account_type_display(),
+                    "total": Decimal("0"),
+                    "count": 0,
+                    "is_liability": account.is_liability,
+                }
+            breakdown[acc_type]["total"] += account.balance
+            breakdown[acc_type]["count"] += 1
+
+        # Convert to list and float values
+        result = []
+        for data in breakdown.values():
+            result.append(
+                {
+                    "type": data["type"],
+                    "type_display": data["type_display"],
+                    "total": float(data["total"]),
+                    "count": data["count"],
+                    "is_liability": data["is_liability"],
+                }
+            )
+
+        return result
