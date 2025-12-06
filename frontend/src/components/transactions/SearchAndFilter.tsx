@@ -1,29 +1,16 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Download, Search } from 'lucide-react';
 
 interface SearchAndFilterProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
-  filterCategory: string;
-  onFilterChange: (category: string) => void;
-  categories: string[];
 }
 
 export function SearchAndFilter({
   searchTerm,
   onSearchChange,
-  filterCategory,
-  onFilterChange,
-  categories,
 }: SearchAndFilterProps) {
   return (
     <Card className="bg-card/50 backdrop-blur-sm border-border/50">
@@ -39,26 +26,6 @@ export function SearchAndFilter({
                 className="pl-10 min-w-0"
               />
             </div>
-          </div>
-          <div className="w-full sm:w-48 min-w-0">
-            <Select
-              value={filterCategory || 'all'}
-              onValueChange={value =>
-                onFilterChange(value === 'all' ? '' : value)
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map(category => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
           <Button variant="outline" className="hidden md:inline-flex">
             <Download className="h-4 w-4 mr-2" />

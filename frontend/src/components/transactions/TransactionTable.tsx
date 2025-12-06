@@ -2,9 +2,13 @@ import { SearchAndFilter } from '@/components/transactions/SearchAndFilter';
 import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ContextMenu } from '@/components/ui/ContextMenu';
+import {
+  ColumnFilterPopover,
+  FilterOption,
+} from '@/components/ui/ColumnFilterPopover';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
+import { SortableHeader } from '@/components/ui/SortableHeader';
 import {
   Table,
   TableBody,
@@ -22,20 +26,11 @@ import {
 } from '@/lib/api/transactions';
 import {
   DisplayTransaction,
-  FilterOption,
   TransactionFormData,
   TransactionTableProps,
   transformTransaction,
 } from '@/types/transactions';
-import {
-  ArrowUpDown,
-  Calendar,
-  CreditCard,
-  Filter,
-  Plus,
-  Tag,
-  ArrowLeftRight,
-} from 'lucide-react';
+import { Calendar, CreditCard, Plus, Tag, ArrowLeftRight } from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
 
 const getLocalDateString = (): string => {
@@ -62,7 +57,7 @@ export function TransactionTable({
 }) {
   const { preferences } = usePreferences();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterCategory, setFilterCategory] = useState('');
+  const [filterCategories, setFilterCategories] = useState<string[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortField, setSortField] = useState<keyof DisplayTransaction>('date');
@@ -72,22 +67,18 @@ export function TransactionTable({
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
-  // Context menu state
-  const [contextMenu, setContextMenu] = useState({
-    isOpen: false,
-    position: { x: 0, y: 0 },
-    field: '',
-    title: '',
-  } as {
-    isOpen: boolean;
-    position: { x: number; y: number };
-    field: string;
-    title: string;
-  });
+  // Additional filters (now arrays for multi-select)
+  const [dateFilters, setDateFilters] = useState<string[]>([]);
+  const [descriptionFilters, setDescriptionFilters] = useState<string[]>([]);
+  const [accountFilters, setAccountFilters] = useState<string[]>([]);
+  const [amountFilters, setAmountFilters] = useState<string[]>([]);
 
-  // Additional filters
-  const [dateFilter, setDateFilter] = useState('');
-  const [accountFilter, setAccountFilter] = useState('');
+  // Column search terms (for filtering while typing in popover)
+  const [dateSearch, setDateSearch] = useState('');
+  const [descriptionSearch, setDescriptionSearch] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
+  const [accountSearch, setAccountSearch] = useState('');
+  const [amountSearch, setAmountSearch] = useState('');
 
   // Get display title based on filter
   const getTitle = () => {
@@ -135,7 +126,19 @@ export function TransactionTable({
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterCategory, dateFilter, accountFilter]);
+  }, [
+    searchTerm,
+    filterCategories,
+    dateFilters,
+    descriptionFilters,
+    accountFilters,
+    amountFilters,
+    dateSearch,
+    descriptionSearch,
+    categorySearch,
+    accountSearch,
+    amountSearch,
+  ]);
 
   const evaluateAmountField = (value: string): string => {
     const val = String(value || '').trim();
@@ -154,18 +157,70 @@ export function TransactionTable({
 
   const filteredTransactions = transactions
     .filter(transaction => {
+      // Global search bar
       const matchesSearch =
         transaction.description
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
         transaction.account.toLowerCase().includes(searchTerm.toLowerCase()) ||
         transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Checkbox selections
       const matchesCategory =
-        !filterCategory || transaction.category === filterCategory;
-      const matchesDate = !dateFilter || transaction.date === dateFilter;
+        filterCategories.length === 0 ||
+        filterCategories.includes(transaction.category);
+      const matchesDate =
+        dateFilters.length === 0 || dateFilters.includes(transaction.date);
+      const matchesDescription =
+        descriptionFilters.length === 0 ||
+        descriptionFilters.includes(transaction.description);
       const matchesAccount =
-        !accountFilter || transaction.account === accountFilter;
-      return matchesSearch && matchesCategory && matchesDate && matchesAccount;
+        accountFilters.length === 0 ||
+        accountFilters.includes(transaction.account);
+      const matchesAmount =
+        amountFilters.length === 0 ||
+        amountFilters.includes(String(transaction.amount));
+
+      // Column search terms (typed in filter popover)
+      const matchesDateSearch =
+        !dateSearch ||
+        transaction.date.toLowerCase().includes(dateSearch.toLowerCase()) ||
+        formatDate(transaction.date, preferences.date_format)
+          .toLowerCase()
+          .includes(dateSearch.toLowerCase());
+      const matchesDescriptionSearch =
+        !descriptionSearch ||
+        transaction.description
+          .toLowerCase()
+          .includes(descriptionSearch.toLowerCase());
+      const matchesCategorySearch =
+        !categorySearch ||
+        transaction.category
+          .toLowerCase()
+          .includes(categorySearch.toLowerCase());
+      const matchesAccountSearch =
+        !accountSearch ||
+        transaction.account.toLowerCase().includes(accountSearch.toLowerCase());
+      const matchesAmountSearch =
+        !amountSearch ||
+        String(transaction.amount).includes(amountSearch) ||
+        formatCurrency(Math.abs(transaction.amount), preferences.currency)
+          .toLowerCase()
+          .includes(amountSearch.toLowerCase());
+
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesDate &&
+        matchesDescription &&
+        matchesAccount &&
+        matchesAmount &&
+        matchesDateSearch &&
+        matchesDescriptionSearch &&
+        matchesCategorySearch &&
+        matchesAccountSearch &&
+        matchesAmountSearch
+      );
     })
     .sort((a, b) => {
       const aValue = a[sortField];
@@ -198,67 +253,53 @@ export function TransactionTable({
     new Set(transactions.map(t => t.category))
   ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
-  // Generate filter options for context menu
-  const getFilterOptions = (field: string): FilterOption[] => {
-    switch (field) {
-      case 'date': {
-        const dates = Array.from(new Set(transactions.map(t => t.date)))
-          .sort()
-          .reverse(); // Most recent first
-        return dates.map(date => ({
-          label: formatDate(date, preferences.date_format),
-          value: date,
-          count: transactions.filter(t => t.date === date).length,
-        }));
-      }
-      case 'category':
-        return categoryNames.map(category => ({
-          label: category,
-          value: category,
-          count: transactions.filter(t => t.category === category).length,
-        }));
-      case 'account': {
-        const accountNames = Array.from(
-          new Set(transactions.map(t => t.account))
-        );
-        return accountNames.map(account => ({
-          label: account,
-          value: account,
-          count: transactions.filter(t => t.account === account).length,
-        }));
-      }
-      default:
-        return [];
-    }
-  };
+  // Generate filter options for each column
+  const dateFilterOptions: FilterOption[] = Array.from(
+    new Set(transactions.map(t => t.date))
+  )
+    .sort()
+    .reverse()
+    .map(date => ({
+      label: formatDate(date, preferences.date_format),
+      value: date,
+      count: transactions.filter(t => t.date === date).length,
+    }));
 
-  const handleContextMenu = (
-    e: React.MouseEvent,
-    field: string,
-    title: string
-  ) => {
-    e.preventDefault();
-    setContextMenu({
-      isOpen: true,
-      position: { x: e.clientX, y: e.clientY },
-      field,
-      title,
-    });
-  };
+  const descriptionFilterOptions: FilterOption[] = Array.from(
+    new Set(transactions.map(t => t.description))
+  )
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+    .map(description => ({
+      label: description,
+      value: description,
+      count: transactions.filter(t => t.description === description).length,
+    }));
 
-  const handleFilterSelect = (value: string) => {
-    switch (contextMenu.field) {
-      case 'date':
-        setDateFilter(value);
-        break;
-      case 'category':
-        setFilterCategory(value);
-        break;
-      case 'account':
-        setAccountFilter(value);
-        break;
-    }
-  };
+  const categoryFilterOptions: FilterOption[] = categoryNames.map(category => ({
+    label: category,
+    value: category,
+    count: transactions.filter(t => t.category === category).length,
+  }));
+
+  const accountFilterOptions: FilterOption[] = Array.from(
+    new Set(transactions.map(t => t.account))
+  )
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+    .map(account => ({
+      label: account,
+      value: account,
+      count: transactions.filter(t => t.account === account).length,
+    }));
+
+  const amountFilterOptions: FilterOption[] = Array.from(
+    new Set(transactions.map(t => String(t.amount)))
+  )
+    .sort((a, b) => parseFloat(a) - parseFloat(b))
+    .map(amount => ({
+      label: formatCurrency(Math.abs(parseFloat(amount)), preferences.currency),
+      value: amount,
+      count: transactions.filter(t => String(t.amount) === amount).length,
+    }));
 
   const handleSort = (field: keyof DisplayTransaction) => {
     if (sortField === field) {
@@ -512,36 +553,76 @@ export function TransactionTable({
             {getTitle()}
           </h2>
           {/* Active filters indicator */}
-          {(dateFilter || accountFilter || filterCategory) && (
-            <div className="flex items-center gap-2 mt-2">
+          {(dateFilters.length > 0 ||
+            descriptionFilters.length > 0 ||
+            accountFilters.length > 0 ||
+            filterCategories.length > 0 ||
+            amountFilters.length > 0 ||
+            dateSearch ||
+            descriptionSearch ||
+            categorySearch ||
+            accountSearch ||
+            amountSearch) && (
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
               <span className="text-sm text-muted-foreground">
                 Active filters:
               </span>
-              {dateFilter && (
+              {dateFilters.length > 0 && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/15 text-primary text-xs rounded-full dark:bg-primary/20 dark:text-primary">
                   <Calendar className="h-3 w-3" />
-                  {formatDate(dateFilter, preferences.date_format)}
+                  {dateFilters.length === 1
+                    ? formatDate(dateFilters[0], preferences.date_format)
+                    : `${dateFilters.length} dates`}
                 </span>
               )}
-              {filterCategory && (
+              {descriptionFilters.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full dark:bg-blue-900/20 dark:text-blue-400">
+                  {descriptionFilters.length === 1
+                    ? descriptionFilters[0].substring(0, 20) +
+                      (descriptionFilters[0].length > 20 ? '...' : '')
+                    : `${descriptionFilters.length} descriptions`}
+                </span>
+              )}
+              {filterCategories.length > 0 && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground text-xs rounded-full dark:bg-secondary/20 dark:text-secondary-foreground">
                   <Tag className="h-3 w-3" />
-                  {filterCategory}
+                  {filterCategories.length === 1
+                    ? filterCategories[0]
+                    : `${filterCategories.length} categories`}
                 </span>
               )}
-              {accountFilter && (
+              {accountFilters.length > 0 && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full dark:bg-green-900/20 dark:text-green-400">
                   <CreditCard className="h-3 w-3" />
-                  {accountFilter}
+                  {accountFilters.length === 1
+                    ? accountFilters[0]
+                    : `${accountFilters.length} accounts`}
+                </span>
+              )}
+              {amountFilters.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-full dark:bg-amber-900/20 dark:text-amber-400">
+                  {amountFilters.length === 1
+                    ? formatCurrency(
+                        Math.abs(parseFloat(amountFilters[0])),
+                        preferences.currency
+                      )
+                    : `${amountFilters.length} amounts`}
                 </span>
               )}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  setDateFilter('');
-                  setAccountFilter('');
-                  setFilterCategory('');
+                  setDateFilters([]);
+                  setDescriptionFilters([]);
+                  setAccountFilters([]);
+                  setFilterCategories([]);
+                  setAmountFilters([]);
+                  setDateSearch('');
+                  setDescriptionSearch('');
+                  setCategorySearch('');
+                  setAccountSearch('');
+                  setAmountSearch('');
                   setCurrentPage(1);
                 }}
                 className="text-xs h-6 px-2"
@@ -578,9 +659,6 @@ export function TransactionTable({
       <SearchAndFilter
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        filterCategory={filterCategory}
-        onFilterChange={setFilterCategory}
-        categories={categoryNames}
       />
 
       {/* Mobile list (<= md) */}
@@ -641,31 +719,75 @@ export function TransactionTable({
                     {getTableHeaders().map(header => (
                       <TableHead
                         key={header.field}
-                        className={`cursor-pointer hover:bg-muted/50 whitespace-normal break-words ${
+                        className={`whitespace-normal break-words ${
                           header.field === 'amount' ? 'text-right' : ''
                         } min-w-0`}
-                        onClick={() =>
-                          handleSort(header.field as keyof DisplayTransaction)
-                        }
-                        onContextMenu={
-                          header.filterable
-                            ? e =>
-                                handleContextMenu(e, header.field, header.label)
-                            : undefined
-                        }
                       >
                         <div
-                          className={`flex items-center gap-2 min-w-0 ${
+                          className={`flex items-center gap-1 min-w-0 ${
                             header.field === 'amount' ? 'justify-end' : ''
-                          } flex-wrap`}
+                          }`}
                         >
-                          {header.label}
-                          <div className="flex items-center gap-1">
-                            {header.filterable && (
-                              <Filter className="h-3 w-3 text-muted-foreground" />
-                            )}
-                            <ArrowUpDown className="h-4 w-4" />
-                          </div>
+                          <SortableHeader
+                            label={header.label}
+                            field={header.field}
+                            sortField={sortField}
+                            sortDirection={sortDirection}
+                            onSort={field =>
+                              handleSort(field as keyof DisplayTransaction)
+                            }
+                            align={header.field === 'amount' ? 'right' : 'left'}
+                          />
+                          {header.field === 'date' && (
+                            <ColumnFilterPopover
+                              title="Filter by Date"
+                              options={dateFilterOptions}
+                              selectedValues={dateFilters}
+                              onSelectionChange={setDateFilters}
+                              searchTerm={dateSearch}
+                              onSearchChange={setDateSearch}
+                            />
+                          )}
+                          {header.field === 'description' && (
+                            <ColumnFilterPopover
+                              title="Filter by Description"
+                              options={descriptionFilterOptions}
+                              selectedValues={descriptionFilters}
+                              onSelectionChange={setDescriptionFilters}
+                              searchTerm={descriptionSearch}
+                              onSearchChange={setDescriptionSearch}
+                            />
+                          )}
+                          {header.field === 'category' && (
+                            <ColumnFilterPopover
+                              title="Filter by Category"
+                              options={categoryFilterOptions}
+                              selectedValues={filterCategories}
+                              onSelectionChange={setFilterCategories}
+                              searchTerm={categorySearch}
+                              onSearchChange={setCategorySearch}
+                            />
+                          )}
+                          {header.field === 'account' && (
+                            <ColumnFilterPopover
+                              title="Filter by Account"
+                              options={accountFilterOptions}
+                              selectedValues={accountFilters}
+                              onSelectionChange={setAccountFilters}
+                              searchTerm={accountSearch}
+                              onSearchChange={setAccountSearch}
+                            />
+                          )}
+                          {header.field === 'amount' && (
+                            <ColumnFilterPopover
+                              title="Filter by Amount"
+                              options={amountFilterOptions}
+                              selectedValues={amountFilters}
+                              onSelectionChange={setAmountFilters}
+                              searchTerm={amountSearch}
+                              onSearchChange={setAmountSearch}
+                            />
+                          )}
                         </div>
                       </TableHead>
                     ))}
@@ -722,16 +844,6 @@ export function TransactionTable({
           </CardContent>
         </Card>
       )}
-
-      {/* Context Menu */}
-      <ContextMenu
-        isOpen={contextMenu.isOpen}
-        position={contextMenu.position}
-        onClose={() => setContextMenu(prev => ({ ...prev, isOpen: false }))}
-        options={getFilterOptions(contextMenu.field)}
-        onSelect={handleFilterSelect}
-        title={contextMenu.title}
-      />
 
       {/* Edit Modal */}
       <Modal
