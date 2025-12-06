@@ -88,10 +88,11 @@ class CategorySettingsAPIView(APIView):
         },
     )
     def put(self, request):
-        """Update category settings and budgets."""
+        """Update category settings, budgets, and category types."""
         enabled = set(request.data.get("enabled", []))
         disabled = set(request.data.get("disabled", []))
         budgets = request.data.get("budgets", {})
+        category_types = request.data.get("category_types", {})
 
         # Create categories that don't exist
         existing = {
@@ -101,16 +102,30 @@ class CategorySettingsAPIView(APIView):
         to_create = []
         for slug in enabled:
             if slug not in existing:
+                # Check if we have type info for this new category
+                cat_type = category_types.get(slug, "expense")
+                is_income = cat_type == "income"
+                is_expense = cat_type == "expense"
                 to_create.append(
                     TransactionCategory(
                         user=request.user,
                         name=slug.replace("-", " ").replace("_", " ").title(),
                         slug=slug,
-                        is_expense=True,
+                        is_income=is_income,
+                        is_expense=is_expense,
                     )
                 )
         if to_create:
             TransactionCategory.objects.bulk_create(to_create)
+
+        # Update category types for existing categories
+        if category_types:
+            for slug, cat_type in category_types.items():
+                if slug in existing:
+                    cat = existing[slug]
+                    cat.is_income = cat_type == "income"
+                    cat.is_expense = cat_type == "expense"
+                    cat.save(update_fields=["is_income", "is_expense"])
 
         # Delete disabled categories (or just remove from user's list)
         TransactionCategory.objects.filter(

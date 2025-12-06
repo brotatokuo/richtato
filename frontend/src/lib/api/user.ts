@@ -123,6 +123,8 @@ export class UserApiService {
   }
 }
 
+export type CategoryType = 'income' | 'expense' | 'neither';
+
 export interface CategoryCatalogItem {
   name: string;
   display: string;
@@ -130,12 +132,24 @@ export interface CategoryCatalogItem {
   color: string;
   type: string | null;
   enabled: boolean;
+  is_income: boolean;
+  is_expense: boolean;
   budget: {
     id: number;
     amount: number;
     start_date: string;
     end_date: string | null;
   } | null;
+}
+
+export interface CategorySettingsPayload {
+  enabled: string[];
+  disabled: string[];
+  budgets?: Record<
+    string,
+    { amount: number | null; start_date?: string; end_date?: string | null }
+  >;
+  category_types?: Record<string, CategoryType>;
 }
 
 export class CategorySettingsApi {
@@ -156,14 +170,7 @@ export class CategorySettingsApi {
     return res.json();
   }
 
-  async updateSettings(payload: {
-    enabled: string[];
-    disabled: string[];
-    budgets?: Record<
-      string,
-      { amount: number | null; start_date?: string; end_date?: string | null }
-    >;
-  }): Promise<{ success: boolean }> {
+  async updateSettings(payload: CategorySettingsPayload): Promise<{ success: boolean }> {
     const res = await fetch(`${this.baseUrl}/`, {
       method: 'PUT',
       headers: await this.getHeaders(),

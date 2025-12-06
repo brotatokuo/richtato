@@ -528,7 +528,7 @@ class TransactionsApiService {
     }>;
   }> {
     const url = new URL(
-      `${this.baseUrl}/budgets/progress/`,
+      `${this.baseUrl}/budget-dashboard/progress/`,
       window.location.origin
     );
     if (input.year) url.searchParams.append('year', String(input.year));

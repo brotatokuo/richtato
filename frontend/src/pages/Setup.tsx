@@ -1,6 +1,7 @@
 import { AccountsSection } from '@/components/settings/AccountsSection';
+import { BudgetsSection } from '@/components/settings/BudgetsSection';
 import { CardsSection } from '@/components/settings/CardsSection';
-import { CategoriesBudgetsSection } from '@/components/settings/CategoriesBudgetsSection';
+import { CategoriesSection } from '@/components/settings/CategoriesSection';
 import { TellerSection } from '@/components/settings/TellerSection';
 
 export function Setup() {
@@ -10,7 +11,8 @@ export function Setup() {
         <TellerSection />
         <AccountsSection />
         <CardsSection />
-        <CategoriesBudgetsSection />
+        <CategoriesSection />
+        <BudgetsSection />
       </div>
     </div>
   );

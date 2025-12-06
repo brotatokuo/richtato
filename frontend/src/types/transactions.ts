@@ -6,10 +6,10 @@ export interface TransactionFormData {
   amount: string;
   account_name: string;
   category?: string;
-  isPositive?: boolean;
+  transactionType: 'debit' | 'credit';
 }
 
-export type TransactionType = 'income' | 'expense';
+export type TransactionTypeFilter = 'all' | 'credit' | 'debit';
 
 export interface FilterOption {
   label: string;
@@ -27,9 +27,9 @@ export interface ContextMenuProps {
 }
 
 export interface TransactionTableProps {
-  type: TransactionType;
   transactions: DisplayTransaction[];
   onTransactionsChange: (transactions: DisplayTransaction[]) => void;
+  typeFilter: TransactionTypeFilter;
 }
 
 // Display transaction interface (different from API)
@@ -40,6 +40,7 @@ export interface DisplayTransaction {
   category: string;
   amount: number;
   account: string;
+  transactionType: 'debit' | 'credit';
 }
 
 // Helper function to transform API transaction to display format
@@ -53,5 +54,6 @@ export const transformTransaction = (
     category: apiTransaction.category_name || 'Uncategorized',
     amount: Number(apiTransaction.signed_amount),
     account: apiTransaction.account_name || 'Unknown',
+    transactionType: apiTransaction.transaction_type,
   };
 };

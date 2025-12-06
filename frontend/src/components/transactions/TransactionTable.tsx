@@ -34,8 +34,7 @@ import {
   Filter,
   Plus,
   Tag,
-  TrendingDown,
-  TrendingUp,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
 
@@ -48,9 +47,9 @@ const getLocalDateString = (): string => {
 };
 
 export function TransactionTable({
-  type,
   transactions,
   onTransactionsChange,
+  typeFilter,
   accounts,
   categories,
   loading,
@@ -90,18 +89,25 @@ export function TransactionTable({
   const [dateFilter, setDateFilter] = useState('');
   const [accountFilter, setAccountFilter] = useState('');
 
-  const isIncome = type === 'income';
-  const colorClass = isIncome ? 'green' : 'red';
-  const title = isIncome ? 'Income' : 'Expense';
-  const icon = isIncome ? TrendingUp : TrendingDown;
-  const IconComponent = icon;
+  // Get display title based on filter
+  const getTitle = () => {
+    switch (typeFilter) {
+      case 'credit':
+        return 'Income';
+      case 'debit':
+        return 'Expenses';
+      default:
+        return 'Transactions';
+    }
+  };
 
   const [formData, setFormData] = useState<TransactionFormData>({
     description: '',
     date: getLocalDateString(),
     amount: '',
     account_name: '',
-    ...(isIncome ? {} : { category: '', isPositive: false }),
+    category: '',
+    transactionType: typeFilter === 'credit' ? 'credit' : 'debit',
   });
 
   // Edit modal state
@@ -112,8 +118,19 @@ export function TransactionTable({
     date: getLocalDateString(),
     amount: '',
     account_name: '',
-    ...(isIncome ? {} : { category: '', isPositive: false }),
+    category: '',
+    transactionType: 'debit',
   });
+
+  // Update form default transaction type when filter changes
+  useEffect(() => {
+    if (typeFilter !== 'all') {
+      setFormData(prev => ({
+        ...prev,
+        transactionType: typeFilter as 'debit' | 'credit',
+      }));
+    }
+  }, [typeFilter]);
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -142,13 +159,9 @@ export function TransactionTable({
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
         transaction.account.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (isIncome
-          ? false
-          : transaction.category
-              .toLowerCase()
-              .includes(searchTerm.toLowerCase()));
+        transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory =
-        isIncome || !filterCategory || transaction.category === filterCategory;
+        !filterCategory || transaction.category === filterCategory;
       const matchesDate = !dateFilter || transaction.date === dateFilter;
       const matchesAccount =
         !accountFilter || transaction.account === accountFilter;
@@ -258,12 +271,7 @@ export function TransactionTable({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (
-      !formData.description ||
-      !formData.amount ||
-      !formData.account_name ||
-      (!isIncome && !formData.category)
-    ) {
+    if (!formData.description || !formData.amount || !formData.account_name) {
       return;
     }
 
@@ -276,16 +284,15 @@ export function TransactionTable({
         throw new Error('Account not found');
       }
 
-      // Find the category ID for expenses
+      // Find the category ID
       let categoryId: number | undefined;
-      if (!isIncome && formData.category) {
+      if (formData.category) {
         const category = categories.find(
           cat => String(cat.id) === String(formData.category)
         );
-        if (!category) {
-          throw new Error('Category not found');
+        if (category) {
+          categoryId = category.id;
         }
-        categoryId = category.id;
       }
 
       const rawAmount = evaluateAmountField(formData.amount);
@@ -296,7 +303,7 @@ export function TransactionTable({
         date: formData.date,
         amount: amountNum,
         description: formData.description,
-        transaction_type: isIncome ? 'credit' : (formData.isPositive ? 'credit' : 'debit'),
+        transaction_type: formData.transactionType,
         category_id: categoryId,
       });
 
@@ -310,13 +317,13 @@ export function TransactionTable({
         date: getLocalDateString(),
         amount: '',
         account_name: '',
-        ...(isIncome ? {} : { category: '', isPositive: false }),
+        category: '',
+        transactionType: typeFilter === 'credit' ? 'credit' : 'debit',
       });
       setShowAddModal(false);
       onRefresh();
     } catch (error) {
       console.error('Error creating transaction:', error);
-      // You might want to show a toast notification here
     }
   };
 
@@ -324,23 +331,18 @@ export function TransactionTable({
     setSelectedTransaction(t);
     // Find account ID from account name
     const account = accounts.find(acc => acc.name === t.account);
-    // Find category ID from category name (for expenses only)
-    const category =
-      !isIncome && t.category
-        ? categories.find(cat => cat.name === t.category)
-        : null;
+    // Find category ID from category name
+    const category = t.category
+      ? categories.find(cat => cat.name === t.category)
+      : null;
 
     setEditFormData({
       description: t.description,
       date: t.date,
       amount: Math.abs(t.amount).toString(),
       account_name: account ? String(account.id) : '',
-      ...(isIncome
-        ? {}
-        : {
-            category: category ? String(category.id) : '',
-            isPositive: t.amount >= 0,
-          }),
+      category: category ? String(category.id) : '',
+      transactionType: t.transactionType,
     });
     setShowEditModal(true);
   };
@@ -355,9 +357,9 @@ export function TransactionTable({
       );
       if (!account) throw new Error('Account not found');
 
-      // Find the category ID for expenses
+      // Find the category ID
       let categoryId: number | undefined;
-      if (!isIncome && editFormData.category) {
+      if (editFormData.category) {
         const category = categories.find(
           cat => String(cat.id) === String(editFormData.category)
         );
@@ -375,7 +377,7 @@ export function TransactionTable({
         date: editFormData.date,
         amount: amountValue,
         category_id: categoryId ?? null,
-        transaction_type: isIncome ? 'credit' : (editFormData.isPositive ? 'credit' : 'debit'),
+        transaction_type: editFormData.transactionType,
       });
 
       const transformed = transformTransaction(updated);
@@ -410,7 +412,7 @@ export function TransactionTable({
   };
 
   const getTableHeaders = () => {
-    const baseHeaders = [
+    return [
       {
         field: 'date' as keyof DisplayTransaction,
         label: 'Date',
@@ -422,27 +424,21 @@ export function TransactionTable({
         filterable: false,
       },
       {
+        field: 'category' as keyof DisplayTransaction,
+        label: 'Category',
+        filterable: true,
+      },
+      {
         field: 'account' as keyof DisplayTransaction,
         label: 'Account',
         filterable: true,
       },
+      {
+        field: 'amount' as keyof DisplayTransaction,
+        label: 'Amount',
+        filterable: false,
+      },
     ];
-
-    if (!isIncome) {
-      baseHeaders.splice(2, 0, {
-        field: 'category' as keyof DisplayTransaction,
-        label: 'Category',
-        filterable: true,
-      });
-    }
-
-    baseHeaders.push({
-      field: 'amount' as keyof DisplayTransaction,
-      label: 'Amount',
-      filterable: false,
-    });
-
-    return baseHeaders;
   };
 
   const renderTableCell = (
@@ -467,29 +463,33 @@ export function TransactionTable({
         );
       case 'account':
         return <TableCell key={String(field)}>{transaction.account}</TableCell>;
-      case 'category':
+      case 'category': {
+        const isCredit = transaction.transactionType === 'credit';
+        const bgColor = isCredit
+          ? 'bg-green-100 dark:bg-green-900/20'
+          : 'bg-red-100 dark:bg-red-900/20';
+        const textColor = isCredit
+          ? 'text-green-800 dark:text-green-400'
+          : 'text-red-800 dark:text-red-400';
         return (
           <TableCell key={String(field)}>
-            <span className="px-2 py-1 rounded text-xs bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+            <span className={`px-2 py-1 rounded text-xs ${bgColor} ${textColor}`}>
               {transaction.category}
             </span>
           </TableCell>
         );
+      }
       case 'amount': {
-        const amount = transaction.amount;
-        const isPositiveAmount = amount >= 0;
-        const sign = isIncome ? '+' : isPositiveAmount ? '+' : '-';
-        const color = isIncome
-          ? 'text-green-600'
-          : isPositiveAmount
-            ? 'text-green-600'
-            : 'text-red-600';
+        const isCredit = transaction.transactionType === 'credit';
+        const sign = isCredit ? '+' : '-';
+        const color = isCredit ? 'text-green-600' : 'text-red-600';
         return (
           <TableCell
             key={String(field)}
             className={`text-right font-medium ${color}`}
           >
-            {sign}{formatCurrency(Math.abs(amount), preferences.currency)}
+            {sign}
+            {formatCurrency(Math.abs(transaction.amount), preferences.currency)}
           </TableCell>
         );
       }
@@ -508,11 +508,11 @@ export function TransactionTable({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-card-foreground flex items-center gap-2">
-            <IconComponent className={`h-6 w-6 text-${colorClass}-600`} />
-            {title}
+            <ArrowLeftRight className="h-6 w-6 text-primary" />
+            {getTitle()}
           </h2>
           {/* Active filters indicator */}
-          {(dateFilter || accountFilter || (!isIncome && filterCategory)) && (
+          {(dateFilter || accountFilter || filterCategory) && (
             <div className="flex items-center gap-2 mt-2">
               <span className="text-sm text-muted-foreground">
                 Active filters:
@@ -523,7 +523,7 @@ export function TransactionTable({
                   {formatDate(dateFilter, preferences.date_format)}
                 </span>
               )}
-              {!isIncome && filterCategory && (
+              {filterCategory && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground text-xs rounded-full dark:bg-secondary/20 dark:text-secondary-foreground">
                   <Tag className="h-3 w-3" />
                   {filterCategory}
@@ -554,7 +554,7 @@ export function TransactionTable({
         <div className="flex gap-2">
           <Button onClick={() => setShowAddModal(true)} variant="default">
             <Plus className="h-4 w-4 mr-2" />
-            Add {isIncome ? 'Income' : 'Expense'}
+            Add Transaction
           </Button>
         </div>
       </div>
@@ -563,10 +563,9 @@ export function TransactionTable({
       <Modal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        title={`Add New ${isIncome ? 'Income' : 'Expense'}`}
+        title="Add New Transaction"
       >
         <TransactionForm
-          type={type}
           formData={formData}
           onFormChange={setFormData}
           onSubmit={handleSubmit}
@@ -577,7 +576,6 @@ export function TransactionTable({
 
       {/* Search and Filters */}
       <SearchAndFilter
-        type={type}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         filterCategory={filterCategory}
@@ -596,32 +594,32 @@ export function TransactionTable({
             ) : (
               <div className="divide-y">
                 {paginatedTransactions.map((t, index) => {
-                  const amount = t.amount;
-                  const isPositiveAmount = amount >= 0;
-                  const sign = isIncome ? '+' : isPositiveAmount ? '+' : '-';
-                  const color = isIncome
-                    ? 'text-green-600'
-                    : isPositiveAmount
-                      ? 'text-green-600'
-                      : 'text-red-600';
+                  const isCredit = t.transactionType === 'credit';
+                  const sign = isCredit ? '+' : '-';
+                  const color = isCredit ? 'text-green-600' : 'text-red-600';
                   return (
                     <div
                       key={`${t.id}-${index}`}
-                      className="p-4 w-full flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
+                      className="p-4 w-full flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between cursor-pointer hover:bg-muted/50"
+                      onClick={() => openEditModal(t)}
                     >
                       <div className="space-y-1 min-w-0 sm:pr-2">
                         <div className="text-sm font-medium whitespace-normal break-words">
                           {t.description}
                         </div>
                         <div className="text-xs text-muted-foreground whitespace-normal break-words">
-                          {formatDate(t.date, preferences.date_format)} • {t.account}
-                          {!isIncome && t.category ? ` • ${t.category}` : ''}
+                          {formatDate(t.date, preferences.date_format)} •{' '}
+                          {t.account} • {t.category}
                         </div>
                       </div>
                       <div
                         className={`sm:ml-4 sm:text-right text-sm font-semibold ${color}`}
                       >
-                        {sign}{formatCurrency(Math.abs(amount), preferences.currency)}
+                        {sign}
+                        {formatCurrency(
+                          Math.abs(t.amount),
+                          preferences.currency
+                        )}
                       </div>
                     </div>
                   );
@@ -720,9 +718,7 @@ export function TransactionTable({
       {totalItems === 0 && (
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardContent className="text-center py-8">
-            <p className="text-muted-foreground">
-              No {isIncome ? 'income' : 'expense'} transactions found.
-            </p>
+            <p className="text-muted-foreground">No transactions found.</p>
           </CardContent>
         </Card>
       )}
@@ -744,10 +740,9 @@ export function TransactionTable({
           setShowEditModal(false);
           setSelectedTransaction(null);
         }}
-        title={`Edit ${isIncome ? 'Income' : 'Expense'}`}
+        title="Edit Transaction"
       >
         <TransactionForm
-          type={type}
           formData={editFormData}
           onFormChange={setEditFormData}
           onSubmit={handleEditSubmit}

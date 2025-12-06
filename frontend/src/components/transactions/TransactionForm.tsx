@@ -9,18 +9,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { formatDate } from '@/lib/format';
-import {
-  Account,
-  Category,
-  transactionsApiService,
-} from '@/lib/api/transactions';
-import { TransactionFormData, TransactionType } from '@/types/transactions';
+import { Account, Category } from '@/lib/api/transactions';
+import { TransactionFormData } from '@/types/transactions';
 import { Calendar, Minus, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 interface TransactionFormProps {
-  type: TransactionType;
   formData: TransactionFormData;
   onFormChange: (data: TransactionFormData) => void;
   onSubmit: (e: React.FormEvent) => void;
@@ -31,7 +25,6 @@ interface TransactionFormProps {
 }
 
 export function TransactionForm({
-  type,
   formData,
   onFormChange,
   onSubmit,
@@ -41,11 +34,17 @@ export function TransactionForm({
   onDelete,
 }: TransactionFormProps) {
   const { preferences, getCurrencySymbol } = usePreferences();
-  const isIncome = type === 'income';
-  const title = isIncome ? 'Income' : 'Expense';
-  const placeholder = isIncome
+  const isCredit = formData.transactionType === 'credit';
+  const title = isCredit ? 'Income' : 'Expense';
+  const placeholder = isCredit
     ? 'e.g., Salary, Freelance work'
     : 'e.g., Groceries, Gas, Coffee';
+
+  // Filter categories based on transaction type
+  const filteredCategories = categories.filter(cat => {
+    if (isCredit) return cat.is_income;
+    return cat.is_expense;
+  });
 
   // Create number formatter for displaying amounts (without currency symbol)
   const numberFormatter = new Intl.NumberFormat('en-US', {
@@ -98,13 +97,23 @@ export function TransactionForm({
     }
   }, [formData.amount, isAmountFocused]);
 
+  // Reset category when transaction type changes (to avoid invalid category)
+  const handleTransactionTypeToggle = () => {
+    const newType = isCredit ? 'debit' : 'credit';
+    onFormChange({
+      ...formData,
+      transactionType: newType,
+      category: '', // Reset category when type changes
+    });
+  };
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label htmlFor={`${type}-description`}>Description</Label>
+          <Label htmlFor="transaction-description">Description</Label>
           <Input
-            id={`${type}-description`}
+            id="transaction-description"
             value={formData.description}
             onChange={e =>
               onFormChange({
@@ -114,12 +123,13 @@ export function TransactionForm({
             }
             onBlur={e => {
               const val = e.target.value || '';
-              if (!isIncome) {
-                const hasRefundWord = /\brefund\b/i.test(val);
-                // Flip sign based on "refund" presence
+              const hasRefundWord = /\brefund\b/i.test(val);
+              // Flip to credit if "refund" is mentioned in expense mode
+              if (hasRefundWord && formData.transactionType === 'debit') {
                 onFormChange({
                   ...formData,
-                  isPositive: hasRefundWord ? true : false,
+                  transactionType: 'credit',
+                  category: '', // Reset category
                 });
               }
             }}
@@ -128,55 +138,71 @@ export function TransactionForm({
           />
         </div>
         <div>
-          <Label htmlFor={`${type}-amount`}>Amount</Label>
-          {isIncome ? (
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-muted-foreground px-3 py-2 bg-muted rounded-md border border-input">
-                {getCurrencySymbol(preferences.currency)}
-              </span>
-              <Input
-                id={`${type}-amount`}
-                type="text"
-                value={amountDisplay}
-                onFocus={() => {
-                  setIsAmountFocused(true);
-                  if (!amountDisplay) return;
-                  // Show raw numeric for editing if currently formatted currency
-                  if (!amountDisplay.trim().startsWith('=')) {
-                    const raw = normalizeNumericString(amountDisplay);
-                    setAmountDisplay(raw);
-                  }
-                }}
-                onChange={e => {
-                  const rawInput = e.target.value;
-                  setAmountDisplay(rawInput);
-                  if (rawInput.trim().startsWith('=')) {
-                    onFormChange({
-                      ...formData,
-                      amount: rawInput,
-                    });
-                  } else {
-                    const normalized = normalizeNumericString(rawInput);
-                    onFormChange({
-                      ...formData,
-                      amount: normalized,
-                    });
-                  }
-                }}
-                onBlur={e => {
-                  setIsAmountFocused(false);
-                  const val = e.target.value;
-                  if (val.trim().startsWith('=')) {
-                    const result = evaluateExpression(val.trim().slice(1));
-                    if (result !== null) {
-                    const normalized = Math.abs(result); // don't affect sign toggle elsewhere
+          <Label htmlFor="transaction-amount">Amount</Label>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              aria-pressed={isCredit ? 'true' : 'false'}
+              onClick={handleTransactionTypeToggle}
+              className={
+                isCredit
+                  ? 'border-green-600 text-green-600'
+                  : 'border-red-600 text-red-600'
+              }
+              title={isCredit ? 'Income (credit)' : 'Expense (debit)'}
+            >
+              {isCredit ? (
+                <Plus className="h-4 w-4" />
+              ) : (
+                <Minus className="h-4 w-4" />
+              )}
+            </Button>
+            <span className="text-sm font-medium text-muted-foreground px-3 py-2 bg-muted rounded-md border border-input">
+              {getCurrencySymbol(preferences.currency || 'USD')}
+            </span>
+            <Input
+              id="transaction-amount"
+              type="text"
+              value={amountDisplay}
+              onFocus={() => {
+                setIsAmountFocused(true);
+                if (!amountDisplay) return;
+                if (!amountDisplay.trim().startsWith('=')) {
+                  const raw = normalizeNumericString(amountDisplay);
+                  setAmountDisplay(raw);
+                }
+              }}
+              onChange={e => {
+                const rawInput = e.target.value;
+                setAmountDisplay(rawInput);
+                if (rawInput.trim().startsWith('=')) {
+                  onFormChange({
+                    ...formData,
+                    amount: rawInput,
+                  });
+                } else {
+                  const normalized = normalizeNumericString(rawInput);
+                  onFormChange({
+                    ...formData,
+                    amount: normalized,
+                  });
+                }
+              }}
+              onBlur={e => {
+                setIsAmountFocused(false);
+                const val = e.target.value;
+                if (val.trim().startsWith('=')) {
+                  const result = evaluateExpression(val.trim().slice(1));
+                  if (result !== null) {
+                    const normalized = Math.abs(result);
                     const numericString = formatAmount(normalized);
                     onFormChange({ ...formData, amount: numericString });
                     setAmountDisplay(numberFormatter.format(normalized));
-                    }
-                    return;
                   }
-                  const normalized = normalizeNumericString(val);
+                  return;
+                }
+                const normalized = normalizeNumericString(val);
                 const num = parseFloat(normalized);
                 if (!isNaN(num)) {
                   const numericString = formatAmount(Math.abs(num));
@@ -187,100 +213,14 @@ export function TransactionForm({
               placeholder="0.00"
               required
             />
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                aria-pressed={formData.isPositive ? 'true' : 'false'}
-                onClick={() =>
-                  onFormChange({
-                    ...formData,
-                    isPositive: !formData.isPositive,
-                  })
-                }
-                className={
-                  formData.isPositive
-                    ? 'border-green-600 text-green-600'
-                    : 'border-red-600 text-red-600'
-                }
-                title={
-                  formData.isPositive
-                    ? 'Refund (positive)'
-                    : 'Expense (negative)'
-                }
-              >
-                {formData.isPositive ? (
-                  <Plus className="h-4 w-4" />
-                ) : (
-                  <Minus className="h-4 w-4" />
-                )}
-              </Button>
-              <span className="text-sm font-medium text-muted-foreground px-3 py-2 bg-muted rounded-md border border-input">
-                {getCurrencySymbol(preferences.currency)}
-              </span>
-              <Input
-                id={`${type}-amount`}
-                type="text"
-                value={amountDisplay}
-                onFocus={() => {
-                  setIsAmountFocused(true);
-                  if (!amountDisplay) return;
-                  if (!amountDisplay.trim().startsWith('=')) {
-                    const raw = normalizeNumericString(amountDisplay);
-                    setAmountDisplay(raw);
-                  }
-                }}
-                onChange={e => {
-                  const rawInput = e.target.value;
-                  setAmountDisplay(rawInput);
-                  if (rawInput.trim().startsWith('=')) {
-                    onFormChange({
-                      ...formData,
-                      amount: rawInput,
-                    });
-                  } else {
-                    const normalized = normalizeNumericString(rawInput);
-                    onFormChange({
-                      ...formData,
-                      amount: normalized,
-                    });
-                  }
-                }}
-                onBlur={e => {
-                  setIsAmountFocused(false);
-                  const val = e.target.value;
-                  if (val.trim().startsWith('=')) {
-                    const result = evaluateExpression(val.trim().slice(1));
-                    if (result !== null) {
-                      const normalized = Math.abs(result); // do not change sign toggle
-                      const numericString = formatAmount(normalized);
-                      onFormChange({ ...formData, amount: numericString });
-                      setAmountDisplay(numberFormatter.format(normalized));
-                    }
-                    return;
-                  }
-                  const normalized = normalizeNumericString(val);
-                  const num = parseFloat(normalized);
-                  if (!isNaN(num)) {
-                    const numericString = formatAmount(Math.abs(num));
-                    onFormChange({ ...formData, amount: numericString });
-                    setAmountDisplay(numberFormatter.format(Math.abs(num)));
-                  }
-                }}
-                placeholder="0.00"
-                required
-              />
-            </div>
-          )}
+          </div>
         </div>
         <div>
-          <Label htmlFor={`${type}-date`}>Date</Label>
+          <Label htmlFor="transaction-date">Date</Label>
           <div className="flex items-center gap-2">
             <Input
               ref={dateInputRef}
-              id={`${type}-date`}
+              id="transaction-date"
               type="date"
               value={formData.date}
               onChange={e =>
@@ -304,7 +244,7 @@ export function TransactionForm({
           </div>
         </div>
         <div>
-          <Label htmlFor={`${type}-account`}>Account</Label>
+          <Label htmlFor="transaction-account">Account</Label>
           <Select
             value={formData.account_name}
             onValueChange={value =>
@@ -326,31 +266,29 @@ export function TransactionForm({
             </SelectContent>
           </Select>
         </div>
-        {!isIncome && (
-          <div className="md:col-span-2">
-            <Label htmlFor={`${type}-category`}>Category</Label>
-            <Select
-              value={formData.category || ''}
-              onValueChange={value =>
-                onFormChange({
-                  ...formData,
-                  category: value,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map(category => (
-                  <SelectItem key={category.id} value={String(category.id)}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        <div className="md:col-span-2">
+          <Label htmlFor="transaction-category">Category</Label>
+          <Select
+            value={formData.category || ''}
+            onValueChange={value =>
+              onFormChange({
+                ...formData,
+                category: value,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              {filteredCategories.map(category => (
+                <SelectItem key={category.id} value={String(category.id)}>
+                  {category.full_path || category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <div className="flex items-center justify-between gap-2">
         <div>
