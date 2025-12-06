@@ -118,15 +118,26 @@ const TYPE_ORDER: Record<string, number> = {
   wallet: 6,
 };
 
+export interface AccountGroup {
+  type: string;
+  typeDisplay: string;
+  accounts: AccountWithBalance[];
+  total: number;
+}
+
 interface AccountsListProps {
   selectedAccountId: number | null;
+  selectedGroupType: string | null;
   onAccountSelect: (account: AccountWithBalance | null) => void;
+  onGroupSelect: (group: AccountGroup | null) => void;
   reloadKey?: string | number;
 }
 
 export function AccountsList({
   selectedAccountId,
+  selectedGroupType,
   onAccountSelect,
+  onGroupSelect,
   reloadKey,
 }: AccountsListProps) {
   const { preferences } = usePreferences();
@@ -268,16 +279,39 @@ export function AccountsList({
             (sum, account) => sum + account.balance,
             0
           );
+          const isGroupSelected = selectedGroupType === type;
+          const group: AccountGroup = {
+            type,
+            typeDisplay: getAccountTypeLabel(type),
+            accounts: typeAccounts,
+            total: typeTotal,
+          };
 
           return (
             <div key={type} className="space-y-2">
-              {/* Type header */}
-              <div className="flex items-center justify-between px-1">
+              {/* Type header - clickable */}
+              <button
+                onClick={() => {
+                  // Clear individual account selection when selecting a group
+                  onAccountSelect(null);
+                  onGroupSelect(isGroupSelected ? null : group);
+                }}
+                className={`w-full flex items-center justify-between px-2 py-1.5 rounded-md transition-all ${
+                  isGroupSelected
+                    ? 'bg-primary/10 ring-1 ring-primary'
+                    : 'hover:bg-muted/50'
+                }`}
+              >
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <div
                     className={`w-2 h-2 rounded-full ${getAccountTypeColor(type)}`}
                   />
-                  {getAccountTypeLabel(type)}
+                  <span className={isGroupSelected ? 'text-primary' : ''}>
+                    {getAccountTypeLabel(type)}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    ({typeAccounts.length})
+                  </span>
                 </div>
                 <span
                   className={`text-sm font-semibold ${
@@ -286,9 +320,9 @@ export function AccountsList({
                 >
                   {formatSignedCurrency(typeTotal, preferences.currency, true)}
                 </span>
-              </div>
+              </button>
 
-              {/* Account items */}
+              {/* Account items - indented under group */}
               <div className="space-y-1">
                 {typeAccounts.map(account => {
                   const isSelected = selectedAccountId === account.id;
@@ -296,9 +330,11 @@ export function AccountsList({
                   return (
                     <button
                       key={account.id}
-                      onClick={() =>
-                        onAccountSelect(isSelected ? null : account)
-                      }
+                      onClick={() => {
+                        // Clear group selection when selecting an individual account
+                        onGroupSelect(null);
+                        onAccountSelect(isSelected ? null : account);
+                      }}
                       className={`w-full p-3 rounded-lg border transition-all text-left flex items-center justify-between group ${
                         isSelected
                           ? 'bg-primary/10 border-primary ring-1 ring-primary'

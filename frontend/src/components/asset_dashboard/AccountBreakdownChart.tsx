@@ -135,9 +135,9 @@ export function AccountBreakdownChart() {
         },
       },
       legend: {
-        orient: 'vertical',
-        right: 10,
-        top: 'center',
+        orient: 'horizontal',
+        bottom: 0,
+        left: 'center',
         textStyle: {
           color: '#9ca3af',
         },

@@ -1,9 +1,11 @@
 import { AccountBreakdownChart } from '@/components/asset_dashboard/AccountBreakdownChart';
 import { AccountHistoryPanel } from '@/components/asset_dashboard/AccountHistoryPanel';
 import {
+  AccountGroup,
   AccountsList,
   AccountWithBalance,
 } from '@/components/asset_dashboard/AccountsList';
+import { GroupHistoryPanel } from '@/components/asset_dashboard/GroupHistoryPanel';
 import { MetricCard } from '@/components/asset_dashboard/MetricCard';
 import { NetWorthTrendChart } from '@/components/asset_dashboard/NetWorthTrendChart';
 import { usePreferences } from '@/contexts/PreferencesContext';
@@ -34,6 +36,7 @@ export function AssetDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [selectedAccount, setSelectedAccount] =
     useState<AccountWithBalance | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<AccountGroup | null>(null);
   const [accountsReloadKey, setAccountsReloadKey] = useState(0);
 
   const loadDashboardData = async () => {
@@ -69,6 +72,16 @@ export function AssetDashboard() {
 
   const handleAccountSelect = (account: AccountWithBalance | null) => {
     setSelectedAccount(account);
+    if (account) {
+      setSelectedGroup(null); // Clear group when selecting individual account
+    }
+  };
+
+  const handleGroupSelect = (group: AccountGroup | null) => {
+    setSelectedGroup(group);
+    if (group) {
+      setSelectedAccount(null); // Clear individual account when selecting group
+    }
   };
 
   const handleDataChange = () => {
@@ -260,13 +273,23 @@ export function AssetDashboard() {
         <div className="lg:col-span-3">
           <AccountsList
             selectedAccountId={selectedAccount?.id ?? null}
+            selectedGroupType={selectedGroup?.type ?? null}
             onAccountSelect={handleAccountSelect}
+            onGroupSelect={handleGroupSelect}
             reloadKey={accountsReloadKey}
           />
         </div>
       </div>
 
-      {/* Account History Panel - Shows when an account is selected */}
+      {/* Group History Panel - Shows when a group is selected */}
+      {selectedGroup && (
+        <GroupHistoryPanel
+          group={selectedGroup}
+          onClose={() => setSelectedGroup(null)}
+        />
+      )}
+
+      {/* Account History Panel - Shows when an individual account is selected */}
       {selectedAccount && (
         <AccountHistoryPanel
           account={selectedAccount}

@@ -37,7 +37,7 @@ export function CategoriesSection() {
   const [error, setError] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<CategoryCatalogItem[]>([]);
   const [expandedGroups, setExpandedGroups] = useState<Set<CategoryType>>(
-    new Set(['expense'])
+    new Set()
   );
 
   useEffect(() => {
