@@ -249,57 +249,145 @@ export function TransactionTable({
     endIndex
   );
 
-  const categoryNames = Array.from(
-    new Set(transactions.map(t => t.category))
-  ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  // Helper: filter transactions by all filters EXCEPT the specified column
+  // This allows each column's filter options to show only relevant values
+  const getFilteredForColumn = (excludeColumn: string) => {
+    return transactions.filter(transaction => {
+      const matchesSearch =
+        transaction.description
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        transaction.account.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
 
-  // Generate filter options for each column
-  const dateFilterOptions: FilterOption[] = Array.from(
-    new Set(transactions.map(t => t.date))
-  )
-    .sort()
-    .reverse()
-    .map(date => ({
-      label: formatDate(date, preferences.date_format),
-      value: date,
-      count: transactions.filter(t => t.date === date).length,
+      const matchesCategory =
+        excludeColumn === 'category' ||
+        filterCategories.length === 0 ||
+        filterCategories.includes(transaction.category);
+      const matchesDate =
+        excludeColumn === 'date' ||
+        dateFilters.length === 0 ||
+        dateFilters.includes(transaction.date);
+      const matchesDescription =
+        excludeColumn === 'description' ||
+        descriptionFilters.length === 0 ||
+        descriptionFilters.includes(transaction.description);
+      const matchesAccount =
+        excludeColumn === 'account' ||
+        accountFilters.length === 0 ||
+        accountFilters.includes(transaction.account);
+      const matchesAmount =
+        excludeColumn === 'amount' ||
+        amountFilters.length === 0 ||
+        amountFilters.includes(String(transaction.amount));
+
+      const matchesDateSearch =
+        excludeColumn === 'date' ||
+        !dateSearch ||
+        transaction.date.toLowerCase().includes(dateSearch.toLowerCase()) ||
+        formatDate(transaction.date, preferences.date_format)
+          .toLowerCase()
+          .includes(dateSearch.toLowerCase());
+      const matchesDescriptionSearch =
+        excludeColumn === 'description' ||
+        !descriptionSearch ||
+        transaction.description
+          .toLowerCase()
+          .includes(descriptionSearch.toLowerCase());
+      const matchesCategorySearch =
+        excludeColumn === 'category' ||
+        !categorySearch ||
+        transaction.category
+          .toLowerCase()
+          .includes(categorySearch.toLowerCase());
+      const matchesAccountSearch =
+        excludeColumn === 'account' ||
+        !accountSearch ||
+        transaction.account.toLowerCase().includes(accountSearch.toLowerCase());
+      const matchesAmountSearch =
+        excludeColumn === 'amount' ||
+        !amountSearch ||
+        String(transaction.amount).includes(amountSearch) ||
+        formatCurrency(Math.abs(transaction.amount), preferences.currency)
+          .toLowerCase()
+          .includes(amountSearch.toLowerCase());
+
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesDate &&
+        matchesDescription &&
+        matchesAccount &&
+        matchesAmount &&
+        matchesDateSearch &&
+        matchesDescriptionSearch &&
+        matchesCategorySearch &&
+        matchesAccountSearch &&
+        matchesAmountSearch
+      );
+    });
+  };
+
+  // Generate filter options based on filtered data (excluding own column's filter)
+  const dateFilterOptions: FilterOption[] = (() => {
+    const filtered = getFilteredForColumn('date');
+    return Array.from(new Set(filtered.map(t => t.date)))
+      .sort()
+      .reverse()
+      .map(date => ({
+        label: formatDate(date, preferences.date_format),
+        value: date,
+        count: filtered.filter(t => t.date === date).length,
+      }));
+  })();
+
+  const descriptionFilterOptions: FilterOption[] = (() => {
+    const filtered = getFilteredForColumn('description');
+    return Array.from(new Set(filtered.map(t => t.description)))
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+      .map(description => ({
+        label: description,
+        value: description,
+        count: filtered.filter(t => t.description === description).length,
+      }));
+  })();
+
+  const categoryFilterOptions: FilterOption[] = (() => {
+    const filtered = getFilteredForColumn('category');
+    const cats = Array.from(new Set(filtered.map(t => t.category))).sort(
+      (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })
+    );
+    return cats.map(category => ({
+      label: category,
+      value: category,
+      count: filtered.filter(t => t.category === category).length,
     }));
+  })();
 
-  const descriptionFilterOptions: FilterOption[] = Array.from(
-    new Set(transactions.map(t => t.description))
-  )
-    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
-    .map(description => ({
-      label: description,
-      value: description,
-      count: transactions.filter(t => t.description === description).length,
-    }));
+  const accountFilterOptions: FilterOption[] = (() => {
+    const filtered = getFilteredForColumn('account');
+    return Array.from(new Set(filtered.map(t => t.account)))
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+      .map(account => ({
+        label: account,
+        value: account,
+        count: filtered.filter(t => t.account === account).length,
+      }));
+  })();
 
-  const categoryFilterOptions: FilterOption[] = categoryNames.map(category => ({
-    label: category,
-    value: category,
-    count: transactions.filter(t => t.category === category).length,
-  }));
-
-  const accountFilterOptions: FilterOption[] = Array.from(
-    new Set(transactions.map(t => t.account))
-  )
-    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
-    .map(account => ({
-      label: account,
-      value: account,
-      count: transactions.filter(t => t.account === account).length,
-    }));
-
-  const amountFilterOptions: FilterOption[] = Array.from(
-    new Set(transactions.map(t => String(t.amount)))
-  )
-    .sort((a, b) => parseFloat(a) - parseFloat(b))
-    .map(amount => ({
-      label: formatCurrency(Math.abs(parseFloat(amount)), preferences.currency),
-      value: amount,
-      count: transactions.filter(t => String(t.amount) === amount).length,
-    }));
+  const amountFilterOptions: FilterOption[] = (() => {
+    const filtered = getFilteredForColumn('amount');
+    return Array.from(new Set(filtered.map(t => String(t.amount))))
+      .sort((a, b) => parseFloat(a) - parseFloat(b))
+      .map(amount => ({
+        label: formatCurrency(
+          Math.abs(parseFloat(amount)),
+          preferences.currency
+        ),
+        value: amount,
+        count: filtered.filter(t => String(t.amount) === amount).length,
+      }));
+  })();
 
   const handleSort = (field: keyof DisplayTransaction) => {
     if (sortField === field) {
