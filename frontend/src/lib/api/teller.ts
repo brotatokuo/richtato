@@ -130,9 +130,18 @@ class TellerApiService {
 
   /**
    * Disconnect a Teller connection
+   * @param id - Connection ID
+   * @param deleteData - If true, also deletes the account and all its transactions
    */
-  async deleteTellerConnection(id: number): Promise<void> {
-    let response = await fetch(`${this.baseUrl}/teller/connections/${id}/`, {
+  async deleteTellerConnection(
+    id: number,
+    deleteData: boolean = false
+  ): Promise<void> {
+    const url = deleteData
+      ? `${this.baseUrl}/teller/connections/${id}/?delete_data=true`
+      : `${this.baseUrl}/teller/connections/${id}/`;
+
+    let response = await fetch(url, {
       method: 'DELETE',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
@@ -142,7 +151,7 @@ class TellerApiService {
     if (response.status === 403) {
       console.log('CSRF token invalid for Teller delete, refreshing...');
       await csrfService.refreshToken();
-      response = await fetch(`${this.baseUrl}/teller/connections/${id}/`, {
+      response = await fetch(url, {
         method: 'DELETE',
         headers: await csrfService.getHeaders(),
         credentials: 'include',

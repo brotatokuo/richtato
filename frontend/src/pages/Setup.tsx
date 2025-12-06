@@ -1,16 +1,12 @@
-import { AccountsSection } from '@/components/settings/AccountsSection';
 import { BudgetsSection } from '@/components/settings/BudgetsSection';
-import { CardsSection } from '@/components/settings/CardsSection';
 import { CategoriesSection } from '@/components/settings/CategoriesSection';
-import { TellerSection } from '@/components/settings/TellerSection';
+import { UnifiedAccountsSection } from '@/components/settings/UnifiedAccountsSection';
 
 export function Setup() {
   return (
     <div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-1">
-        <TellerSection />
-        <AccountsSection />
-        <CardsSection />
+        <UnifiedAccountsSection />
         <CategoriesSection />
         <BudgetsSection />
       </div>

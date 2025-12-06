@@ -39,6 +39,12 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
     entity_display = serializers.CharField(source="institution.name", read_only=True)
     date = serializers.DateTimeField(source="updated_at", read_only=True)
 
+    # Sync connection fields
+    has_connection = serializers.SerializerMethodField()
+    connection_id = serializers.SerializerMethodField()
+    connection_status = serializers.SerializerMethodField()
+    last_sync = serializers.SerializerMethodField()
+
     class Meta:
         model = FinancialAccount
         fields = [
@@ -61,8 +67,49 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
             "entity",
             "entity_display",
             "date",
+            # Sync connection fields
+            "has_connection",
+            "connection_id",
+            "connection_status",
+            "last_sync",
         ]
         read_only_fields = ["id", "created_at", "updated_at", "sync_source"]
+
+    def _get_active_connection(self, obj):
+        """Get the active sync connection for this account."""
+        # Use prefetched data if available, otherwise query
+        if (
+            hasattr(obj, "_prefetched_objects_cache")
+            and "sync_connections" in obj._prefetched_objects_cache
+        ):
+            connections = obj._prefetched_objects_cache["sync_connections"]
+            for conn in connections:
+                if conn.status in ("active", "error"):
+                    return conn
+            return None
+        # Fallback to query
+        return obj.sync_connections.filter(status__in=["active", "error"]).first()
+
+    def get_has_connection(self, obj):
+        """Check if account has an active sync connection."""
+        return self._get_active_connection(obj) is not None
+
+    def get_connection_id(self, obj):
+        """Get the sync connection ID if exists."""
+        conn = self._get_active_connection(obj)
+        return conn.id if conn else None
+
+    def get_connection_status(self, obj):
+        """Get the sync connection status."""
+        conn = self._get_active_connection(obj)
+        return conn.status if conn else None
+
+    def get_last_sync(self, obj):
+        """Get the last sync timestamp."""
+        conn = self._get_active_connection(obj)
+        if conn and conn.last_sync:
+            return conn.last_sync.isoformat()
+        return None
 
     def get_entity(self, obj):
         """Return institution slug or name for backward compatibility."""

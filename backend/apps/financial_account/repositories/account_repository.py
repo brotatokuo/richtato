@@ -4,6 +4,8 @@ from datetime import date
 from decimal import Decimal
 from typing import List, Optional
 
+from django.db.models import Prefetch
+
 from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
 from apps.richtato_user.models import User
 
@@ -14,8 +16,10 @@ class FinancialAccountRepository:
     def get_by_id(self, account_id: int) -> Optional[FinancialAccount]:
         """Get account by ID."""
         try:
-            return FinancialAccount.objects.select_related("institution", "user").get(
-                id=account_id
+            return (
+                FinancialAccount.objects.select_related("institution", "user")
+                .prefetch_related("sync_connections")
+                .get(id=account_id)
             )
         except FinancialAccount.DoesNotExist:
             return None
@@ -24,8 +28,10 @@ class FinancialAccountRepository:
         self, user: User, is_active: Optional[bool] = None
     ) -> List[FinancialAccount]:
         """Get all accounts for a user."""
-        queryset = FinancialAccount.objects.filter(user=user).select_related(
-            "institution"
+        queryset = (
+            FinancialAccount.objects.filter(user=user)
+            .select_related("institution")
+            .prefetch_related("sync_connections")
         )
         if is_active is not None:
             queryset = queryset.filter(is_active=is_active)
@@ -40,6 +46,7 @@ class FinancialAccountRepository:
                 user=user, account_type=account_type, is_active=is_active
             )
             .select_related("institution")
+            .prefetch_related("sync_connections")
             .all()
         )
 

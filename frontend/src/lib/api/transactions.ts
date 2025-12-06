@@ -46,6 +46,19 @@ export interface Account {
   entity?: string;
   entity_display?: string;
   date?: string;
+  // Account type
+  account_type?: string;
+  account_type_display?: string;
+  account_number_last4?: string;
+  institution_name?: string;
+  currency?: string;
+  is_active?: boolean;
+  // Sync connection fields
+  sync_source?: string;
+  has_connection?: boolean;
+  connection_id?: number | null;
+  connection_status?: 'active' | 'disconnected' | 'error' | null;
+  last_sync?: string | null;
 }
 
 export interface Category {

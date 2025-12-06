@@ -280,7 +280,13 @@ class SyncConnectionDetailAPIView(APIView):
         return Response(serializer.data)
 
     def delete(self, request, pk):
-        """Disconnect/delete connection."""
+        """
+        Disconnect/delete connection.
+
+        Query params:
+            delete_data: If 'true', also deletes the associated account and all its transactions.
+                         If 'false' or omitted, only removes the connection (account becomes manual).
+        """
         connection = self.connection_repository.get_by_id(pk)
 
         if not connection or connection.user != request.user:
@@ -288,8 +294,38 @@ class SyncConnectionDetailAPIView(APIView):
                 {"error": "Connection not found"}, status=status.HTTP_404_NOT_FOUND
             )
 
+        # Check if we should also delete the account and its data
+        delete_data = request.query_params.get("delete_data", "false").lower() == "true"
+
         try:
+            account = connection.account
+
+            # Delete the connection first
             self.connection_repository.delete_connection(connection)
+
+            if delete_data and account:
+                # Delete all transactions for this account
+                from apps.transaction.models import Transaction
+
+                Transaction.objects.filter(account=account).delete()
+
+                # Delete the account itself (hard delete, not soft delete)
+                account.delete()
+
+                logger.info(
+                    f"Deleted connection {pk}, account {account.id}, and all associated data"
+                )
+            else:
+                # Just mark the account as manual if it was synced
+                if account and account.sync_source != "manual":
+                    account.sync_source = "manual"
+                    account.save()
+                    logger.info(
+                        f"Deleted connection {pk}, converted account {account.id} to manual"
+                    )
+                else:
+                    logger.info(f"Deleted connection {pk}")
+
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         except Exception as e:
