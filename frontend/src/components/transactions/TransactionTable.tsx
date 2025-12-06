@@ -1,4 +1,3 @@
-import { SearchAndFilter } from '@/components/transactions/SearchAndFilter';
 import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -6,8 +5,16 @@ import {
   ColumnFilterPopover,
   FilterOption,
 } from '@/components/ui/ColumnFilterPopover';
+import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { SortableHeader } from '@/components/ui/SortableHeader';
 import {
   Table,
@@ -18,19 +25,26 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { formatCurrency, formatDate } from '@/lib/format';
 import {
   Account,
   Category,
   transactionsApiService,
 } from '@/lib/api/transactions';
+import { formatCurrency, formatDate } from '@/lib/format';
 import {
   DisplayTransaction,
   TransactionFormData,
   TransactionTableProps,
   transformTransaction,
 } from '@/types/transactions';
-import { Calendar, CreditCard, Plus, Tag, ArrowLeftRight } from 'lucide-react';
+import {
+  ArrowLeftRight,
+  Calendar,
+  CreditCard,
+  Plus,
+  Search,
+  Tag,
+} from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
 
 const getLocalDateString = (): string => {
@@ -45,6 +59,7 @@ export function TransactionTable({
   transactions,
   onTransactionsChange,
   typeFilter,
+  onTypeFilterChange,
   accounts,
   categories,
   loading,
@@ -602,7 +617,9 @@ export function TransactionTable({
           : 'text-red-800 dark:text-red-400';
         return (
           <TableCell key={String(field)}>
-            <span className={`px-2 py-1 rounded text-xs ${bgColor} ${textColor}`}>
+            <span
+              className={`px-2 py-1 rounded text-xs ${bgColor} ${textColor}`}
+            >
               {transaction.category}
             </span>
           </TableCell>
@@ -632,101 +649,124 @@ export function TransactionTable({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-card-foreground flex items-center gap-2">
-            <ArrowLeftRight className="h-6 w-6 text-primary" />
-            {getTitle()}
-          </h2>
-          {/* Active filters indicator */}
-          {(dateFilters.length > 0 ||
-            descriptionFilters.length > 0 ||
-            accountFilters.length > 0 ||
-            filterCategories.length > 0 ||
-            amountFilters.length > 0 ||
-            dateSearch ||
-            descriptionSearch ||
-            categorySearch ||
-            accountSearch ||
-            amountSearch) && (
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <span className="text-sm text-muted-foreground">
-                Active filters:
-              </span>
-              {dateFilters.length > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/15 text-primary text-xs rounded-full dark:bg-primary/20 dark:text-primary">
-                  <Calendar className="h-3 w-3" />
-                  {dateFilters.length === 1
-                    ? formatDate(dateFilters[0], preferences.date_format)
-                    : `${dateFilters.length} dates`}
-                </span>
-              )}
-              {descriptionFilters.length > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full dark:bg-blue-900/20 dark:text-blue-400">
-                  {descriptionFilters.length === 1
-                    ? descriptionFilters[0].substring(0, 20) +
-                      (descriptionFilters[0].length > 20 ? '...' : '')
-                    : `${descriptionFilters.length} descriptions`}
-                </span>
-              )}
-              {filterCategories.length > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground text-xs rounded-full dark:bg-secondary/20 dark:text-secondary-foreground">
-                  <Tag className="h-3 w-3" />
-                  {filterCategories.length === 1
-                    ? filterCategories[0]
-                    : `${filterCategories.length} categories`}
-                </span>
-              )}
-              {accountFilters.length > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full dark:bg-green-900/20 dark:text-green-400">
-                  <CreditCard className="h-3 w-3" />
-                  {accountFilters.length === 1
-                    ? accountFilters[0]
-                    : `${accountFilters.length} accounts`}
-                </span>
-              )}
-              {amountFilters.length > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-full dark:bg-amber-900/20 dark:text-amber-400">
-                  {amountFilters.length === 1
-                    ? formatCurrency(
-                        Math.abs(parseFloat(amountFilters[0])),
-                        preferences.currency
-                      )
-                    : `${amountFilters.length} amounts`}
-                </span>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setDateFilters([]);
-                  setDescriptionFilters([]);
-                  setAccountFilters([]);
-                  setFilterCategories([]);
-                  setAmountFilters([]);
-                  setDateSearch('');
-                  setDescriptionSearch('');
-                  setCategorySearch('');
-                  setAccountSearch('');
-                  setAmountSearch('');
-                  setCurrentPage(1);
-                }}
-                className="text-xs h-6 px-2"
-              >
-                Clear all
-              </Button>
-            </div>
-          )}
+    <div className="space-y-3">
+      {/* Header with Search and Filters */}
+      <div className="flex items-center gap-4 flex-wrap py-2">
+        <h2 className="text-xl font-bold text-card-foreground flex items-center gap-2 shrink-0">
+          <ArrowLeftRight className="h-5 w-5 text-primary" />
+          {getTitle()}
+        </h2>
+        <Select
+          value={typeFilter}
+          onValueChange={value =>
+            onTypeFilterChange(value as 'all' | 'credit' | 'debit')
+          }
+        >
+          <SelectTrigger className="w-40 h-8 text-sm">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Transactions</SelectItem>
+            <SelectItem value="credit">Income</SelectItem>
+            <SelectItem value="debit">Expenses</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="flex-1 min-w-[200px] relative">
+          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Search transactions..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="pl-8 h-8 text-sm"
+          />
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setShowAddModal(true)} variant="default">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Transaction
+        <Button
+          onClick={() => setShowAddModal(true)}
+          variant="default"
+          size="sm"
+        >
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
+          Add Transaction
+        </Button>
+      </div>
+
+      {/* Active filters indicator */}
+      {(dateFilters.length > 0 ||
+        descriptionFilters.length > 0 ||
+        accountFilters.length > 0 ||
+        filterCategories.length > 0 ||
+        amountFilters.length > 0 ||
+        dateSearch ||
+        descriptionSearch ||
+        categorySearch ||
+        accountSearch ||
+        amountSearch) && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm text-muted-foreground">Active filters:</span>
+          {dateFilters.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/15 text-primary text-xs rounded-full">
+              <Calendar className="h-3 w-3" />
+              {dateFilters.length === 1
+                ? formatDate(dateFilters[0], preferences.date_format)
+                : `${dateFilters.length} dates`}
+            </span>
+          )}
+          {descriptionFilters.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full dark:bg-blue-900/20 dark:text-blue-400">
+              {descriptionFilters.length === 1
+                ? descriptionFilters[0].substring(0, 20) +
+                  (descriptionFilters[0].length > 20 ? '...' : '')
+                : `${descriptionFilters.length} descriptions`}
+            </span>
+          )}
+          {filterCategories.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-secondary text-secondary-foreground text-xs rounded-full">
+              <Tag className="h-3 w-3" />
+              {filterCategories.length === 1
+                ? filterCategories[0]
+                : `${filterCategories.length} categories`}
+            </span>
+          )}
+          {accountFilters.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full dark:bg-green-900/20 dark:text-green-400">
+              <CreditCard className="h-3 w-3" />
+              {accountFilters.length === 1
+                ? accountFilters[0]
+                : `${accountFilters.length} accounts`}
+            </span>
+          )}
+          {amountFilters.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-800 text-xs rounded-full dark:bg-amber-900/20 dark:text-amber-400">
+              {amountFilters.length === 1
+                ? formatCurrency(
+                    Math.abs(parseFloat(amountFilters[0])),
+                    preferences.currency
+                  )
+                : `${amountFilters.length} amounts`}
+            </span>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setDateFilters([]);
+              setDescriptionFilters([]);
+              setAccountFilters([]);
+              setFilterCategories([]);
+              setAmountFilters([]);
+              setDateSearch('');
+              setDescriptionSearch('');
+              setCategorySearch('');
+              setAccountSearch('');
+              setAmountSearch('');
+              setCurrentPage(1);
+            }}
+            className="text-xs h-6 px-2"
+          >
+            Clear all
           </Button>
         </div>
-      </div>
+      )}
 
       {/* Add Modal */}
       <Modal
@@ -742,12 +782,6 @@ export function TransactionTable({
           categories={categories}
         />
       </Modal>
-
-      {/* Search and Filters */}
-      <SearchAndFilter
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-      />
 
       {/* Mobile list (<= md) */}
       <div className="md:hidden">

@@ -30,6 +30,7 @@ export interface TransactionTableProps {
   transactions: DisplayTransaction[];
   onTransactionsChange: (transactions: DisplayTransaction[]) => void;
   typeFilter: TransactionTypeFilter;
+  onTypeFilterChange: (filter: TransactionTypeFilter) => void;
 }
 
 // Display transaction interface (different from API)

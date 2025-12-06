@@ -3,13 +3,6 @@ import { AccountTiles } from '@/components/accounts/AccountTiles';
 import { TransactionTable } from '@/components/transactions/TransactionTable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import {
   Account,
@@ -90,50 +83,26 @@ export function DataTable() {
   return (
     <div className="min-h-screen bg-background">
       <div className="w-full max-w-full mx-auto space-y-8 sm:space-y-12 min-w-0">
-        {/* View toggle and filters */}
-        <div className="flex items-center gap-4 flex-wrap">
-          {/* View toggle: Transactions / Accounts */}
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant={activeView === 'transactions' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setActiveView('transactions')}
-              aria-pressed={activeView === 'transactions'}
-            >
-              Transactions
-            </Button>
-            <Button
-              type="button"
-              variant={activeView === 'accounts' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setActiveView('accounts')}
-              aria-pressed={activeView === 'accounts'}
-            >
-              Accounts
-            </Button>
-          </div>
-
-          {/* Transaction type filter (only visible in transactions view) */}
-          {activeView === 'transactions' && (
-            <div className="w-48">
-              <Select
-                value={typeFilter}
-                onValueChange={value =>
-                  setTypeFilter(value as TransactionTypeFilter)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Transactions</SelectItem>
-                  <SelectItem value="credit">Income (Credit)</SelectItem>
-                  <SelectItem value="debit">Expenses (Debit)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+        {/* View toggle */}
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant={activeView === 'transactions' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveView('transactions')}
+            aria-pressed={activeView === 'transactions'}
+          >
+            Transactions
+          </Button>
+          <Button
+            type="button"
+            variant={activeView === 'accounts' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveView('accounts')}
+            aria-pressed={activeView === 'accounts'}
+          >
+            Accounts
+          </Button>
         </div>
 
         {/* Main content */}
@@ -144,6 +113,7 @@ export function DataTable() {
                 transactions={transactions}
                 onTransactionsChange={setTransactions}
                 typeFilter={typeFilter}
+                onTypeFilterChange={setTypeFilter}
                 accounts={accounts}
                 categories={categories}
                 loading={loading}
