@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from decimal import Decimal
+import threading
 
 from apps.financial_account.repositories.account_repository import (
     FinancialAccountRepository,
@@ -384,27 +385,33 @@ class SyncTriggerAPIView(APIView):
                 {"error": "Connection not found"}, status=status.HTTP_404_NOT_FOUND
             )
 
-        # Check if full sync is requested
         force_full_sync = request.data.get("full_sync", False)
         if isinstance(force_full_sync, str):
             force_full_sync = force_full_sync.lower() in ["true", "1", "yes"]
 
-        logger.info(
-            f"Starting sync for connection {pk}, user {request.user.username}, "
-            f"force_full_sync={force_full_sync}"
+        # Create job and start sync in background thread
+        def run_sync():
+            try:
+                self.sync_service.sync_connection(
+                    connection, force_full_sync=force_full_sync
+                )
+            except Exception as e:
+                logger.error(f"Background sync error for connection {pk}: {str(e)}")
+
+        thread = threading.Thread(target=run_sync)
+        thread.daemon = True
+        thread.start()
+
+        # Return immediately with success message
+        return Response(
+            {
+                "success": True,
+                "message": "Sync started",
+                "accounts_synced": 0,
+                "transactions_synced": 0,
+                "errors": [],
+            }
         )
-
-        try:
-            result = self.sync_service.sync_connection(
-                connection, force_full_sync=force_full_sync
-            )
-            return Response(result)
-
-        except Exception as e:
-            logger.error(f"Error syncing connection {pk}: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
 
 
 class SyncJobListAPIView(APIView):

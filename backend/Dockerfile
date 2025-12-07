@@ -50,4 +50,4 @@ EXPOSE 8000
 
 # Default command
 # Creates superuser if DJANGO_SUPERUSER_USERNAME, DJANGO_SUPERUSER_EMAIL, and DJANGO_SUPERUSER_PASSWORD are set
-CMD ["sh", "-c", "python manage.py makemigrations && python manage.py migrate && python manage.py createsuperuser --noinput || true && python manage.py runserver 0.0.0.0:8000"]
+CMD ["sh", "-c", "python manage.py makemigrations && python manage.py migrate && python manage.py createsuperuser --noinput || true && gunicorn richtato.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 2"]

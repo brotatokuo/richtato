@@ -7,8 +7,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { SyncJobProgress, TellerSyncResult } from '@/lib/api/teller';
-import { AlertCircle, CheckCircle2, Clock, Loader2, RefreshCw } from 'lucide-react';
+import { TellerSyncResult } from '@/lib/api/teller';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  Loader2,
+  RefreshCw,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface TellerSyncModalProps {
@@ -16,7 +22,6 @@ interface TellerSyncModalProps {
   onClose: () => void;
   loading: boolean;
   result: TellerSyncResult | null;
-  progress?: SyncJobProgress | null;
 }
 
 export function TellerSyncModal({
@@ -24,7 +29,6 @@ export function TellerSyncModal({
   onClose,
   loading,
   result,
-  progress,
 }: TellerSyncModalProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
@@ -42,8 +46,10 @@ export function TellerSyncModal({
   const getStatusMessage = () => {
     if (elapsedSeconds < 5) return 'Starting sync...';
     if (elapsedSeconds < 15) return 'Fetching transactions...';
-    if (elapsedSeconds < 30) return 'Still working... free API has rate limits 😅';
-    if (elapsedSeconds < 60) return 'Taking a breather to stay under API limits 🐢';
+    if (elapsedSeconds < 30)
+      return 'Still working... free API has rate limits 😅';
+    if (elapsedSeconds < 60)
+      return 'Taking a breather to stay under API limits 🐢';
     if (elapsedSeconds < 90) return 'Patience is a virtue... almost there! ☕';
     if (elapsedSeconds < 120) return 'Still chugging along... grab a snack? 🍿';
     return 'This is taking a while, but we got this! 💪';
@@ -76,48 +82,15 @@ export function TellerSyncModal({
 
         <div className="py-4">
           {loading && (
-            <div className="space-y-4">
-              <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <span className="text-center">{getStatusMessage()}</span>
-
-                {/* Prominent transaction counter */}
-                <div className="flex flex-col items-center gap-1 py-2">
-                  <span className="text-3xl font-bold tabular-nums text-foreground">
-                    {(progress?.transactions_synced ?? 0).toLocaleString()}
-                  </span>
-                  <span className="text-xs text-muted-foreground">transactions synced</span>
-                </div>
-
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
-                  <Clock className="h-3 w-3" />
-                  <span className="tabular-nums">{formatElapsed(elapsedSeconds)}</span>
-                </div>
+            <div className="flex flex-col items-center gap-3 text-muted-foreground">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <span className="text-center">{getStatusMessage()}</span>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
+                <Clock className="h-3 w-3" />
+                <span className="tabular-nums">
+                  {formatElapsed(elapsedSeconds)}
+                </span>
               </div>
-              {progress?.status === 'running' && (progress.transactions_skipped > 0 || progress.batches_processed > 0) && (
-                <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
-                  {progress.transactions_skipped > 0 && (
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">
-                        Skipped (duplicates):
-                      </span>
-                      <span className="tabular-nums text-muted-foreground">
-                        {progress.transactions_skipped.toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-                  {progress.batches_processed > 0 && (
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">
-                        Batches processed:
-                      </span>
-                      <span className="tabular-nums text-muted-foreground">
-                        {progress.batches_processed}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
@@ -164,18 +137,6 @@ export function TellerSyncModal({
                   </ul>
                 </div>
               )}
-
-              {result.success &&
-                (result.accounts_synced > 0 ||
-                  result.transactions_synced > 0) && (
-                  <div className="mt-4 p-3 bg-blue-50 rounded-md border border-blue-200">
-                    <div className="text-sm text-blue-800">
-                      <strong>💡 Note:</strong> New accounts and transactions
-                      have been added. Refresh the page to see them in the
-                      Accounts and Data sections.
-                    </div>
-                  </div>
-                )}
             </div>
           )}
         </div>
