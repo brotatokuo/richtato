@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { formatDate, formatSignedCurrency } from '@/lib/format';
 import { Account, transactionsApiService } from '@/lib/api/transactions';
+import { formatSignedCurrency } from '@/lib/format';
 import {
   AlertCircle,
   Building2,
@@ -350,15 +350,6 @@ export function AccountsList({
                         <div className="min-w-0 flex-1">
                           <p className="font-medium text-foreground truncate">
                             {account.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {account.entity || 'Manual'} •{' '}
-                            {account.lastUpdated
-                              ? formatDate(
-                                  account.lastUpdated,
-                                  preferences.date_format
-                                )
-                              : 'No updates'}
                           </p>
                         </div>
                       </div>
