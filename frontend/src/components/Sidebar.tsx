@@ -27,14 +27,14 @@ const navigationItems = [
     icon: Wallet,
   },
   {
-    name: 'Assets',
-    href: '/assets',
-    icon: PieChart,
-  },
-  {
     name: 'Cashflow',
     href: '/cashflow',
     icon: TrendingUp,
+  },
+  {
+    name: 'Assets',
+    href: '/assets',
+    icon: PieChart,
   },
   {
     name: 'Data',

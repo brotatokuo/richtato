@@ -1,5 +1,4 @@
 import { IncomeExpenseChart } from '@/components/asset_dashboard/IncomeExpenseChart';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
@@ -569,17 +568,6 @@ export function Cashflow() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const now = new Date();
-                  setYear(now.getFullYear());
-                  setMonth(now.getMonth() + 1);
-                }}
-              >
-                This month
-              </Button>
             </div>
           </CardContent>
         </Card>
