@@ -473,6 +473,17 @@ class TellerSyncService:
                         batch_synced += 1
                         total_synced += 1
 
+                        # Update progress every 10 transactions for real-time feedback
+                        if total_synced % 10 == 0:
+                            job.transactions_synced = total_synced
+                            job.transactions_skipped = total_skipped + batch_skipped
+                            job.save(
+                                update_fields=[
+                                    "transactions_synced",
+                                    "transactions_skipped",
+                                ]
+                            )
+
                     except Exception as e:
                         logger.error(
                             f"Error syncing transaction {txn.get('id')}: {str(e)}"
@@ -646,10 +657,26 @@ class TellerSyncService:
 
                     synced_count += 1
 
+                    # Update progress every 10 transactions for real-time feedback
+                    if synced_count % 10 == 0:
+                        job.transactions_synced = synced_count
+                        job.transactions_skipped = skipped_count
+                        job.save(
+                            update_fields=[
+                                "transactions_synced",
+                                "transactions_skipped",
+                            ]
+                        )
+
                 except Exception as e:
                     logger.error(f"Error syncing transaction {txn.get('id')}: {str(e)}")
                     results["errors"].append(str(e))
                     continue
+
+            # Final progress update
+            job.transactions_synced = synced_count
+            job.transactions_skipped = skipped_count
+            job.save(update_fields=["transactions_synced", "transactions_skipped"])
 
             results["transactions_synced"] = synced_count
             results["transactions_skipped"] = skipped_count
