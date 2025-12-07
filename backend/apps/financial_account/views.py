@@ -263,14 +263,18 @@ class AccountTransactionsAPIView(APIView):
         columns = [
             {"field": "id", "title": "ID"},
             {"field": "date", "title": "Date"},
+            {"field": "description", "title": "Description"},
             {"field": "amount", "title": "Amount"},
+            {"field": "transaction_type", "title": "Type"},
         ]
 
         rows = [
             {
                 "id": t.id,
                 "date": t.date.isoformat() if t.date else None,
+                "description": t.description or "",
                 "amount": str(t.amount),
+                "transaction_type": t.transaction_type,
             }
             for t in transactions
         ]

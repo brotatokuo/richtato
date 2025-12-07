@@ -188,7 +188,7 @@ class TransactionsApiService {
   }
 
   /**
-   * Get transactions (balance history) for an account
+   * Get transactions for an account
    */
   async getAccountTransactions(
     accountId: number,
@@ -198,7 +198,13 @@ class TransactionsApiService {
     }
   ): Promise<{
     columns: Array<{ field: string; title: string }>;
-    rows: Array<{ id: number; date: string; amount: string }>;
+    rows: Array<{
+      id: number;
+      date: string;
+      description: string;
+      amount: string;
+      transaction_type: 'credit' | 'debit';
+    }>;
     page: number;
     page_size: number;
     total: number;
