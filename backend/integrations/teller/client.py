@@ -1,3 +1,4 @@
+import random
 import time
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Optional
@@ -9,11 +10,12 @@ from loguru import logger
 class TellerClient:
     BASE_URL = "https://api.teller.io"
 
-    # Rate limiting settings
-    MAX_RETRIES = 5
-    BASE_DELAY = 2.0  # Base delay in seconds
-    MAX_DELAY = 60.0  # Maximum delay between retries
-    REQUEST_DELAY = 0.5  # Delay between normal requests to avoid rate limits
+    # Rate limiting settings - conservative to avoid 429 errors
+    MAX_RETRIES = 8
+    BASE_DELAY = 3.0  # Base delay in seconds for exponential backoff
+    MAX_DELAY = 120.0  # Maximum delay between retries
+    REQUEST_DELAY = 2.0  # Delay between normal requests to avoid rate limits
+    BATCH_DELAY = 5.0  # Delay between pagination batches
 
     def __init__(self, cert_path: str, key_path: str, access_token: str):
         """
@@ -29,10 +31,13 @@ class TellerClient:
         self._last_request_time = 0.0
 
     def _wait_for_rate_limit(self):
-        """Ensure minimum delay between requests."""
+        """Ensure minimum delay between requests with jitter."""
         elapsed = time.time() - self._last_request_time
-        if elapsed < self.REQUEST_DELAY:
-            time.sleep(self.REQUEST_DELAY - elapsed)
+        # Add 0-50% jitter to prevent synchronized requests
+        jitter = random.uniform(0, self.REQUEST_DELAY * 0.5)
+        delay_needed = self.REQUEST_DELAY + jitter
+        if elapsed < delay_needed:
+            time.sleep(delay_needed - elapsed)
         self._last_request_time = time.time()
 
     def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Any:
@@ -54,6 +59,10 @@ class TellerClient:
                         delay = float(retry_after)
                     else:
                         delay = min(self.BASE_DELAY * (2**attempt), self.MAX_DELAY)
+
+                    # Add jitter to prevent synchronized retries
+                    jitter = random.uniform(0, delay * 0.25)
+                    delay = delay + jitter
 
                     logger.warning(
                         f"Rate limited by Teller API. Waiting {delay:.1f}s before retry "
@@ -173,7 +182,9 @@ class TellerClient:
         while True:
             # Add extra delay between pagination requests to avoid rate limits
             if batch_count > 0:
-                time.sleep(1.0)  # 1 second between batches
+                # Add jitter to batch delay
+                jitter = random.uniform(0, self.BATCH_DELAY * 0.3)
+                time.sleep(self.BATCH_DELAY + jitter)
 
             batch_count += 1
 

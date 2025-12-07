@@ -7,6 +7,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from decimal import Decimal
+
+from apps.financial_account.repositories.account_repository import (
+    FinancialAccountRepository,
+)
 from apps.financial_account.services.account_service import AccountService
 from apps.sync.repositories.sync_connection_repository import SyncConnectionRepository
 from apps.sync.repositories.sync_job_repository import SyncJobRepository
@@ -30,6 +35,7 @@ class SyncConnectionListCreateAPIView(APIView):
         super().__init__(**kwargs)
         self.connection_repository = SyncConnectionRepository()
         self.account_service = AccountService()
+        self.account_repository = FinancialAccountRepository()
 
     def get(self, request):
         """List all sync connections for the user."""
@@ -172,19 +178,42 @@ class SyncConnectionListCreateAPIView(APIView):
             else:
                 mapped_type = type_mapping.get(account_type, "checking")
 
-            # Create FinancialAccount
+            # Use balance from the accounts response (already fetched)
+            initial_balance = Decimal("0")
+            try:
+                balances = teller_account.get("balances", {})
+                ledger_balance = balances.get("ledger")
+                if ledger_balance is not None:
+                    initial_balance = Decimal(str(ledger_balance))
+                    logger.info(
+                        f"Got initial balance for {account_name}: {initial_balance}"
+                    )
+            except Exception as e:
+                logger.warning(f"Could not parse balance for {teller_account_id}: {e}")
+
+            # Create FinancialAccount with initial balance
             financial_account = self.account_service.create_manual_account(
                 user=user,
                 name=f"{institution_name} {account_name}",
                 account_type=mapped_type,
                 institution_name=institution_name,
                 account_number_last4=last_four,
+                initial_balance=initial_balance,
             )
             financial_account.sync_source = "teller"
             # Set is_liability for credit card accounts
             if mapped_type == "credit_card":
                 financial_account.is_liability = True
             financial_account.save()
+
+            # Record initial balance in history for net worth tracking
+            if initial_balance != Decimal("0"):
+                self.account_repository.update_balance(
+                    financial_account, initial_balance
+                )
+                logger.info(
+                    f"Recorded initial balance history for account {financial_account.id}"
+                )
 
             # Create SyncConnection
             connection = self.connection_repository.create_connection(
@@ -199,7 +228,7 @@ class SyncConnectionListCreateAPIView(APIView):
 
             logger.info(
                 f"Created connection {connection.id} for Teller account "
-                f"{teller_account_id} ({account_name})"
+                f"{teller_account_id} ({account_name}) with balance {initial_balance}"
             )
             return connection
 
