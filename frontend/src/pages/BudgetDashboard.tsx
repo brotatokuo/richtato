@@ -1,13 +1,7 @@
 import { MetricCard } from '@/components/asset_dashboard/MetricCard';
 import { BudgetDashboard } from '@/components/budget_dashboard/BudgetBreakdown';
 import { ExpenseBreakdown } from '@/components/budget_dashboard/ExpenseBreakdown';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
 import {
   BudgetDateRangeProvider,
   useBudgetDateRange,
@@ -15,77 +9,13 @@ import {
 import { budgetDashboardApiService } from '@/lib/api/budget-dashboard';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { AlertTriangle, Gauge, Percent } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-
-// Removed non-dropdown global date inputs; dropdown range is inside BudgetDashboard
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export function Dashboard() {
   return (
     <BudgetDateRangeProvider>
       <DashboardContent />
     </BudgetDateRangeProvider>
-  );
-}
-
-function MonthYearControls({
-  onChange,
-}: {
-  onChange: (year: number, month: number) => void;
-}) {
-  const years = useMemo(() => {
-    const current = new Date().getFullYear();
-    // reasonable range; could be fetched but keeping local for simplicity
-    const arr: number[] = [];
-    for (let y = current; y >= current - 15; y--) arr.push(y);
-    return arr;
-  }, []);
-  const { startDate } = useBudgetDateRange();
-  const [year, setYear] = useState<number>(() =>
-    Number(startDate.split('-')[0])
-  );
-  const [month, setMonth] = useState<number>(() =>
-    Number(startDate.split('-')[1])
-  );
-
-  const handleYear = (value: string) => {
-    const y = Number(value);
-    setYear(y);
-    onChange(y, month);
-  };
-  const handleMonth = (value: string) => {
-    const m = Number(value);
-    setMonth(m);
-    onChange(year, m);
-  };
-  return (
-    <div className="flex items-center flex-wrap gap-3">
-      <Select value={String(year)} onValueChange={handleYear}>
-        <SelectTrigger className="w-[120px] text-lg">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {years.map(y => (
-            <SelectItem key={y} value={String(y)}>
-              {y}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select value={String(month)} onValueChange={handleMonth}>
-        <SelectTrigger className="w-[120px] text-lg">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
-            <SelectItem key={m} value={String(m)}>
-              {new Date(2000, m - 1, 1).toLocaleString('default', {
-                month: 'short',
-              })}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
   );
 }
 
@@ -205,20 +135,26 @@ function DashboardContent() {
     );
   }
 
+  // Extract year and month from startDate for the picker
+  const currentYear = Number(startDate.split('-')[0]);
+  const currentMonth = Number(startDate.split('-')[1]);
+
+  const handleDateChange = (y: number, m: number) => {
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    const start = `${y}-${pad2(m)}-01`;
+    const end = new Date(y, m, 0);
+    const endStr = `${end.getFullYear()}-${pad2(end.getMonth() + 1)}-${pad2(end.getDate())}`;
+    setRange({ startDate: start, endDate: endStr });
+  };
+
   return (
     <div className="space-y-6 max-w-full">
-      {/* Global Month/Year Controls */}
-      <div className="flex justify-start">
-        <MonthYearControls
-          onChange={(y, m) => {
-            const pad2 = (n: number) => String(n).padStart(2, '0');
-            const start = `${y}-${pad2(m)}-01`;
-            const end = new Date(y, m, 0);
-            const endStr = `${end.getFullYear()}-${pad2(end.getMonth() + 1)}-${pad2(end.getDate())}`;
-            setRange({ startDate: start, endDate: endStr });
-          }}
-        />
-      </div>
+      {/* Floating Month/Year Picker */}
+      <MonthYearPicker
+        year={currentYear}
+        month={currentMonth}
+        onChange={handleDateChange}
+      />
 
       {/* KPI Summary Row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 min-w-0">

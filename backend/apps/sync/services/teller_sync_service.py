@@ -156,10 +156,9 @@ class TellerSyncService:
             if ledger_balance is not None:
                 balance = Decimal(str(ledger_balance))
 
-                # Update the financial account balance
+                # Update the financial account balance AND record history
                 account = connection.account
-                account.balance = balance
-                account.save(update_fields=["balance", "updated_at"])
+                self.account_repository.update_balance(account, balance)
 
                 logger.info(
                     f"Synced balance for account {account.id} ({account.name}): {balance}"

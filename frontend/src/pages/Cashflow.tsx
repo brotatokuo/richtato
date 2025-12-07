@@ -1,12 +1,6 @@
 import { IncomeExpenseChart } from '@/components/asset_dashboard/IncomeExpenseChart';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
 import { Category, transactionsApiService } from '@/lib/api/transactions';
 import ReactECharts from 'echarts-for-react';
 import {
@@ -17,7 +11,7 @@ import {
   TrendingUp,
   Wallet,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // Function to get computed CSS values
 const getCSSValue = (property: string) => {
@@ -70,13 +64,10 @@ export function Cashflow() {
   const [year, setYear] = useState<number>(now.getFullYear());
   const [month, setMonth] = useState<number>(now.getMonth() + 1);
 
-  // Generate year options (current year down to 15 years back)
-  const years = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    const arr: number[] = [];
-    for (let y = currentYear; y >= currentYear - 15; y--) arr.push(y);
-    return arr;
-  }, []);
+  const handleDateChange = (newYear: number, newMonth: number) => {
+    setYear(newYear);
+    setMonth(newMonth);
+  };
 
   // Build category hierarchy map
   const buildCategoryMap = (
@@ -531,47 +522,10 @@ export function Cashflow() {
 
   return (
     <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Date Range Controls */}
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-          <CardContent className="p-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <Select
-                value={String(year)}
-                onValueChange={v => setYear(Number(v))}
-              >
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {years.map(y => (
-                    <SelectItem key={y} value={String(y)}>
-                      {y}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={String(month)}
-                onValueChange={v => setMonth(Number(v))}
-              >
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
-                    <SelectItem key={m} value={String(m)}>
-                      {new Date(2000, m - 1, 1).toLocaleString('default', {
-                        month: 'short',
-                      })}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Floating Month/Year Picker */}
+      <MonthYearPicker year={year} month={month} onChange={handleDateChange} />
 
+      <div className="max-w-7xl mx-auto space-y-6">
         {hasNoData ? (
           <Card className="bg-card/50 backdrop-blur-sm border-border/50">
             <CardContent>
@@ -584,7 +538,7 @@ export function Cashflow() {
                 </h2>
                 <p className="text-muted-foreground">
                   No income or expense transactions found for this month. Select
-                  a different month above.
+                  a different month using the picker.
                 </p>
               </div>
             </CardContent>
