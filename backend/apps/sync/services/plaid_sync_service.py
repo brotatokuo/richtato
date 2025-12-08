@@ -88,13 +88,16 @@ class PlaidSyncService:
     def _serialize_plaid_data(self, data) -> Any:
         """
         Serialize Plaid transaction data for JSON storage.
-        Converts date objects to ISO format strings.
+        Converts date objects to ISO format strings and Plaid SDK objects to dicts.
         """
-        import copy
         from datetime import date as date_type
 
         def serialize_value(val):
-            if isinstance(val, date_type):
+            # Handle Plaid SDK objects that have to_dict method
+            if hasattr(val, "to_dict"):
+                return serialize_value(val.to_dict())
+            # Handle date objects
+            elif isinstance(val, date_type):
                 return val.isoformat()
             elif isinstance(val, dict):
                 return {k: serialize_value(v) for k, v in val.items()}
@@ -102,7 +105,7 @@ class PlaidSyncService:
                 return [serialize_value(item) for item in val]
             return val
 
-        return serialize_value(copy.deepcopy(data))
+        return serialize_value(data)
 
     def _detect_transaction_nature(
         self,
