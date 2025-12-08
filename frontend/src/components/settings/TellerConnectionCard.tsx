@@ -6,13 +6,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { TellerConnection } from '@/lib/api/teller';
+import { BankConnection } from '@/lib/api/bankConnections';
 import { Building2, RefreshCw } from 'lucide-react';
 
 interface TellerConnectionCardProps {
-  connection: TellerConnection;
-  onSync: (connection: TellerConnection) => void;
-  onDisconnect: (connection: TellerConnection) => void;
+  connection: BankConnection;
+  onSync: (connection: BankConnection) => void;
+  onDisconnect: (connection: BankConnection) => void;
 }
 
 export function TellerConnectionCard({

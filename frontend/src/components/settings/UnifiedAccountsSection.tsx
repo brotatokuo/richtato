@@ -7,12 +7,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useTellerConnect } from '@/hooks/useTellerConnect';
 import {
-  SyncJobProgress,
-  TellerSyncResult,
-  tellerApiService,
-} from '@/lib/api/teller';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { usePlaidLink } from '@/hooks/usePlaidLink';
+import { useTellerConnect } from '@/hooks/useTellerConnect';
+import { TellerSyncResult, tellerApiService } from '@/lib/api/teller';
 import { Account, transactionsApiService } from '@/lib/api/transactions';
 import {
   getBankLogo,
@@ -20,7 +23,14 @@ import {
   getEntityLogo,
   hasSpecificCardImage,
 } from '@/lib/imageMapping';
-import { Building2, Cloud, CreditCard, Landmark, Plus } from 'lucide-react';
+import {
+  Building2,
+  ChevronDown,
+  Cloud,
+  CreditCard,
+  Landmark,
+  Plus,
+} from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccountDetailModal } from './AccountDetailModal';
 import { DisconnectConfirmModal } from './DisconnectConfirmModal';
@@ -41,9 +51,6 @@ export function UnifiedAccountsSection() {
   // Sync states
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncResult, setSyncResult] = useState<TellerSyncResult | null>(null);
-  const [syncProgress, setSyncProgress] = useState<SyncJobProgress | null>(
-    null
-  );
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Field choices for account creation
@@ -60,6 +67,13 @@ export function UnifiedAccountsSection() {
     error: tellerError,
     clearError: clearTellerError,
   } = useTellerConnect();
+
+  const {
+    openPlaidLink,
+    loading: plaidLoading,
+    error: plaidError,
+    clearError: clearPlaidError,
+  } = usePlaidLink();
 
   // Group accounts by type
   const bankAccounts = accounts.filter(
@@ -115,12 +129,18 @@ export function UnifiedAccountsSection() {
     }
   }, [tellerError, clearTellerError]);
 
+  useEffect(() => {
+    if (plaidError) {
+      setError(plaidError);
+      clearPlaidError();
+    }
+  }, [plaidError, clearPlaidError]);
+
   // Polling for sync progress
   const pollSyncProgress = useCallback(async (connectionId: number) => {
     try {
       const progress = await tellerApiService.getSyncJobProgress(connectionId);
       if (progress) {
-        setSyncProgress(progress);
         if (progress.status !== 'running') {
           if (pollIntervalRef.current) {
             clearInterval(pollIntervalRef.current);
@@ -220,12 +240,11 @@ export function UnifiedAccountsSection() {
 
     setSyncLoading(true);
     setSyncResult(null);
-    setSyncProgress(null);
     setShowDetail(false);
     setShowSync(true);
 
     try {
-      const result = await tellerApiService.syncTellerConnection(
+      const result = await tellerApiService.syncConnection(
         selectedAccount.connection_id
       );
       setSyncResult(result);
@@ -256,7 +275,7 @@ export function UnifiedAccountsSection() {
 
     try {
       setLoading(true);
-      await tellerApiService.deleteTellerConnection(
+      await tellerApiService.deleteConnection(
         selectedAccount.connection_id,
         deleteData
       );
@@ -270,11 +289,25 @@ export function UnifiedAccountsSection() {
     }
   };
 
-  const handleConnectBank = () => {
+  const handleConnectTeller = () => {
     openTellerConnect(() => {
       refresh();
     });
   };
+
+  const handleConnectPlaid = () => {
+    openPlaidLink(() => {
+      refresh();
+    });
+  };
+
+  // Check which providers are available
+  const isTellerAvailable =
+    typeof window !== 'undefined' &&
+    !!window.TellerConnect &&
+    !!import.meta.env.VITE_TELLER_APP_ID;
+  const isPlaidAvailable = typeof window !== 'undefined' && !!window.Plaid;
+  const isConnecting = tellerLoading || plaidLoading;
 
   const closeSync = () => {
     if (pollIntervalRef.current) {
@@ -283,7 +316,6 @@ export function UnifiedAccountsSection() {
     }
     setShowSync(false);
     setSyncResult(null);
-    setSyncProgress(null);
     refresh();
   };
 
@@ -473,15 +505,34 @@ export function UnifiedAccountsSection() {
             </CardDescription>
           </div>
           <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleConnectBank}
-              disabled={tellerLoading}
-            >
-              <Building2 className="h-4 w-4 mr-2" />
-              Connect Bank
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" disabled={isConnecting}>
+                  <Building2 className="h-4 w-4 mr-2" />
+                  {isConnecting ? 'Connecting...' : 'Connect Bank'}
+                  <ChevronDown className="h-4 w-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {isTellerAvailable && (
+                  <DropdownMenuItem onClick={handleConnectTeller}>
+                    <span className="mr-2">🏦</span>
+                    Connect via Teller
+                  </DropdownMenuItem>
+                )}
+                {isPlaidAvailable && (
+                  <DropdownMenuItem onClick={handleConnectPlaid}>
+                    <span className="mr-2">💳</span>
+                    Connect via Plaid
+                  </DropdownMenuItem>
+                )}
+                {!isTellerAvailable && !isPlaidAvailable && (
+                  <DropdownMenuItem disabled>
+                    No providers configured
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               type="button"
               variant="outline"
@@ -582,7 +633,6 @@ export function UnifiedAccountsSection() {
         onClose={closeSync}
         loading={syncLoading}
         result={syncResult}
-        progress={syncProgress}
       />
     </Card>
   );

@@ -1,14 +1,7 @@
 """Views for sync API."""
 
-from django.conf import settings
-from rest_framework import status
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
-from decimal import Decimal
 import threading
+from decimal import Decimal
 
 from apps.financial_account.repositories.account_repository import (
     FinancialAccountRepository,
@@ -21,9 +14,16 @@ from apps.sync.serializers import (
     SyncConnectionSerializer,
     SyncJobSerializer,
 )
-from apps.sync.services.teller_sync_service import TellerSyncService
+from apps.sync.services import get_sync_service
+from django.conf import settings
+from integrations.plaid.client import PlaidClient
 from integrations.teller.client import TellerClient
 from loguru import logger
+from rest_framework import status
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 
 class SyncConnectionListCreateAPIView(APIView):
@@ -45,13 +45,15 @@ class SyncConnectionListCreateAPIView(APIView):
         return Response({"connections": serializer.data})
 
     def post(self, request):
-        """Create Teller sync connections for all accounts in an enrollment."""
+        """Create sync connections for all accounts in an enrollment."""
         serializer = SyncConnectionCreateSerializer(data=request.data)
 
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         try:
+            # Detect provider from request (default to teller for backwards compat)
+            provider = serializer.validated_data.get("provider", "teller")
             access_token = serializer.validated_data["access_token"]
             institution_name = serializer.validated_data["institution_name"]
             external_enrollment_id = serializer.validated_data.get(
@@ -59,61 +61,135 @@ class SyncConnectionListCreateAPIView(APIView):
             )
             external_account_id = serializer.validated_data.get("external_account_id")
 
-            # Check if this is an enrollment ID (starts with 'enr_') or no account ID provided
-            # In either case, we need to fetch actual accounts from Teller
-            is_enrollment_id = (
-                external_account_id and external_account_id.startswith("enr_")
-            ) or not external_account_id
-
-            if is_enrollment_id:
-                # Fetch actual accounts from Teller API
-                teller_accounts = self._fetch_teller_accounts(access_token)
-
-                if not teller_accounts:
-                    return Response(
-                        {"error": "No accounts found in Teller enrollment"},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-
-                # Create a connection for each account
-                created_connections = []
-                for teller_account in teller_accounts:
-                    connection = self._create_connection_for_account(
-                        user=request.user,
-                        teller_account=teller_account,
-                        access_token=access_token,
-                        institution_name=institution_name,
-                        external_enrollment_id=external_enrollment_id,
-                    )
-                    if connection:
-                        created_connections.append(connection)
-
-                if not created_connections:
-                    return Response(
-                        {"error": "Failed to create any connections"},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    )
-
-                response_serializer = SyncConnectionSerializer(
-                    created_connections, many=True
-                )
-                return Response(
-                    {"connections": response_serializer.data},
-                    status=status.HTTP_201_CREATED,
+            if provider == "plaid":
+                return self._create_plaid_connections(
+                    request.user,
+                    access_token,
+                    institution_name,
+                    external_enrollment_id,
                 )
             else:
-                # Single account ID provided - use original flow
-                connection = self._create_single_connection(
-                    user=request.user,
-                    validated_data=serializer.validated_data,
-                )
-                response_serializer = SyncConnectionSerializer(connection)
-                return Response(
-                    response_serializer.data, status=status.HTTP_201_CREATED
+                return self._create_teller_connections(
+                    request.user,
+                    access_token,
+                    institution_name,
+                    external_enrollment_id,
+                    external_account_id,
+                    serializer.validated_data,
                 )
 
         except Exception as e:
             logger.error(f"Error creating sync connection: {str(e)}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def _create_teller_connections(
+        self,
+        user,
+        access_token: str,
+        institution_name: str,
+        external_enrollment_id: str,
+        external_account_id: str,
+        validated_data: dict,
+    ):
+        """Create Teller sync connections."""
+        # Check if this is an enrollment ID (starts with 'enr_') or no account ID provided
+        is_enrollment_id = (
+            external_account_id and external_account_id.startswith("enr_")
+        ) or not external_account_id
+
+        if is_enrollment_id:
+            # Fetch actual accounts from Teller API
+            teller_accounts = self._fetch_teller_accounts(access_token)
+
+            if not teller_accounts:
+                return Response(
+                    {"error": "No accounts found in Teller enrollment"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Create a connection for each account
+            created_connections = []
+            for teller_account in teller_accounts:
+                connection = self._create_connection_for_teller_account(
+                    user=user,
+                    teller_account=teller_account,
+                    access_token=access_token,
+                    institution_name=institution_name,
+                    external_enrollment_id=external_enrollment_id,
+                )
+                if connection:
+                    created_connections.append(connection)
+
+            if not created_connections:
+                return Response(
+                    {"error": "Failed to create any connections"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+            response_serializer = SyncConnectionSerializer(
+                created_connections, many=True
+            )
+            return Response(
+                {"connections": response_serializer.data},
+                status=status.HTTP_201_CREATED,
+            )
+        else:
+            # Single account ID provided - use original flow
+            connection = self._create_single_connection(
+                user=user,
+                validated_data=validated_data,
+                provider="teller",
+            )
+            response_serializer = SyncConnectionSerializer(connection)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+    def _create_plaid_connections(
+        self,
+        user,
+        access_token: str,
+        institution_name: str,
+        item_id: str,
+    ):
+        """Create Plaid sync connections for all accounts."""
+        try:
+            plaid_accounts = self._fetch_plaid_accounts(access_token)
+
+            if not plaid_accounts:
+                return Response(
+                    {"error": "No accounts found in Plaid item"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            created_connections = []
+            for plaid_account in plaid_accounts:
+                connection = self._create_connection_for_plaid_account(
+                    user=user,
+                    plaid_account=plaid_account,
+                    access_token=access_token,
+                    institution_name=institution_name,
+                    item_id=item_id,
+                )
+                if connection:
+                    created_connections.append(connection)
+
+            if not created_connections:
+                return Response(
+                    {"error": "Failed to create any connections"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+            response_serializer = SyncConnectionSerializer(
+                created_connections, many=True
+            )
+            return Response(
+                {"connections": response_serializer.data},
+                status=status.HTTP_201_CREATED,
+            )
+
+        except Exception as e:
+            logger.error(f"Error creating Plaid connections: {str(e)}")
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
@@ -140,7 +216,31 @@ class SyncConnectionListCreateAPIView(APIView):
             logger.error(f"Error fetching Teller accounts: {str(e)}")
             return []
 
-    def _create_connection_for_account(
+    def _fetch_plaid_accounts(self, access_token: str):
+        """Fetch accounts from Plaid API using the access token."""
+        try:
+            client_id = settings.PLAID_CLIENT_ID
+            secret = settings.PLAID_SECRET
+            environment = getattr(settings, "PLAID_ENV", "sandbox")
+
+            if not client_id or not secret:
+                logger.error("Plaid credentials not configured")
+                return []
+
+            client = PlaidClient(
+                client_id=client_id,
+                secret=secret,
+                environment=environment,
+                access_token=access_token,
+            )
+            accounts = client.get_accounts()
+            logger.info(f"Fetched {len(accounts)} accounts from Plaid")
+            return accounts
+        except Exception as e:
+            logger.error(f"Error fetching Plaid accounts: {str(e)}")
+            return []
+
+    def _create_connection_for_teller_account(
         self,
         user,
         teller_account: dict,
@@ -150,7 +250,7 @@ class SyncConnectionListCreateAPIView(APIView):
     ):
         """Create a FinancialAccount and SyncConnection for a Teller account."""
         try:
-            teller_account_id = teller_account.get("id")
+            teller_account_id = teller_account.get("id") or ""
             account_name = teller_account.get("name", "Account")
             account_type = teller_account.get("type", "depository")
             account_subtype = teller_account.get("subtype", "")
@@ -240,7 +340,113 @@ class SyncConnectionListCreateAPIView(APIView):
             )
             return None
 
-    def _create_single_connection(self, user, validated_data: dict):
+    def _create_connection_for_plaid_account(
+        self,
+        user,
+        plaid_account: dict,
+        access_token: str,
+        institution_name: str,
+        item_id: str,
+    ):
+        """Create a FinancialAccount and SyncConnection for a Plaid account."""
+        try:
+            plaid_account_id = plaid_account.get("id") or ""
+            account_name = plaid_account.get("name", "Account")
+            account_type = plaid_account.get("type", "depository")
+            account_subtype = plaid_account.get("subtype", "")
+            last_four = plaid_account.get("last_four", "")
+
+            # Check if connection already exists for this account
+            existing = self.connection_repository.get_by_external_account_id(
+                user, "plaid", plaid_account_id
+            )
+            if existing:
+                logger.info(
+                    f"Connection already exists for Plaid account {plaid_account_id}"
+                )
+                return existing
+
+            # Map Plaid account types to our types
+            type_mapping = {
+                "depository": "checking",
+                "credit": "credit_card",
+                "loan": "loan",
+                "investment": "investment",
+            }
+            # Use subtype for more specific mapping
+            if account_subtype in ("savings", "cd", "money market"):
+                mapped_type = "savings"
+            elif account_subtype == "checking":
+                mapped_type = "checking"
+            elif account_subtype == "credit card":
+                mapped_type = "credit_card"
+            else:
+                mapped_type = type_mapping.get(account_type, "checking")
+
+            # Use balance from the accounts response
+            initial_balance = Decimal("0")
+            try:
+                balances = plaid_account.get("balances", {})
+                current_balance = balances.get("current") or balances.get("ledger")
+                if current_balance is not None:
+                    initial_balance = Decimal(str(current_balance))
+                    logger.info(
+                        f"Got initial balance for {account_name}: {initial_balance}"
+                    )
+            except Exception as e:
+                logger.warning(f"Could not parse balance for {plaid_account_id}: {e}")
+
+            # Create FinancialAccount with initial balance
+            financial_account = self.account_service.create_manual_account(
+                user=user,
+                name=f"{institution_name} {account_name}",
+                account_type=mapped_type,
+                institution_name=institution_name,
+                account_number_last4=last_four,
+                initial_balance=initial_balance,
+            )
+            financial_account.sync_source = "plaid"
+            # Set is_liability for credit card and loan accounts
+            if mapped_type in ("credit_card", "loan"):
+                financial_account.is_liability = True
+            financial_account.save()
+
+            # Record initial balance in history
+            if initial_balance != Decimal("0"):
+                self.account_repository.update_balance(
+                    financial_account, initial_balance
+                )
+                logger.info(
+                    f"Recorded initial balance history for account {financial_account.id}"
+                )
+
+            # Create SyncConnection
+            connection = self.connection_repository.create_connection(
+                user=user,
+                account=financial_account,
+                provider="plaid",
+                access_token=access_token,
+                institution_name=institution_name,
+                external_account_id=plaid_account_id,
+                external_enrollment_id=item_id,  # Plaid uses item_id
+            )
+
+            logger.info(
+                f"Created connection {connection.id} for Plaid account "
+                f"{plaid_account_id} ({account_name}) with balance {initial_balance}"
+            )
+            return connection
+
+        except Exception as e:
+            logger.error(
+                f"Error creating connection for Plaid account "
+                f"{plaid_account.get('id')}: {str(e)}"
+            )
+            return None
+
+    def _create_single_connection(
+        self, user, validated_data: dict, provider: str = "teller"
+    ):
         """Create a single connection with explicit account ID."""
         account = None
         if validated_data.get("account_id"):
@@ -268,7 +474,7 @@ class SyncConnectionListCreateAPIView(APIView):
                 account_type=mapped_type,
                 institution_name=institution_name,
             )
-            account.sync_source = "teller"
+            account.sync_source = provider
             # Set is_liability for credit card accounts
             if mapped_type == "credit_card":
                 account.is_liability = True
@@ -277,7 +483,7 @@ class SyncConnectionListCreateAPIView(APIView):
         connection = self.connection_repository.create_connection(
             user=user,
             account=account,
-            provider="teller",
+            provider=provider,
             access_token=validated_data["access_token"],
             institution_name=validated_data["institution_name"],
             external_account_id=validated_data["external_account_id"],
@@ -374,7 +580,6 @@ class SyncTriggerAPIView(APIView):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.connection_repository = SyncConnectionRepository()
-        self.sync_service = TellerSyncService()
 
     def post(self, request, pk):
         """Trigger sync."""
@@ -389,10 +594,16 @@ class SyncTriggerAPIView(APIView):
         if isinstance(force_full_sync, str):
             force_full_sync = force_full_sync.lower() in ["true", "1", "yes"]
 
+        # Get the appropriate sync service based on provider
+        try:
+            sync_service = get_sync_service(connection.provider)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
         # Create job and start sync in background thread
         def run_sync():
             try:
-                self.sync_service.sync_connection(
+                sync_service.sync_connection(
                     connection, force_full_sync=force_full_sync
                 )
             except Exception as e:
@@ -467,3 +678,197 @@ class SyncJobProgressAPIView(APIView):
         latest_job = jobs[0]  # Already ordered by -started_at
         serializer = SyncJobSerializer(latest_job)
         return Response({"job": serializer.data})
+
+
+# ============================================================================
+# Plaid-specific endpoints
+# ============================================================================
+
+
+class PlaidLinkTokenAPIView(APIView):
+    """Create a Plaid Link token for initializing Plaid Link."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """Create a Link token."""
+        try:
+            client_id = settings.PLAID_CLIENT_ID
+            secret = settings.PLAID_SECRET
+            environment = getattr(settings, "PLAID_ENV", "sandbox")
+
+            if not client_id or not secret:
+                return Response(
+                    {"error": "Plaid is not configured"},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+
+            client = PlaidClient(
+                client_id=client_id,
+                secret=secret,
+                environment=environment,
+            )
+
+            # Use user ID as the client user ID
+            user_id = str(request.user.id)
+            redirect_uri = request.data.get("redirect_uri")
+
+            link_token = client.create_link_token(
+                user_id=user_id,
+                redirect_uri=redirect_uri,
+            )
+
+            return Response({"link_token": link_token})
+
+        except Exception as e:
+            logger.error(f"Error creating Plaid link token: {str(e)}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class PlaidExchangeTokenAPIView(APIView):
+    """Exchange a Plaid public token for an access token."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """Exchange public token for access token."""
+        public_token = request.data.get("public_token")
+        institution_name = request.data.get("institution_name", "Bank")
+
+        if not public_token:
+            return Response(
+                {"error": "public_token is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            client_id = settings.PLAID_CLIENT_ID
+            secret = settings.PLAID_SECRET
+            environment = getattr(settings, "PLAID_ENV", "sandbox")
+
+            if not client_id or not secret:
+                return Response(
+                    {"error": "Plaid is not configured"},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+
+            client = PlaidClient(
+                client_id=client_id,
+                secret=secret,
+                environment=environment,
+            )
+
+            # Exchange public token for access token
+            result = client.exchange_public_token(public_token)
+            access_token = result["access_token"]
+            item_id = result["item_id"]
+
+            # Now create connections for all accounts
+            connection_repository = SyncConnectionRepository()
+            account_service = AccountService()
+            account_repository = FinancialAccountRepository()
+
+            # Create a temporary client with access token to fetch accounts
+            client_with_token = PlaidClient(
+                client_id=client_id,
+                secret=secret,
+                environment=environment,
+                access_token=access_token,
+            )
+
+            plaid_accounts = client_with_token.get_accounts()
+
+            if not plaid_accounts:
+                return Response(
+                    {"error": "No accounts found"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            created_connections = []
+            for plaid_account in plaid_accounts:
+                plaid_account_id = plaid_account.get("id")
+                account_name = plaid_account.get("name", "Account")
+                account_type = plaid_account.get("type", "depository")
+                account_subtype = plaid_account.get("subtype", "")
+                last_four = plaid_account.get("last_four", "")
+
+                # Check if connection already exists
+                existing = connection_repository.get_by_external_account_id(
+                    request.user, "plaid", plaid_account_id
+                )
+                if existing:
+                    created_connections.append(existing)
+                    continue
+
+                # Map account types
+                type_mapping = {
+                    "depository": "checking",
+                    "credit": "credit_card",
+                    "loan": "loan",
+                    "investment": "investment",
+                }
+                if account_subtype in ("savings", "cd", "money market"):
+                    mapped_type = "savings"
+                elif account_subtype == "checking":
+                    mapped_type = "checking"
+                elif account_subtype == "credit card":
+                    mapped_type = "credit_card"
+                else:
+                    mapped_type = type_mapping.get(account_type, "checking")
+
+                # Get initial balance
+                initial_balance = Decimal("0")
+                try:
+                    balances = plaid_account.get("balances", {})
+                    current = balances.get("current") or balances.get("ledger")
+                    if current is not None:
+                        initial_balance = Decimal(str(current))
+                except Exception:
+                    pass
+
+                # Create FinancialAccount
+                financial_account = account_service.create_manual_account(
+                    user=request.user,
+                    name=f"{institution_name} {account_name}",
+                    account_type=mapped_type,
+                    institution_name=institution_name,
+                    account_number_last4=last_four,
+                    initial_balance=initial_balance,
+                )
+                financial_account.sync_source = "plaid"
+                if mapped_type in ("credit_card", "loan"):
+                    financial_account.is_liability = True
+                financial_account.save()
+
+                if initial_balance != Decimal("0"):
+                    account_repository.update_balance(
+                        financial_account, initial_balance
+                    )
+
+                # Create SyncConnection
+                connection = connection_repository.create_connection(
+                    user=request.user,
+                    account=financial_account,
+                    provider="plaid",
+                    access_token=access_token,
+                    institution_name=institution_name,
+                    external_account_id=plaid_account_id,
+                    external_enrollment_id=item_id,
+                )
+                created_connections.append(connection)
+
+            serializer = SyncConnectionSerializer(created_connections, many=True)
+            return Response(
+                {"connections": serializer.data},
+                status=status.HTTP_201_CREATED,
+            )
+
+        except Exception as e:
+            logger.error(f"Error exchanging Plaid token: {str(e)}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

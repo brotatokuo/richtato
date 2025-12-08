@@ -31,6 +31,11 @@ TELLER_CERT_PATH = os.path.join(BASE_DIR, "certs", "certificate.pem")
 TELLER_KEY_PATH = os.path.join(BASE_DIR, "certs", "private_key.pem")
 TELLER_TRANSACTION_LIMIT = int(os.getenv("TELLER_TRANSACTION_LIMIT", "500"))
 
+# Plaid API Configuration
+PLAID_CLIENT_ID = os.getenv("PLAID_CLIENT_ID")
+PLAID_SECRET = os.getenv("PLAID_SECRET")
+PLAID_ENV = os.getenv("PLAID_ENV", "sandbox")  # sandbox, development, production
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True  # Force DEBUG to True for local development
 # DEBUG = False

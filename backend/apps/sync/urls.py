@@ -5,6 +5,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Connection management (works for both Teller and Plaid)
     path(
         "connections/",
         views.SyncConnectionListCreateAPIView.as_view(),
@@ -29,5 +30,16 @@ urlpatterns = [
         "connections/<int:pk>/progress/",
         views.SyncJobProgressAPIView.as_view(),
         name="sync-job-progress",
+    ),
+    # Plaid-specific endpoints
+    path(
+        "plaid/link-token/",
+        views.PlaidLinkTokenAPIView.as_view(),
+        name="plaid-link-token",
+    ),
+    path(
+        "plaid/exchange-token/",
+        views.PlaidExchangeTokenAPIView.as_view(),
+        name="plaid-exchange-token",
     ),
 ]
