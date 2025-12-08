@@ -127,6 +127,9 @@ class PlaidClient(BaseBankingClient):
         """
         Create a Plaid Link token for initializing Link.
 
+        Configures the token to request maximum historical transaction data
+        (730 days = 2 years) instead of the default 90 days.
+
         Args:
             user_id: Unique identifier for the user
             redirect_uri: Optional redirect URI for OAuth flows
@@ -140,6 +143,8 @@ class PlaidClient(BaseBankingClient):
             "country_codes": [CountryCode("US")],
             "language": "en",
             "user": LinkTokenCreateRequestUser(client_user_id=user_id),
+            # Request maximum historical data (730 days = 2 years)
+            "transactions": {"days_requested": 730},
         }
 
         if redirect_uri:
