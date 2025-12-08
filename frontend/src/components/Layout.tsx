@@ -89,8 +89,8 @@ export function Layout() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto scrollbar-thin">
-          <div className="mx-auto p-6">
+        <main className="flex-1 overflow-auto scrollbar-thin min-w-0">
+          <div className="w-full max-w-full p-6 overflow-x-hidden">
             <Outlet />
           </div>
         </main>

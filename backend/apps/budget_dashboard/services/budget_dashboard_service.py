@@ -320,6 +320,72 @@ class BudgetDashboardService:
         else:
             return f"{float(abs(difference))} over ({percent}%)"
 
+    def get_budget_progress_multi_month(
+        self,
+        user,
+        months: int = 12,
+    ) -> dict:
+        """
+        Get budget progress for the last N months.
+
+        Business logic: Aggregates budget progress data for multiple months
+        to support timeline and trend visualizations.
+
+        Args:
+            user: User instance
+            months: Number of months to fetch (default 12)
+
+        Returns:
+            Dictionary with monthly_data list and metadata
+        """
+        today = date.today()
+        monthly_data = []
+
+        for i in range(months - 1, -1, -1):
+            # Calculate the target month (going backwards from current)
+            year = today.year
+            month = today.month - i
+            while month <= 0:
+                month += 12
+                year -= 1
+
+            # Get budget progress for this month
+            progress = self.get_budget_progress(user, year=year, month=month)
+
+            # Calculate totals for this month
+            budgets = progress.get("budgets", [])
+            total_budget = sum(b.get("budget", 0) for b in budgets)
+            total_spent = sum(b.get("spent", 0) for b in budgets)
+            total_remaining = total_budget - total_spent
+            percentage = (
+                int(round((total_spent / total_budget) * 100))
+                if total_budget > 0
+                else 0
+            )
+
+            month_name = calendar.month_abbr[month]
+
+            monthly_data.append(
+                {
+                    "year": year,
+                    "month": month,
+                    "month_name": month_name,
+                    "label": f"{month_name} {year}",
+                    "total_budget": round(total_budget, 2),
+                    "total_spent": round(total_spent, 2),
+                    "total_remaining": round(total_remaining, 2),
+                    "percentage": percentage,
+                    "categories": budgets,
+                    "start_date": progress.get("start_date"),
+                    "end_date": progress.get("end_date"),
+                }
+            )
+
+        return {
+            "monthly_data": monthly_data,
+            "months_requested": months,
+        }
+
     def _determine_date_range(
         self,
         start_date: date | None,

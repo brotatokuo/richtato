@@ -1,14 +1,25 @@
 import { MetricCard } from '@/components/asset_dashboard/MetricCard';
-import { BudgetDashboard } from '@/components/budget_dashboard/BudgetBreakdown';
+import { BudgetDashboard as BudgetBreakdownChart } from '@/components/budget_dashboard/BudgetBreakdown';
+import { BudgetTrendsChart } from '@/components/budget_dashboard/BudgetTrendsChart';
 import { ExpenseBreakdown } from '@/components/budget_dashboard/ExpenseBreakdown';
-import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
+import { ExpenseDetailModal } from '@/components/budget_dashboard/ExpenseDetailModal';
+import { MonthTimeline } from '@/components/budget_dashboard/MonthTimeline';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   BudgetDateRangeProvider,
   useBudgetDateRange,
 } from '@/contexts/BudgetDateRangeContext';
-import { budgetDashboardApiService } from '@/lib/api/budget-dashboard';
-import { transactionsApiService } from '@/lib/api/transactions';
-import { AlertTriangle, Gauge, Percent } from 'lucide-react';
+import {
+  budgetDashboardApiService,
+  type MonthlyBudgetData,
+} from '@/lib/api/budget-dashboard';
+import {
+  AlertTriangle,
+  CalendarDays,
+  Gauge,
+  Percent,
+  TrendingUp,
+} from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export function Dashboard() {
@@ -20,95 +31,86 @@ export function Dashboard() {
 }
 
 function DashboardContent() {
-  const { startDate, endDate, setRange } = useBudgetDateRange();
-  const [budgetUtilizationPct, setBudgetUtilizationPct] =
-    useState<string>('N/A');
-  const [nonEssentialPct, setNonEssentialPct] = useState<string>('N/A');
+  const { setRange } = useBudgetDateRange();
+  const [monthlyData, setMonthlyData] = useState<MonthlyBudgetData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [budgetProgress, setBudgetProgress] = useState<
-    Array<{
-      category: string;
-      budget: number;
-      spent: number;
-      percentage: number;
-      remaining: number;
-      year: number;
-      month: number;
-    }>
-  >([]);
-  const lastRangeRef = useRef<string | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<MonthlyBudgetData | null>(
+    null
+  );
+  const [displayedMonth, setDisplayedMonth] =
+    useState<MonthlyBudgetData | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const lastFetchRef = useRef<string | null>(null);
 
-  const loadAllDashboardData = useCallback(async () => {
+  // Calculate aggregate KPIs from monthly data
+  const currentMonthData =
+    monthlyData.length > 0 ? monthlyData[monthlyData.length - 1] : null;
+
+  const aggregateStats = {
+    averageUtilization:
+      monthlyData.length > 0
+        ? Math.round(
+            monthlyData.reduce((sum, m) => sum + m.percentage, 0) /
+              monthlyData.length
+          )
+        : 0,
+    monthsOverBudget: monthlyData.filter(m => m.percentage > 100).length,
+    currentUtilization: currentMonthData?.percentage ?? 0,
+  };
+
+  const loadDashboardData = useCallback(async () => {
+    const fetchKey = 'multi-month-12';
+    if (lastFetchRef.current === fetchKey) return;
+    lastFetchRef.current = fetchKey;
+
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch all data in parallel
-      const [budgetProgressData, categories, expenseData] = await Promise.all([
-        budgetDashboardApiService.getBudgetProgress({
-          startDate,
-          endDate,
-        }),
-        transactionsApiService.getCategories(),
-        budgetDashboardApiService.getExpenseCategoriesData({
-          startDate,
-          endDate,
-        }),
-      ]);
+      const multiMonthData =
+        await budgetDashboardApiService.getBudgetProgressMultiMonth({
+          months: 12,
+        });
 
-      // Set budget progress
-      setBudgetProgress(budgetProgressData.budgets);
+      setMonthlyData(multiMonthData.monthly_data);
 
-      // Calculate budget utilization
-      const totalBudget = budgetProgressData.budgets.reduce(
-        (sum: number, b: any) => sum + (b.budget || 0),
-        0
-      );
-      const totalSpent = budgetProgressData.budgets.reduce(
-        (sum: number, b: any) => sum + (b.spent || 0),
-        0
-      );
-      const budgetPct =
-        totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
-      setBudgetUtilizationPct(`${budgetPct}%`);
-
-      // Calculate non-essential spending percentage
-      const nonEssentialNames = new Set(
-        categories
-          .filter((c: any) => c.type === 'nonessential')
-          .map((c: any) => c.name)
-      );
-      const labels: string[] = expenseData.labels || [];
-      const values: number[] =
-        (expenseData.datasets?.[0]?.data as number[]) || [];
-      let total = 0;
-      let nonEssential = 0;
-      for (let i = 0; i < labels.length; i++) {
-        const v = Number(values[i] || 0);
-        total += v;
-        if (nonEssentialNames.has(labels[i])) nonEssential += v;
+      // Set the date range context to current month for expense breakdown
+      if (multiMonthData.monthly_data.length > 0) {
+        const current =
+          multiMonthData.monthly_data[multiMonthData.monthly_data.length - 1];
+        setDisplayedMonth(current);
+        setRange({
+          startDate: current.start_date,
+          endDate: current.end_date,
+        });
       }
-      const nonEssentialPctValue =
-        total > 0 ? Math.round((nonEssential / total) * 100) : 0;
-      setNonEssentialPct(`${nonEssentialPctValue}%`);
-
-      setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
+    } finally {
       setLoading(false);
     }
-  }, [startDate, endDate]);
+  }, [setRange]);
 
-  // Load all data when date range changes
   useEffect(() => {
-    // Deduplicate same-range fetches (avoids StrictMode double-invoke)
-    const key = `${startDate}|${endDate}`;
-    if (lastRangeRef.current === key) return;
-    lastRangeRef.current = key;
+    loadDashboardData();
+  }, [loadDashboardData]);
 
-    loadAllDashboardData();
-  }, [startDate, endDate, loadAllDashboardData]);
+  const handleMonthClick = (month: MonthlyBudgetData) => {
+    setSelectedMonth(month);
+    setDisplayedMonth(month);
+    setIsModalOpen(true);
+    // Update date range context for expense breakdown
+    setRange({
+      startDate: month.start_date,
+      endDate: month.end_date,
+    });
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedMonth(null);
+  };
 
   if (loading) {
     return (
@@ -125,7 +127,10 @@ function DashboardContent() {
           <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
           <p className="text-red-600 mb-4">Error loading dashboard: {error}</p>
           <button
-            onClick={loadAllDashboardData}
+            onClick={() => {
+              lastFetchRef.current = null;
+              loadDashboardData();
+            }}
             className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
           >
             Retry
@@ -135,78 +140,152 @@ function DashboardContent() {
     );
   }
 
-  // Extract year and month from startDate for the picker
-  const currentYear = Number(startDate.split('-')[0]);
-  const currentMonth = Number(startDate.split('-')[1]);
-
-  const handleDateChange = (y: number, m: number) => {
-    const pad2 = (n: number) => String(n).padStart(2, '0');
-    const start = `${y}-${pad2(m)}-01`;
-    const end = new Date(y, m, 0);
-    const endStr = `${end.getFullYear()}-${pad2(end.getMonth() + 1)}-${pad2(end.getDate())}`;
-    setRange({ startDate: start, endDate: endStr });
-  };
+  // Convert displayedMonth categories to the format expected by BudgetBreakdownChart
+  const budgetProgress = displayedMonth
+    ? displayedMonth.categories.map(cat => ({
+        category: cat.category,
+        budget: cat.budget,
+        spent: cat.spent,
+        percentage: cat.percentage,
+        remaining: cat.remaining,
+        year: displayedMonth.year,
+        month: displayedMonth.month,
+      }))
+    : [];
 
   return (
-    <div className="space-y-6 max-w-full">
-      {/* Floating Month/Year Picker */}
-      <MonthYearPicker
-        year={currentYear}
-        month={currentMonth}
-        onChange={handleDateChange}
-      />
+    <div className="space-y-6 w-full max-w-full overflow-hidden">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">
+            Budget Dashboard
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Track your budget usage across the last 12 months
+          </p>
+        </div>
+        {displayedMonth && (
+          <div className="text-right">
+            <span className="text-sm text-muted-foreground">Viewing</span>
+            <h2 className="text-lg font-semibold text-primary">
+              {displayedMonth.label}
+            </h2>
+          </div>
+        )}
+      </div>
+
+      {/* Selected Month Budget Breakdown - At the Top */}
+      <div className="w-full min-w-0">
+        <BudgetBreakdownChart progress={budgetProgress} />
+      </div>
+
+      {/* Month Timeline */}
+      <div className="flex w-full">
+        <div className="flex-1 min-w-0">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <CalendarDays className="h-5 w-5" />
+                Monthly Budget Timeline
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Click on any month to view detailed expenses and update the
+                budget breakdown above
+              </p>
+            </CardHeader>
+            <CardContent className="px-2 sm:px-6">
+              <MonthTimeline
+                monthlyData={monthlyData}
+                onMonthClick={handleMonthClick}
+                loading={loading}
+                selectedYear={displayedMonth?.year}
+                selectedMonth={displayedMonth?.month}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* KPI Summary Row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 min-w-0">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 w-full min-w-0">
         <MetricCard
-          title="Budget Utilization"
-          value={budgetUtilizationPct}
-          subtitle="of selected period"
+          title="Current Month"
+          value={`${aggregateStats.currentUtilization}%`}
+          subtitle={currentMonthData?.label ?? 'N/A'}
           icon={<Gauge className="h-4 w-4" />}
           info={
             <div className="space-y-2">
               <p className="text-foreground">
-                Budget Utilization = Total Spent / Total Budget.
+                Budget utilization for the current month.
               </p>
-              <p>
-                Totals are summed across all categories for the selected period.
-              </p>
+              <p>Shows how much of this month&apos;s budget has been used.</p>
             </div>
           }
         />
 
         <MetricCard
-          title="Non-Essential Spending"
-          value={nonEssentialPct}
-          subtitle="of total spending"
+          title="12-Month Average"
+          value={`${aggregateStats.averageUtilization}%`}
+          subtitle="average utilization"
           icon={<Percent className="h-4 w-4" />}
           info={
             <div className="space-y-2">
               <p className="text-foreground">
-                Non‑Essential Spending = Non‑essential Expenses / Total
-                Expenses.
+                Average budget utilization over the last 12 months.
               </p>
-              <p>
-                Categories flagged as non‑essential are included in the
-                numerator for the selected period.
+              <p>A lower average indicates better budget discipline.</p>
+            </div>
+          }
+        />
+
+        <MetricCard
+          title="Months Over Budget"
+          value={String(aggregateStats.monthsOverBudget)}
+          subtitle="in the last 12 months"
+          icon={<TrendingUp className="h-4 w-4" />}
+          info={
+            <div className="space-y-2">
+              <p className="text-foreground">
+                Number of months where spending exceeded the budget.
               </p>
+              <p>Aim to keep this number as low as possible.</p>
+            </div>
+          }
+        />
+
+        <MetricCard
+          title="Months Tracked"
+          value={String(monthlyData.length)}
+          subtitle="with budget data"
+          icon={<CalendarDays className="h-4 w-4" />}
+          info={
+            <div className="space-y-2">
+              <p className="text-foreground">
+                Total months with budget tracking data.
+              </p>
+              <p>Click on any month in the timeline to view details.</p>
             </div>
           }
         />
       </div>
 
-      {/* Budget Progress */}
-      <div className="lg:col-span-2 min-w-0 overflow-x-auto">
-        <BudgetDashboard progress={budgetProgress} />
+      {/* Budget Trends Chart */}
+      <div className="w-full min-w-0">
+        <BudgetTrendsChart monthlyData={monthlyData} loading={loading} />
       </div>
 
-      {/* Main Analytics Grid */}
-      <div className="grid gap-6 lg:grid-cols-2 min-w-0">
-        {/* Expense Breakdown */}
-        <div className="lg:col-span-2 min-w-0 overflow-x-auto">
-          <ExpenseBreakdown />
-        </div>
+      {/* Expense Breakdown - shows data for selected/current month */}
+      <div className="w-full min-w-0">
+        <ExpenseBreakdown />
       </div>
+
+      {/* Expense Detail Modal */}
+      <ExpenseDetailModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        monthData={selectedMonth}
+      />
     </div>
   );
 }

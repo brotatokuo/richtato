@@ -205,3 +205,31 @@ def expense_years(request):
     except Exception as e:
         logger.error(f"Error in expense_years: {e}")
         return JsonResponse({"error": str(e)}, status=500)
+
+
+@login_required
+def budget_progress_multi_month(request):
+    """Get budget progress for multiple months - delegates to service layer."""
+    try:
+        # Extract parameters
+        months_param = request.GET.get("months", "12")
+        try:
+            months = int(months_param)
+            if months < 1:
+                months = 1
+            elif months > 24:
+                months = 24  # Cap at 24 months
+        except (TypeError, ValueError):
+            months = 12
+
+        # Inject dependencies and delegate to service
+        repo = BudgetDashboardRepository()
+        service = BudgetDashboardService(repo)
+
+        # Delegate to service
+        result = service.get_budget_progress_multi_month(request.user, months=months)
+        return JsonResponse(result)
+
+    except Exception as e:
+        logger.error(f"Error in budget_progress_multi_month: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
