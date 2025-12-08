@@ -142,6 +142,13 @@ export function AccountDetailModal({
 
   const isConnected = account?.has_connection;
 
+  // Format provider name for display (e.g., "teller" -> "Teller", "plaid" -> "Plaid")
+  const getProviderDisplayName = () => {
+    const source = account?.sync_source;
+    if (!source) return 'Bank';
+    return source.charAt(0).toUpperCase() + source.slice(1);
+  };
+
   // Get display values for locked fields
   const getTypeDisplayValue = () => {
     const option = accountTypeOptions.find(t => t.value === form.type);
@@ -167,7 +174,9 @@ export function AccountDetailModal({
               <Cloud
                 className={`h-5 w-5 ${statusColors[account.connection_status || 'active']}`}
               />
-              <span className="font-medium">Connected via Teller</span>
+              <span className="font-medium">
+                Connected via {getProviderDisplayName()}
+              </span>
               <span
                 className={`text-sm ${statusColors[account.connection_status || 'active']}`}
               >
@@ -222,7 +231,7 @@ export function AccountDetailModal({
             {isConnected ? (
               <div
                 className="flex items-center justify-between h-10 w-full rounded-md border border-input bg-muted/50 px-3 py-2 text-sm cursor-not-allowed"
-                title="This field cannot be edited because the account is synced via Teller"
+                title={`This field cannot be edited because the account is synced via ${getProviderDisplayName()}`}
               >
                 <span className="text-muted-foreground">
                   {getTypeDisplayValue()}
@@ -254,7 +263,7 @@ export function AccountDetailModal({
             {isConnected ? (
               <div
                 className="flex items-center justify-between h-10 w-full rounded-md border border-input bg-muted/50 px-3 py-2 text-sm cursor-not-allowed"
-                title="This field cannot be edited because the account is synced via Teller"
+                title={`This field cannot be edited because the account is synced via ${getProviderDisplayName()}`}
               >
                 <span className="text-muted-foreground">
                   {getEntityDisplayValue()}

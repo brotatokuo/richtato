@@ -3,7 +3,7 @@
 import re
 from datetime import datetime
 from decimal import Decimal
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from apps.categorization.services.rule_based_service import (
     RuleBasedCategorizationService,
@@ -84,6 +84,25 @@ class PlaidSyncService:
         self.merchant_repository = MerchantRepository()
         self.job_repository = SyncJobRepository()
         self.rule_categorization = RuleBasedCategorizationService()
+
+    def _serialize_plaid_data(self, data) -> Any:
+        """
+        Serialize Plaid transaction data for JSON storage.
+        Converts date objects to ISO format strings.
+        """
+        import copy
+        from datetime import date as date_type
+
+        def serialize_value(val):
+            if isinstance(val, date_type):
+                return val.isoformat()
+            elif isinstance(val, dict):
+                return {k: serialize_value(v) for k, v in val.items()}
+            elif isinstance(val, list):
+                return [serialize_value(item) for item in val]
+            return val
+
+        return serialize_value(copy.deepcopy(data))
 
     def _detect_transaction_nature(
         self,
@@ -383,7 +402,12 @@ class PlaidSyncService:
 
                 for txn in batch:
                     try:
-                        txn_date = datetime.strptime(txn["date"], "%Y-%m-%d").date()
+                        # Handle both date objects (from Plaid SDK) and strings
+                        raw_date = txn["date"]
+                        if isinstance(raw_date, str):
+                            txn_date = datetime.strptime(raw_date, "%Y-%m-%d").date()
+                        else:
+                            txn_date = raw_date  # Already a date object
                         txn_amount_raw = Decimal(str(txn["amount"]))
                         # Plaid amounts are positive for expenses, so we take absolute value
                         txn_amount = abs(txn_amount_raw)
@@ -434,7 +458,7 @@ class PlaidSyncService:
                                     )
                                 )
 
-                        # Create transaction
+                        # Create transaction (serialize raw_data to handle date objects)
                         transaction = self.transaction_repository.create_transaction(
                             user=user,
                             account=account,
@@ -446,7 +470,7 @@ class PlaidSyncService:
                             status=txn.get("status", "posted"),
                             sync_source="plaid",
                             external_id=txn_id,
-                            raw_data=txn,
+                            raw_data=self._serialize_plaid_data(txn),
                         )
 
                         categorized = self._auto_categorize_transaction(
@@ -565,7 +589,12 @@ class PlaidSyncService:
 
             for txn in transactions:
                 try:
-                    txn_date = datetime.strptime(txn["date"], "%Y-%m-%d").date()
+                    # Handle both date objects (from Plaid SDK) and strings
+                    raw_date = txn["date"]
+                    if isinstance(raw_date, str):
+                        txn_date = datetime.strptime(raw_date, "%Y-%m-%d").date()
+                    else:
+                        txn_date = raw_date  # Already a date object
                     txn_amount_raw = Decimal(str(txn["amount"]))
                     txn_amount = abs(txn_amount_raw)
                     txn_description = txn.get("description", "")
@@ -604,6 +633,7 @@ class PlaidSyncService:
                                 name=merchant_name
                             )
 
+                    # Serialize raw_data to handle date objects
                     transaction = self.transaction_repository.create_transaction(
                         user=user,
                         account=account,
@@ -615,7 +645,7 @@ class PlaidSyncService:
                         status=txn.get("status", "posted"),
                         sync_source="plaid",
                         external_id=txn_id,
-                        raw_data=txn,
+                        raw_data=self._serialize_plaid_data(txn),
                     )
 
                     categorized = self._auto_categorize_transaction(

@@ -10,12 +10,12 @@ from loguru import logger
 class TellerClient:
     BASE_URL = "https://api.teller.io"
 
-    # Rate limiting settings - conservative to avoid 429 errors
+    # Rate limiting settings - conservative for free tier APIs
     MAX_RETRIES = 8
-    BASE_DELAY = 3.0  # Base delay in seconds for exponential backoff
+    BASE_DELAY = 5.0  # Base delay in seconds for exponential backoff
     MAX_DELAY = 120.0  # Maximum delay between retries
-    REQUEST_DELAY = 2.0  # Delay between normal requests to avoid rate limits
-    BATCH_DELAY = 5.0  # Delay between pagination batches
+    REQUEST_DELAY = 5.0  # Delay between normal requests to avoid rate limits
+    BATCH_DELAY = 10.0  # Delay between pagination batches
 
     def __init__(self, cert_path: str, key_path: str, access_token: str):
         """

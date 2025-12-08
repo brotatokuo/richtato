@@ -1,5 +1,6 @@
 """Plaid API client implementation."""
 
+import random
 import time
 from datetime import datetime, timedelta
 from typing import Any, Dict, Generator, List, Optional
@@ -29,11 +30,12 @@ class PlaidClient(BaseBankingClient):
     Implements cursor-based transaction sync.
     """
 
-    # Rate limiting settings
-    MAX_RETRIES = 5
-    BASE_DELAY = 1.0
-    MAX_DELAY = 60.0
-    REQUEST_DELAY = 0.5
+    # Rate limiting settings - conservative for free tier APIs
+    MAX_RETRIES = 8
+    BASE_DELAY = 5.0  # Base delay in seconds for exponential backoff
+    MAX_DELAY = 120.0  # Maximum delay between retries
+    REQUEST_DELAY = 5.0  # Delay between normal requests to avoid rate limits
+    BATCH_DELAY = 10.0  # Delay between pagination batches
 
     def __init__(
         self,
@@ -75,10 +77,13 @@ class PlaidClient(BaseBankingClient):
         self.client = plaid_api.PlaidApi(api_client)
 
     def _wait_for_rate_limit(self):
-        """Ensure minimum delay between requests."""
+        """Ensure minimum delay between requests with jitter."""
         elapsed = time.time() - self._last_request_time
-        if elapsed < self.REQUEST_DELAY:
-            time.sleep(self.REQUEST_DELAY - elapsed)
+        # Add 0-50% jitter to prevent synchronized requests
+        jitter = random.uniform(0, self.REQUEST_DELAY * 0.5)
+        delay_needed = self.REQUEST_DELAY + jitter
+        if elapsed < delay_needed:
+            time.sleep(delay_needed - elapsed)
         self._last_request_time = time.time()
 
     def _retry_with_backoff(self, func, *args, **kwargs):
@@ -90,6 +95,9 @@ class PlaidClient(BaseBankingClient):
             except plaid.ApiException as e:
                 if e.status == 429 and attempt < self.MAX_RETRIES - 1:
                     delay = min(self.BASE_DELAY * (2**attempt), self.MAX_DELAY)
+                    # Add jitter to prevent synchronized retries
+                    jitter = random.uniform(0, delay * 0.25)
+                    delay = delay + jitter
                     logger.warning(
                         f"Rate limited by Plaid API. Waiting {delay:.1f}s before retry "
                         f"(attempt {attempt + 1}/{self.MAX_RETRIES})"
@@ -100,6 +108,9 @@ class PlaidClient(BaseBankingClient):
             except Exception as e:
                 if attempt < self.MAX_RETRIES - 1:
                     delay = min(self.BASE_DELAY * (2**attempt), self.MAX_DELAY)
+                    # Add jitter to prevent synchronized retries
+                    jitter = random.uniform(0, delay * 0.25)
+                    delay = delay + jitter
                     logger.warning(
                         f"Request failed: {e}. Retrying in {delay:.1f}s "
                         f"(attempt {attempt + 1}/{self.MAX_RETRIES})"
@@ -411,8 +422,9 @@ class PlaidClient(BaseBankingClient):
             if not has_more or not cursor:
                 break
 
-            # Add delay between batches
-            time.sleep(1.0)
+            # Add delay between batches with jitter to avoid rate limits
+            jitter = random.uniform(0, self.BATCH_DELAY * 0.3)
+            time.sleep(self.BATCH_DELAY + jitter)
 
     def get_item_info(self) -> Dict[str, Any]:
         """
