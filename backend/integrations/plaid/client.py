@@ -7,14 +7,14 @@ from typing import Any, Dict, Generator, List, Optional
 import plaid
 from loguru import logger
 from plaid.api import plaid_api
-from plaid.model.accounts_get_request import AccountsGetRequest
 from plaid.model.accounts_balance_get_request import AccountsBalanceGetRequest
+from plaid.model.accounts_get_request import AccountsGetRequest
 from plaid.model.country_code import CountryCode
-from plaid.model.link_token_create_request import LinkTokenCreateRequest
-from plaid.model.link_token_create_request_user import LinkTokenCreateRequestUser
 from plaid.model.item_public_token_exchange_request import (
     ItemPublicTokenExchangeRequest,
 )
+from plaid.model.link_token_create_request import LinkTokenCreateRequest
+from plaid.model.link_token_create_request_user import LinkTokenCreateRequestUser
 from plaid.model.products import Products
 from plaid.model.transactions_sync_request import TransactionsSyncRequest
 
@@ -173,12 +173,30 @@ class PlaidClient(BaseBankingClient):
 
         accounts = []
         for account in response["accounts"]:
+            # Convert Plaid enum types to strings
+            account_type = account["type"]
+            account_subtype = account.get("subtype")
+
+            # Plaid SDK returns enum objects, convert to string values
+            if hasattr(account_type, "value"):
+                account_type = account_type.value
+            else:
+                account_type = str(account_type)
+
+            if account_subtype is not None:
+                if hasattr(account_subtype, "value"):
+                    account_subtype = account_subtype.value
+                else:
+                    account_subtype = str(account_subtype)
+            else:
+                account_subtype = ""
+
             # Normalize Plaid account structure to match expected format
             normalized = {
                 "id": account["account_id"],
                 "name": account["name"],
-                "type": account["type"],
-                "subtype": account.get("subtype", ""),
+                "type": account_type,
+                "subtype": account_subtype,
                 "last_four": account.get("mask", ""),
                 "balances": {
                     "ledger": account["balances"].get("current"),
@@ -406,10 +424,10 @@ class PlaidClient(BaseBankingClient):
         if not self.access_token:
             raise ValueError("Access token is required")
 
-        from plaid.model.item_get_request import ItemGetRequest
         from plaid.model.institutions_get_by_id_request import (
             InstitutionsGetByIdRequest,
         )
+        from plaid.model.item_get_request import ItemGetRequest
 
         # Get item info
         item_request = ItemGetRequest(access_token=self.access_token)
