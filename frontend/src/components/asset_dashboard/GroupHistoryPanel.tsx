@@ -8,15 +8,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AccountGroup, AccountWithBalance } from './AccountsList';
 import { BaseChart } from './BaseChart';
 
-interface BalanceHistoryItem {
-  id: number;
+interface BalancePoint {
   date: string;
-  amount: string;
+  balance: number;
 }
 
 interface AccountBalanceData {
   account: AccountWithBalance;
-  history: BalanceHistoryItem[];
+  history: BalancePoint[];
 }
 
 // Color palette for accounts
@@ -49,13 +48,12 @@ export function GroupHistoryPanel({ group, onClose }: GroupHistoryPanelProps) {
     setError(null);
     try {
       const promises = group.accounts.map(async account => {
-        const data = await transactionsApiService.getAccountTransactions(
-          account.id,
-          { page: 1, pageSize: 100 }
+        const data = await transactionsApiService.getAccountBalanceHistory(
+          account.id
         );
         return {
           account,
-          history: data.rows || [],
+          history: data?.data_points || [],
         };
       });
 
@@ -103,7 +101,7 @@ export function GroupHistoryPanel({ group, onClose }: GroupHistoryPanelProps) {
       // Build a map of date -> balance for this account
       const balanceMap = new Map<string, number>();
       history.forEach(h => {
-        balanceMap.set(h.date, parseFloat(h.amount) || 0);
+        balanceMap.set(h.date, h.balance);
       });
 
       // For each date, find the most recent balance up to that date
@@ -187,9 +185,11 @@ export function GroupHistoryPanel({ group, onClose }: GroupHistoryPanelProps) {
         textStyle: {
           color: '#f3f4f6',
         },
-        formatter: function (params: any) {
+        formatter: function (
+          params: Array<{ name?: string; value?: number; color?: string; seriesName?: string }>
+        ) {
           const date = params?.[0]?.name ?? '';
-          const lines = (params || []).map((p: any) => {
+          const lines = (params || []).map(p => {
             const value = p.value ?? 0;
             const color = p.color;
             return `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${color};"></span>${p.seriesName}: ${formatCurrency(value, preferences.currency)}`;

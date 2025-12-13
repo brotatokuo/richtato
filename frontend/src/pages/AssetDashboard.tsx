@@ -5,9 +5,8 @@ import {
   AccountsList,
   AccountWithBalance,
 } from '@/components/asset_dashboard/AccountsList';
-import { GroupHistoryPanel } from '@/components/asset_dashboard/GroupHistoryPanel';
+import { AssetTrendsChart } from '@/components/asset_dashboard/AssetTrendsChart';
 import { MetricCard } from '@/components/asset_dashboard/MetricCard';
-import { NetWorthTrendChart } from '@/components/asset_dashboard/NetWorthTrendChart';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { assetDashboardApiService } from '@/lib/api/asset-dashboard';
 import { formatCurrency } from '@/lib/format';
@@ -84,6 +83,11 @@ export function AssetDashboard() {
     }
   };
 
+  const handleResetSelection = () => {
+    setSelectedAccount(null);
+    setSelectedGroup(null);
+  };
+
   const handleDataChange = () => {
     setAccountsReloadKey(v => v + 1);
     loadDashboardData();
@@ -130,7 +134,11 @@ export function AssetDashboard() {
         <div className="lg:col-span-2">
           <MetricCard
             title="Net Worth"
-            value={formatCurrency(dashboardData.networth, preferences.currency, 0)}
+            value={formatCurrency(
+              dashboardData.networth,
+              preferences.currency,
+              0
+            )}
             subtitle={dashboardData.networth_growth}
             icon={<TrendingUp className="h-4 w-4" />}
             valueClassName={
@@ -197,7 +205,9 @@ export function AssetDashboard() {
                   className="h-full bg-green-500 rounded-full transition-all duration-500"
                   style={{
                     width: `${
-                      dashboardData.total_assets + dashboardData.total_liabilities > 0
+                      dashboardData.total_assets +
+                        dashboardData.total_liabilities >
+                      0
                         ? (dashboardData.total_assets /
                             (dashboardData.total_assets +
                               dashboardData.total_liabilities)) *
@@ -259,8 +269,12 @@ export function AssetDashboard() {
         />
       </div>
 
-      {/* Net Worth Trend Chart - Full Width */}
-      <NetWorthTrendChart />
+      {/* Asset Trends - unified chart */}
+      <AssetTrendsChart
+        selectedAccount={selectedAccount}
+        selectedGroup={selectedGroup}
+        onResetSelection={handleResetSelection}
+      />
 
       {/* Account Breakdown + Accounts List */}
       <div className="grid gap-6 lg:grid-cols-5">
@@ -280,14 +294,6 @@ export function AssetDashboard() {
           />
         </div>
       </div>
-
-      {/* Group History Panel - Shows when a group is selected */}
-      {selectedGroup && (
-        <GroupHistoryPanel
-          group={selectedGroup}
-          onClose={() => setSelectedGroup(null)}
-        />
-      )}
 
       {/* Account History Panel - Shows when an individual account is selected */}
       {selectedAccount && (
