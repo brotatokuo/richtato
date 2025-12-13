@@ -174,6 +174,34 @@ class TransactionsApiService {
   }
 
   /**
+   * Get balance history for an account
+   */
+  async getAccountBalanceHistory(
+    accountId: number,
+    input?: { days?: number }
+  ): Promise<{
+    current_balance: number;
+    starting_balance: number;
+    change: number;
+    change_percent: number;
+    data_points: Array<{ date: string; balance: number }>;
+  }> {
+    const url = new URL(
+      `${this.baseUrl}/accounts/${accountId}/balance-history/`,
+      window.location.origin
+    );
+    if (input?.days) url.searchParams.append('days', String(input.days));
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
+
+    return this.handleResponse(response);
+  }
+
+  /**
    * Get all accounts
    */
   async getAccounts(): Promise<Account[]> {
@@ -231,14 +259,14 @@ class TransactionsApiService {
     account: number;
     amount: number;
     date: string; // YYYY-MM-DD
-  }): Promise<any> {
+  }): Promise<unknown> {
     const response = await fetch(`${this.baseUrl}/accounts/details/`, {
       method: 'POST',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
       body: JSON.stringify(input),
     });
-    return this.handleResponse(response);
+    return this.handleResponse<unknown>(response);
   }
 
   async updateAccountTransaction(
@@ -248,7 +276,7 @@ class TransactionsApiService {
       amount?: number;
       date?: string;
     }
-  ): Promise<any> {
+  ): Promise<unknown> {
     const response = await fetch(
       `${this.baseUrl}/accounts/${accountId}/transactions/`,
       {
@@ -258,7 +286,7 @@ class TransactionsApiService {
         body: JSON.stringify(input),
       }
     );
-    return this.handleResponse(response);
+    return this.handleResponse<unknown>(response);
   }
 
   async deleteAccountTransaction(accountId: number, id: number): Promise<void> {

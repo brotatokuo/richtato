@@ -33,6 +33,11 @@ interface AccountHistoryPanelProps {
   onDataChange?: () => void;
 }
 
+interface BalancePoint {
+  date: string;
+  balance: number;
+}
+
 export function AccountHistoryPanel({
   account,
   onClose,
@@ -40,6 +45,9 @@ export function AccountHistoryPanel({
 }: AccountHistoryPanelProps) {
   const { preferences } = usePreferences();
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
+  const [balanceHistory, setBalanceHistory] = useState<BalancePoint[]>([]);
+  const [balanceError, setBalanceError] = useState<string | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -70,48 +78,82 @@ export function AccountHistoryPanel({
     }
   }, [account.id]);
 
+  const fetchBalanceHistory = useCallback(async () => {
+    setBalanceLoading(true);
+    setBalanceError(null);
+    try {
+      const data = await transactionsApiService.getAccountBalanceHistory(
+        account.id
+      );
+      setBalanceHistory(data?.data_points || []);
+    } catch (err) {
+      setBalanceError(
+        err instanceof Error ? err.message : 'Failed to load balance history'
+      );
+      setBalanceHistory([]);
+    } finally {
+      setBalanceLoading(false);
+    }
+  }, [account.id]);
+
   useEffect(() => {
     fetchTransactions();
-  }, [fetchTransactions]);
+    fetchBalanceHistory();
+  }, [fetchTransactions, fetchBalanceHistory]);
 
-  // Chart data - show transaction amounts over time
+  // Chart data - show balance over time (carry forward last known balance)
   const chartData = useMemo(() => {
-    if (transactions.length === 0) return { series: [], dates: [] };
+    if (balanceHistory.length === 0) return { series: [], dates: [] };
 
-    const sortedByDate = [...transactions].sort(
+    // Sort ascending by date
+    const sortedByDate = [...balanceHistory].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
-    const dates = sortedByDate.map(t => {
-      const date = new Date(t.date);
+    const dateLabels = sortedByDate.map(d => {
+      const date = new Date(d.date);
       return date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
       });
     });
 
-    const amounts = sortedByDate.map(t => {
-      const amount = parseFloat(t.amount) || 0;
-      // Show debits as negative for visual clarity
-      return t.transaction_type === 'debit' ? -amount : amount;
-    });
+    const balanceSeries = sortedByDate.map(d => d.balance);
 
     return {
-      dates,
+      dates: dateLabels,
       series: [
         {
-          name: 'Amount',
-          type: 'bar',
-          data: amounts,
+          name: 'Balance',
+          type: 'line',
+          data: balanceSeries,
+          smooth: true,
+          symbol: 'circle',
+          symbolSize: 6,
+          lineStyle: {
+            width: 2,
+            color: '#22c55e',
+          },
           itemStyle: {
-            color: (params: any) => {
-              return params.value >= 0 ? '#22c55e' : '#ef4444';
+            color: '#22c55e',
+          },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(34, 197, 94, 0.18)' },
+                { offset: 1, color: 'rgba(34, 197, 94, 0.02)' },
+              ],
             },
           },
         },
       ],
     };
-  }, [transactions]);
+  }, [balanceHistory]);
 
   const chartOptions = useMemo(
     () => ({
@@ -122,15 +164,15 @@ export function AccountHistoryPanel({
         textStyle: {
           color: '#f3f4f6',
         },
-        formatter: function (params: any) {
+        formatter: function (params: Array<{ name?: string; value?: number }>) {
           const date = params?.[0]?.name ?? '';
           const value = params?.[0]?.value ?? 0;
-          const type = value >= 0 ? 'Credit' : 'Debit';
-          return `${date}<br/>${type}: ${formatCurrency(Math.abs(value), preferences.currency)}`;
+          return `${date}<br/>Balance: ${formatCurrency(value, preferences.currency)}`;
         },
       },
       xAxis: {
         type: 'category',
+        boundaryGap: false,
         data: chartData.dates,
         axisLabel: {
           color: '#9ca3af',
@@ -144,7 +186,7 @@ export function AccountHistoryPanel({
             if (Math.abs(value) >= 1000) {
               return `${(value / 1000).toFixed(0)}K`;
             }
-            return formatCurrency(Math.abs(value), preferences.currency, 0);
+            return formatCurrency(value, preferences.currency, 0);
           },
           color: '#9ca3af',
         },
@@ -157,7 +199,7 @@ export function AccountHistoryPanel({
         containLabel: true,
       },
     }),
-    [chartData.dates, preferences.currency]
+    [chartData, preferences.currency]
   );
 
   // Calculate total credits and debits
@@ -197,9 +239,7 @@ export function AccountHistoryPanel({
         sortable: true,
         filterable: true,
         render: (value: string) => (
-          <span className="max-w-[200px] truncate block">
-            {value || '—'}
-          </span>
+          <span className="max-w-[200px] truncate block">{value || '—'}</span>
         ),
       },
       {
@@ -237,7 +277,7 @@ export function AccountHistoryPanel({
         amount: data.balance,
         date: data.date,
       });
-      await fetchTransactions();
+      await Promise.all([fetchTransactions(), fetchBalanceHistory()]);
       setShowAddModal(false);
       onDataChange?.();
     } catch (error) {
@@ -259,7 +299,7 @@ export function AccountHistoryPanel({
         amount: data.balance,
         date: data.date,
       });
-      await fetchTransactions();
+      await Promise.all([fetchTransactions(), fetchBalanceHistory()]);
       setShowEditModal(false);
       setSelectedItem(null);
       onDataChange?.();
@@ -279,7 +319,7 @@ export function AccountHistoryPanel({
         account.id,
         selectedItem.id
       );
-      await fetchTransactions();
+      await Promise.all([fetchTransactions(), fetchBalanceHistory()]);
       setShowEditModal(false);
       setSelectedItem(null);
       onDataChange?.();
@@ -362,19 +402,27 @@ export function AccountHistoryPanel({
               <TrendingUp className="h-4 w-4 text-green-500" />
               <span className="text-muted-foreground">Credits:</span>
               <span className="font-medium text-green-500">
-                {formatCurrency(transactionSummary.totalCredits, preferences.currency)}
+                {formatCurrency(
+                  transactionSummary.totalCredits,
+                  preferences.currency
+                )}
               </span>
             </div>
             <div className="flex items-center gap-2">
               <TrendingDown className="h-4 w-4 text-red-500" />
               <span className="text-muted-foreground">Debits:</span>
               <span className="font-medium text-red-500">
-                {formatCurrency(transactionSummary.totalDebits, preferences.currency)}
+                {formatCurrency(
+                  transactionSummary.totalDebits,
+                  preferences.currency
+                )}
               </span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Net:</span>
-              <span className={`font-semibold ${transactionSummary.net >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              <span
+                className={`font-semibold ${transactionSummary.net >= 0 ? 'text-green-500' : 'text-red-500'}`}
+              >
                 {transactionSummary.net >= 0 ? '+' : ''}
                 {formatCurrency(transactionSummary.net, preferences.currency)}
               </span>
@@ -395,7 +443,7 @@ export function AccountHistoryPanel({
               </Button>
             </div>
           </div>
-        ) : transactions.length === 0 ? (
+        ) : transactions.length === 0 && balanceHistory.length === 0 ? (
           <div className="h-48 flex items-center justify-center">
             <div className="text-center text-muted-foreground">
               <History className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -408,47 +456,81 @@ export function AccountHistoryPanel({
         ) : (
           <>
             {/* Chart */}
-            <BaseChart
-              type="line"
-              data={{ series: chartData.series }}
-              options={chartOptions}
-              height={180}
-            />
+            {chartData.series.length > 0 ? (
+              <BaseChart
+                type="line"
+                data={{ series: chartData.series }}
+                options={chartOptions}
+                height={180}
+              />
+            ) : balanceLoading ? (
+              <div className="h-48 flex items-center justify-center">
+                <div className="text-muted-foreground">
+                  Loading balance history...
+                </div>
+              </div>
+            ) : balanceError ? (
+              <div className="h-48 flex items-center justify-center">
+                <div className="text-center">
+                  <p className="text-red-600 mb-2">{balanceError}</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchBalanceHistory}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="h-48 flex items-center justify-center">
+                <div className="text-center text-muted-foreground">
+                  <History className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No balance history yet.</p>
+                  <p className="text-sm mt-1">
+                    Add balance updates to track changes over time.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Collapsible DataTable */}
-            <div>
-              <button
-                onClick={() => setShowTable(!showTable)}
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full justify-between p-2 rounded hover:bg-muted/30"
-              >
-                <span>
-                  {transactions.length} transaction{transactions.length !== 1 && 's'}
-                </span>
-                {showTable ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </button>
+            {transactions.length > 0 && (
+              <div>
+                <button
+                  onClick={() => setShowTable(!showTable)}
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full justify-between p-2 rounded hover:bg-muted/30"
+                >
+                  <span>
+                    {transactions.length} transaction
+                    {transactions.length !== 1 && 's'}
+                  </span>
+                  {showTable ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </button>
 
-              {showTable && (
-                <div className="mt-2">
-                  <DataTable
-                    data={transactions}
-                    columns={columns}
-                    searchable
-                    searchPlaceholder="Search transactions..."
-                    searchFields={['description']}
-                    onRowClick={handleRowClick}
-                    defaultSortField="date"
-                    defaultSortDirection="desc"
-                    pageSize={10}
-                    emptyMessage="No transactions found."
-                    renderMobileCard={renderMobileCard}
-                  />
-                </div>
-              )}
-            </div>
+                {showTable && (
+                  <div className="mt-2">
+                    <DataTable
+                      data={transactions}
+                      columns={columns}
+                      searchable
+                      searchPlaceholder="Search transactions..."
+                      searchFields={['description']}
+                      onRowClick={handleRowClick}
+                      defaultSortField="date"
+                      defaultSortDirection="desc"
+                      pageSize={10}
+                      emptyMessage="No transactions found."
+                      renderMobileCard={renderMobileCard}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </CardContent>
