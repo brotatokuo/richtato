@@ -270,3 +270,33 @@ SWAGGER_SETTINGS = {
     "SHOW_EXTENSIONS": True,
     "SHOW_COMMON_EXTENSIONS": True,
 }
+
+# #region agent log
+try:
+    import json
+    import time
+
+    log_path = "/app/.cursor_logs/debug.log"
+    log_entry = {
+        "timestamp": int(time.time() * 1000),
+        "location": "settings.py:end",
+        "message": "Settings loaded",
+        "data": {
+            "STATIC_ROOT": str(STATIC_ROOT),
+            "STATIC_URL": STATIC_URL,
+            "DEBUG": DEBUG,
+            "STATIC_ROOT_EXISTS": os.path.exists(STATIC_ROOT),
+            "STATIC_ROOT_LIST": os.listdir(STATIC_ROOT)
+            if os.path.exists(STATIC_ROOT)
+            else [],
+        },
+        "sessionId": "debug-session",
+        "runId": "run1",
+        "hypothesisId": "missing-static",
+    }
+    if os.path.exists(os.path.dirname(log_path)):
+        with open(log_path, "a") as f:
+            f.write(json.dumps(log_entry) + "\n")
+except Exception as e:
+    pass
+# #endregion

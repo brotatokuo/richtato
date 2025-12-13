@@ -27,6 +27,7 @@ services:
       - ./backend:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
+      - ./.cursor:/app/.cursor_logs
     depends_on:
       db:
         condition: service_healthy
