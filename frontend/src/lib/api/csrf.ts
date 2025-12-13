@@ -69,6 +69,7 @@ class CSRFService {
     return {
       'Content-Type': 'application/json',
       'X-CSRFToken': token,
+      'X-Requested-With': 'XMLHttpRequest',
     };
   }
 }

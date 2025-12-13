@@ -154,6 +154,7 @@ export interface CategorySettingsPayload {
 
 export class CategorySettingsApi {
   private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/auth/category-settings`;
+  private keywordBase = `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/transactions/keyword-rules`;
 
   private async getHeaders(): Promise<HeadersInit> {
     const headers = await csrfService.getHeaders();
@@ -179,6 +180,36 @@ export class CategorySettingsApi {
     });
     if (!res.ok) throw new Error('Failed to update category settings');
     return res.json();
+  }
+
+  async listKeywordRules(): Promise<{ rules: Array<{ id: number; keyword: string; category: number; category_name: string }> }> {
+    const res = await fetch(`${this.keywordBase}/`, {
+      method: 'GET',
+      headers: await this.getHeaders(),
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('Failed to load keyword rules');
+    return res.json();
+  }
+
+  async createKeywordRule(payload: { keyword: string; category: number }): Promise<{ id: number; keyword: string; category: number; category_name: string }> {
+    const res = await fetch(`${this.keywordBase}/`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to create keyword rule');
+    return res.json();
+  }
+
+  async deleteKeywordRule(id: number): Promise<void> {
+    const res = await fetch(`${this.keywordBase}/${id}/`, {
+      method: 'DELETE',
+      headers: await this.getHeaders(),
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('Failed to delete keyword rule');
   }
 }
 

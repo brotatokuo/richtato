@@ -6,6 +6,7 @@ export interface TransactionFormData {
   amount: string;
   account_name: string;
   category?: string;
+  notes?: string;
   transactionType: 'debit' | 'credit';
 }
 
@@ -42,6 +43,7 @@ export interface DisplayTransaction {
   amount: number;
   account: string;
   transactionType: 'debit' | 'credit';
+  notes?: string | null;
 }
 
 // Helper function to transform API transaction to display format
@@ -56,5 +58,6 @@ export const transformTransaction = (
     amount: Number(apiTransaction.signed_amount),
     account: apiTransaction.account_name || 'Unknown',
     transactionType: apiTransaction.transaction_type,
+    notes: apiTransaction.notes ?? '',
   };
 };

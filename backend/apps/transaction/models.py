@@ -1,5 +1,7 @@
 """Transaction models."""
 
+from decimal import Decimal
+
 from django.conf import settings
 from django.db import models
 
@@ -18,8 +20,8 @@ class TransactionCategory(models.Model):
     )
     icon = models.CharField(max_length=50, blank=True)
     color = models.CharField(max_length=7, blank=True, help_text="Hex color code")
-    is_income = models.BooleanField(default=False)
-    is_expense = models.BooleanField(default=True)
+    is_income = models.BooleanField(default=False)  # type: ignore[arg-type]
+    is_expense = models.BooleanField(default=True)  # type: ignore[arg-type]
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -48,8 +50,39 @@ class TransactionCategory(models.Model):
     def full_path(self):
         """Get full category path."""
         if self.parent:
-            return f"{self.parent.full_path} > {self.name}"
+            return f"{self.parent.full_path} > {self.name}"  # type: ignore[union-attr]
         return self.name
+
+
+class KeywordRule(models.Model):
+    """User-defined keyword rules for categorization."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="keyword_rules",
+    )
+    category = models.ForeignKey(
+        TransactionCategory,
+        on_delete=models.CASCADE,
+        related_name="keyword_rules",
+    )
+    keyword = models.CharField(max_length=255, help_text="Case-insensitive substring")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "transaction_keyword_rule"
+        indexes = [
+            models.Index(fields=["user", "keyword"]),
+        ]
+        unique_together = [["user", "keyword"]]
+
+    def save(self, *args, **kwargs):
+        self.keyword = str(self.keyword or "").strip().lower()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user_id}: {self.keyword} -> {self.category_id}"  # type: ignore[union-attr]
 
 
 class Merchant(models.Model):
@@ -138,7 +171,7 @@ class Transaction(models.Model):
         related_name="transactions",
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="posted")
-    is_recurring = models.BooleanField(default=False)
+    is_recurring = models.BooleanField(default=False)  # type: ignore[arg-type]
     sync_source = models.CharField(
         max_length=20, choices=SYNC_SOURCE_CHOICES, default="manual"
     )
@@ -155,6 +188,9 @@ class Transaction(models.Model):
         choices=CATEGORIZATION_STATUS_CHOICES,
         default="uncategorized",
         help_text="Status of categorization for this transaction",
+    )
+    notes = models.TextField(
+        blank=True, null=True, default="", help_text="Notes for this transaction"
     )
 
     # Metadata
@@ -180,9 +216,10 @@ class Transaction(models.Model):
     @property
     def signed_amount(self):
         """Get amount with sign based on transaction type."""
+        amt = Decimal(str(self.amount))
         if self.transaction_type == "debit":
-            return -self.amount
-        return self.amount
+            return -amt
+        return amt
 
     @property
     def category_name(self):

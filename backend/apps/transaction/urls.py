@@ -33,4 +33,15 @@ urlpatterns = [
         views.CategoryListCreateAPIView.as_view(),
         name="category-list-create",
     ),
+    # Keyword rules
+    path(
+        "keyword-rules/",
+        views.KeywordRuleListCreateAPIView.as_view(),
+        name="keyword-rule-list-create",
+    ),
+    path(
+        "keyword-rules/<int:pk>/",
+        views.KeywordRuleDetailAPIView.as_view(),
+        name="keyword-rule-detail",
+    ),
 ]

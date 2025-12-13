@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 
 from apps.financial_account.models import FinancialAccount
 from apps.richtato_user.models import User
-from apps.transaction.models import Transaction, TransactionCategory
+from apps.transaction.models import KeywordRule, Transaction, TransactionCategory
 from apps.transaction.repositories.category_repository import CategoryRepository
 from apps.transaction.repositories.merchant_repository import MerchantRepository
 from apps.transaction.repositories.transaction_repository import TransactionRepository
@@ -60,6 +60,7 @@ class TransactionService:
         category_id: Optional[int] = None,
         merchant_name: Optional[str] = None,
         status: str = "posted",
+        notes: Optional[str] = "",
     ) -> Transaction:
         """
         Create a manually entered transaction.
@@ -82,6 +83,12 @@ class TransactionService:
         category = None
         if category_id:
             category = self.category_repository.get_by_id(category_id)
+        else:
+            matched_category = self._match_category_via_keywords(
+                user, description, merchant_name
+            )
+            if matched_category:
+                category = matched_category
 
         # Get or create merchant if provided
         merchant = None
@@ -101,6 +108,7 @@ class TransactionService:
             merchant=merchant,
             status=status,
             sync_source="manual",
+            notes=notes,
         )
 
         logger.info(
@@ -232,3 +240,19 @@ class TransactionService:
             "net": total_income - total_expenses,
             "by_category": by_category,
         }
+
+    def _match_category_via_keywords(
+        self, user: User, description: str, merchant_name: Optional[str]
+    ) -> Optional[TransactionCategory]:
+        """Try to match a category using user keyword rules."""
+        text_parts = [description or ""]
+        if merchant_name:
+            text_parts.append(merchant_name)
+        haystack = " ".join(text_parts).lower()
+
+        rules = list(KeywordRule.objects.filter(user=user).select_related("category"))
+        for rule in rules:
+            kw = (rule.keyword or "").strip().lower()
+            if kw and kw in haystack:
+                return rule.category
+        return None

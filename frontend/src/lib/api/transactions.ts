@@ -24,6 +24,7 @@ export interface Transaction {
   categorization_status_display: string;
   created_at: string;
   updated_at: string;
+  notes?: string | null;
 }
 
 export interface CreateTransactionInput {
@@ -35,6 +36,7 @@ export interface CreateTransactionInput {
   category_id?: number;
   merchant_name?: string;
   status?: 'pending' | 'posted' | 'reconciled';
+  notes?: string | null;
 }
 
 export interface Account {
@@ -495,25 +497,25 @@ class TransactionsApiService {
       category_id: number | null;
       merchant_name: string;
       status: string;
+      notes: string | null;
     }>
   ): Promise<Transaction> {
-    let response = await fetch(`${this.baseUrl}/transactions/${id}/`, {
-      method: 'PATCH',
-      headers: await csrfService.getHeaders(),
-      credentials: 'include',
-      body: JSON.stringify(updates),
-    });
-
-    // If CSRF token is invalid, refresh it and retry once
-    if (response.status === 403) {
-      console.log('CSRF token invalid for transaction update, refreshing...');
-      await csrfService.refreshToken();
-      response = await fetch(`${this.baseUrl}/transactions/${id}/`, {
+    const doPatch = async () =>
+      fetch(`${this.baseUrl}/transactions/${id}/`, {
         method: 'PATCH',
         headers: await csrfService.getHeaders(),
         credentials: 'include',
         body: JSON.stringify(updates),
       });
+
+    let response = await doPatch();
+
+    // If CSRF token is invalid, clear + refresh and retry once
+    if (response.status === 403) {
+      console.log('CSRF token invalid for transaction update, refreshing...');
+      csrfService.clearToken();
+      await csrfService.refreshToken();
+      response = await doPatch();
     }
 
     return this.handleResponse<Transaction>(response);

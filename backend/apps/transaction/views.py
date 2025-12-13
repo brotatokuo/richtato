@@ -10,8 +10,10 @@ from rest_framework.views import APIView
 
 from apps.financial_account.services.account_service import AccountService
 from apps.transaction.repositories.category_repository import CategoryRepository
+from apps.transaction.models import KeywordRule
 from apps.transaction.serializers import (
     CategoryCreateSerializer,
+    KeywordRuleSerializer,
     TransactionCategorizeSerializer,
     TransactionCategorySerializer,
     TransactionCreateSerializer,
@@ -111,6 +113,7 @@ class TransactionListCreateAPIView(APIView):
                 category_id=serializer.validated_data.get("category_id"),
                 merchant_name=serializer.validated_data.get("merchant_name"),
                 status=serializer.validated_data.get("status", "posted"),
+                notes=serializer.validated_data.get("notes", ""),
             )
 
             response_serializer = TransactionSerializer(transaction)
@@ -327,6 +330,84 @@ class CategoryListCreateAPIView(APIView):
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class KeywordRuleListCreateAPIView(APIView):
+    """List or create keyword rules."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        rules = KeywordRule.objects.filter(user=request.user).select_related("category")
+        serializer = KeywordRuleSerializer(rules, many=True)
+        return Response({"rules": serializer.data})
+
+    def post(self, request):
+        serializer = KeywordRuleSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        keyword = serializer.validated_data["keyword"].strip().lower()
+        category = serializer.validated_data["category"]
+
+        # Enforce uniqueness per user
+        if KeywordRule.objects.filter(user=request.user, keyword=keyword).exists():
+            return Response(
+                {"error": "Keyword already exists."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        rule = KeywordRule.objects.create(
+            user=request.user, category=category, keyword=keyword
+        )
+        return Response(
+            KeywordRuleSerializer(rule).data, status=status.HTTP_201_CREATED
+        )
+
+
+class KeywordRuleDetailAPIView(APIView):
+    """Update or delete a keyword rule."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            rule = KeywordRule.objects.get(id=pk, user=request.user)
+        except KeywordRule.DoesNotExist:
+            return Response(
+                {"error": "Rule not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = KeywordRuleSerializer(rule, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        keyword = serializer.validated_data.get("keyword")
+        if keyword is not None:
+            keyword = keyword.strip().lower()
+            if KeywordRule.objects.filter(user=request.user, keyword=keyword).exclude(
+                id=rule.id
+            ):
+                return Response(
+                    {"error": "Keyword already exists."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            rule.keyword = keyword
+
+        if "category" in serializer.validated_data:
+            rule.category = serializer.validated_data["category"]
+
+        rule.save()
+        return Response(KeywordRuleSerializer(rule).data)
+
+    def delete(self, request, pk):
+        deleted, _ = KeywordRule.objects.filter(id=pk, user=request.user).delete()
+        if not deleted:
+            return Response(
+                {"error": "Rule not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class UncategorizedTransactionsAPIView(APIView):

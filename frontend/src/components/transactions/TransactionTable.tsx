@@ -113,6 +113,7 @@ export function TransactionTable({
     amount: '',
     account_name: '',
     category: '',
+    notes: '',
     transactionType: typeFilter === 'credit' ? 'credit' : 'debit',
   });
 
@@ -125,6 +126,7 @@ export function TransactionTable({
     amount: '',
     account_name: '',
     category: '',
+    notes: '',
     transactionType: 'debit',
   });
 
@@ -441,6 +443,7 @@ export function TransactionTable({
 
       const rawAmount = evaluateAmountField(formData.amount);
       const amountNum = parseFloat(rawAmount);
+      const notesValue = (formData.notes ?? '').trim();
 
       const newTransaction = await transactionsApiService.createTransaction({
         account_id: account.id,
@@ -449,6 +452,7 @@ export function TransactionTable({
         description: formData.description,
         transaction_type: formData.transactionType,
         category_id: categoryId,
+        notes: notesValue,
       });
 
       // Transform and add to local state
@@ -462,6 +466,7 @@ export function TransactionTable({
         amount: '',
         account_name: '',
         category: '',
+        notes: '',
         transactionType: typeFilter === 'credit' ? 'credit' : 'debit',
       });
       setShowAddModal(false);
@@ -486,6 +491,7 @@ export function TransactionTable({
       amount: Math.abs(t.amount).toString(),
       account_name: account ? String(account.id) : '',
       category: category ? String(category.id) : '',
+      notes: t.notes ?? '',
       transactionType: t.transactionType,
     });
     setShowEditModal(true);
@@ -514,6 +520,7 @@ export function TransactionTable({
 
       const rawEditAmount = evaluateAmountField(editFormData.amount);
       const amountValue = parseFloat(rawEditAmount);
+      const notesValue = (editFormData.notes ?? '').trim();
 
       const idNum = Number(selectedTransaction.id);
       const updated = await transactionsApiService.updateTransaction(idNum, {
@@ -522,6 +529,7 @@ export function TransactionTable({
         amount: amountValue,
         category_id: categoryId ?? null,
         transaction_type: editFormData.transactionType,
+        notes: notesValue,
       });
 
       const transformed = transformTransaction(updated);

@@ -36,6 +36,16 @@ export function CategoriesSection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<CategoryCatalogItem[]>([]);
+  const [keywordRules, setKeywordRules] = useState<
+    Array<{
+      id: number;
+      keyword: string;
+      category: number;
+      category_name: string;
+    }>
+  >([]);
+  const [newKeyword, setNewKeyword] = useState('');
+  const [newKeywordCategory, setNewKeywordCategory] = useState<string>('');
   const [expandedGroups, setExpandedGroups] = useState<Set<CategoryType>>(
     new Set()
   );
@@ -44,8 +54,12 @@ export function CategoriesSection() {
     (async () => {
       try {
         setLoading(true);
-        const res = await categorySettingsApi.getCatalog();
-        setCatalog(res.categories);
+        const [catalogRes, rulesRes] = await Promise.all([
+          categorySettingsApi.getCatalog(),
+          categorySettingsApi.listKeywordRules(),
+        ]);
+        setCatalog(catalogRes.categories);
+        setKeywordRules(rulesRes.rules || []);
         setError(null);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Failed to load categories');
@@ -127,6 +141,32 @@ export function CategoriesSection() {
       }
       return next;
     });
+  };
+
+  const handleAddKeyword = async () => {
+    const keyword = newKeyword.trim();
+    const categoryId = Number(newKeywordCategory);
+    if (!keyword || !categoryId) return;
+    try {
+      const rule = await categorySettingsApi.createKeywordRule({
+        keyword,
+        category: categoryId,
+      });
+      setKeywordRules(prev => [...prev, rule]);
+      setNewKeyword('');
+      setNewKeywordCategory('');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to add keyword');
+    }
+  };
+
+  const handleDeleteKeyword = async (id: number) => {
+    try {
+      await categorySettingsApi.deleteKeywordRule(id);
+      setKeywordRules(prev => prev.filter(r => r.id !== id));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to delete keyword');
+    }
   };
 
   // Group categories by type
@@ -285,6 +325,78 @@ export function CategoriesSection() {
               </div>
             );
           })}
+
+        {/* Keyword Rules */}
+        <div className="border rounded-lg">
+          <div className="px-4 py-3 border-b">
+            <div className="font-semibold">Keyword Rules</div>
+            <div className="text-xs text-muted-foreground">
+              Map keywords to categories (case-insensitive substring)
+            </div>
+          </div>
+          <div className="p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                className="flex-1 border rounded px-3 py-2 text-sm"
+                placeholder="Keyword (e.g., uber, netflix)"
+                value={newKeyword}
+                onChange={e => setNewKeyword(e.target.value)}
+              />
+              <Select
+                value={newKeywordCategory}
+                onValueChange={v => setNewKeywordCategory(v)}
+              >
+                <SelectTrigger className="w-full sm:w-52 h-10">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {catalog.map(cat => (
+                    <SelectItem key={cat.name} value={String(cat.id)}>
+                      {cat.display}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <button
+                type="button"
+                className="px-3 py-2 rounded bg-primary text-primary-foreground text-sm"
+                onClick={handleAddKeyword}
+              >
+                Add
+              </button>
+            </div>
+
+            {keywordRules.length === 0 ? (
+              <div className="text-sm text-muted-foreground">
+                No keyword rules yet.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {keywordRules.map(rule => (
+                  <div
+                    key={rule.id}
+                    className="flex items-center justify-between border rounded px-3 py-2 text-sm"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono px-2 py-0.5 rounded bg-muted">
+                        {rule.keyword}
+                      </span>
+                      <span className="text-muted-foreground">→</span>
+                      <span className="font-medium">{rule.category_name}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="text-xs text-red-500 hover:underline"
+                      onClick={() => handleDeleteKeyword(rule.id)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

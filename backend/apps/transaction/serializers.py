@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 
-from .models import Merchant, Transaction, TransactionCategory
+from .models import KeywordRule, Merchant, Transaction, TransactionCategory
 
 
 class TransactionCategorySerializer(serializers.ModelSerializer):
@@ -75,6 +75,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             "sync_source",
             "categorization_status",
             "categorization_status_display",
+            "notes",
             "created_at",
             "updated_at",
         ]
@@ -104,6 +105,9 @@ class TransactionCreateSerializer(serializers.Serializer):
     status = serializers.ChoiceField(
         choices=["pending", "posted", "reconciled"], default="posted"
     )
+    notes = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, max_length=2000
+    )
 
 
 class TransactionUpdateSerializer(serializers.Serializer):
@@ -124,6 +128,9 @@ class TransactionUpdateSerializer(serializers.Serializer):
     status = serializers.ChoiceField(
         choices=["pending", "posted", "reconciled"], required=False
     )
+    notes = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, max_length=2000
+    )
 
 
 class TransactionCategorizeSerializer(serializers.Serializer):
@@ -142,3 +149,14 @@ class CategoryCreateSerializer(serializers.Serializer):
     color = serializers.CharField(max_length=7, required=False, allow_blank=True)
     is_income = serializers.BooleanField(default=False)
     is_expense = serializers.BooleanField(default=True)
+
+
+class KeywordRuleSerializer(serializers.ModelSerializer):
+    """Serializer for keyword rules."""
+
+    category_name = serializers.CharField(source="category.name", read_only=True)
+
+    class Meta:
+        model = KeywordRule
+        fields = ["id", "keyword", "category", "category_name", "created_at"]
+        read_only_fields = ["id", "created_at", "category_name"]
