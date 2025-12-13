@@ -120,6 +120,19 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
             )
         return "manual"
 
+    def to_representation(self, instance):
+        """Flip balance sign for credit accounts at serialization time."""
+        data = super().to_representation(instance)
+        account_type = (instance.account_type or "").lower()
+        if account_type in ["credit", "credit_card"]:
+            # Ensure balance is represented as negative for liabilities
+            balance = data.get("balance")
+            try:
+                data["balance"] = -1 * float(balance)
+            except Exception:
+                pass
+        return data
+
 
 class FinancialAccountCreateSerializer(serializers.Serializer):
     """Serializer for creating manual financial accounts."""

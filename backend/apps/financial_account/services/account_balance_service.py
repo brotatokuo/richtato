@@ -84,27 +84,42 @@ class AccountBalanceService:
 
         history = self.get_balance_history(account, start_date, end_date)
 
+        is_credit = (account.account_type or "").lower() in ["credit", "credit_card"]
+
         if not history:
+            current_balance = -account.balance if is_credit else account.balance
             return {
-                "current_balance": account.balance,
-                "starting_balance": account.balance,
+                "current_balance": current_balance,
+                "starting_balance": current_balance,
                 "change": Decimal("0"),
                 "change_percent": Decimal("0"),
                 "data_points": [],
             }
 
-        starting_balance = history[-1].balance if history else account.balance
-        change = account.balance - starting_balance
+        # Apply sign flip before calculations
+        starting_balance_raw = history[-1].balance if history else account.balance
+        current_balance_raw = account.balance
+
+        starting_balance = -starting_balance_raw if is_credit else starting_balance_raw
+        current_balance = -current_balance_raw if is_credit else current_balance_raw
+
+        change = current_balance - starting_balance
         change_percent = (
             (change / starting_balance * 100) if starting_balance != 0 else Decimal("0")
         )
 
+        data_points = [
+            {
+                "date": str(h.date),
+                "balance": float(-h.balance if is_credit else h.balance),
+            }
+            for h in history
+        ]
+
         return {
-            "current_balance": account.balance,
+            "current_balance": current_balance,
             "starting_balance": starting_balance,
             "change": change,
             "change_percent": change_percent,
-            "data_points": [
-                {"date": str(h.date), "balance": float(h.balance)} for h in history
-            ],
+            "data_points": data_points,
         }
