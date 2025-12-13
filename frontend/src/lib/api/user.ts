@@ -172,7 +172,9 @@ export class CategorySettingsApi {
     return res.json();
   }
 
-  async updateSettings(payload: CategorySettingsPayload): Promise<{ success: boolean }> {
+  async updateSettings(
+    payload: CategorySettingsPayload
+  ): Promise<{ success: boolean }> {
     const res = await fetch(`${this.baseUrl}/`, {
       method: 'PUT',
       headers: await this.getHeaders(),
@@ -183,7 +185,14 @@ export class CategorySettingsApi {
     return res.json();
   }
 
-  async listKeywordRules(): Promise<{ rules: Array<{ id: number; keyword: string; category: number; category_name: string }> }> {
+  async listKeywordRules(): Promise<{
+    rules: Array<{
+      id: number;
+      keyword: string;
+      category: number;
+      category_name: string;
+    }>;
+  }> {
     const res = await fetch(`${this.keywordBase}/`, {
       method: 'GET',
       headers: await this.getHeaders(),
@@ -193,7 +202,15 @@ export class CategorySettingsApi {
     return res.json();
   }
 
-  async createKeywordRule(payload: { keyword: string; category: number }): Promise<{ id: number; keyword: string; category: number; category_name: string }> {
+  async createKeywordRule(payload: {
+    keyword: string;
+    category: number;
+  }): Promise<{
+    id: number;
+    keyword: string;
+    category: number;
+    category_name: string;
+  }> {
     // Refresh CSRF to avoid 403s on first write
     await csrfService.refreshToken();
     const res = await fetch(`${this.keywordBase}/`, {
@@ -239,7 +256,9 @@ interface CardAccountApiResponse {
 }
 
 // Transform API response to frontend format
-function transformCardAccount(apiItem: CardAccountApiResponse): CardAccountItem {
+function transformCardAccount(
+  apiItem: CardAccountApiResponse
+): CardAccountItem {
   return {
     id: apiItem.id,
     name: apiItem.name,
