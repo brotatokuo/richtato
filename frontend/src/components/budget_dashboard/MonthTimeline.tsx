@@ -1,13 +1,7 @@
 import { usePreferences } from '@/contexts/PreferencesContext';
 import type { MonthlyBudgetData } from '@/lib/api/budget-dashboard';
 import { formatCurrency } from '@/lib/format';
-import {
-  ChevronLeft,
-  ChevronRight,
-  TrendingDown,
-  TrendingUp,
-} from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { TrendingDown, TrendingUp } from 'lucide-react';
 
 interface MonthTimelineProps {
   monthlyData: MonthlyBudgetData[];
@@ -25,61 +19,6 @@ export function MonthTimeline({
   selectedMonth: selectedMonthProp,
 }: MonthTimelineProps) {
   const { preferences } = usePreferences();
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const checkScroll = () => {
-    const container = scrollContainerRef.current;
-    if (container) {
-      setCanScrollLeft(container.scrollLeft > 0);
-      setCanScrollRight(
-        container.scrollLeft <
-          container.scrollWidth - container.clientWidth - 10
-      );
-    }
-  };
-
-  useEffect(() => {
-    checkScroll();
-    const container = scrollContainerRef.current;
-    if (container) {
-      container.addEventListener('scroll', checkScroll);
-      window.addEventListener('resize', checkScroll);
-    }
-    return () => {
-      if (container) {
-        container.removeEventListener('scroll', checkScroll);
-      }
-      window.removeEventListener('resize', checkScroll);
-    };
-  }, [monthlyData]);
-
-  // Scroll to the current month (last item) on initial load
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (container && monthlyData.length > 0) {
-      // Scroll to end to show current month
-      setTimeout(() => {
-        container.scrollTo({
-          left: container.scrollWidth,
-          behavior: 'smooth',
-        });
-      }, 100);
-    }
-  }, [monthlyData.length]);
-
-  const scroll = (direction: 'left' | 'right') => {
-    const container = scrollContainerRef.current;
-    if (container) {
-      const scrollAmount = 280; // Approximate width of a card + gap
-      container.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth',
-      });
-    }
-  };
-
   // Determine current month
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -109,35 +48,9 @@ export function MonthTimeline({
   }
 
   return (
-    <div className="relative group w-full">
-      {/* Left Scroll Button */}
-      {canScrollLeft && (
-        <button
-          onClick={() => scroll('left')}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-background/90 backdrop-blur-sm border border-border rounded-full p-2 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted"
-          aria-label="Scroll left"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-      )}
-
-      {/* Right Scroll Button */}
-      {canScrollRight && (
-        <button
-          onClick={() => scroll('right')}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-background/90 backdrop-blur-sm border border-border rounded-full p-2 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted"
-          aria-label="Scroll right"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
-      )}
-
-      {/* Timeline Container */}
-      <div
-        ref={scrollContainerRef}
-        className="flex gap-3 py-2 px-1 overflow-x-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
-        style={{ scrollbarWidth: 'thin' }}
-      >
+    <div className="w-full min-w-0">
+      {/* Timeline Grid (no horizontal scroll) */}
+      <div className="grid gap-3 py-2 px-1 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
         {monthlyData.map(month => {
           const isCurrentMonth =
             month.year === currentYear && month.month === currentMonth;
@@ -153,7 +66,7 @@ export function MonthTimeline({
             <button
               key={`${month.year}-${month.month}`}
               onClick={() => onMonthClick(month)}
-              className={`flex-shrink-0 w-56 p-3 rounded-xl border transition-all duration-200 hover:scale-[1.02] hover:shadow-lg cursor-pointer text-left ${
+              className={`w-full p-3 rounded-xl border transition-all duration-200 hover:shadow-lg cursor-pointer text-left ${
                 isSelected
                   ? 'border-primary bg-primary/10 ring-2 ring-primary shadow-md'
                   : isCurrentMonth

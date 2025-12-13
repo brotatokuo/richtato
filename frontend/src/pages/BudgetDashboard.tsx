@@ -194,14 +194,16 @@ function DashboardContent() {
                 budget breakdown above
               </p>
             </CardHeader>
-            <CardContent className="px-2 sm:px-6">
-              <MonthTimeline
-                monthlyData={monthlyData}
-                onMonthClick={handleMonthClick}
-                loading={loading}
-                selectedYear={displayedMonth?.year}
-                selectedMonth={displayedMonth?.month}
-              />
+            <CardContent className="px-2 sm:px-6 min-w-0">
+              <div className="w-full min-w-0">
+                <MonthTimeline
+                  monthlyData={monthlyData}
+                  onMonthClick={handleMonthClick}
+                  loading={loading}
+                  selectedYear={displayedMonth?.year}
+                  selectedMonth={displayedMonth?.month}
+                />
+              </div>
             </CardContent>
           </Card>
         </div>
