@@ -126,6 +126,7 @@ export class UserApiService {
 export type CategoryType = 'income' | 'expense' | 'neither';
 
 export interface CategoryCatalogItem {
+  id: number;
   name: string;
   display: string;
   icon: string;
@@ -193,6 +194,8 @@ export class CategorySettingsApi {
   }
 
   async createKeywordRule(payload: { keyword: string; category: number }): Promise<{ id: number; keyword: string; category: number; category_name: string }> {
+    // Refresh CSRF to avoid 403s on first write
+    await csrfService.refreshToken();
     const res = await fetch(`${this.keywordBase}/`, {
       method: 'POST',
       headers: await this.getHeaders(),
@@ -204,6 +207,8 @@ export class CategorySettingsApi {
   }
 
   async deleteKeywordRule(id: number): Promise<void> {
+    // Refresh CSRF to avoid 403s on delete
+    await csrfService.refreshToken();
     const res = await fetch(`${this.keywordBase}/${id}/`, {
       method: 'DELETE',
       headers: await this.getHeaders(),
