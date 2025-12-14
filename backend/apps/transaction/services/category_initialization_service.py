@@ -1,6 +1,5 @@
 """Service for initializing default categories for new users."""
 
-import os
 from pathlib import Path
 from typing import Dict, List
 
@@ -67,19 +66,9 @@ class CategoryInitializationService:
                     if not name:
                         continue
 
-                    # Check if category already exists for this user
                     slug = slugify(name)
-                    existing = TransactionCategory.objects.filter(
-                        user=user, slug=slug
-                    ).first()
 
-                    if existing:
-                        logger.debug(
-                            f"Category '{name}' already exists for user {user.id}"
-                        )
-                        continue
-
-                    # Create category using get_or_create for extra safety
+                    # Create category with only valid fields (exclude keywords)
                     category, created = TransactionCategory.objects.get_or_create(
                         user=user,
                         slug=slug,
@@ -93,31 +82,32 @@ class CategoryInitializationService:
                     if created:
                         categories_created += 1
 
-                    # Create keywords for this category (only if category was created)
-                    if created:
-                        keywords = cat_config.get("keywords", [])
-                        for keyword in keywords:
-                            if not keyword:
+                    # Create keywords for this category
+                    # (both for newly created and existing categories without keywords)
+                    keywords = cat_config.get("keywords", [])
+                    for keyword in keywords:
+                        if not keyword:
+                            continue
+
+                        try:
+                            # Convert to string in case YAML has integers
+                            keyword_str = str(keyword).strip().lower()
+                            if not keyword_str:
                                 continue
 
-                            try:
-                                # Convert to string in case YAML has integers
-                                keyword_str = str(keyword).strip().lower()
-                                if not keyword_str:
-                                    continue
-
-                                CategoryKeyword.objects.get_or_create(
-                                    user=user,
-                                    category=category,
-                                    keyword=keyword_str,
-                                )
+                            kw_obj, kw_created = CategoryKeyword.objects.get_or_create(
+                                user=user,
+                                category=category,
+                                keyword=keyword_str,
+                            )
+                            if kw_created:
                                 keywords_created += 1
-                            except Exception as e:
-                                # Skip duplicate keywords
-                                logger.debug(
-                                    f"Skipping duplicate keyword '{keyword}' for category '{name}': {str(e)}"
-                                )
-                                continue
+                        except Exception as e:
+                            # Skip duplicate keywords
+                            logger.debug(
+                                f"Skipping duplicate keyword '{keyword}' for category '{name}': {str(e)}"
+                            )
+                            continue
 
                 logger.info(
                     f"Initialized {categories_created} categories and "

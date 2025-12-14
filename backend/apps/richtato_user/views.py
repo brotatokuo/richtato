@@ -46,7 +46,10 @@ class CategorySettingsAPIView(APIView):
         config = service.load_defaults_config()
 
         user_cats = {
-            c.slug: c for c in TransactionCategory.objects.filter(user=request.user)
+            c.slug: c
+            for c in TransactionCategory.objects.filter(
+                user=request.user
+            ).prefetch_related("keywords")
         }
 
         # Get current active budgets
@@ -78,6 +81,20 @@ class CategorySettingsAPIView(APIView):
             budget_info = cat_to_budget.get(slug)
             # Get type from existing category or config, default to "expense"
             cat_type = existing.type if existing else cat_config.get("type", "expense")
+
+            # Get keywords for this category if it exists
+            keywords = []
+            if existing:
+                keywords = [
+                    {
+                        "id": kw.id,
+                        "keyword": kw.keyword,
+                        "match_count": kw.match_count,
+                        "created_at": kw.created_at.isoformat(),
+                    }
+                    for kw in existing.keywords.all()
+                ]
+
             catalog.append(
                 {
                     "id": existing.id
@@ -90,6 +107,7 @@ class CategorySettingsAPIView(APIView):
                     "type": cat_type,
                     "enabled": existing is not None,
                     "budget": budget_info,
+                    "keywords": keywords,
                 }
             )
         return Response({"categories": catalog})
