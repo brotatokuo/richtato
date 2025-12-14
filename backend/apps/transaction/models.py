@@ -14,6 +14,7 @@ class TransactionCategory(models.Model):
         ("expense", "Expense"),
         ("transfer", "Transfer"),
         ("investment", "Investment"),
+        ("other", "Other"),
     ]
 
     name = models.CharField(max_length=255)

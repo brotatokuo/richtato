@@ -91,13 +91,9 @@ export function CategoriesSection() {
     const disabled = cat.filter(c => !c.enabled).map(c => c.name);
     const category_types: Record<string, CategoryType> = {};
     for (const c of cat) {
-      if (c.is_income) {
-        category_types[c.name] = 'income';
-      } else if (c.is_expense) {
-        category_types[c.name] = 'expense';
-      } else {
-        category_types[c.name] = 'neither';
-      }
+      // Use type field if available, fallback to expense for backward compatibility
+      const catType = c.type || 'expense';
+      category_types[c.name] = catType as CategoryType;
     }
     return { enabled, disabled, category_types };
   };
@@ -131,8 +127,7 @@ export function CategoriesSection() {
         if (c.name !== name) return c;
         return {
           ...c,
-          is_income: type === 'income',
-          is_expense: type === 'expense',
+          type: type,
         };
       });
       scheduleSave(next);
@@ -141,9 +136,8 @@ export function CategoriesSection() {
   };
 
   const getCategoryType = (cat: CategoryCatalogItemWithId): CategoryType => {
-    if (cat.is_income) return 'income';
-    if (cat.is_expense) return 'expense';
-    return 'neither';
+    // Use type field if available, fallback to expense for backward compatibility
+    return (cat.type as CategoryType) || 'expense';
   };
 
   const toggleGroup = (type: CategoryType) => {
@@ -209,7 +203,9 @@ export function CategoriesSection() {
       icon: <span className="w-2.5 h-2.5 rounded-full bg-orange-500" />,
       color: 'text-orange-600 dark:text-orange-400',
       bgColor: 'bg-orange-50 dark:bg-orange-950/30',
-      categories: catalog.filter(c => c.is_expense),
+      categories: catalog.filter(
+        c => c.type === 'expense' || (!c.type && c.is_expense)
+      ),
     },
     {
       type: 'income' as CategoryType,
@@ -217,15 +213,33 @@ export function CategoriesSection() {
       icon: <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />,
       color: 'text-emerald-600 dark:text-emerald-400',
       bgColor: 'bg-emerald-50 dark:bg-emerald-950/30',
-      categories: catalog.filter(c => c.is_income),
+      categories: catalog.filter(
+        c => c.type === 'income' || (!c.type && c.is_income)
+      ),
     },
     {
-      type: 'neither' as CategoryType,
+      type: 'transfer' as CategoryType,
+      label: 'Transfers',
+      icon: <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />,
+      color: 'text-blue-600 dark:text-blue-400',
+      bgColor: 'bg-blue-50 dark:bg-blue-950/30',
+      categories: catalog.filter(c => c.type === 'transfer'),
+    },
+    {
+      type: 'investment' as CategoryType,
+      label: 'Investments',
+      icon: <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />,
+      color: 'text-purple-600 dark:text-purple-400',
+      bgColor: 'bg-purple-50 dark:bg-purple-950/30',
+      categories: catalog.filter(c => c.type === 'investment'),
+    },
+    {
+      type: 'other' as CategoryType,
       label: 'Other',
-      icon: <span className="w-2.5 h-2.5 rounded-full bg-gray-400" />,
+      icon: <span className="w-2.5 h-2.5 rounded-full bg-gray-500" />,
       color: 'text-gray-600 dark:text-gray-400',
-      bgColor: 'bg-gray-50 dark:bg-gray-900/30',
-      categories: catalog.filter(c => !c.is_income && !c.is_expense),
+      bgColor: 'bg-gray-50 dark:bg-gray-950/30',
+      categories: catalog.filter(c => c.type === 'other'),
     },
   ];
   const groups = allGroups.filter(g => g.categories.length > 0);
@@ -399,9 +413,21 @@ export function CategoriesSection() {
                                         Income
                                       </span>
                                     </SelectItem>
-                                    <SelectItem value="neither">
+                                    <SelectItem value="transfer">
                                       <span className="flex items-center gap-1.5">
-                                        <span className="w-2 h-2 rounded-full bg-gray-400" />
+                                        <span className="w-2 h-2 rounded-full bg-blue-500" />
+                                        Transfer
+                                      </span>
+                                    </SelectItem>
+                                    <SelectItem value="investment">
+                                      <span className="flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-purple-500" />
+                                        Investment
+                                      </span>
+                                    </SelectItem>
+                                    <SelectItem value="other">
+                                      <span className="flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-gray-500" />
                                         Other
                                       </span>
                                     </SelectItem>

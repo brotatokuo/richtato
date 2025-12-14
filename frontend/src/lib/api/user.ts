@@ -123,7 +123,12 @@ export class UserApiService {
   }
 }
 
-export type CategoryType = 'income' | 'expense' | 'neither';
+export type CategoryType =
+  | 'income'
+  | 'expense'
+  | 'transfer'
+  | 'investment'
+  | 'other';
 
 export interface CategoryCatalogItem {
   id: number;

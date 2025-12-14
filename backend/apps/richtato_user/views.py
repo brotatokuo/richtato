@@ -76,12 +76,18 @@ class CategorySettingsAPIView(APIView):
 
             existing = user_cats.get(slug)
             budget_info = cat_to_budget.get(slug)
+            # Get type from existing category or config, default to "expense"
+            cat_type = existing.type if existing else cat_config.get("type", "expense")
             catalog.append(
                 {
+                    "id": existing.id
+                    if existing
+                    else 0,  # Temporary ID for new categories
                     "name": slug,
                     "display": name,
                     "icon": cat_config.get("icon", ""),
                     "color": cat_config.get("color", ""),
+                    "type": cat_type,
                     "enabled": existing is not None,
                     "budget": budget_info,
                 }
