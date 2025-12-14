@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Card,
   CardContent,
@@ -6,14 +6,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -30,8 +22,9 @@ import {
   categorySettingsApi,
 } from '@/lib/api/user';
 import { cn } from '@/lib/utils';
-import { ChevronDown, ChevronRight, Tags } from 'lucide-react';
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { ChevronDown, ChevronRight, Search, Tags } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { BulkKeywordsModal } from './BulkKeywordsModal';
 
 type CategoryCatalogItemWithId = CategoryCatalogItem & { id: number };
 
@@ -48,41 +41,30 @@ export function CategoriesSection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<CategoryCatalogItemWithId[]>([]);
-  const [keywordRules, setKeywordRules] = useState<
-    Array<{
-      id: number;
-      keyword: string;
-      category: number;
-      category_name: string;
-    }>
-  >([]);
   const [expandedGroups, setExpandedGroups] = useState<Set<CategoryType>>(
     new Set()
   );
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [keywordValue, setKeywordValue] = useState('');
+  const [keywordModalOpen, setKeywordModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] =
     useState<CategoryCatalogItemWithId | null>(null);
-  const [savingKeyword, setSavingKeyword] = useState(false);
+  const [globalKeywordSearch, setGlobalKeywordSearch] = useState('');
 
   useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        const [catalogRes, rulesRes] = await Promise.all([
-          categorySettingsApi.getCatalog(),
-          categorySettingsApi.listKeywordRules(),
-        ]);
-        setCatalog(catalogRes.categories as CategoryCatalogItemWithId[]);
-        setKeywordRules(rulesRes.rules || []);
-        setError(null);
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : 'Failed to load categories');
-      } finally {
-        setLoading(false);
-      }
-    })();
+    loadCatalog();
   }, []);
+
+  const loadCatalog = async () => {
+    try {
+      setLoading(true);
+      const catalogRes = await categorySettingsApi.getCatalog();
+      setCatalog(catalogRes.categories as CategoryCatalogItemWithId[]);
+      setError(null);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to load categories');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const buildPayload = (
     cat: CategoryCatalogItemWithId[]
@@ -152,50 +134,23 @@ export function CategoriesSection() {
     });
   };
 
-  const openKeywordDialog = (category: CategoryCatalogItemWithId) => {
+  const openKeywordModal = (category: CategoryCatalogItemWithId) => {
     setSelectedCategory(category);
-    setKeywordValue('');
-    setDialogOpen(true);
+    setKeywordModalOpen(true);
   };
 
-  const closeKeywordDialog = () => {
-    if (savingKeyword) return;
-    setDialogOpen(false);
+  const closeKeywordModal = () => {
+    setKeywordModalOpen(false);
     setSelectedCategory(null);
-    setKeywordValue('');
   };
 
-  const handleSubmitKeyword = async (e?: FormEvent) => {
-    e?.preventDefault();
-    const keyword = keywordValue.trim();
-    if (!keyword || !selectedCategory) return;
-    setSavingKeyword(true);
-    try {
-      const rule = await categorySettingsApi.createKeywordRule({
-        keyword,
-        category: selectedCategory.id,
-      });
-      setKeywordRules(prev => [...prev, rule]);
-      setDialogOpen(false);
-      setSelectedCategory(null);
-      setKeywordValue('');
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to add keyword');
-    } finally {
-      setSavingKeyword(false);
-    }
-  };
-
-  const handleDeleteKeyword = async (id: number) => {
-    try {
-      await categorySettingsApi.deleteKeywordRule(id);
-      setKeywordRules(prev => prev.filter(r => r.id !== id));
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to delete keyword');
-    }
+  const handleKeywordsChanged = () => {
+    // Reload catalog to get updated keyword counts
+    loadCatalog();
   };
 
   // Group categories by type
+  // Default to 'expense' if type is null (for backward compatibility)
   const allGroups: CategoryGroup[] = [
     {
       type: 'expense' as CategoryType,
@@ -204,7 +159,7 @@ export function CategoriesSection() {
       color: 'text-orange-600 dark:text-orange-400',
       bgColor: 'bg-orange-50 dark:bg-orange-950/30',
       categories: catalog.filter(
-        c => c.type === 'expense' || (!c.type && c.is_expense)
+        c => c.type === 'expense' || c.type === null || c.type === undefined
       ),
     },
     {
@@ -213,9 +168,7 @@ export function CategoriesSection() {
       icon: <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />,
       color: 'text-emerald-600 dark:text-emerald-400',
       bgColor: 'bg-emerald-50 dark:bg-emerald-950/30',
-      categories: catalog.filter(
-        c => c.type === 'income' || (!c.type && c.is_income)
-      ),
+      categories: catalog.filter(c => c.type === 'income'),
     },
     {
       type: 'transfer' as CategoryType,
@@ -242,63 +195,36 @@ export function CategoriesSection() {
       categories: catalog.filter(c => c.type === 'other'),
     },
   ];
-  const groups = allGroups.filter(g => g.categories.length > 0);
+
+  // Filter groups based on global keyword search
+  const filteredGroups = globalKeywordSearch
+    ? allGroups
+        .map(group => ({
+          ...group,
+          categories: group.categories.filter(cat => {
+            if (!cat.keywords) return false;
+            return cat.keywords.some(kw =>
+              kw.keyword
+                .toLowerCase()
+                .includes(globalKeywordSearch.toLowerCase())
+            );
+          }),
+        }))
+        .filter(g => g.categories.length > 0)
+    : allGroups.filter(g => g.categories.length > 0);
 
   return (
     <>
-      <Dialog
-        open={dialogOpen}
-        onOpenChange={open => {
-          if (!open) closeKeywordDialog();
-          else setDialogOpen(true);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add keyword</DialogTitle>
-            <DialogDescription>
-              Map transactions containing this keyword to the selected category.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form className="space-y-4" onSubmit={handleSubmitKeyword}>
-            <div className="space-y-1">
-              <div className="text-sm font-semibold">
-                {selectedCategory?.display ?? 'Select a category'}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Keywords are matched case-insensitively against transaction
-                descriptions.
-              </div>
-            </div>
-
-            <Input
-              autoFocus
-              placeholder="Keyword (e.g., uber, netflix)"
-              value={keywordValue}
-              onChange={e => setKeywordValue(e.target.value)}
-              disabled={savingKeyword}
-            />
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeKeywordDialog}
-                disabled={savingKeyword}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={!keywordValue.trim() || savingKeyword}
-              >
-                {savingKeyword ? 'Saving...' : 'Save'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {selectedCategory && (
+        <BulkKeywordsModal
+          open={keywordModalOpen}
+          onClose={closeKeywordModal}
+          categoryId={selectedCategory.id}
+          categoryName={selectedCategory.display}
+          categoryIcon={selectedCategory.icon}
+          onKeywordsChanged={handleKeywordsChanged}
+        />
+      )}
 
       <Card>
         <CardHeader>
@@ -310,16 +236,39 @@ export function CategoriesSection() {
             Manage your transaction categories and types
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {error && <div className="text-sm text-red-600 mb-3">{error}</div>}
-          {loading && <div className="text-sm">Loading...</div>}
+        <CardContent className="space-y-4">
+          {error && (
+            <div className="text-sm text-red-600 bg-red-50 dark:bg-red-950/30 p-3 rounded">
+              {error}
+            </div>
+          )}
+
+          {/* Global keyword search */}
+          {!loading && catalog.length > 0 && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by keyword..."
+                value={globalKeywordSearch}
+                onChange={e => setGlobalKeywordSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          )}
+
+          {loading && <div className="text-sm py-4">Loading...</div>}
           {!loading && catalog.length === 0 && (
-            <div className="text-sm text-muted-foreground py-4 text-center">
+            <div className="text-sm text-muted-foreground py-8 text-center">
               No categories found
             </div>
           )}
+          {!loading && globalKeywordSearch && filteredGroups.length === 0 && (
+            <div className="text-sm text-muted-foreground py-8 text-center">
+              No categories with keywords matching "{globalKeywordSearch}"
+            </div>
+          )}
           {!loading &&
-            groups.map(group => {
+            filteredGroups.map(group => {
               const isExpanded = expandedGroups.has(group.type);
               const enabledCount = group.categories.filter(
                 c => c.enabled
@@ -335,25 +284,31 @@ export function CategoriesSection() {
                     type="button"
                     onClick={() => toggleGroup(group.type)}
                     className={cn(
-                      'w-full flex items-center justify-between px-4 py-3 transition-colors',
-                      'hover:bg-muted/50',
-                      group.bgColor
+                      'w-full flex items-center justify-between px-6 py-4',
+                      'transition-all duration-200',
+                      'hover:shadow-md',
+                      group.bgColor,
+                      isExpanded && 'shadow-lg'
                     )}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                       {isExpanded ? (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        <ChevronDown className="h-5 w-5" />
                       ) : (
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        <ChevronRight className="h-5 w-5" />
                       )}
-                      {group.icon}
-                      <span className={cn('font-semibold', group.color)}>
-                        {group.label}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        {group.icon}
+                        <span className={cn('text-lg font-bold', group.color)}>
+                          {group.label}
+                        </span>
+                      </div>
                     </div>
-                    <span className="text-sm text-muted-foreground">
-                      {enabledCount} / {group.categories.length} enabled
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="secondary" className="text-xs">
+                        {enabledCount} / {group.categories.length}
+                      </Badge>
+                    </div>
                   </button>
 
                   {/* Group Content */}
@@ -361,115 +316,116 @@ export function CategoriesSection() {
                     <div className="divide-y">
                       {group.categories.map(item => {
                         const catType = getCategoryType(item);
-                        const rulesForCategory = keywordRules.filter(
-                          r => r.category === item.id
-                        );
+                        const keywordCount = item.keywords?.length || 0;
+                        const totalMatches =
+                          item.keywords?.reduce(
+                            (sum, k) => sum + k.match_count,
+                            0
+                          ) || 0;
 
                         return (
-                          <div key={item.name} className="divide-y">
-                            <div
-                              className={cn(
-                                'flex items-center justify-between gap-4 px-4 py-2.5 transition-colors cursor-pointer',
-                                'hover:bg-muted/30',
-                                !item.enabled && 'opacity-50'
-                              )}
-                              onClick={() => openKeywordDialog(item)}
-                              title="Click to add a keyword rule for this category"
-                            >
-                              {/* Left: Icon + Name */}
-                              <div className="flex items-center gap-3 min-w-0 flex-1">
-                                <span className="text-lg" aria-hidden>
-                                  {item.icon}
-                                </span>
-                                <span className="font-medium truncate text-sm">
+                          <div
+                            key={item.name}
+                            className={cn(
+                              'flex items-center justify-between gap-4 px-6 py-3',
+                              'hover:bg-accent/50 cursor-pointer',
+                              'transition-all duration-150',
+                              'hover:scale-[1.01]',
+                              !item.enabled && 'opacity-50'
+                            )}
+                            onClick={() => openKeywordModal(item)}
+                            title="Click to manage keywords for this category"
+                          >
+                            {/* Left: Icon + Name + Badges */}
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <span className="text-2xl" aria-hidden>
+                                {item.icon}
+                              </span>
+                              <div className="min-w-0">
+                                <div className="font-medium">
                                   {item.display}
-                                </span>
-                              </div>
-
-                              {/* Center: Type Selector */}
-                              <div onClick={e => e.stopPropagation()}>
-                                <Select
-                                  value={catType}
-                                  onValueChange={v =>
-                                    updateCategoryType(
-                                      item.name,
-                                      v as CategoryType
-                                    )
-                                  }
-                                >
-                                  <SelectTrigger className="w-[100px] h-7 text-xs">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="expense">
-                                      <span className="flex items-center gap-1.5">
-                                        <span className="w-2 h-2 rounded-full bg-orange-500" />
-                                        Expense
-                                      </span>
-                                    </SelectItem>
-                                    <SelectItem value="income">
-                                      <span className="flex items-center gap-1.5">
-                                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                                        Income
-                                      </span>
-                                    </SelectItem>
-                                    <SelectItem value="transfer">
-                                      <span className="flex items-center gap-1.5">
-                                        <span className="w-2 h-2 rounded-full bg-blue-500" />
-                                        Transfer
-                                      </span>
-                                    </SelectItem>
-                                    <SelectItem value="investment">
-                                      <span className="flex items-center gap-1.5">
-                                        <span className="w-2 h-2 rounded-full bg-purple-500" />
-                                        Investment
-                                      </span>
-                                    </SelectItem>
-                                    <SelectItem value="other">
-                                      <span className="flex items-center gap-1.5">
-                                        <span className="w-2 h-2 rounded-full bg-gray-500" />
-                                        Other
-                                      </span>
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              {/* Right: Enabled Toggle */}
-                              <div onClick={e => e.stopPropagation()}>
-                                <Switch
-                                  checked={item.enabled}
-                                  onCheckedChange={val =>
-                                    toggleCategory(item.name, Boolean(val))
-                                  }
-                                />
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] h-4 px-1.5"
+                                  >
+                                    {keywordCount}{' '}
+                                    {keywordCount === 1
+                                      ? 'keyword'
+                                      : 'keywords'}
+                                  </Badge>
+                                  {totalMatches > 0 && (
+                                    <Badge
+                                      variant="default"
+                                      className="text-[10px] h-4 px-1.5"
+                                    >
+                                      {totalMatches}{' '}
+                                      {totalMatches === 1 ? 'match' : 'matches'}
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
                             </div>
 
-                            {rulesForCategory.length > 0 && (
-                              <div className="space-y-1 px-8 py-2 text-xs bg-muted/20">
-                                {rulesForCategory.map(rule => (
-                                  <div
-                                    key={rule.id}
-                                    className="flex items-center justify-between rounded border px-2 py-1 bg-background"
-                                  >
-                                    <span className="font-mono text-[11px]">
-                                      {rule.keyword}
+                            {/* Center: Type Selector */}
+                            <div onClick={e => e.stopPropagation()}>
+                              <Select
+                                value={catType}
+                                onValueChange={v =>
+                                  updateCategoryType(
+                                    item.name,
+                                    v as CategoryType
+                                  )
+                                }
+                              >
+                                <SelectTrigger className="w-[120px] h-8 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="expense">
+                                    <span className="flex items-center gap-1.5">
+                                      <span className="w-2 h-2 rounded-full bg-orange-500" />
+                                      Expense
                                     </span>
-                                    <button
-                                      type="button"
-                                      className="text-[11px] text-red-500 hover:underline"
-                                      onClick={e => {
-                                        e.stopPropagation();
-                                        handleDeleteKeyword(rule.id);
-                                      }}
-                                    >
-                                      Remove
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                                  </SelectItem>
+                                  <SelectItem value="income">
+                                    <span className="flex items-center gap-1.5">
+                                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                      Income
+                                    </span>
+                                  </SelectItem>
+                                  <SelectItem value="transfer">
+                                    <span className="flex items-center gap-1.5">
+                                      <span className="w-2 h-2 rounded-full bg-blue-500" />
+                                      Transfer
+                                    </span>
+                                  </SelectItem>
+                                  <SelectItem value="investment">
+                                    <span className="flex items-center gap-1.5">
+                                      <span className="w-2 h-2 rounded-full bg-purple-500" />
+                                      Investment
+                                    </span>
+                                  </SelectItem>
+                                  <SelectItem value="other">
+                                    <span className="flex items-center gap-1.5">
+                                      <span className="w-2 h-2 rounded-full bg-gray-500" />
+                                      Other
+                                    </span>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* Right: Enabled Toggle */}
+                            <div onClick={e => e.stopPropagation()}>
+                              <Switch
+                                checked={item.enabled}
+                                onCheckedChange={val =>
+                                  toggleCategory(item.name, Boolean(val))
+                                }
+                              />
+                            </div>
                           </div>
                         );
                       })}

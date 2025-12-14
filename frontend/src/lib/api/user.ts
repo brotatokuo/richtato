@@ -130,6 +130,13 @@ export type CategoryType =
   | 'investment'
   | 'other';
 
+export interface CategoryKeyword {
+  id: number;
+  keyword: string;
+  match_count: number;
+  created_at: string;
+}
+
 export interface CategoryCatalogItem {
   id: number;
   name: string;
@@ -138,8 +145,10 @@ export interface CategoryCatalogItem {
   color: string;
   type: string | null;
   enabled: boolean;
-  is_income: boolean;
-  is_expense: boolean;
+  keywords?: CategoryKeyword[];
+  // Deprecated fields - kept for backward compatibility but not returned by API
+  is_income?: boolean;
+  is_expense?: boolean;
   budget: {
     id: number;
     amount: number;
@@ -160,7 +169,9 @@ export interface CategorySettingsPayload {
 
 export class CategorySettingsApi {
   private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/auth/category-settings`;
-  private keywordBase = `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/transactions/keyword-rules`;
+  private keywordBase = `${
+    import.meta.env.VITE_API_BASE_URL || '/api/v1'
+  }/transactions/categories`;
 
   private async getHeaders(): Promise<HeadersInit> {
     const headers = await csrfService.getHeaders();
@@ -190,53 +201,47 @@ export class CategorySettingsApi {
     return res.json();
   }
 
-  async listKeywordRules(): Promise<{
-    rules: Array<{
-      id: number;
-      keyword: string;
-      category: number;
-      category_name: string;
-    }>;
+  async getCategoryKeywords(categoryId: number): Promise<{
+    keywords: CategoryKeyword[];
   }> {
-    const res = await fetch(`${this.keywordBase}/`, {
+    const res = await fetch(`${this.keywordBase}/${categoryId}/keywords/`, {
       method: 'GET',
       headers: await this.getHeaders(),
       credentials: 'include',
     });
-    if (!res.ok) throw new Error('Failed to load keyword rules');
+    if (!res.ok) throw new Error('Failed to load keywords');
     return res.json();
   }
 
-  async createKeywordRule(payload: {
-    keyword: string;
-    category: number;
-  }): Promise<{
-    id: number;
-    keyword: string;
-    category: number;
-    category_name: string;
-  }> {
-    // Refresh CSRF to avoid 403s on first write
+  async addCategoryKeyword(
+    categoryId: number,
+    keyword: string
+  ): Promise<CategoryKeyword> {
     await csrfService.refreshToken();
-    const res = await fetch(`${this.keywordBase}/`, {
+    const res = await fetch(`${this.keywordBase}/${categoryId}/keywords/`, {
       method: 'POST',
       headers: await this.getHeaders(),
       credentials: 'include',
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ keyword }),
     });
-    if (!res.ok) throw new Error('Failed to create keyword rule');
+    if (!res.ok) throw new Error('Failed to add keyword');
     return res.json();
   }
 
-  async deleteKeywordRule(id: number): Promise<void> {
-    // Refresh CSRF to avoid 403s on delete
+  async deleteCategoryKeyword(
+    categoryId: number,
+    keywordId: number
+  ): Promise<void> {
     await csrfService.refreshToken();
-    const res = await fetch(`${this.keywordBase}/${id}/`, {
-      method: 'DELETE',
-      headers: await this.getHeaders(),
-      credentials: 'include',
-    });
-    if (!res.ok) throw new Error('Failed to delete keyword rule');
+    const res = await fetch(
+      `${this.keywordBase}/${categoryId}/keywords/${keywordId}/`,
+      {
+        method: 'DELETE',
+        headers: await this.getHeaders(),
+        credentials: 'include',
+      }
+    );
+    if (!res.ok) throw new Error('Failed to delete keyword');
   }
 }
 

@@ -211,3 +211,43 @@ class Transaction(models.Model):
     def category_name(self):
         """Get category name or 'Uncategorized'."""
         return self.category.name if self.category else "Uncategorized"
+
+
+class RecategorizationTask(models.Model):
+    """Track progress of bulk recategorization tasks."""
+
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("processing", "Processing"),
+        ("completed", "Completed"),
+        ("failed", "Failed"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="recategorization_tasks",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="pending",
+    )
+    total_count = models.IntegerField(default=0)
+    processed_count = models.IntegerField(default=0)
+    updated_count = models.IntegerField(default=0)
+    error_message = models.TextField(blank=True)
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    keep_existing_for_unmatched = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "recategorization_task"
+        ordering = ["-started_at"]
+        indexes = [
+            models.Index(fields=["user", "-started_at"]),
+            models.Index(fields=["status"]),
+        ]
+
+    def __str__(self):
+        return f"Task {self.id} - {self.user.username} - {self.status}"

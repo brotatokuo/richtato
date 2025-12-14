@@ -684,6 +684,61 @@ class TransactionsApiService {
 
     return this.handleResponse(response);
   }
+
+  /**
+   * Start bulk recategorization of all transactions
+   */
+  async startRecategorization(
+    keepExistingForUnmatched: boolean
+  ): Promise<{ task_id: number }> {
+    let response = await fetch(`${this.baseUrl}/transactions/recategorize/`, {
+      method: 'POST',
+      headers: await csrfService.getHeaders(),
+      credentials: 'include',
+      body: JSON.stringify({
+        keep_existing_for_unmatched: keepExistingForUnmatched,
+      }),
+    });
+
+    // If CSRF token is invalid, refresh it and retry once
+    if (response.status === 403) {
+      console.log('CSRF token invalid for recategorization, refreshing...');
+      await csrfService.refreshToken();
+      response = await fetch(`${this.baseUrl}/transactions/recategorize/`, {
+        method: 'POST',
+        headers: await csrfService.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          keep_existing_for_unmatched: keepExistingForUnmatched,
+        }),
+      });
+    }
+
+    return this.handleResponse<{ task_id: number }>(response);
+  }
+
+  /**
+   * Get recategorization task progress
+   */
+  async getRecategorizeProgress(taskId: number): Promise<{
+    status: 'pending' | 'processing' | 'completed' | 'failed';
+    total: number;
+    processed: number;
+    updated: number;
+    progress_percent: number;
+    error: string | null;
+  }> {
+    const response = await fetch(
+      `${this.baseUrl}/transactions/recategorize/${taskId}/`,
+      {
+        method: 'GET',
+        headers: this.getHeaders(),
+        credentials: 'include',
+      }
+    );
+
+    return this.handleResponse(response);
+  }
 }
 
 export const transactionsApiService = new TransactionsApiService();

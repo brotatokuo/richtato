@@ -343,7 +343,7 @@ class CategoryListCreateAPIView(APIView):
 
 
 class CategoryKeywordAPIView(APIView):
-    """Add or remove keywords for a category."""
+    """Add, list, or remove keywords for a category."""
 
     authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
@@ -351,6 +351,29 @@ class CategoryKeywordAPIView(APIView):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.category_repository = CategoryRepository()
+
+    def get(self, request, category_id):
+        """Get all keywords for a category."""
+        try:
+            category = self.category_repository.get_by_id(category_id)
+            if not category or (category.user and category.user != request.user):
+                return Response(
+                    {"error": "Category not found"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            keywords = CategoryKeyword.objects.filter(
+                user=request.user, category=category
+            ).order_by("-match_count", "keyword")
+
+            serializer = CategoryKeywordSerializer(keywords, many=True)
+            return Response({"keywords": serializer.data})
+
+        except Exception as e:
+            logger.error(f"Error getting keywords: {str(e)}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def post(self, request, category_id):
         """Add a keyword to a category."""
@@ -413,54 +436,6 @@ class CategoryKeywordAPIView(APIView):
             )
 
 
-class KeywordRuleListCreateAPIView(APIView):
-    """Deprecated: List or create keyword rules. Use CategoryKeywordAPIView instead."""
-
-    authentication_classes = [SessionAuthentication, BasicAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        # Deprecated endpoint - return empty list
-        return Response(
-            {
-                "rules": [],
-                "deprecated": True,
-                "message": "This endpoint is deprecated. Use /api/transactions/categories/{id}/keywords/ instead",
-            }
-        )
-
-    def post(self, request):
-        return Response(
-            {
-                "error": "This endpoint is deprecated. Use /api/transactions/categories/{id}/keywords/ instead"
-            },
-            status=status.HTTP_410_GONE,
-        )
-
-
-class KeywordRuleDetailAPIView(APIView):
-    """Deprecated: Update or delete a keyword rule. Use CategoryKeywordAPIView instead."""
-
-    authentication_classes = [SessionAuthentication, BasicAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    def patch(self, request, pk):
-        return Response(
-            {
-                "error": "This endpoint is deprecated. Use /api/transactions/categories/{id}/keywords/ instead"
-            },
-            status=status.HTTP_410_GONE,
-        )
-
-    def delete(self, request, pk):
-        return Response(
-            {
-                "error": "This endpoint is deprecated. Use /api/transactions/categories/{id}/keywords/{keyword_id}/ instead"
-            },
-            status=status.HTTP_410_GONE,
-        )
-
-
 class UncategorizedTransactionsAPIView(APIView):
     """Get uncategorized transactions."""
 
@@ -484,6 +459,96 @@ class UncategorizedTransactionsAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error getting uncategorized transactions: {str(e)}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class RecategorizeTransactionsAPIView(APIView):
+    """API for bulk recategorization of transactions."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """Start a bulk recategorization task."""
+        import threading
+
+        from apps.transaction.models import RecategorizationTask
+        from apps.transaction.services.recategorization_service import (
+            RecategorizationService,
+        )
+
+        keep_existing = request.data.get("keep_existing_for_unmatched", True)
+
+        try:
+            # Check if there's already an active task for this user
+            active_task = RecategorizationTask.objects.filter(
+                user=request.user, status__in=["pending", "processing"]
+            ).first()
+
+            if active_task:
+                return Response(
+                    {
+                        "error": "A recategorization task is already in progress",
+                        "task_id": active_task.id,
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            # Create new task
+            task = RecategorizationTask.objects.create(
+                user=request.user, keep_existing_for_unmatched=keep_existing
+            )
+
+            # Start async processing in a background thread
+            def process_recategorization():
+                service = RecategorizationService()
+                try:
+                    service.recategorize_all_transactions(task)
+                except Exception as e:
+                    logger.error(f"Background recategorization failed: {str(e)}")
+
+            thread = threading.Thread(target=process_recategorization)
+            thread.daemon = True
+            thread.start()
+
+            return Response({"task_id": task.id}, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            logger.error(f"Error starting recategorization: {str(e)}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def get(self, request, task_id):
+        """Get progress of a recategorization task."""
+        from apps.transaction.models import RecategorizationTask
+
+        try:
+            task = RecategorizationTask.objects.get(id=task_id, user=request.user)
+
+            progress_percent = 0
+            if task.total_count > 0:
+                progress_percent = (task.processed_count / task.total_count) * 100
+
+            return Response(
+                {
+                    "status": task.status,
+                    "total": task.total_count,
+                    "processed": task.processed_count,
+                    "updated": task.updated_count,
+                    "progress_percent": round(progress_percent, 2),
+                    "error": task.error_message if task.error_message else None,
+                }
+            )
+
+        except RecategorizationTask.DoesNotExist:
+            return Response(
+                {"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error getting recategorization progress: {str(e)}")
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

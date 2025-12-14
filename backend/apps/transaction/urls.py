@@ -37,22 +37,22 @@ urlpatterns = [
     path(
         "categories/<int:category_id>/keywords/",
         views.CategoryKeywordAPIView.as_view(),
-        name="category-keyword-create",
+        name="category-keyword-list-create",
     ),
     path(
         "categories/<int:category_id>/keywords/<int:keyword_id>/",
         views.CategoryKeywordAPIView.as_view(),
         name="category-keyword-delete",
     ),
-    # Keyword rules (deprecated - kept for backward compatibility)
+    # Recategorization
     path(
-        "keyword-rules/",
-        views.KeywordRuleListCreateAPIView.as_view(),
-        name="keyword-rule-list-create",
+        "recategorize/",
+        views.RecategorizeTransactionsAPIView.as_view(),
+        name="recategorize-start",
     ),
     path(
-        "keyword-rules/<int:pk>/",
-        views.KeywordRuleDetailAPIView.as_view(),
-        name="keyword-rule-detail",
+        "recategorize/<int:task_id>/",
+        views.RecategorizeTransactionsAPIView.as_view(),
+        name="recategorize-progress",
     ),
 ]

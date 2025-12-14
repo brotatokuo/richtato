@@ -1,3 +1,5 @@
+import { RecategorizeDialog } from '@/components/transactions/RecategorizeDialog';
+import { RecategorizeProgressModal } from '@/components/transactions/RecategorizeProgressModal';
 import { TransactionTable } from '@/components/transactions/TransactionTable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,6 +13,7 @@ import {
   TransactionTypeFilter,
   transformTransaction,
 } from '@/types/transactions';
+import { RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 // Main DataTable Component - Transactions Only
@@ -21,6 +24,11 @@ export function DataTable() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<TransactionTypeFilter>('all');
+  const [showRecategorizeDialog, setShowRecategorizeDialog] = useState(false);
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [recategorizeTaskId, setRecategorizeTaskId] = useState<number | null>(
+    null
+  );
 
   const loadData = async () => {
     try {
@@ -53,6 +61,30 @@ export function DataTable() {
     loadData();
   }, [typeFilter]);
 
+  const handleRecategorize = async (keepExisting: boolean) => {
+    setShowRecategorizeDialog(false);
+
+    try {
+      const { task_id } =
+        await transactionsApiService.startRecategorization(keepExisting);
+      setRecategorizeTaskId(task_id);
+      setShowProgressModal(true);
+    } catch (error) {
+      console.error('Error starting recategorization:', error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to start recategorization'
+      );
+    }
+  };
+
+  const handleRecategorizeComplete = () => {
+    setShowProgressModal(false);
+    setRecategorizeTaskId(null);
+    loadData(); // Reload transactions to show updated categories
+  };
+
   if (error) {
     return (
       <div className="min-h-screen bg-background">
@@ -73,6 +105,19 @@ export function DataTable() {
   return (
     <div className="min-h-screen bg-background">
       <div className="w-full max-w-full mx-auto space-y-8 sm:space-y-12 min-w-0">
+        {/* Recategorize button */}
+        <div className="flex justify-end px-4 sm:px-6 lg:px-8">
+          <Button
+            onClick={() => setShowRecategorizeDialog(true)}
+            disabled={loading || transactions.length === 0}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Recategorize All
+          </Button>
+        </div>
+
         {/* Main content */}
         <div className="overflow-x-auto min-w-0">
           <div className="min-w-0 max-w-full">
@@ -89,6 +134,19 @@ export function DataTable() {
           </div>
         </div>
       </div>
+
+      <RecategorizeDialog
+        open={showRecategorizeDialog}
+        onClose={() => setShowRecategorizeDialog(false)}
+        onConfirm={handleRecategorize}
+        transactionCount={transactions.length}
+      />
+
+      <RecategorizeProgressModal
+        open={showProgressModal}
+        taskId={recategorizeTaskId}
+        onComplete={handleRecategorizeComplete}
+      />
     </div>
   );
 }
