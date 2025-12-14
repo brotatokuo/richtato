@@ -2,7 +2,16 @@
 
 from rest_framework import serializers
 
-from .models import KeywordRule, Merchant, Transaction, TransactionCategory
+from .models import CategoryKeyword, Transaction, TransactionCategory
+
+
+class CategoryKeywordSerializer(serializers.ModelSerializer):
+    """Serializer for category keywords."""
+
+    class Meta:
+        model = CategoryKeyword
+        fields = ["id", "user", "keyword", "match_count", "created_at"]
+        read_only_fields = ["id", "user", "match_count", "created_at"]
 
 
 class TransactionCategorySerializer(serializers.ModelSerializer):
@@ -10,6 +19,8 @@ class TransactionCategorySerializer(serializers.ModelSerializer):
 
     parent_name = serializers.CharField(source="parent.name", read_only=True)
     full_path = serializers.CharField(read_only=True)
+    keywords = CategoryKeywordSerializer(many=True, read_only=True)
+    type_display = serializers.CharField(source="get_type_display", read_only=True)
 
     class Meta:
         model = TransactionCategory
@@ -22,20 +33,12 @@ class TransactionCategorySerializer(serializers.ModelSerializer):
             "full_path",
             "icon",
             "color",
-            "is_income",
-            "is_expense",
+            "type",
+            "type_display",
+            "keywords",
             "created_at",
         ]
         read_only_fields = ["id", "created_at"]
-
-
-class MerchantSerializer(serializers.ModelSerializer):
-    """Serializer for merchants."""
-
-    class Meta:
-        model = Merchant
-        fields = ["id", "name", "slug", "category_hint", "logo_url"]
-        read_only_fields = ["id"]
 
 
 class TransactionSerializer(serializers.ModelSerializer):
@@ -43,7 +46,6 @@ class TransactionSerializer(serializers.ModelSerializer):
 
     account_name = serializers.CharField(source="account.name", read_only=True)
     category_name = serializers.CharField(read_only=True)
-    merchant_name = serializers.CharField(source="merchant.name", read_only=True)
     signed_amount = serializers.DecimalField(
         max_digits=15, decimal_places=2, read_only=True
     )
@@ -68,8 +70,6 @@ class TransactionSerializer(serializers.ModelSerializer):
             "transaction_type_display",
             "category",
             "category_name",
-            "merchant",
-            "merchant_name",
             "status",
             "is_recurring",
             "sync_source",
@@ -99,9 +99,6 @@ class TransactionCreateSerializer(serializers.Serializer):
         choices=["debit", "credit"], default="debit"
     )
     category_id = serializers.IntegerField(required=False, allow_null=True)
-    merchant_name = serializers.CharField(
-        max_length=255, required=False, allow_blank=True
-    )
     status = serializers.ChoiceField(
         choices=["pending", "posted", "reconciled"], default="posted"
     )
@@ -122,9 +119,6 @@ class TransactionUpdateSerializer(serializers.Serializer):
         choices=["debit", "credit"], required=False
     )
     category_id = serializers.IntegerField(required=False, allow_null=True)
-    merchant_name = serializers.CharField(
-        max_length=255, required=False, allow_blank=True
-    )
     status = serializers.ChoiceField(
         choices=["pending", "posted", "reconciled"], required=False
     )
@@ -147,16 +141,18 @@ class CategoryCreateSerializer(serializers.Serializer):
     parent_id = serializers.IntegerField(required=False, allow_null=True)
     icon = serializers.CharField(max_length=50, required=False, allow_blank=True)
     color = serializers.CharField(max_length=7, required=False, allow_blank=True)
-    is_income = serializers.BooleanField(default=False)
-    is_expense = serializers.BooleanField(default=True)
+    type = serializers.ChoiceField(
+        choices=["income", "expense", "transfer"], default="expense"
+    )
+    keywords = serializers.ListField(
+        child=serializers.CharField(max_length=200),
+        required=False,
+        allow_empty=True,
+        help_text="List of keywords for this category",
+    )
 
 
-class KeywordRuleSerializer(serializers.ModelSerializer):
-    """Serializer for keyword rules."""
+class CategoryKeywordCreateSerializer(serializers.Serializer):
+    """Serializer for adding keywords to a category."""
 
-    category_name = serializers.CharField(source="category.name", read_only=True)
-
-    class Meta:
-        model = KeywordRule
-        fields = ["id", "keyword", "category", "category_name", "created_at"]
-        read_only_fields = ["id", "created_at", "category_name"]
+    keyword = serializers.CharField(max_length=200)

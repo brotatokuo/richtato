@@ -9,7 +9,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TransactionCategory
-        fields = ["id", "name", "slug", "is_income", "is_expense", "icon", "color"]
+        fields = ["id", "name", "slug", "icon", "color"]
         read_only_fields = ["id"]
 
 

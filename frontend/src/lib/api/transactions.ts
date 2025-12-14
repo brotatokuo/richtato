@@ -15,8 +15,6 @@ export interface Transaction {
   transaction_type_display: string;
   category: number | null;
   category_name: string | null;
-  merchant: number | null;
-  merchant_name: string | null;
   status: string;
   is_recurring: boolean;
   sync_source: string;
@@ -34,7 +32,6 @@ export interface CreateTransactionInput {
   description: string;
   transaction_type: 'debit' | 'credit';
   category_id?: number;
-  merchant_name?: string;
   status?: 'pending' | 'posted' | 'reconciled';
   notes?: string | null;
 }
@@ -495,7 +492,6 @@ class TransactionsApiService {
       description: string;
       transaction_type: 'debit' | 'credit';
       category_id: number | null;
-      merchant_name: string;
       status: string;
       notes: string | null;
     }>

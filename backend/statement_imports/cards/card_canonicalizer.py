@@ -1,14 +1,13 @@
+import re
 from abc import ABC, abstractmethod
 from decimal import Decimal
 
 import pandas as pd
-from loguru import logger
-import re
-
 from apps.financial_account.models import FinancialAccount
 from apps.transaction.models import Transaction, TransactionCategory
+from apps.transaction.services.transaction_service import TransactionService
 from artificial_intelligence.ai import OpenAI
-from categories.categories_manager import CategoriesManager
+from loguru import logger
 
 
 class CardCanonicalizer(ABC):
@@ -118,9 +117,17 @@ class CardCanonicalizer(ABC):
         """
         Computes the category for each transaction in the DataFrame.
         """
-        categories_manager = CategoriesManager(self.user)
+        transaction_service = TransactionService()
+
+        def match_category(description: str) -> str:
+            """Match category via keywords and return category name or None."""
+            category = transaction_service._match_category_via_keywords(
+                self.user, description
+            )
+            return category.name if category else None
+
         self.formatted_df["Category"] = self.formatted_df["Description"].apply(
-            categories_manager.search
+            match_category
         )
         uncategorized_mask = self.formatted_df["Category"].isna()
         logger.debug(

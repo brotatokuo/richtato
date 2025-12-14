@@ -3,21 +3,17 @@
 import re
 from datetime import datetime
 from decimal import Decimal
-from typing import Dict, Optional, Tuple
+from typing import Optional, Tuple
 
-from apps.categorization.services.rule_based_service import (
-    RuleBasedCategorizationService,
-)
 from apps.financial_account.repositories.account_repository import (
     FinancialAccountRepository,
 )
 from apps.sync.models import SyncConnection
 from apps.sync.repositories.sync_job_repository import SyncJobRepository
-from apps.transaction.models import TransactionCategory
-from apps.transaction.repositories.merchant_repository import MerchantRepository
+from apps.transaction.models import CategoryKeyword, TransactionCategory
 from apps.transaction.repositories.transaction_repository import TransactionRepository
-from categories.categories import BaseCategory
 from django.conf import settings
+from django.db.models import Q
 from integrations.teller.client import TellerClient
 from loguru import logger
 
@@ -61,9 +57,7 @@ class TellerSyncService:
     def __init__(self):
         self.account_repository = FinancialAccountRepository()
         self.transaction_repository = TransactionRepository()
-        self.merchant_repository = MerchantRepository()
         self.job_repository = SyncJobRepository()
-        self.rule_categorization = RuleBasedCategorizationService()
 
     def _detect_transaction_nature(
         self,
@@ -202,111 +196,38 @@ class TellerSyncService:
             logger.error(f"Error getting CC payment category: {str(e)}")
             return None
 
-    def _ensure_user_categories_exist(self, user) -> None:
-        """
-        Ensure categories exist for a user, creating them if necessary.
-
-        This creates categories based on the BaseCategory registry.
-        """
-        existing_count = TransactionCategory.objects.filter(user=user).count()
-        if existing_count > 0:
-            return  # User already has categories
-
-        category_classes = BaseCategory.get_registered_categories()
-        created_count = 0
-
-        for cat_instance in category_classes:
-            try:
-                from django.utils.text import slugify
-
-                slug = slugify(cat_instance.name)
-
-                TransactionCategory.objects.get_or_create(
-                    user=user,
-                    slug=slug,
-                    defaults={
-                        "name": cat_instance.name,
-                        "icon": cat_instance.icon,
-                        "color": cat_instance.color,
-                        "is_income": cat_instance.is_income,
-                        "is_expense": cat_instance.is_expense,
-                    },
-                )
-                created_count += 1
-            except Exception as e:
-                logger.warning(f"Could not create category {cat_instance.name}: {e}")
-                continue
-
-        if created_count > 0:
-            logger.info(f"Created {created_count} categories for user {user.username}")
-
-    def _get_keyword_category_map(self, user) -> Dict[str, TransactionCategory]:
-        """
-        Build a keyword to category mapping for a user.
-
-        Includes both expense and income categories.
-        Ensures categories exist before building the map.
-
-        Args:
-            user: User to get categories for
-
-        Returns:
-            Dict mapping lowercase keywords to TransactionCategory instances
-        """
-        # Ensure user has categories
-        self._ensure_user_categories_exist(user)
-
-        keyword_map = {}
-        category_class_map = BaseCategory.get_registry()
-
-        # Get user-specific and global categories (both expense and income)
-        user_categories = list(TransactionCategory.objects.filter(user=user))
-        global_categories = list(TransactionCategory.objects.filter(user__isnull=True))
-
-        all_categories = user_categories + global_categories
-
-        for category in all_categories:
-            category_class = category_class_map.get(category.name)
-            if not category_class:
-                continue
-
-            try:
-                instance = category_class()
-                for keyword in instance.generate_keywords():
-                    keyword_lower = keyword.strip().lower()
-                    # Don't overwrite user-specific categories with global ones
-                    if keyword_lower not in keyword_map or category.user is not None:
-                        keyword_map[keyword_lower] = category
-            except Exception:
-                continue
-
-        return keyword_map
-
-    def _categorize_by_keywords(
-        self, transaction, description: str, user
-    ) -> Optional[TransactionCategory]:
+    def _categorize_by_keywords(self, transaction) -> Optional[TransactionCategory]:
         """
         Attempt to categorize a transaction using keyword matching.
 
         Args:
             transaction: Transaction to categorize
-            description: Transaction description to match against
-            user: User for getting categories
 
         Returns:
             TransactionCategory if matched, None otherwise
         """
         try:
-            keyword_map = self._get_keyword_category_map(user)
-            description_lower = description.lower()
+            description_lower = transaction.description.lower()
 
-            for keyword, category in keyword_map.items():
-                if keyword in description_lower:
+            # Query all keywords for this user's categories
+            # Order by match_count descending to prioritize effective keywords
+            keywords = (
+                CategoryKeyword.objects.filter(category__user=transaction.user)
+                .select_related("category")
+                .order_by("-match_count")
+            )
+
+            # Find first matching keyword
+            for keyword_obj in keywords:
+                if keyword_obj.keyword in description_lower:
                     logger.debug(
                         f"Keyword match for transaction {transaction.id}: "
-                        f"'{keyword}' → {category.name}"
+                        f"'{keyword_obj.keyword}' → {keyword_obj.category.name}"
                     )
-                    return category
+                    # Increment match count
+                    keyword_obj.match_count += 1
+                    keyword_obj.save(update_fields=["match_count"])
+                    return keyword_obj.category
 
             return None
         except Exception as e:
@@ -315,7 +236,7 @@ class TellerSyncService:
 
     def sync_connection(
         self, connection: SyncConnection, force_full_sync: bool = False
-    ) -> Dict:
+    ) -> dict:
         """
         Sync transactions from Teller for a specific connection.
 
@@ -327,7 +248,7 @@ class TellerSyncService:
             force_full_sync: If True, perform full historical sync regardless
 
         Returns:
-            Dict with sync results
+            dict with sync results
         """
         # Check if this is first sync or forced full sync
         is_full_sync = not connection.initial_backfill_complete or force_full_sync
@@ -341,7 +262,7 @@ class TellerSyncService:
             logger.info(f"Triggering incremental sync for connection {connection.id}")
             return self.sync_recent_transactions(connection)
 
-    def sync_historical_transactions(self, connection: SyncConnection) -> Dict:
+    def sync_historical_transactions(self, connection: SyncConnection) -> dict:
         """
         Sync all available historical transactions from Teller using pagination.
 
@@ -349,7 +270,7 @@ class TellerSyncService:
             connection: SyncConnection to sync
 
         Returns:
-            Dict with sync results
+            dict with sync results
         """
         # Create sync job
         job = self.job_repository.create_job(connection, is_full_sync=True)
@@ -436,18 +357,6 @@ class TellerSyncService:
                         txn["_nature_hint"] = nature_hint
                         txn["_teller_category"] = teller_category
 
-                        # Get or create merchant if available
-                        merchant = None
-                        merchant_name = (
-                            txn.get("merchant", {}).get("name")
-                            if isinstance(txn.get("merchant"), dict)
-                            else None
-                        )
-                        if merchant_name:
-                            merchant = self.merchant_repository.get_or_create_merchant(
-                                name=merchant_name
-                            )
-
                         # Create transaction
                         transaction = self.transaction_repository.create_transaction(
                             user=user,
@@ -456,7 +365,6 @@ class TellerSyncService:
                             amount=txn_amount,
                             description=txn_description,
                             transaction_type=transaction_type,
-                            merchant=merchant,
                             status="posted",
                             sync_source="teller",
                             external_id=txn_id,
@@ -542,7 +450,7 @@ class TellerSyncService:
 
     def sync_recent_transactions(
         self, connection: SyncConnection, days: int = 30
-    ) -> Dict:
+    ) -> dict:
         """
         Sync recent transactions (last N days) for incremental updates.
 
@@ -551,7 +459,7 @@ class TellerSyncService:
             days: Number of days to fetch (default 30)
 
         Returns:
-            Dict with sync results
+            dict with sync results
         """
         # Create sync job
         job = self.job_repository.create_job(connection, is_full_sync=False)
@@ -621,18 +529,6 @@ class TellerSyncService:
                     txn["_nature_hint"] = nature_hint
                     txn["_teller_category"] = teller_category
 
-                    # Get or create merchant
-                    merchant = None
-                    merchant_name = (
-                        txn.get("merchant", {}).get("name")
-                        if isinstance(txn.get("merchant"), dict)
-                        else None
-                    )
-                    if merchant_name:
-                        merchant = self.merchant_repository.get_or_create_merchant(
-                            name=merchant_name
-                        )
-
                     # Create transaction
                     transaction = self.transaction_repository.create_transaction(
                         user=user,
@@ -641,7 +537,6 @@ class TellerSyncService:
                         amount=txn_amount,
                         description=txn_description,
                         transaction_type=transaction_type,
-                        merchant=merchant,
                         status="posted",
                         sync_source="teller",
                         external_id=txn_id,
@@ -712,58 +607,52 @@ class TellerSyncService:
 
         return results
 
+    def _transaction_type_from_category(self, category: TransactionCategory) -> str:
+        """
+        Determine transaction type (debit/credit) from category type.
+
+        Args:
+            category: TransactionCategory instance
+
+        Returns:
+            "debit" or "credit"
+        """
+        # Income categories are credits (money coming in)
+        if category.type == "income":
+            return "credit"
+        # Expense categories are debits (money going out)
+        elif category.type == "expense":
+            return "debit"
+        # Transfers can be either, keep existing type
+        else:  # transfer
+            return "debit"  # Default to debit for transfers
+
     def _auto_categorize_transaction(
         self, transaction, nature_hint: Optional[str] = None
     ) -> bool:
         """
-        Attempt to categorize transaction during sync using multiple strategies.
-
-        Categorization order:
-        1. CC payment hint (for credit card payment transactions)
-        2. User-defined rules (highest priority)
-        3. Keyword-based matching (matches description against category keywords)
+        Attempt to categorize transaction during sync using keyword matching.
 
         Args:
             transaction: Transaction to categorize
-            nature_hint: Optional hint about transaction nature (e.g., "cc_payment")
+            nature_hint: Optional hint about transaction nature (deprecated, not used)
 
         Returns:
             True if categorized, False if uncategorized
         """
         try:
-            # 1. Check for CC payment hint - auto-categorize with Credit Card Payment category
-            if nature_hint == "cc_payment":
-                cc_payment_category = self._get_cc_payment_category(transaction.user)
-                if cc_payment_category:
-                    transaction.category = cc_payment_category
-                    transaction.categorization_status = "categorized"
-                    transaction.save()
-                    logger.debug(
-                        f"Auto-categorized transaction {transaction.id} as Credit Card Payment"
-                    )
-                    return True
-
-            # 2. Try rule-based categorization (user-defined rules)
-            rule_result = self.rule_categorization.categorize_transaction(transaction)
-            if rule_result:
-                category, rule = rule_result
-                self.rule_categorization.apply_categorization(
-                    transaction, category, rule
+            # Single stage: keyword matching
+            category = self._categorize_by_keywords(transaction)
+            if category:
+                transaction.category = category
+                # Category type determines transaction type
+                transaction.transaction_type = self._transaction_type_from_category(
+                    category
                 )
                 transaction.categorization_status = "categorized"
                 transaction.save()
-                return True
-
-            # 3. Try keyword-based categorization
-            keyword_category = self._categorize_by_keywords(
-                transaction, transaction.description, transaction.user
-            )
-            if keyword_category:
-                transaction.category = keyword_category
-                transaction.categorization_status = "categorized"
-                transaction.save()
                 logger.debug(
-                    f"Keyword-categorized transaction {transaction.id}: {keyword_category.name}"
+                    f"Categorized transaction {transaction.id}: {category.name} ({category.type})"
                 )
                 return True
 

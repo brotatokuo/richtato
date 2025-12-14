@@ -4,11 +4,10 @@ from datetime import date
 from decimal import Decimal
 from typing import List, Optional
 
-from django.db.models import Q
-
 from apps.financial_account.models import FinancialAccount
 from apps.richtato_user.models import User
 from apps.transaction.models import Transaction, TransactionCategory
+from django.db.models import Q
 
 
 class TransactionRepository:
@@ -18,7 +17,7 @@ class TransactionRepository:
         """Get transaction by ID."""
         try:
             return Transaction.objects.select_related(
-                "account", "category", "merchant", "user"
+                "account", "category", "user"
             ).get(id=transaction_id)
         except Transaction.DoesNotExist:
             return None
@@ -34,7 +33,7 @@ class TransactionRepository:
     ) -> List[Transaction]:
         """Get transactions for a user with optional filters."""
         queryset = Transaction.objects.filter(user=user).select_related(
-            "account", "category", "merchant"
+            "account", "category"
         )
 
         if start_date:
@@ -58,7 +57,7 @@ class TransactionRepository:
     ) -> List[Transaction]:
         """Get transactions for a specific account."""
         queryset = Transaction.objects.filter(account=account).select_related(
-            "category", "merchant"
+            "category"
         )
 
         if start_date:
@@ -88,7 +87,6 @@ class TransactionRepository:
         description: str,
         transaction_type: str = "debit",
         category: Optional[TransactionCategory] = None,
-        merchant=None,
         status: str = "posted",
         sync_source: str = "manual",
         external_id: str = "",
@@ -104,7 +102,6 @@ class TransactionRepository:
             description=description,
             transaction_type=transaction_type,
             category=category,
-            merchant=merchant,
             status=status,
             sync_source=sync_source,
             external_id=external_id,
@@ -128,14 +125,13 @@ class TransactionRepository:
     def search_transactions(
         self, user: User, search_term: str, limit: int = 50
     ) -> List[Transaction]:
-        """Search transactions by description or merchant."""
+        """Search transactions by description."""
         return list(
             Transaction.objects.filter(
-                Q(description__icontains=search_term)
-                | Q(merchant__name__icontains=search_term),
+                Q(description__icontains=search_term),
                 user=user,
             )
-            .select_related("account", "category", "merchant")
+            .select_related("account", "category")
             .order_by("-date")[:limit]
         )
 
@@ -145,6 +141,6 @@ class TransactionRepository:
         """Get transactions without a category."""
         return list(
             Transaction.objects.filter(user=user, category__isnull=True)
-            .select_related("account", "merchant")
+            .select_related("account")
             .order_by("-date")[:limit]
         )

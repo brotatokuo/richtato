@@ -30,7 +30,6 @@ class DemoUserFactory:
         self._delete_existing_user()
         self._create_user()
         self._create_financial_accounts()
-        self._create_categories()
         self._create_income_transactions()
         self._create_expense_transactions()
         self._create_budgets()
@@ -107,51 +106,6 @@ class DemoUserFactory:
             balance=Decimal("0"),
             is_liability=True,
         )
-
-    def _create_categories(self):
-        """Create transaction categories for the demo user."""
-        # Format: (name, slug, icon, color, is_income, is_expense)
-        categories_data = [
-            # Expense categories
-            ("Travel", "travel", "✈️", "#3B82F6", False, True),
-            ("Shopping", "shopping", "🛍️", "#8B5CF6", False, True),
-            ("Groceries", "groceries", "🛒", "#10B981", False, True),
-            ("Dining", "dining", "🍽️", "#F59E0B", False, True),
-            ("Utilities", "utilities", "💡", "#6366F1", False, True),
-            ("Housing", "housing", "🏠", "#EC4899", False, True),
-            ("Medical", "medical", "🏥", "#EF4444", False, True),
-            ("Entertainment", "entertainment", "🎬", "#14B8A6", False, True),
-            ("Subscriptions", "subscriptions", "📱", "#F97316", False, True),
-            ("Car", "car", "🚗", "#84CC16", False, True),
-            # Income categories
-            ("Salary", "salary", "💰", "#22C55E", True, False),
-            ("Freelance Income", "freelance-income", "💼", "#0D9488", True, False),
-            ("Interest Income", "interest-income", "🏦", "#2563EB", True, False),
-            ("Dividend Income", "dividend-income", "📊", "#7C3AED", True, False),
-            ("Tax Refund", "tax-refund", "🏛️", "#16A34A", True, False),
-            # Neither income nor expense
-            ("Refund", "refund", "↩️", "#EA580C", False, False),
-            ("Transfer", "transfer", "🔄", "#64748B", False, False),
-            (
-                "Credit Card Payment",
-                "credit-card-payment",
-                "💳",
-                "#475569",
-                False,
-                False,
-            ),
-        ]
-
-        for name, slug, icon, color, is_income, is_expense in categories_data:
-            TransactionCategory.objects.create(
-                user=self.user,
-                name=name,
-                slug=slug,
-                icon=icon,
-                color=color,
-                is_income=is_income,
-                is_expense=is_expense,
-            )
 
     def _create_income_transactions(self):
         """Create income transactions (credit type)."""

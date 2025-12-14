@@ -1,0 +1,524 @@
+# Default categories and keywords for new users
+# Each category includes: name, type (income/expense/transfer), icon, color, and keywords
+
+categories:
+  # Income Categories
+  - name: Salary
+    type: income
+    icon: "💰"
+    color: "green"
+    keywords:
+      - payroll
+      - direct deposit
+      - direct dep
+      - salary
+      - wages
+      - paycheck
+      - compensation
+      - net pay
+      - pay period
+      - adp
+      - gusto
+      - paychex
+      - workday
+      - paylocity
+      - paycom
+      - ceridian
+      - ultipro
+      - rippling
+      - justworks
+      - zenefits
+
+  - name: Freelance Income
+    type: income
+    icon: "💼"
+    color: "teal"
+    keywords:
+      - freelance
+      - contractor
+      - consulting
+      - 1099
+      - self-employment
+      - client payment
+      - invoice payment
+      - upwork
+      - fiverr
+      - toptal
+      - freelancer
+
+  - name: Interest Income
+    type: income
+    icon: "🏦"
+    color: "blue"
+    keywords:
+      - interest payment
+      - interest earned
+      - interest credit
+      - apy interest
+      - savings interest
+      - interest paid
+      - interest income
+      - accrued interest
+
+  - name: Dividend Income
+    type: income
+    icon: "📊"
+    color: "purple"
+    keywords:
+      - dividend
+      - div payment
+      - quarterly dividend
+      - stock dividend
+      - fund distribution
+      - capital gain dist
+      - reinvested dividend
+
+  - name: Tax Refund
+    type: income
+    icon: "🏛️"
+    color: "green"
+    keywords:
+      - irs treas
+      - tax refund
+      - state tax refund
+      - federal tax refund
+      - tax ref
+      - treasury
+      - irs
+
+  # Transfer Categories (neither income nor expense)
+  - name: Transfer
+    type: transfer
+    icon: "🔄"
+    color: "gray"
+    keywords:
+      - transfer
+      - xfer
+      - internal transfer
+      - account transfer
+      - wire transfer
+      - ach transfer
+      - online transfer
+      - bank transfer
+      - zelle
+      - venmo
+      - cash app
+      - paypal
+      - apple cash
+
+  - name: Credit Card Payment
+    type: transfer
+    icon: "💳"
+    color: "slate"
+    keywords:
+      - payment thank you
+      - autopay
+      - auto pay
+      - credit card payment
+      - card payment
+      - online payment
+      - payment received
+      - payment - thank
+
+  - name: Refund
+    type: transfer
+    icon: "↩️"
+    color: "orange"
+    keywords:
+      - refund
+      - return
+      - credit adjustment
+      - reversal
+      - reimbursement
+      - chargeback
+      - cashback
+      - cash back
+      - rebate
+
+  # Expense Categories
+  - name: Groceries
+    type: expense
+    icon: "🥬"
+    color: "green"
+    keywords:
+      - groceries
+      - grocery store
+      - supermarket
+      - farmers market
+      - whole foods
+      - trader joe's
+      - costco
+      - safeway
+      - kroger
+      - aldi
+      - walmart
+      - target
+      - publix
+      - meijer
+      - market
+
+  - name: Dining
+    type: expense
+    icon: "🍽️"
+    color: "red"
+    keywords:
+      - restaurant
+      - cafe
+      - diner
+      - takeout
+      - delivery
+      - food truck
+      - catering
+      - meal kit
+      - olive garden
+      - red lobster
+      - cheesecake factory
+      - outback steakhouse
+      - applebee's
+      - chili's
+      - buffalo wild wings
+      - ihop
+      - denny's
+      - waffle house
+      - bbq
+      - mcdonald's
+      - burger king
+      - subway
+      - taco bell
+      - pizza hut
+      - domino's
+      - chipotle
+      - panda express
+      - food
+      - food & drink
+      - uber eats
+      - doordash
+      - grubhub
+      - postmates
+      - panera bread
+      - drink
+      - bar
+      - starbucks
+      - dunkin'
+      - boba
+      - bubble tea
+      - smoothie
+      - juice bar
+
+  - name: Housing
+    type: expense
+    icon: "🏠"
+    color: "brown"
+    keywords:
+      - rent
+      - mortgage
+      - property tax
+      - home insurance
+      - hoa fee
+      - maintenance
+      - repair
+      - renovation
+      - apartment
+      - condo
+      - townhouse
+      - homeowners
+      - ikea
+
+  - name: Utilities
+    type: expense
+    icon: "⚡"
+    color: "yellow"
+    keywords:
+      - electricity
+      - water
+      - gas
+      - internet
+      - phone
+      - cable
+      - trash
+      - sewer
+      - pg&e
+      - pge&e
+      - power
+      - utility
+
+  - name: Transportation
+    type: expense
+    icon: "🚗"
+    color: "blue"
+    keywords:
+      - car payment
+      - car insurance
+      - gas
+      - fuel
+      - maintenance
+      - repair
+      - tire
+      - brake
+      - oil change
+      - car wash
+      - parking
+      - toll
+      - roadside assistance
+      - uber
+      - lyft
+      - taxi
+      - rideshare
+
+  - name: Travel
+    type: expense
+    icon: "✈️"
+    color: "blue"
+    keywords:
+      - travel
+      - airline
+      - flight
+      - airport
+      - baggage
+      - boarding
+      - passport
+      - visa
+      - customs
+      - immigration
+      - duty-free
+      - travel insurance
+      - trip insurance
+      - mobile boarding pass
+      - e-ticket
+      - delta
+      - american airlines
+      - united airlines
+      - southwest airlines
+      - alaska airlines
+      - jetblue
+      - spirit airlines
+      - frontier airlines
+      - hawaiian airlines
+      - hotel
+      - hostel
+      - resort
+      - motel
+      - inn
+      - lodge
+      - airbnb
+      - vrbo
+      - cabin
+      - chalet
+      - camping
+      - timeshare
+      - metro
+      - metra
+      - train
+      - bus
+      - ferry
+      - cruise
+      - rental
+      - car hire
+      - shuttle
+      - bike rental
+      - scooter rental
+      - road trip
+      - tour
+      - sightseeing
+      - excursion
+      - adventure
+      - guided tour
+      - museum
+      - national park
+      - safari
+      - theme park
+      - zoo
+      - aquarium
+      - booking
+      - expedia
+      - tripadvisor
+      - priceline
+
+  - name: Entertainment
+    type: expense
+    icon: "🎬"
+    color: "red"
+    keywords:
+      - sports
+      - game
+      - movie
+      - concert
+      - theater
+      - show
+      - event
+      - amusement park
+      - arcade
+      - bowling
+      - club
+      - bar
+
+  - name: Shopping
+    type: expense
+    icon: "🛍️"
+    color: "purple"
+    keywords:
+      - shopping
+      - mall
+      - department store
+      - convenience store
+      - target
+      - walmart
+      - home depot
+      - lowes
+
+  - name: Online Shopping
+    type: expense
+    icon: "🛒"
+    color: "orange"
+    keywords:
+      - online shopping
+      - .com
+      - amazon
+      - ebay
+      - alibaba
+      - etsy
+      - shopify
+
+  - name: Medical
+    type: expense
+    icon: "🏥"
+    color: "pink"
+    keywords:
+      - doctor
+      - clinic
+      - pharmacy
+      - prescription
+      - medical bill
+      - health insurance
+      - dental
+      - vision
+      - wellness
+
+  - name: Education
+    type: expense
+    icon: "📚"
+    color: "blue"
+    keywords:
+      - tuition
+      - school
+      - college
+      - university
+      - textbook
+      - course
+      - class
+      - workshop
+      - seminar
+      - training
+
+  - name: Subscriptions
+    type: expense
+    icon: "📱"
+    color: "purple"
+    keywords:
+      - subscription
+      - membership
+      - monthly fee
+      - annual fee
+      - recurring payment
+      - streaming service
+      - netflix
+      - hulu
+      - spotify
+      - apple music
+      - amazon prime
+      - disney+
+      - hbo max
+      - youtube premium
+      - audible
+      - siriusxm
+      - pandora
+      - twitch
+      - patreon
+      - onlyfans
+      - plaid
+      - openai
+      - chatgpt
+
+  - name: Phone
+    type: expense
+    icon: "📞"
+    color: "yellow"
+    keywords:
+      - phone bill
+      - cell phone
+      - mobile plan
+      - at&t
+      - verizon
+      - t-mobile
+      - sprint
+      - boost mobile
+      - cricket
+      - metro by t-mobile
+      - tmobile
+
+  - name: Pet
+    type: expense
+    icon: "🐾"
+    color: "brown"
+    keywords:
+      - pet
+      - dog
+      - cat
+      - vet
+      - petco
+      - petsmart
+      - chewy
+      - barkbox
+      - pet insurance
+      - pet food
+      - pet supplies
+      - dog walking
+      - pet sitting
+
+  - name: Gifts
+    type: expense
+    icon: "🎁"
+    color: "purple"
+    keywords:
+      - gift
+      - present
+      - donation
+
+  - name: Charity
+    type: expense
+    icon: "❤️"
+    color: "pink"
+    keywords:
+      - donation
+      - charity
+      - nonprofit
+      - fundraiser
+      - crowdfunding
+      - go fund me
+      - kickstarter
+      - indiegogo
+      - charitable contribution
+      - tax-deductible donation
+
+  - name: Investments
+    type: expense
+    icon: "📈"
+    color: "orange"
+    keywords:
+      - stocks
+      - bonds
+      - mutual funds
+      - ETFs
+      - real estate
+      - cryptocurrency
+      - investment account
+      - brokerage account
+      - retirement account
+
+  - name: Miscellaneous
+    type: expense
+    icon: "🔧"
+    color: "gray"
+    keywords:
+      - miscellaneous
+      - other

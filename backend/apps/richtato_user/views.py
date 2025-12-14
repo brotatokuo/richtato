@@ -3,17 +3,20 @@ import json
 from decimal import Decimal
 
 import pytz
+from apps.budget.models import Budget, BudgetCategory
 from apps.richtato_user.demo_user_factory import DemoUserFactory
 from apps.richtato_user.models import UserPreference
 from apps.richtato_user.serializers import UserPreferenceSerializer
 from apps.richtato_user.services.user_service import UserService
 from apps.transaction.models import Transaction, TransactionCategory
-from apps.budget.models import Budget, BudgetCategory
-from categories.categories import BaseCategory
+from apps.transaction.services.category_initialization_service import (
+    CategoryInitializationService,
+)
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, JsonResponse
 from django.middleware.csrf import get_token
+from django.utils.text import slugify
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from drf_yasg import openapi
@@ -38,7 +41,10 @@ class CategorySettingsAPIView(APIView):
     )
     def get(self, request):
         """Get all available categories with their settings."""
-        registry = BaseCategory.get_registry()
+        # Load default categories from YAML config
+        service = CategoryInitializationService()
+        config = service.load_defaults_config()
+
         user_cats = {
             c.slug: c for c in TransactionCategory.objects.filter(user=request.user)
         }
@@ -60,19 +66,22 @@ class CategorySettingsAPIView(APIView):
                 }
 
         catalog = []
-        for display_name, cls in registry.items():
-            slug = display_name.lower().replace("/", "-").replace(" ", "-")
-            instance = cls()
+        for cat_config in config.get("categories", []):
+            name = cat_config.get("name", "")
+            if not name:
+                continue
+
+            # Generate slug to match database (same logic as CategoryInitializationService)
+            slug = slugify(name)
+
             existing = user_cats.get(slug)
             budget_info = cat_to_budget.get(slug)
             catalog.append(
                 {
                     "name": slug,
-                    "display": display_name,
-                    "icon": instance.icon,
-                    "color": instance.color,
-                    "is_expense": existing.is_expense if existing else True,
-                    "is_income": existing.is_income if existing else False,
+                    "display": name,
+                    "icon": cat_config.get("icon", ""),
+                    "color": cat_config.get("color", ""),
                     "enabled": existing is not None,
                     "budget": budget_info,
                 }
@@ -104,15 +113,12 @@ class CategorySettingsAPIView(APIView):
             if slug not in existing:
                 # Check if we have type info for this new category
                 cat_type = category_types.get(slug, "expense")
-                is_income = cat_type == "income"
-                is_expense = cat_type == "expense"
                 to_create.append(
                     TransactionCategory(
                         user=request.user,
                         name=slug.replace("-", " ").replace("_", " ").title(),
                         slug=slug,
-                        is_income=is_income,
-                        is_expense=is_expense,
+                        type=cat_type,
                     )
                 )
         if to_create:
@@ -123,9 +129,8 @@ class CategorySettingsAPIView(APIView):
             for slug, cat_type in category_types.items():
                 if slug in existing:
                     cat = existing[slug]
-                    cat.is_income = cat_type == "income"
-                    cat.is_expense = cat_type == "expense"
-                    cat.save(update_fields=["is_income", "is_expense"])
+                    cat.type = cat_type
+                    cat.save(update_fields=["type"])
 
         # Delete disabled categories (or just remove from user's list)
         TransactionCategory.objects.filter(
@@ -666,7 +671,7 @@ class CategoriesAPIView(APIView):
             {
                 "id": cat.id,
                 "name": cat.name,
-                "type": "expense" if cat.is_expense else "income",
+                "type": cat.type,
             }
             for cat in categories
         ]

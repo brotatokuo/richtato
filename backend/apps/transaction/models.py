@@ -9,6 +9,13 @@ from django.db import models
 class TransactionCategory(models.Model):
     """Hierarchical transaction categories."""
 
+    CATEGORY_TYPE_CHOICES = [
+        ("income", "Income"),
+        ("expense", "Expense"),
+        ("transfer", "Transfer"),
+        ("investment", "Investment"),
+    ]
+
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255)
     parent = models.ForeignKey(
@@ -20,15 +27,16 @@ class TransactionCategory(models.Model):
     )
     icon = models.CharField(max_length=50, blank=True)
     color = models.CharField(max_length=7, blank=True, help_text="Hex color code")
-    is_income = models.BooleanField(default=False)  # type: ignore[arg-type]
-    is_expense = models.BooleanField(default=True)  # type: ignore[arg-type]
+    type = models.CharField(
+        max_length=20,
+        choices=CATEGORY_TYPE_CHOICES,
+        default="expense",
+        help_text="Category type determines transaction classification",
+    )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        null=True,
-        blank=True,
         related_name="custom_categories",
-        help_text="Null for global categories, set for user-specific categories",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -38,6 +46,7 @@ class TransactionCategory(models.Model):
         indexes = [
             models.Index(fields=["user", "slug"]),
             models.Index(fields=["parent"]),
+            models.Index(fields=["type"]),
         ]
         unique_together = [["slug", "user"]]
 
@@ -54,60 +63,44 @@ class TransactionCategory(models.Model):
         return self.name
 
 
-class KeywordRule(models.Model):
-    """User-defined keyword rules for categorization."""
+class CategoryKeyword(models.Model):
+    """Keywords for automatic transaction categorization."""
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="keyword_rules",
+        related_name="category_keywords",
     )
     category = models.ForeignKey(
         TransactionCategory,
         on_delete=models.CASCADE,
-        related_name="keyword_rules",
+        related_name="keywords",
     )
-    keyword = models.CharField(max_length=255, help_text="Case-insensitive substring")
+    keyword = models.CharField(
+        max_length=200, help_text="Case-insensitive keyword for matching"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    match_count = models.IntegerField(
+        default=0, help_text="Number of times this keyword has matched"
+    )
+
     class Meta:
-        db_table = "transaction_keyword_rule"
+        db_table = "category_keyword"
         indexes = [
-            models.Index(fields=["user", "keyword"]),
+            models.Index(fields=["keyword"]),
+            models.Index(fields=["category"]),
         ]
-        unique_together = [["user", "keyword"]]
+        unique_together = [["category", "keyword"]]
+        ordering = ["-match_count", "keyword"]
 
     def save(self, *args, **kwargs):
+        # Normalize keyword to lowercase
         self.keyword = str(self.keyword or "").strip().lower()
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.user_id}: {self.keyword} -> {self.category_id}"  # type: ignore[union-attr]
-
-
-class Merchant(models.Model):
-    """Normalized merchant data."""
-
-    name = models.CharField(max_length=255, unique=True)
-    slug = models.SlugField(max_length=255, unique=True)
-    category_hint = models.ForeignKey(
-        TransactionCategory,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="merchants",
-        help_text="Suggested category for transactions from this merchant",
-    )
-    logo_url = models.URLField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = "merchant"
-        ordering = ["name"]
-
-    def __str__(self):
-        return self.name
+        return f"{self.category.name}: {self.keyword}"
 
 
 class Transaction(models.Model):
@@ -163,13 +156,6 @@ class Transaction(models.Model):
         blank=True,
         related_name="transactions",
     )
-    merchant = models.ForeignKey(
-        Merchant,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="transactions",
-    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="posted")
     is_recurring = models.BooleanField(default=False)  # type: ignore[arg-type]
     sync_source = models.CharField(
@@ -204,7 +190,6 @@ class Transaction(models.Model):
             models.Index(fields=["user", "-date"]),
             models.Index(fields=["account", "-date"]),
             models.Index(fields=["category"]),
-            models.Index(fields=["merchant"]),
             models.Index(fields=["external_id"]),
             models.Index(fields=["sync_source"]),
             models.Index(fields=["categorization_status"]),

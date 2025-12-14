@@ -6,9 +6,8 @@ from typing import Dict, List, Optional
 
 from apps.financial_account.models import FinancialAccount
 from apps.richtato_user.models import User
-from apps.transaction.models import KeywordRule, Transaction, TransactionCategory
+from apps.transaction.models import CategoryKeyword, Transaction, TransactionCategory
 from apps.transaction.repositories.category_repository import CategoryRepository
-from apps.transaction.repositories.merchant_repository import MerchantRepository
 from apps.transaction.repositories.transaction_repository import TransactionRepository
 from loguru import logger
 
@@ -19,7 +18,6 @@ class TransactionService:
     def __init__(self):
         self.transaction_repository = TransactionRepository()
         self.category_repository = CategoryRepository()
-        self.merchant_repository = MerchantRepository()
 
     def get_user_transactions(
         self,
@@ -58,7 +56,6 @@ class TransactionService:
         description: str,
         transaction_type: str = "debit",
         category_id: Optional[int] = None,
-        merchant_name: Optional[str] = None,
         status: str = "posted",
         notes: Optional[str] = "",
     ) -> Transaction:
@@ -73,7 +70,6 @@ class TransactionService:
             description: Transaction description
             transaction_type: 'debit' or 'credit'
             category_id: Optional category ID
-            merchant_name: Optional merchant name
             status: Transaction status
 
         Returns:
@@ -84,18 +80,9 @@ class TransactionService:
         if category_id:
             category = self.category_repository.get_by_id(category_id)
         else:
-            matched_category = self._match_category_via_keywords(
-                user, description, merchant_name
-            )
+            matched_category = self._match_category_via_keywords(user, description)
             if matched_category:
                 category = matched_category
-
-        # Get or create merchant if provided
-        merchant = None
-        if merchant_name:
-            merchant = self.merchant_repository.get_or_create_merchant(
-                name=merchant_name
-            )
 
         transaction = self.transaction_repository.create_transaction(
             user=user,
@@ -105,7 +92,6 @@ class TransactionService:
             description=description,
             transaction_type=transaction_type,
             category=category,
-            merchant=merchant,
             status=status,
             sync_source="manual",
             notes=notes,
@@ -128,17 +114,6 @@ class TransactionService:
                 kwargs["category"] = category
             else:
                 kwargs["category"] = None
-
-        # Handle merchant_name separately
-        if "merchant_name" in kwargs:
-            merchant_name = kwargs.pop("merchant_name")
-            if merchant_name:
-                merchant = self.merchant_repository.get_or_create_merchant(
-                    name=merchant_name
-                )
-                kwargs["merchant"] = merchant
-            else:
-                kwargs["merchant"] = None
 
         return self.transaction_repository.update_transaction(transaction, **kwargs)
 
@@ -165,7 +140,7 @@ class TransactionService:
     def search_transactions(
         self, user: User, search_term: str, limit: int = 50
     ) -> List[Transaction]:
-        """Search transactions by description or merchant."""
+        """Search transactions by description."""
         return self.transaction_repository.search_transactions(user, search_term, limit)
 
     def get_uncategorized_transactions(
@@ -242,17 +217,21 @@ class TransactionService:
         }
 
     def _match_category_via_keywords(
-        self, user: User, description: str, merchant_name: Optional[str]
+        self, user: User, description: str
     ) -> Optional[TransactionCategory]:
         """Try to match a category using user keyword rules."""
         text_parts = [description or ""]
-        if merchant_name:
-            text_parts.append(merchant_name)
         haystack = " ".join(text_parts).lower()
 
-        rules = list(KeywordRule.objects.filter(user=user).select_related("category"))
-        for rule in rules:
-            kw = (rule.keyword or "").strip().lower()
+        # Query keywords for user's categories
+        keywords = (
+            CategoryKeyword.objects.filter(user=user)
+            .select_related("category")
+            .order_by("-match_count")
+        )
+
+        for keyword_obj in keywords:
+            kw = keyword_obj.keyword.strip().lower()
             if kw and kw in haystack:
-                return rule.category
+                return keyword_obj.category
         return None

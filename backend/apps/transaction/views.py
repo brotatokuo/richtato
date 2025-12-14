@@ -2,18 +2,13 @@
 
 from datetime import datetime
 
-from rest_framework import status
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
 from apps.financial_account.services.account_service import AccountService
+from apps.transaction.models import CategoryKeyword
 from apps.transaction.repositories.category_repository import CategoryRepository
-from apps.transaction.models import KeywordRule
 from apps.transaction.serializers import (
     CategoryCreateSerializer,
-    KeywordRuleSerializer,
+    CategoryKeywordCreateSerializer,
+    CategoryKeywordSerializer,
     TransactionCategorizeSerializer,
     TransactionCategorySerializer,
     TransactionCreateSerializer,
@@ -22,6 +17,11 @@ from apps.transaction.serializers import (
 )
 from apps.transaction.services.transaction_service import TransactionService
 from loguru import logger
+from rest_framework import status
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 
 class TransactionListCreateAPIView(APIView):
@@ -111,7 +111,6 @@ class TransactionListCreateAPIView(APIView):
                     "transaction_type", "debit"
                 ),
                 category_id=serializer.validated_data.get("category_id"),
-                merchant_name=serializer.validated_data.get("merchant_name"),
                 status=serializer.validated_data.get("status", "posted"),
                 notes=serializer.validated_data.get("notes", ""),
             )
@@ -318,9 +317,20 @@ class CategoryListCreateAPIView(APIView):
                 parent=parent,
                 icon=serializer.validated_data.get("icon", ""),
                 color=serializer.validated_data.get("color", ""),
-                is_income=serializer.validated_data.get("is_income", False),
-                is_expense=serializer.validated_data.get("is_expense", True),
             )
+
+            # Set the type field
+            category.type = category_type
+            category.save(update_fields=["type"])
+
+            # Create keywords if provided
+            keywords = serializer.validated_data.get("keywords", [])
+            for keyword in keywords:
+                CategoryKeyword.objects.create(
+                    user=request.user,
+                    category=category,
+                    keyword=keyword.strip().lower(),
+                )
 
             response_serializer = TransactionCategorySerializer(category)
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)
@@ -332,82 +342,123 @@ class CategoryListCreateAPIView(APIView):
             )
 
 
+class CategoryKeywordAPIView(APIView):
+    """Add or remove keywords for a category."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.category_repository = CategoryRepository()
+
+    def post(self, request, category_id):
+        """Add a keyword to a category."""
+        serializer = CategoryKeywordCreateSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Get category and verify ownership
+            category = self.category_repository.get_by_id(category_id)
+            if not category or (category.user and category.user != request.user):
+                return Response(
+                    {"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Create keyword
+            keyword_obj = CategoryKeyword.objects.create(
+                user=request.user,
+                category=category,
+                keyword=serializer.validated_data["keyword"].strip().lower(),
+            )
+
+            response_serializer = CategoryKeywordSerializer(keyword_obj)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            logger.error(f"Error adding keyword: {str(e)}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def delete(self, request, category_id, keyword_id):
+        """Remove a keyword from a category."""
+        try:
+            # Get category and verify ownership
+            category = self.category_repository.get_by_id(category_id)
+            if not category or (category.user and category.user != request.user):
+                return Response(
+                    {"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Delete keyword
+            keyword_obj = CategoryKeyword.objects.filter(
+                id=keyword_id, category=category
+            ).first()
+
+            if not keyword_obj:
+                return Response(
+                    {"error": "Keyword not found"}, status=status.HTTP_404_NOT_FOUND
+                )
+
+            keyword_obj.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        except Exception as e:
+            logger.error(f"Error removing keyword: {str(e)}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class KeywordRuleListCreateAPIView(APIView):
-    """List or create keyword rules."""
+    """Deprecated: List or create keyword rules. Use CategoryKeywordAPIView instead."""
 
     authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        rules = KeywordRule.objects.filter(user=request.user).select_related("category")
-        serializer = KeywordRuleSerializer(rules, many=True)
-        return Response({"rules": serializer.data})
+        # Deprecated endpoint - return empty list
+        return Response(
+            {
+                "rules": [],
+                "deprecated": True,
+                "message": "This endpoint is deprecated. Use /api/transactions/categories/{id}/keywords/ instead",
+            }
+        )
 
     def post(self, request):
-        serializer = KeywordRuleSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        keyword = serializer.validated_data["keyword"].strip().lower()
-        category = serializer.validated_data["category"]
-
-        # Enforce uniqueness per user
-        if KeywordRule.objects.filter(user=request.user, keyword=keyword).exists():
-            return Response(
-                {"error": "Keyword already exists."}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        rule = KeywordRule.objects.create(
-            user=request.user, category=category, keyword=keyword
-        )
         return Response(
-            KeywordRuleSerializer(rule).data, status=status.HTTP_201_CREATED
+            {
+                "error": "This endpoint is deprecated. Use /api/transactions/categories/{id}/keywords/ instead"
+            },
+            status=status.HTTP_410_GONE,
         )
 
 
 class KeywordRuleDetailAPIView(APIView):
-    """Update or delete a keyword rule."""
+    """Deprecated: Update or delete a keyword rule. Use CategoryKeywordAPIView instead."""
 
     authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, pk):
-        try:
-            rule = KeywordRule.objects.get(id=pk, user=request.user)
-        except KeywordRule.DoesNotExist:
-            return Response(
-                {"error": "Rule not found"}, status=status.HTTP_404_NOT_FOUND
-            )
-
-        serializer = KeywordRuleSerializer(rule, data=request.data, partial=True)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        keyword = serializer.validated_data.get("keyword")
-        if keyword is not None:
-            keyword = keyword.strip().lower()
-            if KeywordRule.objects.filter(user=request.user, keyword=keyword).exclude(
-                id=rule.id
-            ):
-                return Response(
-                    {"error": "Keyword already exists."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            rule.keyword = keyword
-
-        if "category" in serializer.validated_data:
-            rule.category = serializer.validated_data["category"]
-
-        rule.save()
-        return Response(KeywordRuleSerializer(rule).data)
+        return Response(
+            {
+                "error": "This endpoint is deprecated. Use /api/transactions/categories/{id}/keywords/ instead"
+            },
+            status=status.HTTP_410_GONE,
+        )
 
     def delete(self, request, pk):
-        deleted, _ = KeywordRule.objects.filter(id=pk, user=request.user).delete()
-        if not deleted:
-            return Response(
-                {"error": "Rule not found"}, status=status.HTTP_404_NOT_FOUND
-            )
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {
+                "error": "This endpoint is deprecated. Use /api/transactions/categories/{id}/keywords/{keyword_id}/ instead"
+            },
+            status=status.HTTP_410_GONE,
+        )
 
 
 class UncategorizedTransactionsAPIView(APIView):
