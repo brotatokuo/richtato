@@ -2,6 +2,12 @@
 # Each category includes: name, type (income/expense/transfer), icon, color, and keywords
 
 categories:
+  # Special category for uncategorized transactions
+  - name: Uncategorized
+    type: other
+    icon: "❓"
+    color: "gray"
+    keywords: []
   # Income Categories
   - name: Salary
     type: income

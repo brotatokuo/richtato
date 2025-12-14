@@ -63,6 +63,30 @@ class TransactionCategory(models.Model):
             return f"{self.parent.full_path} > {self.name}"  # type: ignore[union-attr]
         return self.name
 
+    @staticmethod
+    def get_uncategorized_for_user(user):
+        """
+        Get or create the 'Uncategorized' category for a user.
+
+        Args:
+            user: User instance
+
+        Returns:
+            TransactionCategory: The uncategorized category for this user
+        """
+
+        category, created = TransactionCategory.objects.get_or_create(
+            user=user,
+            slug="uncategorized",
+            defaults={
+                "name": "Uncategorized",
+                "type": "other",
+                "icon": "❓",
+                "color": "gray",
+            },
+        )
+        return category
+
 
 class CategoryKeyword(models.Model):
     """Keywords for automatic transaction categorization."""
@@ -206,6 +230,17 @@ class Transaction(models.Model):
         if self.transaction_type == "debit":
             return -amt
         return amt
+
+    def save(self, *args, **kwargs):
+        """Override save to set default uncategorized category if none provided."""
+        if not self.category and self.user:
+            self.category = TransactionCategory.get_uncategorized_for_user(self.user)
+            if (
+                not self.categorization_status
+                or self.categorization_status == "pending_ai"
+            ):
+                self.categorization_status = "uncategorized"
+        super().save(*args, **kwargs)
 
     @property
     def category_name(self):

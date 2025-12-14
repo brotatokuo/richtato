@@ -32,6 +32,7 @@ export interface TransactionTableProps {
   onTransactionsChange: (transactions: DisplayTransaction[]) => void;
   typeFilter: TransactionTypeFilter;
   onTypeFilterChange: (filter: TransactionTypeFilter) => void;
+  onRecategorizeClick?: () => void;
 }
 
 // Display transaction interface (different from API)

@@ -42,6 +42,7 @@ import {
   Calendar,
   CreditCard,
   Plus,
+  RefreshCw,
   Search,
   Tag,
 } from 'lucide-react';
@@ -64,6 +65,7 @@ export function TransactionTable({
   categories,
   loading,
   onRefresh,
+  onRecategorizeClick,
 }: TransactionTableProps & {
   accounts: Account[];
   categories: Category[];
@@ -696,6 +698,17 @@ export function TransactionTable({
           <Plus className="h-3.5 w-3.5 mr-1.5" />
           Add Transaction
         </Button>
+        {onRecategorizeClick && (
+          <Button
+            onClick={onRecategorizeClick}
+            disabled={loading || transactions.length === 0}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+            Recategorize All
+          </Button>
+        )}
       </div>
 
       {/* Active filters indicator */}

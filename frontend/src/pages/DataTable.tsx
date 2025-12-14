@@ -13,7 +13,6 @@ import {
   TransactionTypeFilter,
   transformTransaction,
 } from '@/types/transactions';
-import { RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 // Main DataTable Component - Transactions Only
@@ -105,19 +104,6 @@ export function DataTable() {
   return (
     <div className="min-h-screen bg-background">
       <div className="w-full max-w-full mx-auto space-y-8 sm:space-y-12 min-w-0">
-        {/* Recategorize button */}
-        <div className="flex justify-end px-4 sm:px-6 lg:px-8">
-          <Button
-            onClick={() => setShowRecategorizeDialog(true)}
-            disabled={loading || transactions.length === 0}
-            variant="outline"
-            size="sm"
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Recategorize All
-          </Button>
-        </div>
-
         {/* Main content */}
         <div className="overflow-x-auto min-w-0">
           <div className="min-w-0 max-w-full">
@@ -130,6 +116,7 @@ export function DataTable() {
               categories={categories}
               loading={loading}
               onRefresh={loadData}
+              onRecategorizeClick={() => setShowRecategorizeDialog(true)}
             />
           </div>
         </div>
