@@ -1,13 +1,30 @@
+import { AccountBalanceForm } from '@/components/accounts/AccountBalanceForm';
+import {
+  AccountGroup,
+  AccountWithBalance,
+} from '@/components/asset_dashboard/AccountsList';
+import { BaseChart } from '@/components/asset_dashboard/BaseChart';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ColumnDef, DataTable } from '@/components/ui/DataTable';
 import { Input } from '@/components/ui/input';
+import { Modal } from '@/components/ui/Modal';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { AccountGroup, AccountWithBalance } from '@/components/asset_dashboard/AccountsList';
-import { BaseChart } from '@/components/asset_dashboard/BaseChart';
 import { transactionsApiService } from '@/lib/api/transactions';
-import { formatCurrency } from '@/lib/format';
-import { Calendar, Download, Loader2, RefreshCw, TableProperties, X } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { formatCurrency, formatDate } from '@/lib/format';
+import {
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  Plus,
+  RefreshCw,
+  TableProperties,
+  TrendingDown,
+  TrendingUp,
+  X,
+} from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type RangePreset = '30' | '90' | '180' | '365' | 'custom';
 
@@ -21,10 +38,19 @@ interface AccountHistory {
   history: BalancePoint[];
 }
 
+interface TransactionItem {
+  id: number;
+  date: string;
+  description: string;
+  amount: string;
+  transaction_type: 'credit' | 'debit';
+}
+
 interface AssetTrendsChartProps {
   selectedAccount: AccountWithBalance | null;
   selectedGroup: AccountGroup | null;
   onResetSelection: () => void;
+  onDataChange?: () => void;
 }
 
 const ACCOUNT_COLORS = [
@@ -59,6 +85,7 @@ export function AssetTrendsChart({
   selectedAccount,
   selectedGroup,
   onResetSelection,
+  onDataChange,
 }: AssetTrendsChartProps) {
   const { preferences } = usePreferences();
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
@@ -69,7 +96,19 @@ export function AssetTrendsChart({
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
   const [showDataPanel, setShowDataPanel] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+
+  // Transaction-related state
+  const [transactions, setTransactions] = useState<TransactionItem[]>([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [transactionsError, setTransactionsError] = useState<string | null>(
+    null
+  );
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<TransactionItem | null>(
+    null
+  );
+  const [showTable, setShowTable] = useState(false);
 
   const effectiveDays = useMemo(() => {
     if (rangePreset !== 'custom') {
@@ -78,31 +117,39 @@ export function AssetTrendsChart({
     if (customStart && customEnd) {
       const start = new Date(customStart);
       const end = new Date(customEnd);
-      const diff = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+      const diff = Math.max(
+        1,
+        Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+      );
       return diff;
     }
     return 180;
   }, [rangePreset, customStart, customEnd]);
 
-  useEffect(() => {
-    const loadAccountsAndHistory = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const accountList = await transactionsApiService.getAccounts();
-        setAccounts(accountList as AccountWithBalance[]);
-        const histories = await fetchHistories(accountList as AccountWithBalance[], effectiveDays);
-        setHistories(histories);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load asset trends');
-        setHistories([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadAccountsAndHistory();
+  const loadAccountsAndHistory = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const accountList = await transactionsApiService.getAccounts();
+      setAccounts(accountList as AccountWithBalance[]);
+      const histories = await fetchHistories(
+        accountList as AccountWithBalance[],
+        effectiveDays
+      );
+      setHistories(histories);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to load asset trends'
+      );
+      setHistories([]);
+    } finally {
+      setLoading(false);
+    }
   }, [effectiveDays]);
+
+  useEffect(() => {
+    loadAccountsAndHistory();
+  }, [loadAccountsAndHistory]);
 
   const fetchHistories = async (
     accountList: AccountWithBalance[],
@@ -111,7 +158,10 @@ export function AssetTrendsChart({
     const results = await Promise.all(
       accountList.map(async account => {
         try {
-          const data = await transactionsApiService.getAccountBalanceHistory(account.id, { days });
+          const data = await transactionsApiService.getAccountBalanceHistory(
+            account.id,
+            { days }
+          );
           return {
             account,
             history: data?.data_points || [],
@@ -125,13 +175,105 @@ export function AssetTrendsChart({
     return results;
   };
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
+  const fetchTransactions = useCallback(async () => {
+    if (!selectedAccount) return;
+
+    setTransactionsLoading(true);
+    setTransactionsError(null);
     try {
+      const data = await transactionsApiService.getAccountTransactions(
+        selectedAccount.id,
+        {
+          page: 1,
+          pageSize: 500,
+        }
+      );
+      setTransactions(data.rows || []);
+    } catch (err) {
+      setTransactionsError(
+        err instanceof Error ? err.message : 'Failed to load transactions'
+      );
+    } finally {
+      setTransactionsLoading(false);
+    }
+  }, [selectedAccount]);
+
+  useEffect(() => {
+    if (selectedAccount) {
+      fetchTransactions();
+    } else {
+      setTransactions([]);
+      setTransactionsError(null);
+    }
+  }, [selectedAccount, fetchTransactions]);
+
+  const handleAddSubmit = async (data: { balance: number; date: string }) => {
+    if (!selectedAccount) return;
+
+    try {
+      await transactionsApiService.createAccountTransaction({
+        account: selectedAccount.id,
+        amount: data.balance,
+        date: data.date,
+      });
+      await fetchTransactions();
       const histories = await fetchHistories(accounts, effectiveDays);
       setHistories(histories);
-    } finally {
-      setRefreshing(false);
+      setShowAddModal(false);
+      onDataChange?.();
+    } catch (error) {
+      console.error('Error adding transaction:', error);
+      throw error;
+    }
+  };
+
+  const handleEditSubmit = async (data: {
+    balance: number;
+    date: string;
+    id?: number;
+  }) => {
+    if (!selectedAccount || !selectedItem || !data.id) return;
+
+    try {
+      await transactionsApiService.updateAccountTransaction(
+        selectedAccount.id,
+        {
+          id: data.id,
+          amount: data.balance,
+          date: data.date,
+        }
+      );
+      await fetchTransactions();
+      const histories = await fetchHistories(accounts, effectiveDays);
+      setHistories(histories);
+      setShowEditModal(false);
+      setSelectedItem(null);
+      onDataChange?.();
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+      throw error;
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedAccount || !selectedItem) return;
+
+    const confirmDelete = window.confirm('Delete this transaction?');
+    if (!confirmDelete) return;
+
+    try {
+      await transactionsApiService.deleteAccountTransaction(
+        selectedAccount.id,
+        selectedItem.id
+      );
+      await fetchTransactions();
+      const histories = await fetchHistories(accounts, effectiveDays);
+      setHistories(histories);
+      setShowEditModal(false);
+      setSelectedItem(null);
+      onDataChange?.();
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
     }
   };
 
@@ -141,18 +283,114 @@ export function AssetTrendsChart({
     return 'All Accounts';
   }, [selectedAccount, selectedGroup]);
 
-  const contextAccounts = useMemo(() => {
-    if (selectedAccount) {
-      return accounts;
-    }
-    if (selectedGroup) {
-      return accounts;
-    }
-    return accounts;
-  }, [accounts, selectedAccount, selectedGroup]);
+  // Transaction summary calculation
+  const transactionSummary = useMemo(() => {
+    if (transactions.length === 0) return null;
+    let totalCredits = 0;
+    let totalDebits = 0;
+    transactions.forEach(t => {
+      const amount = parseFloat(t.amount) || 0;
+      if (t.transaction_type === 'credit') {
+        totalCredits += amount;
+      } else {
+        totalDebits += amount;
+      }
+    });
+    return { totalCredits, totalDebits, net: totalCredits - totalDebits };
+  }, [transactions]);
+
+  // DataTable column definitions
+  const columns: ColumnDef<TransactionItem>[] = useMemo(
+    () => [
+      {
+        field: 'date',
+        label: 'Date',
+        sortable: true,
+        filterable: true,
+        width: 'w-28',
+        render: (value: string) => (
+          <span className="text-muted-foreground">
+            {formatDate(value, preferences.date_format)}
+          </span>
+        ),
+      },
+      {
+        field: 'description',
+        label: 'Description',
+        sortable: true,
+        filterable: true,
+        render: (value: string) => (
+          <span className="max-w-[200px] truncate block">{value || '—'}</span>
+        ),
+      },
+      {
+        field: 'amount',
+        label: 'Amount',
+        sortable: true,
+        align: 'right',
+        width: 'w-28',
+        render: (value: string, row: TransactionItem) => {
+          const amount = parseFloat(value);
+          const isDebit = row.transaction_type === 'debit';
+          return (
+            <span
+              className={`font-medium ${isDebit ? 'text-red-500' : 'text-green-600'}`}
+            >
+              {isDebit ? '-' : '+'}
+              {formatCurrency(amount, preferences.currency)}
+            </span>
+          );
+        },
+      },
+    ],
+    [preferences.currency, preferences.date_format]
+  );
+
+  const handleRowClick = (item: TransactionItem) => {
+    setSelectedItem(item);
+    setShowEditModal(true);
+  };
+
+  // Mobile card renderer for DataTable
+  const renderMobileCard = ({
+    row,
+    onClick,
+  }: {
+    row: TransactionItem;
+    onClick?: () => void;
+  }) => {
+    const amount = parseFloat(row.amount);
+    const isDebit = row.transaction_type === 'debit';
+    return (
+      <div
+        className="p-4 flex justify-between items-start cursor-pointer hover:bg-muted/50"
+        onClick={onClick}
+      >
+        <div className="space-y-1 min-w-0 pr-2">
+          <div className="text-sm font-medium truncate">
+            {row.description || '—'}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {formatDate(row.date, preferences.date_format)}
+          </div>
+        </div>
+        <div
+          className={`font-medium ${isDebit ? 'text-red-500' : 'text-green-600'}`}
+        >
+          {isDebit ? '-' : '+'}
+          {formatCurrency(amount, preferences.currency)}
+        </div>
+      </div>
+    );
+  };
 
   const chartData = useMemo(() => {
-    if (histories.length === 0) return { series: [], dates: [], rows: [] as Array<{ date: string; label: string; value: number }> };
+    if (histories.length === 0)
+      return {
+        series: [],
+        dates: [],
+        rows: [] as Array<{ date: string; label: string; value: number }>,
+      };
 
     const selectedAccountId = selectedAccount?.id ?? null;
     const selectedGroupType = selectedGroup?.type ?? null;
@@ -198,11 +436,26 @@ export function AssetTrendsChart({
     };
 
     // Build series list
-    const series: Array<{ name: string; type: 'line'; data: number[]; smooth: boolean; symbol: string; symbolSize: number; lineStyle: { width: number; color: string }; itemStyle: { color: string }; areaStyle?: any }> = [];
+    const series: Array<{
+      name: string;
+      type: 'line';
+      data: number[];
+      smooth: boolean;
+      symbol: string;
+      symbolSize: number;
+      lineStyle: { width: number; color: string };
+      itemStyle: { color: string };
+      areaStyle?: any;
+    }> = [];
 
     const rows: Array<{ date: string; label: string; value: number }> = [];
 
-    const addSeries = (name: string, color: string, dataPoints: number[], withArea = false) => {
+    const addSeries = (
+      name: string,
+      color: string,
+      dataPoints: number[],
+      withArea = false
+    ) => {
       series.push({
         name,
         type: 'line',
@@ -237,7 +490,10 @@ export function AssetTrendsChart({
 
     if (selectedAccountId && relevantHistories.length > 0) {
       const accHistory = relevantHistories[0];
-      const accData = buildSeriesData(accHistory.account.id, accHistory.history);
+      const accData = buildSeriesData(
+        accHistory.account.id,
+        accHistory.history
+      );
       addSeries(accHistory.account.name, '#22c55e', accData, true);
     } else if (selectedGroupType) {
       relevantHistories.forEach((h, idx) => {
@@ -246,9 +502,16 @@ export function AssetTrendsChart({
         addSeries(h.account.name, color, dataPoints, idx === 0);
       });
       const groupData = sortedDates.map((_, i) =>
-        relevantHistories.reduce((sum, h) => sum + buildSeriesData(h.account.id, h.history)[i], 0)
+        relevantHistories.reduce(
+          (sum, h) => sum + buildSeriesData(h.account.id, h.history)[i],
+          0
+        )
       );
-      addSeries(`${selectedGroup?.typeDisplay || 'Group'} total`, '#ffffff', groupData);
+      addSeries(
+        `${selectedGroup?.typeDisplay || 'Group'} total`,
+        '#ffffff',
+        groupData
+      );
     } else {
       // Default: per-type traces + total
       const historiesByType = new Map<string, AccountHistory[]>();
@@ -260,14 +523,20 @@ export function AssetTrendsChart({
 
       Array.from(historiesByType.entries()).forEach(([type, items], idx) => {
         const dataPoints = sortedDates.map((_, i) =>
-          items.reduce((sum, h) => sum + buildSeriesData(h.account.id, h.history)[i], 0)
+          items.reduce(
+            (sum, h) => sum + buildSeriesData(h.account.id, h.history)[i],
+            0
+          )
         );
         const color = ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length];
         addSeries(type, color, dataPoints, idx === 0);
       });
 
       const totalData = sortedDates.map((_, i) =>
-        histories.reduce((sum, h) => sum + buildSeriesData(h.account.id, h.history)[i], 0)
+        histories.reduce(
+          (sum, h) => sum + buildSeriesData(h.account.id, h.history)[i],
+          0
+        )
       );
       addSeries('Total', '#ffffff', totalData);
     }
@@ -282,7 +551,14 @@ export function AssetTrendsChart({
         backgroundColor: 'rgba(17, 24, 39, 0.95)',
         borderColor: '#374151',
         textStyle: { color: '#f3f4f6' },
-        formatter: function (params: Array<{ name?: string; seriesName?: string; value?: number; color?: string }>) {
+        formatter: function (
+          params: Array<{
+            name?: string;
+            seriesName?: string;
+            value?: number;
+            color?: string;
+          }>
+        ) {
           const date = params?.[0]?.name ?? '';
           const lines = (params || []).map(p => {
             const value = p.value ?? 0;
@@ -358,20 +634,36 @@ export function AssetTrendsChart({
               {contextLabel}
             </span>
             {(selectedAccount || selectedGroup) && (
-              <Button size="xs" variant="ghost" onClick={onResetSelection} className="h-7 px-2 gap-1">
+              <Button
+                size="xs"
+                variant="ghost"
+                onClick={onResetSelection}
+                className="h-7 px-2 gap-1"
+              >
                 <RefreshCw className="h-3 w-3" />
                 Reset
               </Button>
             )}
+            {selectedAccount && (
+              <Button
+                size="sm"
+                onClick={() => setShowAddModal(true)}
+                className="gap-1"
+              >
+                <Plus className="h-4 w-4" />
+                Add Transaction
+              </Button>
+            )}
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               {(['30', '90', '180', '365'] as RangePreset[]).map(preset => (
                 <Button
                   key={preset}
                   size="xs"
                   variant={rangePreset === preset ? 'default' : 'ghost'}
                   onClick={() => setRangePreset(preset)}
+                  className="transition-all hover:scale-105"
                 >
                   {preset}d
                 </Button>
@@ -380,30 +672,20 @@ export function AssetTrendsChart({
                 size="xs"
                 variant={rangePreset === 'custom' ? 'default' : 'ghost'}
                 onClick={() => setRangePreset('custom')}
-                className="gap-1"
+                className="gap-1 transition-all hover:scale-105"
               >
                 <Calendar className="h-3 w-3" />
                 Custom
               </Button>
             </div>
             <Button
-              size="xs"
+              size="pill"
               variant="outline"
               onClick={() => setShowDataPanel(true)}
-              className="gap-1"
+              className="gap-1.5 transition-all hover:scale-105"
             >
               <TableProperties className="h-4 w-4" />
               Data
-            </Button>
-            <Button
-              size="xs"
-              variant="ghost"
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="gap-1"
-            >
-              {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              Refresh
             </Button>
           </div>
         </CardTitle>
@@ -436,7 +718,11 @@ export function AssetTrendsChart({
           <div className="h-72 flex items-center justify-center">
             <div className="text-center">
               <p className="text-red-600 mb-2">{error}</p>
-              <Button variant="outline" size="sm" onClick={handleRefresh}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadAccountsAndHistory}
+              >
                 Retry
               </Button>
             </div>
@@ -449,14 +735,122 @@ export function AssetTrendsChart({
             </div>
           </div>
         ) : (
-          <BaseChart type="line" data={{ series: chartData.series }} options={chartOptions} height={340} />
+          <BaseChart
+            type="line"
+            data={{ series: chartData.series }}
+            options={chartOptions}
+            height={340}
+          />
+        )}
+
+        {/* Transaction summary and table - shown when an account is selected */}
+        {selectedAccount && (
+          <div className="space-y-4 mt-6">
+            {/* Transaction summary */}
+            {transactionSummary && (
+              <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/30 text-sm">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                  <span className="text-muted-foreground">Credits:</span>
+                  <span className="font-medium text-green-500">
+                    {formatCurrency(
+                      transactionSummary.totalCredits,
+                      preferences.currency
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                  <span className="text-muted-foreground">Debits:</span>
+                  <span className="font-medium text-red-500">
+                    {formatCurrency(
+                      transactionSummary.totalDebits,
+                      preferences.currency
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Net:</span>
+                  <span
+                    className={`font-semibold ${transactionSummary.net >= 0 ? 'text-green-500' : 'text-red-500'}`}
+                  >
+                    {transactionSummary.net >= 0 ? '+' : ''}
+                    {formatCurrency(
+                      transactionSummary.net,
+                      preferences.currency
+                    )}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Collapsible DataTable */}
+            {transactionsLoading ? (
+              <div className="h-24 flex items-center justify-center">
+                <div className="text-muted-foreground">
+                  Loading transactions...
+                </div>
+              </div>
+            ) : transactionsError ? (
+              <div className="h-24 flex items-center justify-center">
+                <div className="text-center">
+                  <p className="text-red-600 mb-2">{transactionsError}</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchTransactions}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              </div>
+            ) : transactions.length > 0 ? (
+              <div>
+                <button
+                  onClick={() => setShowTable(!showTable)}
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full justify-between p-2 rounded hover:bg-muted/30"
+                >
+                  <span>
+                    {transactions.length} transaction
+                    {transactions.length !== 1 && 's'}
+                  </span>
+                  {showTable ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </button>
+
+                {showTable && (
+                  <div className="mt-2">
+                    <DataTable
+                      data={transactions}
+                      columns={columns}
+                      searchable
+                      searchPlaceholder="Search transactions..."
+                      searchFields={['description']}
+                      onRowClick={handleRowClick}
+                      defaultSortField="date"
+                      defaultSortDirection="desc"
+                      pageSize={10}
+                      emptyMessage="No transactions found."
+                      renderMobileCard={renderMobileCard}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
         )}
       </CardContent>
 
       {/* Data side panel */}
       {showDataPanel && (
         <div className="fixed inset-0 z-40">
-          <div className="absolute inset-0 bg-black/30" onClick={() => setShowDataPanel(false)} />
+          <div
+            className="absolute inset-0 bg-black/30"
+            onClick={() => setShowDataPanel(false)}
+          />
           <div className="absolute right-0 top-0 h-full w-full max-w-md bg-card border-l border-border/50 shadow-2xl flex flex-col">
             <div className="p-4 flex items-center justify-between border-b border-border/50">
               <div className="space-y-1">
@@ -466,11 +860,20 @@ export function AssetTrendsChart({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={exportCsv} className="gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={exportCsv}
+                  className="gap-1"
+                >
                   <Download className="h-4 w-4" />
                   CSV
                 </Button>
-                <Button size="icon" variant="ghost" onClick={() => setShowDataPanel(false)}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setShowDataPanel(false)}
+                >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -486,7 +889,9 @@ export function AssetTrendsChart({
                   >
                     <div>
                       <div className="font-medium">{row.label}</div>
-                      <div className="text-xs text-muted-foreground">{row.date}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {row.date}
+                      </div>
                     </div>
                     <div className="font-semibold">
                       {formatCurrency(row.value, preferences.currency)}
@@ -497,6 +902,50 @@ export function AssetTrendsChart({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Add Transaction Modal */}
+      {selectedAccount && (
+        <Modal
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          title={`Add Transaction - ${selectedAccount.name}`}
+        >
+          <AccountBalanceForm
+            accountId={selectedAccount.id}
+            accountName={selectedAccount.name}
+            onSubmit={handleAddSubmit}
+            onCancel={() => setShowAddModal(false)}
+          />
+        </Modal>
+      )}
+
+      {/* Edit Transaction Modal */}
+      {selectedAccount && selectedItem && (
+        <Modal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedItem(null);
+          }}
+          title="Edit Transaction"
+        >
+          <AccountBalanceForm
+            accountId={selectedAccount.id}
+            accountName={selectedAccount.name}
+            initialData={{
+              balance: selectedItem.amount,
+              date: selectedItem.date,
+              id: selectedItem.id,
+            }}
+            onSubmit={handleEditSubmit}
+            onDelete={handleDelete}
+            onCancel={() => {
+              setShowEditModal(false);
+              setSelectedItem(null);
+            }}
+          />
+        </Modal>
       )}
     </Card>
   );

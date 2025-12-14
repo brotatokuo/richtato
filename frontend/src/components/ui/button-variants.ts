@@ -5,7 +5,8 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-secondary hover:text-secondary-foreground',
+        default:
+          'bg-primary text-primary-foreground hover:bg-secondary hover:text-secondary-foreground',
         destructive:
           'bg-destructive text-destructive-foreground hover:bg-destructive/90',
         outline:
@@ -20,6 +21,8 @@ export const buttonVariants = cva(
         sm: 'h-9 rounded-md px-3',
         lg: 'h-11 rounded-md px-8',
         icon: 'h-10 w-10',
+        xs: 'h-7 rounded-full px-3 text-xs',
+        pill: 'h-9 rounded-full px-4',
       },
     },
     defaultVariants: {

@@ -1,5 +1,4 @@
 import { AccountBreakdownChart } from '@/components/asset_dashboard/AccountBreakdownChart';
-import { AccountHistoryPanel } from '@/components/asset_dashboard/AccountHistoryPanel';
 import {
   AccountGroup,
   AccountsList,
@@ -274,6 +273,7 @@ export function AssetDashboard() {
         selectedAccount={selectedAccount}
         selectedGroup={selectedGroup}
         onResetSelection={handleResetSelection}
+        onDataChange={handleDataChange}
       />
 
       {/* Account Breakdown + Accounts List */}
@@ -294,15 +294,6 @@ export function AssetDashboard() {
           />
         </div>
       </div>
-
-      {/* Account History Panel - Shows when an individual account is selected */}
-      {selectedAccount && (
-        <AccountHistoryPanel
-          account={selectedAccount}
-          onClose={() => setSelectedAccount(null)}
-          onDataChange={handleDataChange}
-        />
-      )}
     </div>
   );
 }
