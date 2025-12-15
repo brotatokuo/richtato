@@ -30,8 +30,6 @@ export interface ContextMenuProps {
 export interface TransactionTableProps {
   transactions: DisplayTransaction[];
   onTransactionsChange: (transactions: DisplayTransaction[]) => void;
-  typeFilter: TransactionTypeFilter;
-  onTypeFilterChange: (filter: TransactionTypeFilter) => void;
   onRecategorizeClick?: () => void;
 }
 
@@ -41,6 +39,13 @@ export interface DisplayTransaction {
   date: string;
   description: string;
   category: string;
+  categoryType:
+    | 'income'
+    | 'expense'
+    | 'transfer'
+    | 'investment'
+    | 'other'
+    | 'uncategorized';
   amount: number;
   account: string;
   transactionType: 'debit' | 'credit';
@@ -56,6 +61,7 @@ export const transformTransaction = (
     date: apiTransaction.date,
     description: apiTransaction.description,
     category: apiTransaction.category_name || 'Uncategorized',
+    categoryType: apiTransaction.category_type,
     amount: Number(apiTransaction.signed_amount),
     account: apiTransaction.account_name || 'Unknown',
     transactionType: apiTransaction.transaction_type,

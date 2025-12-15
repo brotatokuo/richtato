@@ -8,11 +8,7 @@ import {
   Category,
   transactionsApiService,
 } from '@/lib/api/transactions';
-import {
-  DisplayTransaction,
-  TransactionTypeFilter,
-  transformTransaction,
-} from '@/types/transactions';
+import { DisplayTransaction, transformTransaction } from '@/types/transactions';
 import { useEffect, useState } from 'react';
 
 // Main DataTable Component - Transactions Only
@@ -22,7 +18,6 @@ export function DataTable() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [typeFilter, setTypeFilter] = useState<TransactionTypeFilter>('all');
   const [showRecategorizeDialog, setShowRecategorizeDialog] = useState(false);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [recategorizeTaskId, setRecategorizeTaskId] = useState<number | null>(
@@ -37,9 +32,7 @@ export function DataTable() {
       // Load all data in parallel
       const [transactionsData, categoriesData, accountsData] =
         await Promise.all([
-          transactionsApiService.getTransactions({
-            type: typeFilter === 'all' ? undefined : typeFilter,
-          }),
+          transactionsApiService.getTransactions(),
           transactionsApiService.getCategories(),
           transactionsApiService.getAccounts(),
         ]);
@@ -58,7 +51,7 @@ export function DataTable() {
 
   useEffect(() => {
     loadData();
-  }, [typeFilter]);
+  }, []);
 
   const handleRecategorize = async (keepExisting: boolean) => {
     setShowRecategorizeDialog(false);
@@ -110,8 +103,6 @@ export function DataTable() {
             <TransactionTable
               transactions={transactions}
               onTransactionsChange={setTransactions}
-              typeFilter={typeFilter}
-              onTypeFilterChange={setTypeFilter}
               accounts={accounts}
               categories={categories}
               loading={loading}

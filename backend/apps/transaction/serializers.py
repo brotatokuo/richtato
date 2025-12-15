@@ -46,6 +46,7 @@ class TransactionSerializer(serializers.ModelSerializer):
 
     account_name = serializers.CharField(source="account.name", read_only=True)
     category_name = serializers.CharField(read_only=True)
+    category_type = serializers.SerializerMethodField()
     signed_amount = serializers.DecimalField(
         max_digits=15, decimal_places=2, read_only=True
     )
@@ -70,6 +71,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             "transaction_type_display",
             "category",
             "category_name",
+            "category_type",
             "status",
             "is_recurring",
             "sync_source",
@@ -86,6 +88,12 @@ class TransactionSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+    def get_category_type(self, obj):
+        """Return category type or 'uncategorized'."""
+        if obj.category:
+            return obj.category.type
+        return "uncategorized"
 
 
 class TransactionCreateSerializer(serializers.Serializer):

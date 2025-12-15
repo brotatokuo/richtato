@@ -8,13 +8,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { SortableHeader } from '@/components/ui/SortableHeader';
 import {
   Table,
@@ -59,8 +52,6 @@ const getLocalDateString = (): string => {
 export function TransactionTable({
   transactions,
   onTransactionsChange,
-  typeFilter,
-  onTypeFilterChange,
   accounts,
   categories,
   loading,
@@ -87,27 +78,17 @@ export function TransactionTable({
   // Additional filters (now arrays for multi-select)
   const [dateFilters, setDateFilters] = useState<string[]>([]);
   const [descriptionFilters, setDescriptionFilters] = useState<string[]>([]);
+  const [categoryTypeFilters, setCategoryTypeFilters] = useState<string[]>([]);
   const [accountFilters, setAccountFilters] = useState<string[]>([]);
   const [amountFilters, setAmountFilters] = useState<string[]>([]);
 
   // Column search terms (for filtering while typing in popover)
   const [dateSearch, setDateSearch] = useState('');
   const [descriptionSearch, setDescriptionSearch] = useState('');
+  const [categoryTypeSearch, setCategoryTypeSearch] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
   const [accountSearch, setAccountSearch] = useState('');
   const [amountSearch, setAmountSearch] = useState('');
-
-  // Get display title based on filter
-  const getTitle = () => {
-    switch (typeFilter) {
-      case 'credit':
-        return 'Income';
-      case 'debit':
-        return 'Expenses';
-      default:
-        return 'Transactions';
-    }
-  };
 
   const [formData, setFormData] = useState<TransactionFormData>({
     description: '',
@@ -116,7 +97,7 @@ export function TransactionTable({
     account_name: '',
     category: '',
     notes: '',
-    transactionType: typeFilter === 'credit' ? 'credit' : 'debit',
+    transactionType: 'debit',
   });
 
   // Edit modal state
@@ -132,28 +113,20 @@ export function TransactionTable({
     transactionType: 'debit',
   });
 
-  // Update form default transaction type when filter changes
-  useEffect(() => {
-    if (typeFilter !== 'all') {
-      setFormData(prev => ({
-        ...prev,
-        transactionType: typeFilter as 'debit' | 'credit',
-      }));
-    }
-  }, [typeFilter]);
-
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [
     searchTerm,
     filterCategories,
+    categoryTypeFilters,
     dateFilters,
     descriptionFilters,
     accountFilters,
     amountFilters,
     dateSearch,
     descriptionSearch,
+    categoryTypeSearch,
     categorySearch,
     accountSearch,
     amountSearch,
@@ -193,6 +166,9 @@ export function TransactionTable({
       const matchesDescription =
         descriptionFilters.length === 0 ||
         descriptionFilters.includes(transaction.description);
+      const matchesCategoryType =
+        categoryTypeFilters.length === 0 ||
+        categoryTypeFilters.includes(transaction.categoryType);
       const matchesAccount =
         accountFilters.length === 0 ||
         accountFilters.includes(transaction.account);
@@ -212,6 +188,11 @@ export function TransactionTable({
         transaction.description
           .toLowerCase()
           .includes(descriptionSearch.toLowerCase());
+      const matchesCategoryTypeSearch =
+        !categoryTypeSearch ||
+        transaction.categoryType
+          .toLowerCase()
+          .includes(categoryTypeSearch.toLowerCase());
       const matchesCategorySearch =
         !categorySearch ||
         transaction.category
@@ -230,12 +211,14 @@ export function TransactionTable({
       return (
         matchesSearch &&
         matchesCategory &&
+        matchesCategoryType &&
         matchesDate &&
         matchesDescription &&
         matchesAccount &&
         matchesAmount &&
         matchesDateSearch &&
         matchesDescriptionSearch &&
+        matchesCategoryTypeSearch &&
         matchesCategorySearch &&
         matchesAccountSearch &&
         matchesAmountSearch
@@ -291,6 +274,10 @@ export function TransactionTable({
         excludeColumn === 'description' ||
         descriptionFilters.length === 0 ||
         descriptionFilters.includes(transaction.description);
+      const matchesCategoryType =
+        excludeColumn === 'categoryType' ||
+        categoryTypeFilters.length === 0 ||
+        categoryTypeFilters.includes(transaction.categoryType);
       const matchesAccount =
         excludeColumn === 'account' ||
         accountFilters.length === 0 ||
@@ -313,6 +300,12 @@ export function TransactionTable({
         transaction.description
           .toLowerCase()
           .includes(descriptionSearch.toLowerCase());
+      const matchesCategoryTypeSearch =
+        excludeColumn === 'categoryType' ||
+        !categoryTypeSearch ||
+        transaction.categoryType
+          .toLowerCase()
+          .includes(categoryTypeSearch.toLowerCase());
       const matchesCategorySearch =
         excludeColumn === 'category' ||
         !categorySearch ||
@@ -334,12 +327,14 @@ export function TransactionTable({
       return (
         matchesSearch &&
         matchesCategory &&
+        matchesCategoryType &&
         matchesDate &&
         matchesDescription &&
         matchesAccount &&
         matchesAmount &&
         matchesDateSearch &&
         matchesDescriptionSearch &&
+        matchesCategoryTypeSearch &&
         matchesCategorySearch &&
         matchesAccountSearch &&
         matchesAmountSearch
@@ -369,6 +364,34 @@ export function TransactionTable({
         value: description,
         count: filtered.filter(t => t.description === description).length,
       }));
+  })();
+
+  const categoryTypeFilterOptions: FilterOption[] = (() => {
+    const filtered = getFilteredForColumn('categoryType');
+    const typeOrder = [
+      'income',
+      'expense',
+      'transfer',
+      'investment',
+      'other',
+      'uncategorized',
+    ];
+    const types = Array.from(new Set(filtered.map(t => t.categoryType))).sort(
+      (a, b) => typeOrder.indexOf(a) - typeOrder.indexOf(b)
+    );
+    const typeLabels: Record<string, string> = {
+      income: 'Income',
+      expense: 'Expense',
+      transfer: 'Transfer',
+      investment: 'Investment',
+      other: 'Other',
+      uncategorized: 'Uncategorized',
+    };
+    return types.map(type => ({
+      label: typeLabels[type] || type,
+      value: type,
+      count: filtered.filter(t => t.categoryType === type).length,
+    }));
   })();
 
   const categoryFilterOptions: FilterOption[] = (() => {
@@ -469,7 +492,7 @@ export function TransactionTable({
         account_name: '',
         category: '',
         notes: '',
-        transactionType: typeFilter === 'credit' ? 'credit' : 'debit',
+        transactionType: 'debit',
       });
       setShowAddModal(false);
       onRefresh();
@@ -578,6 +601,11 @@ export function TransactionTable({
         filterable: false,
       },
       {
+        field: 'categoryType' as keyof DisplayTransaction,
+        label: 'Type',
+        filterable: true,
+      },
+      {
         field: 'category' as keyof DisplayTransaction,
         label: 'Category',
         filterable: true,
@@ -617,6 +645,50 @@ export function TransactionTable({
         );
       case 'account':
         return <TableCell key={String(field)}>{transaction.account}</TableCell>;
+      case 'categoryType': {
+        const typeConfig = {
+          income: {
+            label: 'Income',
+            bgColor: 'bg-emerald-100 dark:bg-emerald-900/20',
+            textColor: 'text-emerald-800 dark:text-emerald-400',
+          },
+          expense: {
+            label: 'Expense',
+            bgColor: 'bg-orange-100 dark:bg-orange-900/20',
+            textColor: 'text-orange-800 dark:text-orange-400',
+          },
+          transfer: {
+            label: 'Transfer',
+            bgColor: 'bg-blue-100 dark:bg-blue-900/20',
+            textColor: 'text-blue-800 dark:text-blue-400',
+          },
+          investment: {
+            label: 'Investment',
+            bgColor: 'bg-purple-100 dark:bg-purple-900/20',
+            textColor: 'text-purple-800 dark:text-purple-400',
+          },
+          other: {
+            label: 'Other',
+            bgColor: 'bg-gray-100 dark:bg-gray-900/20',
+            textColor: 'text-gray-800 dark:text-gray-400',
+          },
+          uncategorized: {
+            label: 'Uncategorized',
+            bgColor: 'bg-muted',
+            textColor: 'text-muted-foreground',
+          },
+        };
+        const config = typeConfig[transaction.categoryType];
+        return (
+          <TableCell key={String(field)}>
+            <span
+              className={`px-2 py-1 rounded text-xs font-medium ${config.bgColor} ${config.textColor}`}
+            >
+              {config.label}
+            </span>
+          </TableCell>
+        );
+      }
       case 'category': {
         const isCredit = transaction.transactionType === 'credit';
         const bgColor = isCredit
@@ -664,23 +736,8 @@ export function TransactionTable({
       <div className="flex items-center gap-4 flex-wrap py-2">
         <h2 className="text-xl font-bold text-card-foreground flex items-center gap-2 shrink-0">
           <ArrowLeftRight className="h-5 w-5 text-primary" />
-          {getTitle()}
+          Transactions
         </h2>
-        <Select
-          value={typeFilter}
-          onValueChange={value =>
-            onTypeFilterChange(value as 'all' | 'credit' | 'debit')
-          }
-        >
-          <SelectTrigger className="w-40 h-8 text-sm">
-            <SelectValue placeholder="Filter by type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Transactions</SelectItem>
-            <SelectItem value="credit">Income</SelectItem>
-            <SelectItem value="debit">Expenses</SelectItem>
-          </SelectContent>
-        </Select>
         <div className="flex-1 min-w-[200px] relative">
           <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
@@ -714,11 +771,13 @@ export function TransactionTable({
       {/* Active filters indicator */}
       {(dateFilters.length > 0 ||
         descriptionFilters.length > 0 ||
+        categoryTypeFilters.length > 0 ||
         accountFilters.length > 0 ||
         filterCategories.length > 0 ||
         amountFilters.length > 0 ||
         dateSearch ||
         descriptionSearch ||
+        categoryTypeSearch ||
         categorySearch ||
         accountSearch ||
         amountSearch) && (
@@ -738,6 +797,15 @@ export function TransactionTable({
                 ? descriptionFilters[0].substring(0, 20) +
                   (descriptionFilters[0].length > 20 ? '...' : '')
                 : `${descriptionFilters.length} descriptions`}
+            </span>
+          )}
+          {categoryTypeFilters.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full dark:bg-purple-900/20 dark:text-purple-400">
+              <Tag className="h-3 w-3" />
+              {categoryTypeFilters.length === 1
+                ? categoryTypeFilters[0].charAt(0).toUpperCase() +
+                  categoryTypeFilters[0].slice(1)
+                : `${categoryTypeFilters.length} types`}
             </span>
           )}
           {filterCategories.length > 0 && (
@@ -772,11 +840,13 @@ export function TransactionTable({
             onClick={() => {
               setDateFilters([]);
               setDescriptionFilters([]);
+              setCategoryTypeFilters([]);
               setAccountFilters([]);
               setFilterCategories([]);
               setAmountFilters([]);
               setDateSearch('');
               setDescriptionSearch('');
+              setCategoryTypeSearch('');
               setCategorySearch('');
               setAccountSearch('');
               setAmountSearch('');
@@ -899,6 +969,16 @@ export function TransactionTable({
                               onSelectionChange={setDescriptionFilters}
                               searchTerm={descriptionSearch}
                               onSearchChange={setDescriptionSearch}
+                            />
+                          )}
+                          {header.field === 'categoryType' && (
+                            <ColumnFilterPopover
+                              title="Filter by Type"
+                              options={categoryTypeFilterOptions}
+                              selectedValues={categoryTypeFilters}
+                              onSelectionChange={setCategoryTypeFilters}
+                              searchTerm={categoryTypeSearch}
+                              onSearchChange={setCategoryTypeSearch}
                             />
                           )}
                           {header.field === 'category' && (

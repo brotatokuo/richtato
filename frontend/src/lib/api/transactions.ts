@@ -15,6 +15,13 @@ export interface Transaction {
   transaction_type_display: string;
   category: number | null;
   category_name: string | null;
+  category_type:
+    | 'income'
+    | 'expense'
+    | 'transfer'
+    | 'investment'
+    | 'other'
+    | 'uncategorized';
   status: string;
   is_recurring: boolean;
   sync_source: string;
