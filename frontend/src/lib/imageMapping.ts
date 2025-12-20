@@ -14,13 +14,57 @@ export interface CardImageOption {
 }
 
 export const AVAILABLE_CARD_IMAGES: CardImageOption[] = [
-  { key: 'amex_blue_cash', label: 'Amex Blue Cash', path: '/images/credit_cards/amex_blue_cash.avif' },
-  { key: 'amex_platinum', label: 'Amex Platinum', path: '/images/credit_cards/amex_platinum.avif' },
-  { key: 'amex_delta_platinum', label: 'Amex Delta Platinum', path: '/images/credit_cards/amex_delta_platinum.avif' },
+  {
+    key: 'amex_blue_cash',
+    label: 'Amex Blue Cash',
+    path: '/images/credit_cards/amex_blue_cash.avif',
+  },
+  {
+    key: 'amex_gold',
+    label: 'Amex Gold',
+    path: '/images/credit_cards/amex_gold.png',
+  },
+  {
+    key: 'amex_platinum',
+    label: 'Amex Platinum',
+    path: '/images/credit_cards/amex_platinum.avif',
+  },
+  {
+    key: 'amex_delta_platinum',
+    label: 'Amex Delta Platinum',
+    path: '/images/credit_cards/amex_delta_platinum.avif',
+  },
   { key: 'bilt', label: 'Bilt', path: '/images/credit_cards/bilt.jpg' },
-  { key: 'bofa_custom_cash', label: 'BofA Custom Cash', path: '/images/credit_cards/bofa_custom_cash.png' },
-  { key: 'citi_costco', label: 'Citi Costco', path: '/images/credit_cards/citi_costco.jpg' },
-  { key: 'citi_custom_cash', label: 'Citi Custom Cash', path: '/images/credit_cards/citi_custom_cash.png' },
+  {
+    key: 'bofa_custom_cash',
+    label: 'BofA Custom Cash',
+    path: '/images/credit_cards/bofa_custom_cash.png',
+  },
+  {
+    key: 'citi_costco',
+    label: 'Citi Costco',
+    path: '/images/credit_cards/citi_costco.jpg',
+  },
+  {
+    key: 'citi_custom_cash',
+    label: 'Citi Custom Cash',
+    path: '/images/credit_cards/citi_custom_cash.png',
+  },
+  {
+    key: 'chase_sapphire_preferred',
+    label: 'Chase Sapphire Preferred',
+    path: '/images/credit_cards/chase_sapphire_preferred.png',
+  },
+  {
+    key: 'chase_sapphire_reserve',
+    label: 'Chase Sapphire Reserve',
+    path: '/images/credit_cards/chase_sapphire_reserve.png',
+  },
+  {
+    key: 'venturex',
+    label: 'Capital One Venture X',
+    path: '/images/credit_cards/venturex.avif',
+  },
 ];
 
 // Mapping from image key to path (for quick lookup)
@@ -28,25 +72,13 @@ const CARD_IMAGE_BY_KEY: Record<string, string> = Object.fromEntries(
   AVAILABLE_CARD_IMAGES.map(img => [img.key, img.path])
 );
 
-// Mapping of card names (normalized) to specific card images (for auto-detection)
-const SPECIFIC_CARD_IMAGES: Record<string, string> = {
-  'amex blue cash': '/images/credit_cards/amex_blue_cash.avif',
-  'amex platinum': '/images/credit_cards/amex_platinum.avif',
-  'amex delta platinum': '/images/credit_cards/amex_delta_platinum.avif',
-  bilt: '/images/credit_cards/bilt.jpg',
-  'bofa custom cash': '/images/credit_cards/bofa_custom_cash.png',
-  'bank of america custom cash': '/images/credit_cards/bofa_custom_cash.png',
-  'citi costco': '/images/credit_cards/citi_costco.jpg',
-  'citi custom cash': '/images/credit_cards/citi_custom_cash.png',
-};
-
 // Mapping of bank identifiers to bank logos
 const BANK_LOGOS: Record<string, string> = {
   // Major Banks
   chase: '/images/logos/chase.webp',
   bank_of_america: '/images/logos/bofa.png',
-  wells_fargo: '',
-  citibank: '',
+  wells_fargo: '/images/logos/wells_fargo.png',
+  citibank: '/images/logos/citi.webp',
   capital_one: '',
   us_bank: '',
   pnc: '',
@@ -54,15 +86,15 @@ const BANK_LOGOS: Record<string, string> = {
   // Online Banks
   ally: '',
   discover: '',
-  sofi: '',
+  sofi: '/images/logos/sofi.png',
   // Credit Card Issuers
   american_express: '/images/logos/amex.png',
   bilt: '/images/credit_cards/bilt.jpg',
   // Investment / Brokerage
   marcus: '/images/logos/marcus.png',
   robinhood: '/images/logos/robinhood.png',
-  schwab: '',
-  fidelity: '',
+  schwab: '/images/logos/charles_schwab.png',
+  fidelity: '/images/logos/fidelity.png',
   vanguard: '',
   // Credit Unions
   navy_federal: '',
@@ -75,8 +107,8 @@ const ENTITY_LOGOS: Record<string, string> = {
   // Major Banks
   chase: '/images/logos/chase.webp',
   bank_of_america: '/images/logos/bofa.png',
-  wells_fargo: '',
-  citibank: '',
+  wells_fargo: '/images/logos/wells_fargo.png',
+  citibank: '/images/logos/citi.webp',
   capital_one: '',
   us_bank: '',
   pnc: '',
@@ -84,14 +116,14 @@ const ENTITY_LOGOS: Record<string, string> = {
   // Online Banks
   ally: '',
   discover: '',
-  sofi: '',
+  sofi: '/images/logos/sofi.png',
   // Credit Card Issuers
   american_express: '/images/logos/amex.png',
   // Investment / Brokerage
   marcus: '/images/logos/marcus.png',
   robinhood: '/images/logos/robinhood.png',
-  schwab: '',
-  fidelity: '',
+  schwab: '/images/logos/charles_schwab.png',
+  fidelity: '/images/logos/fidelity.png',
   vanguard: '',
   // Credit Unions
   navy_federal: '',
@@ -100,103 +132,53 @@ const ENTITY_LOGOS: Record<string, string> = {
 };
 
 /**
- * Normalizes a card name for matching against specific card images
- * Converts to lowercase and removes extra whitespace
- */
-function normalizeCardName(name: string): string {
-  return name.toLowerCase().trim().replace(/\s+/g, ' ');
-}
-
-/**
  * Gets the image path for a credit card.
- * Priority: 1) Manual image_key override, 2) Auto-detect from card name, 3) Bank logo fallback
+ * Priority: 1) Manual image_key override, 2) Bank logo fallback
  *
- * @param cardName - The user-provided name of the card
+ * @param _cardName - The user-provided name of the card (unused, kept for API compatibility)
  * @param bank - The bank identifier (e.g., 'american_express', 'chase')
  * @param imageKey - Optional manual image key override (from database)
  * @returns The image path, or empty string if no image is available
  */
-export function getCardImage(cardName: string, bank: string, imageKey?: string | null): string {
+export function getCardImage(
+  _cardName: string,
+  bank: string,
+  imageKey?: string | null
+): string {
   // Priority 1: Use manual image_key override if provided
   if (imageKey && CARD_IMAGE_BY_KEY[imageKey]) {
     return CARD_IMAGE_BY_KEY[imageKey];
   }
 
-  // Priority 2: Try to auto-detect from card name
-  const normalizedName = normalizeCardName(cardName);
-
-  // Check for exact match
-  if (SPECIFIC_CARD_IMAGES[normalizedName]) {
-    return SPECIFIC_CARD_IMAGES[normalizedName];
-  }
-
-  // Check for partial matches (e.g., "My Amex Blue Cash" should match "amex blue cash")
-  for (const [key, imagePath] of Object.entries(SPECIFIC_CARD_IMAGES)) {
-    if (normalizedName.includes(key) || key.includes(normalizedName)) {
-      return imagePath;
-    }
-  }
-
-  // Priority 3: Fall back to bank logo
+  // Priority 2: Fall back to bank logo
   return BANK_LOGOS[bank] || '';
 }
 
 /**
  * Checks if a card has a specific card image (not just a bank logo)
  *
- * @param cardName - The user-provided name of the card
+ * @param _cardName - The user-provided name of the card (unused, kept for API compatibility)
  * @param imageKey - Optional manual image key override
  * @returns true if a specific card image exists, false otherwise
  */
-export function hasSpecificCardImage(cardName: string, imageKey?: string | null): boolean {
-  // Check manual override first
-  if (imageKey && CARD_IMAGE_BY_KEY[imageKey]) {
-    return true;
-  }
-
-  const normalizedName = normalizeCardName(cardName);
-
-  // Check for exact match
-  if (SPECIFIC_CARD_IMAGES[normalizedName]) {
-    return true;
-  }
-
-  // Check for partial matches
-  for (const key of Object.keys(SPECIFIC_CARD_IMAGES)) {
-    if (normalizedName.includes(key) || key.includes(normalizedName)) {
-      return true;
-    }
-  }
-
-  return false;
+export function hasSpecificCardImage(
+  _cardName: string,
+  imageKey?: string | null
+): boolean {
+  // Only check manual override - no auto-detection
+  return !!(imageKey && CARD_IMAGE_BY_KEY[imageKey]);
 }
 
 /**
  * Gets the auto-detected image key from a card name (if any)
- * Used to show which image would be auto-detected in the picker
+ * Auto-detection is disabled - always returns undefined.
+ * Kept for API compatibility with components that use it.
  *
- * @param cardName - The user-provided name of the card
- * @returns The image key if auto-detected, undefined otherwise
+ * @param _cardName - The user-provided name of the card (unused)
+ * @returns Always undefined (auto-detection disabled)
  */
-export function getAutoDetectedImageKey(cardName: string): string | undefined {
-  const normalizedName = normalizeCardName(cardName);
-
-  // Check for exact match first
-  for (const img of AVAILABLE_CARD_IMAGES) {
-    const searchKey = img.label.toLowerCase().replace(/\s+/g, ' ');
-    if (normalizedName === searchKey) {
-      return img.key;
-    }
-  }
-
-  // Check for partial matches
-  for (const img of AVAILABLE_CARD_IMAGES) {
-    const searchKey = img.label.toLowerCase().replace(/\s+/g, ' ');
-    if (normalizedName.includes(searchKey) || searchKey.includes(normalizedName)) {
-      return img.key;
-    }
-  }
-
+export function getAutoDetectedImageKey(_cardName: string): string | undefined {
+  // Auto-detection is disabled - images must be explicitly set via image_key
   return undefined;
 }
 

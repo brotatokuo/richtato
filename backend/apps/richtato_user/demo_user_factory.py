@@ -2,13 +2,12 @@ import random
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db import transaction
-from django.utils.text import slugify
-
 from apps.budget.models import Budget, BudgetCategory
 from apps.financial_account.models import FinancialAccount, FinancialInstitution
 from apps.richtato_user.models import User
 from apps.transaction.models import Transaction, TransactionCategory
+from django.db import transaction
+from django.utils.text import slugify
 
 
 class DemoUserFactory:
@@ -89,6 +88,7 @@ class DemoUserFactory:
             account_type="credit_card",
             balance=Decimal("0"),
             is_liability=True,
+            image_key="bofa_custom_cash",
         )
         self.amex_card = FinancialAccount.objects.create(
             user=self.user,
@@ -97,6 +97,7 @@ class DemoUserFactory:
             account_type="credit_card",
             balance=Decimal("0"),
             is_liability=True,
+            image_key="amex_platinum",
         )
         self.chase_card = FinancialAccount.objects.create(
             user=self.user,
@@ -105,6 +106,7 @@ class DemoUserFactory:
             account_type="credit_card",
             balance=Decimal("0"),
             is_liability=True,
+            image_key="chase_sapphire_preferred",
         )
 
     def _create_income_transactions(self):
