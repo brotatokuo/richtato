@@ -329,7 +329,6 @@ class TransactionsApiService {
 
     // If CSRF token is invalid, refresh it and retry once
     if (response.status === 403) {
-      console.log('CSRF token invalid for account creation, refreshing...');
       await csrfService.refreshToken();
       response = await fetch(`${this.baseUrl}/accounts/`, {
         method: 'POST',
@@ -367,7 +366,6 @@ class TransactionsApiService {
 
     // If CSRF token is invalid, refresh it and retry once
     if (response.status === 403) {
-      console.log('CSRF token invalid for account update, refreshing...');
       await csrfService.refreshToken();
       response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
         method: 'PATCH',
@@ -392,7 +390,6 @@ class TransactionsApiService {
 
     // If CSRF token is invalid, refresh it and retry once
     if (response.status === 403) {
-      console.log('CSRF token invalid for account deletion, refreshing...');
       await csrfService.refreshToken();
       response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
         method: 'DELETE',
@@ -440,7 +437,6 @@ class TransactionsApiService {
 
     // If CSRF token is invalid, refresh it and retry once
     if (response.status === 403) {
-      console.log('CSRF token invalid for transaction creation, refreshing...');
       await csrfService.refreshToken();
       response = await fetch(`${this.baseUrl}/transactions/`, {
         method: 'POST',
@@ -512,7 +508,6 @@ class TransactionsApiService {
 
     // If CSRF token is invalid, clear + refresh and retry once
     if (response.status === 403) {
-      console.log('CSRF token invalid for transaction update, refreshing...');
       csrfService.clearToken();
       await csrfService.refreshToken();
       response = await doPatch();
@@ -706,7 +701,6 @@ class TransactionsApiService {
 
     // If CSRF token is invalid, refresh it and retry once
     if (response.status === 403) {
-      console.log('CSRF token invalid for recategorization, refreshing...');
       await csrfService.refreshToken();
       response = await fetch(`${this.baseUrl}/transactions/recategorize/`, {
         method: 'POST',

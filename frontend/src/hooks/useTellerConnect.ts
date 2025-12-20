@@ -71,7 +71,6 @@ export function useTellerConnect() {
       applicationId,
       environment: import.meta.env.VITE_TELLER_ENV || 'sandbox',
       onSuccess: async (enrollment: TellerEnrollment) => {
-        console.log('Teller enrollment successful:', enrollment);
         setLoading(true);
         setError(null);
 
@@ -81,10 +80,6 @@ export function useTellerConnect() {
           const enrollmentId = enrollment.enrollment?.id || '';
           const institutionName =
             enrollment.enrollment?.institution?.name || 'Unknown Bank';
-
-          console.log(
-            `Sending enrollment to backend: ${enrollmentId} for ${institutionName}`
-          );
 
           // Send enrollment ID to backend - it will fetch all accounts from Teller
           // and create a FinancialAccount + SyncConnection for each
@@ -105,10 +100,9 @@ export function useTellerConnect() {
         }
       },
       onExit: () => {
-        console.log('Teller Connect closed');
+        // Connection dialog closed
       },
       onFailure: (error: any) => {
-        console.error('Teller Connect error:', error);
         setError(error?.message ?? 'Failed to connect');
       },
     });

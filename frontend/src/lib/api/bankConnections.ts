@@ -97,7 +97,6 @@ class BankConnectionsApiService {
 
     // If CSRF token is invalid, refresh it and retry once
     if (response.status === 403) {
-      console.log('CSRF token invalid, refreshing...');
       await csrfService.refreshToken();
       response = await fetch(url, {
         ...options,
@@ -152,7 +151,10 @@ class BankConnectionsApiService {
    * @param id - Connection ID
    * @param deleteData - If true, also deletes the account and all its transactions
    */
-  async deleteConnection(id: number, deleteData: boolean = false): Promise<void> {
+  async deleteConnection(
+    id: number,
+    deleteData: boolean = false
+  ): Promise<void> {
     const url = deleteData
       ? `${this.baseUrl}/teller/connections/${id}/?delete_data=true`
       : `${this.baseUrl}/teller/connections/${id}/`;
@@ -169,7 +171,10 @@ class BankConnectionsApiService {
   /**
    * Trigger sync for a specific connection
    */
-  async syncConnection(id: number, fullSync: boolean = false): Promise<SyncResult> {
+  async syncConnection(
+    id: number,
+    fullSync: boolean = false
+  ): Promise<SyncResult> {
     const response = await this.fetchWithCsrf(
       `${this.baseUrl}/teller/connections/${id}/sync/`,
       {
@@ -184,7 +189,9 @@ class BankConnectionsApiService {
   /**
    * Get the progress of the latest sync job for a connection
    */
-  async getSyncJobProgress(connectionId: number): Promise<SyncJobProgress | null> {
+  async getSyncJobProgress(
+    connectionId: number
+  ): Promise<SyncJobProgress | null> {
     const response = await fetch(
       `${this.baseUrl}/teller/connections/${connectionId}/progress/`,
       {
@@ -248,7 +255,9 @@ class BankConnectionsApiService {
   /**
    * Create Teller connections (convenience wrapper)
    */
-  async saveTellerConnection(input: Omit<CreateConnectionInput, 'provider'>): Promise<CreateConnectionResponse> {
+  async saveTellerConnection(
+    input: Omit<CreateConnectionInput, 'provider'>
+  ): Promise<CreateConnectionResponse> {
     return this.createConnection({
       ...input,
       provider: 'teller',

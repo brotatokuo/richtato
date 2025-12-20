@@ -30,8 +30,7 @@ export function Profile() {
   };
 
   const handleSave = () => {
-    // TODO: Implement profile update
-    console.log('Saving profile:', formData);
+    // TODO: Implement profile update API call
     setIsEditing(false);
   };
 

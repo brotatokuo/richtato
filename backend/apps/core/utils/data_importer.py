@@ -3,8 +3,8 @@
 import os
 from decimal import Decimal
 
-import colorama
 import pandas as pd
+from loguru import logger
 
 from apps.financial_account.models import FinancialAccount, FinancialInstitution
 from apps.transaction.models import Transaction, TransactionCategory
@@ -64,7 +64,7 @@ class DataImporter:
     def import_accounts_from_csv(self):
         """Import financial accounts from Account.csv."""
         accounts_df = pd.read_csv(os.path.join(self.path, "Account.csv"))
-        print(accounts_df.head())
+        logger.debug(f"Importing accounts: {accounts_df.head().to_dict()}")
         for index, row in accounts_df.iterrows():
             # Get or create institution if provided
             institution = None
@@ -90,7 +90,7 @@ class DataImporter:
     def import_categories_from_csv(self):
         """Import transaction categories from Category.csv."""
         categories_df = pd.read_csv(os.path.join(self.path, "Category.csv"))
-        print(categories_df.head())
+        logger.debug(f"Importing categories: {categories_df.head().to_dict()}")
         for index, row in categories_df.iterrows():
             TransactionCategory.objects.create(
                 user=self.user,
@@ -104,7 +104,7 @@ class DataImporter:
     def import_transactions_from_csv(self):
         """Import transactions from Transaction.csv."""
         transactions_df = pd.read_csv(os.path.join(self.path, "Transaction.csv"))
-        print(transactions_df.head())
+        logger.debug(f"Importing transactions: {transactions_df.head().to_dict()}")
         for index, row in transactions_df.iterrows():
             try:
                 # Get the account
@@ -140,13 +140,7 @@ class DataImporter:
                     sync_source="csv",
                 )
             except Exception as e:
-                print(
-                    colorama.Fore.RED
-                    + f"Error importing {row}"
-                    + colorama.Style.RESET_ALL
-                )
-                print(e)
-                print(f"Error importing {row}")
+                logger.error(f"Error importing row: {row}", exc_info=e)
 
     # Legacy import methods for backward compatibility
     # These can be removed after full migration

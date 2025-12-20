@@ -97,17 +97,12 @@ export function usePlaidLink() {
       const plaidLink = window.Plaid.create({
         token,
         onSuccess: async (publicToken: string, metadata: PlaidLinkMetadata) => {
-          console.log('Plaid Link successful:', metadata);
           setLoading(true);
           setError(null);
 
           try {
             const institutionName =
               metadata.institution?.name || 'Unknown Bank';
-
-            console.log(
-              `Exchanging public token for ${institutionName}`
-            );
 
             // Exchange public token for access token and create connections
             await bankConnectionsApiService.exchangePlaidToken(
@@ -125,20 +120,14 @@ export function usePlaidLink() {
             setLoading(false);
           }
         },
-        onExit: (err: PlaidLinkError | null, metadata: PlaidLinkMetadata) => {
-          console.log('Plaid Link closed', { err, metadata });
+        onExit: (err: PlaidLinkError | null) => {
           setLoading(false);
 
           if (err) {
-            console.error('Plaid Link error:', err);
             setError(err.display_message || err.error_message || 'Connection failed');
           }
         },
-        onEvent: (eventName: string, metadata: PlaidLinkEventMetadata) => {
-          console.log('Plaid Link event:', eventName, metadata);
-        },
         onLoad: () => {
-          console.log('Plaid Link loaded');
           setLoading(false);
         },
       });

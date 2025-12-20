@@ -57,10 +57,11 @@ class TransactionCategory(models.Model):
         return self.name
 
     @property
-    def full_path(self):
+    def full_path(self) -> str:
         """Get full category path."""
-        if self.parent:
-            return f"{self.parent.full_path} > {self.name}"  # type: ignore[union-attr]
+        if self.parent is not None:
+            parent_path = self.parent.full_path
+            return f"{parent_path} > {self.name}"
         return self.name
 
     @staticmethod
@@ -182,7 +183,7 @@ class Transaction(models.Model):
         related_name="transactions",
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="posted")
-    is_recurring = models.BooleanField(default=False)  # type: ignore[arg-type]
+    is_recurring = models.BooleanField(default=False)
     sync_source = models.CharField(
         max_length=20, choices=SYNC_SOURCE_CHOICES, default="manual"
     )

@@ -1,0 +1,111 @@
+# Richtato - Personal Finance Management Platform
+
+## Project Overview
+
+Richtato is a comprehensive personal finance management application for tracking expenses, income, budgets, and net worth. It features bank account syncing (Teller/Plaid), AI-powered transaction categorization, and interactive dashboards.
+
+## Tech Stack
+
+- **Backend**: Django 5.x, Django REST Framework, PostgreSQL, Gunicorn
+- **Frontend**: React 19, TypeScript, Vite 7, Tailwind CSS, Shadcn/UI
+- **Infrastructure**: Docker, Nginx (single-container deployment)
+- **Integrations**: Teller (bank sync), Plaid (bank sync), OpenAI (AI categorization)
+
+## Architecture
+
+### Backend Pattern: Repository → Service → View
+
+```
+Views (HTTP handling) → Services (business logic) → Repositories (database access)
+```
+
+- **Views**: Thin HTTP wrappers, delegate to services
+- **Services**: Business logic, calculations, orchestration
+- **Repositories**: ORM queries, data access only
+
+### Frontend Pattern: Pages → Components → API Services
+
+```
+Pages (routes) → Components (UI) → lib/api/* (API calls) → Contexts (state)
+```
+
+- **pages/**: Route-level components
+- **components/**: Reusable UI components (organized by feature)
+- **lib/api/**: API service classes (transactions, auth, dashboard, etc.)
+- **contexts/**: React Context for global state (Auth, Preferences)
+
+## Development Commands
+
+```bash
+# Start all services
+docker compose up -d
+
+# View logs
+docker compose logs -f backend
+docker compose logs -f frontend
+
+# Restart after code changes
+docker compose restart backend frontend
+
+# Run Django shell
+docker compose exec backend python manage.py shell
+
+# Run migrations
+docker compose exec backend python manage.py migrate
+```
+
+## Database Models (Core)
+
+| Model | Purpose |
+|-------|---------|
+| `User` | Extended Django user with preferences |
+| `FinancialAccount` | Bank accounts, credit cards, investment accounts |
+| `Transaction` | All financial transactions (debit/credit) |
+| `TransactionCategory` | Hierarchical categories with type (income/expense/transfer) |
+| `CategoryKeyword` | Keywords for auto-categorization |
+| `Budget` | Budget periods with category allocations |
+| `BankConnection` | Teller/Plaid connection credentials |
+
+## API Structure
+
+```
+/api/v1/
+├── /auth/              # Login, logout, demo user
+├── /transactions/      # CRUD transactions, categories
+├── /accounts/          # Financial accounts
+├── /budget/            # Budget management
+├── /budget-dashboard/  # Budget analytics
+├── /asset-dashboard/   # Net worth, metrics, trends
+├── /sync/              # Bank sync (Teller, Plaid)
+└── /user/              # Profile, preferences, category settings
+```
+
+## Key Files
+
+### Backend
+- `backend/richtato/settings.py` - Django configuration
+- `backend/richtato/urls.py` - Root URL routing
+- `backend/config/categories_defaults.yaml` - Default category definitions
+- `backend/apps/*/views.py` - API endpoints
+- `backend/apps/*/services/*.py` - Business logic
+- `backend/apps/*/repositories/*.py` - Database queries
+
+### Frontend
+- `frontend/src/App.tsx` - Root component with routing
+- `frontend/src/components/Layout.tsx` - Main layout with sidebar
+- `frontend/src/contexts/AuthContext.tsx` - Authentication state
+- `frontend/src/lib/api/*.ts` - API service classes
+
+## Conventions
+
+- **Logging**: Use `loguru.logger` (backend), avoid `console.log` (frontend)
+- **Icons**: Lucide React icons
+- **Styling**: Tailwind CSS utilities, use `cn()` for conditional classes
+- **State**: React Context for global, useState for local
+- **API Calls**: Async/await with try-catch, CSRF tokens for mutations
+
+## For More Context
+
+- `frontend/CLAUDE.md` - Frontend-specific patterns and components
+- `backend/CLAUDE.md` - Backend-specific patterns and Django apps
+- `API_REFERENCE.md` - Complete API endpoint documentation

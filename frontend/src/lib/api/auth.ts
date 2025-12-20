@@ -160,7 +160,6 @@ class AuthApiService {
 
       // If CSRF token is invalid, try to refresh it and retry once
       if (response.status === 403) {
-        console.log('CSRF token invalid, refreshing...');
         const refreshedCsrfHeaders = await csrfService
           .refreshToken()
           .then(() => csrfService.getHeaders());
@@ -384,7 +383,6 @@ class AuthApiService {
 
       // If CSRF token is invalid, try to refresh it and retry once
       if (response.status === 403) {
-        console.log('CSRF token invalid, refreshing...');
         const refreshedCsrfHeaders = await csrfService
           .refreshToken()
           .then(() => csrfService.getHeaders());
