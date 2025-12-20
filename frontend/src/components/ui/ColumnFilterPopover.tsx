@@ -99,7 +99,7 @@ export function ColumnFilterPopover({
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align={align} className="w-56">
+      <DropdownMenuContent align={align} className="min-w-56 max-w-80">
         <DropdownMenuLabel className="flex items-center justify-between">
           <span>{title}</span>
           {hasActiveFilters && (
@@ -160,7 +160,7 @@ export function ColumnFilterPopover({
                 onCheckedChange={() => handleToggle(option.value)}
                 onSelect={e => e.preventDefault()}
               >
-                <span className="flex-1 truncate">{option.label}</span>
+                <span className="flex-1 break-words whitespace-normal">{option.label}</span>
                 {option.count !== undefined && (
                   <span className="ml-2 text-xs text-muted-foreground">
                     {option.count}
