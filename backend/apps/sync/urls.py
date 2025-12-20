@@ -42,4 +42,10 @@ urlpatterns = [
         views.PlaidExchangeTokenAPIView.as_view(),
         name="plaid-exchange-token",
     ),
+    # Sync status (for frontend polling)
+    path(
+        "status/",
+        views.SyncStatusAPIView.as_view(),
+        name="sync-status",
+    ),
 ]

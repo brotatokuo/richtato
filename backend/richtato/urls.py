@@ -16,6 +16,7 @@ Including another URLconf
 """
 
 from apps.richtato_user import views as user_views
+from apps.sync import views as sync_views
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -72,6 +73,10 @@ urlpatterns = [
     path("api/v1/asset-dashboard/", include("apps.asset_dashboard.urls")),
     # Demo login for development
     path("demo-login/", user_views.demo_login, name="demo_login"),
+    # Cron endpoint for scheduled sync (used by Render Cron Jobs)
+    path("api/cron/sync/", sync_views.CronSyncAPIView.as_view(), name="cron-sync"),
+    # Add sync status endpoint at both /api/sync/ and /api/v1/sync/
+    path("api/v1/sync/", include("apps.sync.urls")),
 ]
 
 # Serve static files during development

@@ -1,5 +1,7 @@
 """Sync models for external data source connections."""
 
+from datetime import timedelta
+
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -105,6 +107,12 @@ class SyncConnection(models.Model):
         self.last_sync_error = error_message
         self.save()
 
+    def is_stale(self, hours: int = 4) -> bool:
+        """Check if connection needs sync (not synced in specified hours)."""
+        if not self.last_sync:
+            return True
+        return self.last_sync < timezone.now() - timedelta(hours=hours)
+
 
 class SyncJob(models.Model):
     """Track individual sync operations."""
@@ -168,3 +176,52 @@ class SyncJob(models.Model):
         if self.completed_at:
             return self.completed_at - self.started_at
         return timezone.now() - self.started_at
+
+
+class UserSyncStatus(models.Model):
+    """Track sync status per user for frontend polling."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="sync_status",
+    )
+    is_syncing = models.BooleanField(default=False)
+    last_sync_started = models.DateTimeField(null=True, blank=True)
+    last_sync_completed = models.DateTimeField(null=True, blank=True)
+    new_transaction_count = models.IntegerField(default=0)
+    last_error = models.TextField(blank=True)
+
+    class Meta:
+        db_table = "user_sync_status"
+        verbose_name = "User Sync Status"
+        verbose_name_plural = "User Sync Statuses"
+
+    def __str__(self):
+        status = "syncing" if self.is_syncing else "idle"
+        return f"{self.user.username} - {status}"
+
+    def start_sync(self):
+        """Mark sync as started."""
+        self.is_syncing = True
+        self.last_sync_started = timezone.now()
+        self.last_error = ""
+        self.save()
+
+    def complete_sync(self, new_transactions: int = 0):
+        """Mark sync as completed."""
+        self.is_syncing = False
+        self.last_sync_completed = timezone.now()
+        self.new_transaction_count += new_transactions  # Accumulate until cleared
+        self.save()
+
+    def fail_sync(self, error: str):
+        """Mark sync as failed."""
+        self.is_syncing = False
+        self.last_error = error
+        self.save()
+
+    def clear_new_count(self):
+        """Clear new transaction count (user has seen them)."""
+        self.new_transaction_count = 0
+        self.save()

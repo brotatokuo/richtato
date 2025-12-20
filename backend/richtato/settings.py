@@ -33,6 +33,9 @@ TELLER_TRANSACTION_LIMIT = int(os.getenv("TELLER_TRANSACTION_LIMIT", "500"))
 
 # Plaid API Configuration
 PLAID_CLIENT_ID = os.getenv("PLAID_CLIENT_ID")
+
+# Cron Job Security
+CRON_SECRET_KEY = os.getenv("CRON_SECRET_KEY")
 PLAID_SECRET = os.getenv("PLAID_SECRET")
 PLAID_ENV = os.getenv("PLAID_ENV", "sandbox")  # sandbox, development, production
 
@@ -85,6 +88,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.richtato_user.middleware.CleanupDemoUsersMiddleware",
+    "apps.sync.middleware.AutoSyncMiddleware",  # Auto-trigger bank sync
 ]
 
 if DEPLOY_STAGE == "PROD":

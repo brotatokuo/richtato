@@ -14,7 +14,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { usePlaidLink } from '@/hooks/usePlaidLink';
+import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { useTellerConnect } from '@/hooks/useTellerConnect';
+import { syncService } from '@/lib/api/sync';
 import { TellerSyncResult, tellerApiService } from '@/lib/api/teller';
 import { Account, transactionsApiService } from '@/lib/api/transactions';
 import {
@@ -29,7 +31,9 @@ import {
   Cloud,
   CreditCard,
   Landmark,
+  Loader2,
   Plus,
+  RefreshCw,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccountDetailModal } from './AccountDetailModal';
@@ -74,6 +78,8 @@ export function UnifiedAccountsSection() {
     error: plaidError,
     clearError: clearPlaidError,
   } = usePlaidLink();
+
+  const { status: syncStatus, refresh: refreshSyncStatus } = useSyncStatus();
 
   // Group accounts by type
   const bankAccounts = accounts.filter(
@@ -301,6 +307,20 @@ export function UnifiedAccountsSection() {
     });
   };
 
+  const handleSyncAll = async () => {
+    try {
+      const result = await syncService.triggerSyncAll();
+      if (result.status === 'sync_started') {
+        // Refresh sync status to show syncing indicator
+        refreshSyncStatus();
+      } else if (result.status === 'no_connections') {
+        setError('No connected accounts to sync');
+      }
+    } catch (e: any) {
+      setError(e?.message ?? 'Failed to start sync');
+    }
+  };
+
   // Check which providers are available
   const isTellerAvailable =
     typeof window !== 'undefined' &&
@@ -505,6 +525,25 @@ export function UnifiedAccountsSection() {
             </CardDescription>
           </div>
           <div className="flex gap-2">
+            {/* Sync All Button */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSyncAll}
+              disabled={syncStatus?.is_syncing || accounts.filter(a => a.has_connection).length === 0}
+            >
+              {syncStatus?.is_syncing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Syncing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Sync All
+                </>
+              )}
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button type="button" variant="outline" disabled={isConnecting}>

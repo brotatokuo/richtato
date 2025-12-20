@@ -2,6 +2,9 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
 // https://vitejs.dev/config/
+// Use 'backend' as hostname when running in Docker, otherwise localhost
+const backendHost = process.env.DOCKER_ENV === 'true' ? 'backend' : 'localhost';
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -10,11 +13,11 @@ export default defineConfig({
     allowedHosts: ['localhost', '127.0.0.1'],
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: `http://${backendHost}:8000`,
         changeOrigin: true,
       },
       '/demo-login': {
-        target: 'http://localhost:8000',
+        target: `http://${backendHost}:8000`,
         changeOrigin: true,
       },
     },

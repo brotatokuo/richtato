@@ -872,3 +872,147 @@ class PlaidExchangeTokenAPIView(APIView):
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+# ============================================================================
+# Sync Status endpoints (for frontend polling)
+# ============================================================================
+
+
+class SyncStatusAPIView(APIView):
+    """Get current sync status for frontend polling."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Get the current sync status for the user."""
+        try:
+            from apps.sync.models import UserSyncStatus
+
+            logger.debug(f"SyncStatusAPIView.get called for user {request.user.id}")
+            status_obj = UserSyncStatus.objects.filter(user=request.user).first()
+
+            if not status_obj:
+                return Response(
+                    {
+                        "is_syncing": False,
+                        "new_transaction_count": 0,
+                        "last_sync": None,
+                    }
+                )
+
+            return Response(
+                {
+                    "is_syncing": status_obj.is_syncing,
+                    "new_transaction_count": status_obj.new_transaction_count,
+                    "last_sync": status_obj.last_sync_completed,
+                }
+            )
+        except Exception as e:
+            logger.error(f"SyncStatusAPIView.get error: {e}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def post(self, request):
+        """Trigger background sync for all user connections."""
+        try:
+            from apps.sync.models import SyncConnection
+            from apps.sync.services.background_sync_service import BackgroundSyncService
+
+            logger.info(f"SyncStatusAPIView.post called for user {request.user.id}")
+
+            # Check if user has any active connections
+            has_connections = SyncConnection.objects.filter(
+                user=request.user, status="active"
+            ).exists()
+
+            if not has_connections:
+                logger.info(f"No active connections for user {request.user.id}")
+                return Response(
+                    {
+                        "status": "no_connections",
+                        "message": "No active connections to sync",
+                    },
+                    status=status.HTTP_200_OK,
+                )
+
+            # Trigger background sync
+            logger.info(f"Triggering sync for user {request.user.id}")
+            BackgroundSyncService.trigger_user_sync(request.user.id)
+
+            return Response(
+                {
+                    "status": "sync_started",
+                    "message": "Sync started for all connections",
+                }
+            )
+        except Exception as e:
+            logger.error(f"SyncStatusAPIView.post error: {e}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def delete(self, request):
+        """Clear new transaction count (user has seen them)."""
+        try:
+            from apps.sync.models import UserSyncStatus
+
+            UserSyncStatus.objects.filter(user=request.user).update(
+                new_transaction_count=0
+            )
+            return Response({"status": "cleared"})
+        except Exception as e:
+            logger.error(f"SyncStatusAPIView.delete error: {e}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class CronSyncAPIView(APIView):
+    """Endpoint for Render Cron Job to trigger daily syncs."""
+
+    # No authentication - uses secret key instead
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        """Trigger sync for all active connections."""
+        from apps.sync.models import SyncConnection
+        from apps.sync.services import get_sync_service
+
+        # Verify secret key
+        key = request.GET.get("key")
+        cron_secret = getattr(settings, "CRON_SECRET_KEY", None)
+
+        if not cron_secret or key != cron_secret:
+            return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+
+        # Get all active connections that are stale (not synced in 20 hours)
+        connections = SyncConnection.objects.filter(status="active")
+        synced_count = 0
+        errors = []
+
+        for conn in connections:
+            if conn.is_stale(hours=20):
+                try:
+                    logger.info(
+                        f"Cron sync: Syncing connection {conn.id} ({conn.institution_name}) via {conn.provider}"
+                    )
+                    sync_service = get_sync_service(conn.provider)
+                    sync_service.sync_connection(conn)
+                    synced_count += 1
+                except Exception as e:
+                    logger.error(f"Cron sync error for connection {conn.id}: {e}")
+                    errors.append(f"Connection {conn.id}: {str(e)}")
+
+        logger.info(f"Cron sync completed: {synced_count} connections synced")
+
+        return Response(
+            {
+                "status": "completed",
+                "connections_synced": synced_count,
+                "errors": errors,
+            }
+        )

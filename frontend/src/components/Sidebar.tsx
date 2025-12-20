@@ -1,9 +1,12 @@
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { cn } from '@/lib/utils';
 import {
   ChevronLeft,
   ChevronRight,
+  Loader2,
   LogOut,
   PieChart,
   Settings as SettingsIcon,
@@ -66,6 +69,7 @@ export function Sidebar({
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { status: syncStatus } = useSyncStatus();
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
@@ -130,6 +134,14 @@ export function Sidebar({
           const isActive = location.pathname === item.href;
           const Icon = item.icon;
 
+          // Show sync indicator and badge on Data page
+          const isDataPage = item.href === '/data';
+          const isSyncing = isDataPage && syncStatus?.is_syncing;
+          const newTransactionCount =
+            isDataPage && syncStatus?.new_transaction_count
+              ? syncStatus.new_transaction_count
+              : 0;
+
           return (
             <Link
               key={item.name}
@@ -142,13 +154,32 @@ export function Sidebar({
                 isCollapsed && 'justify-center px-2'
               )}
             >
-              <Icon
-                className={cn(
-                  'h-5 w-5 shrink-0 transition-transform group-hover:scale-110',
-                  isActive && 'text-white'
-                )}
-              />
-              {!isCollapsed && <span>{item.name}</span>}
+              {isSyncing ? (
+                <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
+              ) : (
+                <Icon
+                  className={cn(
+                    'h-5 w-5 shrink-0 transition-transform group-hover:scale-110',
+                    isActive && 'text-white'
+                  )}
+                />
+              )}
+              {!isCollapsed && (
+                <span className="flex-1 flex items-center justify-between">
+                  <span>{item.name}</span>
+                  {newTransactionCount > 0 && (
+                    <Badge
+                      variant="default"
+                      className="ml-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs px-1.5 py-0.5"
+                    >
+                      {newTransactionCount > 99 ? '99+' : newTransactionCount}
+                    </Badge>
+                  )}
+                </span>
+              )}
+              {isCollapsed && newTransactionCount > 0 && (
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-emerald-500" />
+              )}
             </Link>
           );
         })}
