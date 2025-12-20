@@ -285,14 +285,8 @@ class CategoryListCreateAPIView(APIView):
         self.category_repository = CategoryRepository()
 
     def get(self, request):
-        """List all categories."""
-        include_global = (
-            request.query_params.get("include_global", "true").lower() == "true"
-        )
-        categories = self.category_repository.get_all_for_user(
-            request.user, include_global=include_global
-        )
-
+        """List all categories for the user."""
+        categories = self.category_repository.get_all_for_user(request.user)
         serializer = TransactionCategorySerializer(categories, many=True)
         return Response({"categories": serializer.data})
 
@@ -317,11 +311,8 @@ class CategoryListCreateAPIView(APIView):
                 parent=parent,
                 icon=serializer.validated_data.get("icon", ""),
                 color=serializer.validated_data.get("color", ""),
+                category_type=serializer.validated_data.get("type", "expense"),
             )
-
-            # Set the type field
-            category.type = category_type
-            category.save(update_fields=["type"])
 
             # Create keywords if provided
             keywords = serializer.validated_data.get("keywords", [])

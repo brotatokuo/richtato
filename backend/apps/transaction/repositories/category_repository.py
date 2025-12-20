@@ -26,27 +26,13 @@ class CategoryRepository:
         except TransactionCategory.DoesNotExist:
             return None
 
-    def get_all_for_user(
-        self, user: User, include_global: bool = True
-    ) -> List[TransactionCategory]:
-        """Get all categories for a user (including global)."""
-        if include_global:
-            return list(
-                TransactionCategory.objects.filter(
-                    Q(user=user) | Q(user__isnull=True)
-                ).order_by("name")
-            )
+    def get_all_for_user(self, user: User) -> List[TransactionCategory]:
+        """Get all categories for a user."""
         return list(TransactionCategory.objects.filter(user=user).order_by("name"))
 
-    def get_root_categories(
-        self, user: User = None, include_global: bool = True
-    ) -> List[TransactionCategory]:
-        """Get top-level categories (no parent)."""
-        queryset = TransactionCategory.objects.filter(parent__isnull=True)
-        if include_global:
-            queryset = queryset.filter(Q(user=user) | Q(user__isnull=True))
-        else:
-            queryset = queryset.filter(user=user)
+    def get_root_categories(self, user: User) -> List[TransactionCategory]:
+        """Get top-level categories (no parent) for a user."""
+        queryset = TransactionCategory.objects.filter(parent__isnull=True, user=user)
         return list(queryset.order_by("name"))
 
     def get_subcategories(
@@ -65,8 +51,7 @@ class CategoryRepository:
         parent: TransactionCategory = None,
         icon: str = "",
         color: str = "",
-        is_income: bool = False,
-        is_expense: bool = True,
+        category_type: str = "expense",
     ) -> TransactionCategory:
         """Create a new category."""
         return TransactionCategory.objects.create(
@@ -76,8 +61,7 @@ class CategoryRepository:
             parent=parent,
             icon=icon,
             color=color,
-            is_income=is_income,
-            is_expense=is_expense,
+            type=category_type,
         )
 
     def update_category(

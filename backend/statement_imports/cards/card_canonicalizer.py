@@ -175,7 +175,7 @@ class CardCanonicalizer(ABC):
                         "slug": category_name.lower()
                         .replace(" ", "-")
                         .replace("/", "-"),
-                        "is_expense": True,
+                        "type": "expense",
                     },
                 )
 

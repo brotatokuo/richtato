@@ -146,9 +146,6 @@ export interface CategoryCatalogItem {
   type: string | null;
   enabled: boolean;
   keywords?: CategoryKeyword[];
-  // Deprecated fields - kept for backward compatibility but not returned by API
-  is_income?: boolean;
-  is_expense?: boolean;
   budget: {
     id: number;
     amount: number;

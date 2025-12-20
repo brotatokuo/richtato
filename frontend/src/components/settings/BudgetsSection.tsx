@@ -88,7 +88,7 @@ export function BudgetsSection() {
   }, [fetchData]);
 
   // Filter to only show enabled expense categories
-  const expenseCategories = catalog.filter(c => c.enabled && c.is_expense);
+  const expenseCategories = catalog.filter(c => c.enabled && c.type === 'expense');
 
   // Merge budget data with progress
   const categoriesWithProgress = expenseCategories.map(cat => {

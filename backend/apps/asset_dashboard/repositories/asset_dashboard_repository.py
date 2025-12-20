@@ -21,10 +21,10 @@ class AssetDashboardRepository:
         Get Q filter for income transactions.
 
         Income is determined by:
-        1. Transactions with category marked as is_income=True, OR
+        1. Transactions with category type="income", OR
         2. Uncategorized credit transactions (fallback for backward compatibility)
         """
-        return Q(category__is_income=True) | Q(
+        return Q(category__type="income") | Q(
             category__isnull=True, transaction_type="credit"
         )
 
@@ -33,12 +33,12 @@ class AssetDashboardRepository:
         Get Q filter for expense transactions.
 
         Expense is determined by:
-        1. Transactions with category marked as is_expense=True, OR
+        1. Transactions with category type="expense", OR
         2. Uncategorized debit transactions (fallback for backward compatibility)
 
         Explicitly excludes Credit Card Payment category for safety.
         """
-        expense_filter = Q(category__is_expense=True) | Q(
+        expense_filter = Q(category__type="expense") | Q(
             category__isnull=True, transaction_type="debit"
         )
         # Explicitly exclude Credit Card Payment category
@@ -59,7 +59,7 @@ class AssetDashboardRepository:
     def get_income_sum_by_date_range(
         self, user, start_date: date, end_date: date
     ) -> Decimal:
-        """Get sum of income for a date range (based on category.is_income)."""
+        """Get sum of income for a date range (based on category.type='income')."""
         result = (
             Transaction.objects.filter(
                 user=user,
@@ -85,7 +85,7 @@ class AssetDashboardRepository:
     def get_expense_sum_by_date_range(
         self, user, start_date: date, end_date: date
     ) -> Decimal:
-        """Get sum of expenses for a date range (based on category.is_expense)."""
+        """Get sum of expenses for a date range (based on category.type='expense')."""
         result = (
             Transaction.objects.filter(
                 user=user,

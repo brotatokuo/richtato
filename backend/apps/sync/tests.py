@@ -85,12 +85,10 @@ class TellerSyncServiceCategorizationTest(TestCase):
 
         # Verify category types
         payroll_cat = keyword_map.get("payroll")
-        self.assertTrue(payroll_cat.is_income)
-        self.assertFalse(payroll_cat.is_expense)
+        self.assertEqual(payroll_cat.type, "income")
 
         starbucks_cat = keyword_map.get("starbucks")
-        self.assertFalse(starbucks_cat.is_income)
-        self.assertTrue(starbucks_cat.is_expense)
+        self.assertEqual(starbucks_cat.type, "expense")
 
     def test_categorize_by_keywords_matches_salary(self):
         """Test that salary/payroll transactions are categorized as income."""
@@ -114,7 +112,7 @@ class TellerSyncServiceCategorizationTest(TestCase):
 
         self.assertIsNotNone(category)
         self.assertEqual(category.name, "Salary")
-        self.assertTrue(category.is_income)
+        self.assertEqual(category.type, "income")
         print(f"Matched '{transaction.description}' to category: {category.name}")
 
     def test_categorize_by_keywords_matches_dining(self):

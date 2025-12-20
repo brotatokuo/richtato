@@ -78,8 +78,8 @@ export interface Category {
   full_path?: string;
   icon?: string;
   color?: string;
-  is_income: boolean;
-  is_expense: boolean;
+  type: 'income' | 'expense' | 'transfer' | 'investment' | 'other';
+  type_display?: string;
 }
 
 export interface Budget {
@@ -407,20 +407,17 @@ class TransactionsApiService {
   }
 
   /**
-   * Get all categories
+   * Get all categories for the current user
    */
-  async getCategories(includeGlobal: boolean = true): Promise<Category[]> {
-    const url = new URL(
+  async getCategories(): Promise<Category[]> {
+    const response = await fetch(
       `${this.baseUrl}/transactions/categories/`,
-      window.location.origin
+      {
+        method: 'GET',
+        headers: this.getHeaders(),
+        credentials: 'include',
+      }
     );
-    url.searchParams.append('include_global', String(includeGlobal));
-
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: this.getHeaders(),
-      credentials: 'include',
-    });
 
     const data = await this.handleResponse<{ categories: Category[] }>(
       response

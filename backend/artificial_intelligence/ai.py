@@ -51,20 +51,12 @@ class OpenAI(BaseAI):
         return self._ask(prompt)
 
     def get_user_categories(self, user: User) -> list[str]:
-        """Get all category names for a user, including global categories."""
-        # Get user-specific categories
+        """Get all category names for a user."""
+        # Get user's expense categories
         user_categories = TransactionCategory.objects.filter(
-            user=user, is_expense=True
+            user=user, type="expense"
         ).values_list("name", flat=True)
-
-        # Get global categories (user=None)
-        global_categories = TransactionCategory.objects.filter(
-            user__isnull=True, is_expense=True
-        ).values_list("name", flat=True)
-
-        # Combine and deduplicate
-        all_categories = set(user_categories) | set(global_categories)
-        return list(all_categories)
+        return list(user_categories)
 
     def categorize_transaction(self, user: User, input: str) -> str:
         category_list = self.get_user_categories(user)

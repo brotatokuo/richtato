@@ -20,23 +20,23 @@ class BudgetDashboardRepository:
         Get Q filter for expense transactions.
 
         Expense is determined by:
-        1. Transactions with category marked as is_expense=True, OR
+        1. Transactions with category type="expense", OR
         2. Uncategorized debit transactions (fallback for backward compatibility)
 
         Explicitly excludes Credit Card Payment category for safety.
         """
-        expense_filter = Q(category__is_expense=True) | Q(
+        expense_filter = Q(category__type="expense") | Q(
             category__isnull=True, transaction_type="debit"
         )
         # Explicitly exclude Credit Card Payment category
         cc_payment_exclusion = ~Q(category__slug=CC_PAYMENT_CATEGORY_SLUG)
         return expense_filter & cc_payment_exclusion
 
-    # Expense queries (based on category.is_expense or debit transactions)
+    # Expense queries (based on category.type='expense' or debit transactions)
     def get_expense_sum_by_date_range(
         self, user, start_date: date, end_date: date
     ) -> Decimal:
-        """Get sum of expenses for a date range (based on category.is_expense)."""
+        """Get sum of expenses for a date range (based on category.type='expense')."""
         result = (
             Transaction.objects.filter(
                 user=user,
@@ -71,7 +71,7 @@ class BudgetDashboardRepository:
         self, user, category, start_date: date, end_date: date
     ) -> Decimal:
         """Get sum of expenses for a specific category and date range."""
-        # When filtering by specific category, we trust the category's is_expense flag
+        # When filtering by specific category, we trust the category's type
         result = Transaction.objects.filter(
             user=user,
             category=category,
@@ -85,7 +85,7 @@ class BudgetDashboardRepository:
     ) -> Decimal:
         """Get sum of non-essential expenses for a date range.
 
-        Filters by category.is_expense=True for categorized transactions
+        Filters by category.type='expense' for categorized transactions
         or falls back to debit transactions for uncategorized.
         """
         result = (

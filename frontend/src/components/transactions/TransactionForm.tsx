@@ -40,11 +40,9 @@ export function TransactionForm({
     ? 'e.g., Salary, Freelance work'
     : 'e.g., Groceries, Gas, Coffee';
 
-  // Filter categories based on transaction type
-  const filteredCategories = categories.filter(cat => {
-    if (isCredit) return cat.is_income;
-    return cat.is_expense;
-  });
+  // Show all categories for maximum flexibility
+  // Users can select any category regardless of transaction type
+  const filteredCategories = categories;
 
   // Create number formatter for displaying amounts (without currency symbol)
   const numberFormatter = new Intl.NumberFormat('en-US', {

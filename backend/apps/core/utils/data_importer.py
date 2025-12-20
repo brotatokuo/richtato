@@ -36,7 +36,7 @@ class DataImporter:
             "Account.csv", ["name", "account_type", "institution", "last4"]
         )
         self._generate_csv_template(
-            "Category.csv", ["name", "slug", "is_income", "is_expense", "icon", "color"]
+            "Category.csv", ["name", "slug", "type", "icon", "color"]
         )
         self._generate_csv_template(
             "Transaction.csv",
@@ -96,8 +96,7 @@ class DataImporter:
                 user=self.user,
                 name=row["name"],
                 slug=row["slug"],
-                is_income=row.get("is_income", False),
-                is_expense=row.get("is_expense", True),
+                type=row.get("type", "expense"),
                 icon=row.get("icon", ""),
                 color=row.get("color", ""),
             )
@@ -121,10 +120,7 @@ class DataImporter:
                             user=self.user, slug=row["category_slug"]
                         )
                     except TransactionCategory.DoesNotExist:
-                        # Try global categories
-                        category = TransactionCategory.objects.filter(
-                            user__isnull=True, slug=row["category_slug"]
-                        ).first()
+                        pass  # Category not found, will remain None
 
                 # Determine transaction type
                 transaction_type = row.get("transaction_type", "debit")

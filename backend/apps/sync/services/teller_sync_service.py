@@ -178,19 +178,11 @@ class TellerSyncService:
             TransactionCategory or None if not found
         """
         try:
-            # Try user-specific category first
+            # Get user-specific credit card payment category
             category = TransactionCategory.objects.filter(
                 user=user,
                 slug=CC_PAYMENT_CATEGORY_SLUG,
             ).first()
-
-            # Fall back to global category
-            if not category:
-                category = TransactionCategory.objects.filter(
-                    user__isnull=True,
-                    slug=CC_PAYMENT_CATEGORY_SLUG,
-                ).first()
-
             return category
         except Exception as e:
             logger.error(f"Error getting CC payment category: {str(e)}")
