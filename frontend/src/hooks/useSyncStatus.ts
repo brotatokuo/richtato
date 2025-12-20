@@ -4,13 +4,21 @@
  * This hook automatically polls for sync status and provides:
  * - Current sync state (is_syncing, new_transaction_count, last_sync)
  * - Method to clear the new transaction count
+ * - Optional callback when sync completes
  *
  * The backend middleware automatically triggers sync when connections are stale,
  * so the frontend only needs to poll for status updates.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { syncService, SyncStatus } from '@/lib/api/sync';
+
+interface UseSyncStatusOptions {
+  /** Callback when sync completes (transitions from syncing to not syncing) */
+  onSyncComplete?: (newTransactionCount: number) => void;
+  /** Callback when sync fails */
+  onSyncError?: (error: string) => void;
+}
 
 interface UseSyncStatusReturn {
   /** Current sync status, null if not yet fetched */
@@ -23,9 +31,25 @@ interface UseSyncStatusReturn {
   refresh: () => Promise<void>;
 }
 
-export function useSyncStatus(): UseSyncStatusReturn {
+export function useSyncStatus(
+  options: UseSyncStatusOptions = {}
+): UseSyncStatusReturn {
+  const { onSyncComplete, onSyncError } = options;
   const [status, setStatus] = useState<SyncStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Track previous syncing state to detect completion
+  const wasSyncingRef = useRef(false);
+
+  // Store callbacks in refs to avoid re-running effect when they change
+  const onSyncCompleteRef = useRef(onSyncComplete);
+  const onSyncErrorRef = useRef(onSyncError);
+
+  // Keep refs up to date
+  useEffect(() => {
+    onSyncCompleteRef.current = onSyncComplete;
+    onSyncErrorRef.current = onSyncError;
+  }, [onSyncComplete, onSyncError]);
 
   const checkStatus = useCallback(async () => {
     try {
@@ -50,16 +74,37 @@ export function useSyncStatus(): UseSyncStatusReturn {
         const s = await syncService.getStatus();
         if (!isMounted) return;
 
+        // Detect sync completion (was syncing, now not syncing)
+        if (wasSyncingRef.current && !s.is_syncing) {
+          if (s.last_error) {
+            onSyncErrorRef.current?.(s.last_error);
+          } else {
+            onSyncCompleteRef.current?.(s.new_transaction_count);
+          }
+        }
+        wasSyncingRef.current = s.is_syncing;
+
         setStatus(s);
         setIsLoading(false);
 
-        // If syncing, poll more frequently (every 5 seconds)
+        // If syncing, poll more frequently (every 3 seconds)
         if (s.is_syncing && !interval) {
           interval = setInterval(async () => {
             if (!isMounted) return;
             try {
               const newStatus = await syncService.getStatus();
               if (!isMounted) return;
+
+              // Detect sync completion during polling
+              if (wasSyncingRef.current && !newStatus.is_syncing) {
+                if (newStatus.last_error) {
+                  onSyncErrorRef.current?.(newStatus.last_error);
+                } else {
+                  onSyncCompleteRef.current?.(newStatus.new_transaction_count);
+                }
+              }
+              wasSyncingRef.current = newStatus.is_syncing;
+
               setStatus(newStatus);
 
               // Stop polling when sync is complete
@@ -70,7 +115,7 @@ export function useSyncStatus(): UseSyncStatusReturn {
             } catch {
               // Ignore polling errors
             }
-          }, 5000);
+          }, 3000);
         }
       } catch {
         if (isMounted) {
@@ -92,7 +137,7 @@ export function useSyncStatus(): UseSyncStatusReturn {
       if (interval) clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
     };
-  }, []);
+  }, []); // Callbacks stored in refs to avoid infinite loops
 
   const clearNewCount = useCallback(async () => {
     await syncService.clearNewCount();

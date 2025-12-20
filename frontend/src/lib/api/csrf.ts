@@ -12,13 +12,11 @@ class CSRFService {
    */
   async getCSRFToken(): Promise<string> {
     if (this.token) {
-      console.log('CSRF: Using cached token');
       return this.token as string;
     }
 
     try {
       // First, try to get from cookie (Django sets this automatically)
-      console.log('CSRF: Checking cookies:', document.cookie);
       const cookieValue =
         document.cookie
           .split('; ')
@@ -26,28 +24,23 @@ class CSRFService {
           ?.split('=')[1] || '';
 
       if (cookieValue) {
-        console.log('CSRF: Found token in cookie');
         this.token = cookieValue as string;
         return cookieValue;
       }
 
       // If no cookie, try to get from Django endpoint
-      console.log('CSRF: No cookie, fetching from endpoint');
       const response = await fetch(`${API_BASE}/auth/csrf/`, {
         method: 'GET',
         credentials: 'include',
       });
 
-      console.log('CSRF: Endpoint response:', response.status);
-
       if (response.ok) {
         const data = await response.json();
-        console.log('CSRF: Got token from endpoint');
         this.token = data.csrfToken;
         return data.csrfToken as string;
       }
-    } catch (error) {
-      console.warn('Failed to get CSRF token:', error);
+    } catch {
+      // Ignore CSRF errors - will throw below
     }
 
     throw new Error('Unable to obtain CSRF token');

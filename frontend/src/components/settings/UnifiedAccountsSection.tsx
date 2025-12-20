@@ -36,6 +36,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { AccountDetailModal } from './AccountDetailModal';
 import { DisconnectConfirmModal } from './DisconnectConfirmModal';
 import { TellerSyncModal } from './TellerSyncModal';
@@ -79,7 +80,12 @@ export function UnifiedAccountsSection() {
     clearError: clearPlaidError,
   } = usePlaidLink();
 
-  const { status: syncStatus, refresh: refreshSyncStatus } = useSyncStatus();
+  const { status: syncStatus, refresh: refreshSyncStatus } = useSyncStatus({
+    onSyncComplete: () => {
+      // Refresh accounts list to show updated data (toast handled globally in Layout)
+      refresh();
+    },
+  });
 
   // Group accounts by type
   const bankAccounts = accounts.filter(
@@ -311,13 +317,20 @@ export function UnifiedAccountsSection() {
     try {
       const result = await syncService.triggerSyncAll();
       if (result.status === 'sync_started') {
+        toast.info('Sync started', {
+          description: 'Syncing all connected accounts...',
+        });
         // Refresh sync status to show syncing indicator
         refreshSyncStatus();
       } else if (result.status === 'no_connections') {
-        setError('No connected accounts to sync');
+        toast.warning('No connected accounts', {
+          description: 'Connect a bank account first to sync transactions',
+        });
       }
     } catch (e: any) {
-      setError(e?.message ?? 'Failed to start sync');
+      toast.error('Sync failed', {
+        description: e?.message ?? 'Failed to start sync',
+      });
     }
   };
 
@@ -530,7 +543,10 @@ export function UnifiedAccountsSection() {
               type="button"
               variant="outline"
               onClick={handleSyncAll}
-              disabled={syncStatus?.is_syncing || accounts.filter(a => a.has_connection).length === 0}
+              disabled={
+                syncStatus?.is_syncing ||
+                accounts.filter(a => a.has_connection).length === 0
+              }
             >
               {syncStatus?.is_syncing ? (
                 <>

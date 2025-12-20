@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { Sidebar } from './Sidebar';
 
 // Route to page title and icon mapping
@@ -30,6 +32,26 @@ const routeConfig: Record<
 export function Layout() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Global sync status monitoring for toast notifications
+  useSyncStatus({
+    onSyncComplete: newCount => {
+      if (newCount > 0) {
+        toast.success('Sync complete', {
+          description: `${newCount} new transaction${newCount === 1 ? '' : 's'} synced`,
+        });
+      } else {
+        toast.success('Sync complete', {
+          description: 'All accounts are up to date',
+        });
+      }
+    },
+    onSyncError: error => {
+      toast.error('Sync failed', {
+        description: error || 'An error occurred during sync',
+      });
+    },
+  });
 
   // Get the current page config based on the route (supports nested paths)
   const matchedKey = Object.keys(routeConfig).find(

@@ -48,4 +48,10 @@ urlpatterns = [
         views.SyncStatusAPIView.as_view(),
         name="sync-status",
     ),
+    # User sync job history
+    path(
+        "jobs/",
+        views.UserSyncJobsAPIView.as_view(),
+        name="user-sync-jobs",
+    ),
 ]

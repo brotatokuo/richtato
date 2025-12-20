@@ -162,10 +162,9 @@ export function AccountDetailModal({
     return option?.label || form.entity || 'Unknown';
   };
 
-  if (!account) return null;
-
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Account Details">
+    <Modal isOpen={isOpen && !!account} onClose={onClose} title="Account Details">
+      {account && (
       <div className="space-y-6">
         {/* Sync Status Section */}
         {isConnected && (
@@ -402,6 +401,7 @@ export function AccountDetailModal({
           </div>
         </div>
       </div>
+      )}
     </Modal>
   );
 }

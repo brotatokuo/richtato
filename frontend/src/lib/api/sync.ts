@@ -15,11 +15,27 @@ export interface SyncStatus {
   is_syncing: boolean;
   new_transaction_count: number;
   last_sync: string | null;
+  last_error?: string;
 }
 
 export interface SyncTriggerResponse {
   status: 'sync_started' | 'no_connections';
   message: string;
+}
+
+export interface SyncJob {
+  id: number;
+  connection_id: number;
+  institution_name: string;
+  provider: 'teller' | 'plaid';
+  status: 'running' | 'completed' | 'failed' | 'cancelled';
+  started_at: string | null;
+  completed_at: string | null;
+  transactions_synced: number;
+  transactions_skipped: number;
+  is_full_sync: boolean;
+  errors: string[];
+  duration_seconds: number | null;
 }
 
 class SyncService {
@@ -63,7 +79,6 @@ class SyncService {
     await csrfService.refreshToken();
 
     const headers = await csrfService.getHeaders();
-    console.log('Sync POST headers:', headers);
 
     const response = await fetch(`${this.baseUrl}/status/`, {
       method: 'POST',
@@ -71,15 +86,27 @@ class SyncService {
       headers,
     });
 
-    console.log('Sync POST response:', response.status);
-
     if (!response.ok) {
-      const text = await response.text();
-      console.error('Sync POST error:', text);
       throw new Error(`Failed to trigger sync: ${response.status}`);
     }
 
     return response.json();
+  }
+
+  /**
+   * Get sync job history for the current user.
+   */
+  async getSyncJobs(): Promise<SyncJob[]> {
+    const response = await fetch(`${this.baseUrl}/jobs/`, {
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get sync jobs: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.jobs;
   }
 }
 

@@ -907,6 +907,7 @@ class SyncStatusAPIView(APIView):
                     "is_syncing": status_obj.is_syncing,
                     "new_transaction_count": status_obj.new_transaction_count,
                     "last_sync": status_obj.last_sync_completed,
+                    "last_error": status_obj.last_error or "",
                 }
             )
         except Exception as e:
@@ -968,6 +969,52 @@ class SyncStatusAPIView(APIView):
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class UserSyncJobsAPIView(APIView):
+    """List all sync jobs for the current user across all connections."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Get sync job history for the user (last 20 jobs)."""
+        from apps.sync.models import SyncJob
+
+        # Get all jobs for the user's connections, ordered by most recent
+        jobs = (
+            SyncJob.objects.filter(connection__user=request.user)
+            .select_related("connection")
+            .order_by("-started_at")[:20]
+        )
+
+        # Serialize with connection info
+        jobs_data = []
+        for job in jobs:
+            jobs_data.append(
+                {
+                    "id": job.id,
+                    "connection_id": job.connection.id,
+                    "institution_name": job.connection.institution_name,
+                    "provider": job.connection.provider,
+                    "status": job.status,
+                    "started_at": job.started_at.isoformat()
+                    if job.started_at
+                    else None,
+                    "completed_at": (
+                        job.completed_at.isoformat() if job.completed_at else None
+                    ),
+                    "transactions_synced": job.transactions_synced,
+                    "transactions_skipped": job.transactions_skipped,
+                    "is_full_sync": job.is_full_sync,
+                    "errors": job.errors or [],
+                    "duration_seconds": (
+                        job.duration.total_seconds() if job.completed_at else None
+                    ),
+                }
+            )
+
+        return Response({"jobs": jobs_data})
 
 
 class CronSyncAPIView(APIView):
