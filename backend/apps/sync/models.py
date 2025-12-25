@@ -68,6 +68,11 @@ class SyncConnection(models.Model):
         blank=True,
         help_text="Date of the oldest transaction synced",
     )
+    newest_transaction_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date of the newest transaction synced (for incremental sync)",
+    )
     last_sync_error = models.TextField(blank=True)
 
     # Metadata
@@ -87,7 +92,9 @@ class SyncConnection(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.provider} - {self.institution_name}"
 
-    def mark_synced(self, backfill_complete: bool = False, oldest_date=None):
+    def mark_synced(
+        self, backfill_complete: bool = False, oldest_date=None, newest_date=None
+    ):
         """Mark connection as successfully synced."""
         self.last_sync = timezone.now()
         self.status = "active"
@@ -98,6 +105,14 @@ class SyncConnection(models.Model):
 
         if oldest_date:
             self.oldest_transaction_date = oldest_date
+
+        if newest_date:
+            # Only update if newer than current value
+            if (
+                self.newest_transaction_date is None
+                or newest_date > self.newest_transaction_date
+            ):
+                self.newest_transaction_date = newest_date
 
         self.save()
 

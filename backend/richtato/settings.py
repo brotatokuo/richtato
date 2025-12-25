@@ -43,15 +43,19 @@ PLAID_ENV = os.getenv("PLAID_ENV", "sandbox")  # sandbox, development, productio
 DEBUG = True  # Force DEBUG to True for local development
 # DEBUG = False
 
-ALLOWED_HOSTS = [
-    "localhost",
-    "127.0.0.1",
-    "0.0.0.0",
-    "backend",
-    "frontend",
-    "richtato-latest.onrender.com",
-    "richtato.com",
-]
+# Allow all hosts in development for local network access
+if DEPLOY_STAGE == "DEV":
+    ALLOWED_HOSTS = ["*"]  # Allow all hosts in development
+else:
+    ALLOWED_HOSTS = [
+        "localhost",
+        "127.0.0.1",
+        "0.0.0.0",
+        "backend",
+        "frontend",
+        "richtato-latest.onrender.com",
+        "richtato.com",
+    ]
 # Application definition
 
 INSTALLED_APPS = [
@@ -213,14 +217,18 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # CORS Configuration for React frontend
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://frontend:3000",
-    "https://richtato.com",
-]
+# In development, allow all origins for local network access
+if DEPLOY_STAGE == "DEV":
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://frontend:3000",
+        "https://richtato.com",
+    ]
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -229,15 +237,29 @@ CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to access CSRF token
 CSRF_COOKIE_NAME = "csrftoken"  # Default Django CSRF cookie name
 CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"  # Header name for CSRF token
-CSRF_TRUSTED_ORIGINS = [
-    "https://richtato-latest.onrender.com",
-    "https://richtato.com",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5173",  # Vite dev server
-    "http://127.0.0.1:5173",  # Vite dev server
-    "http://0.0.0.0:8000",
-]
+
+# CSRF trusted origins - allow all in development for local network access
+if DEPLOY_STAGE == "DEV":
+    # In development, allow all HTTP origins on common ports
+    # This allows access from any device on your local network
+    CSRF_TRUSTED_ORIGINS = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+    # Add common local network IP patterns (you can add your specific IP)
+    # Example: "http://192.168.1.100:3000" - replace with your local IP
+else:
+    CSRF_TRUSTED_ORIGINS = [
+        "https://richtato-latest.onrender.com",
+        "https://richtato.com",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",  # Vite dev server
+        "http://127.0.0.1:5173",  # Vite dev server
+        "http://0.0.0.0:8000",
+    ]
 
 # REST Framework Configuration
 REST_FRAMEWORK = {

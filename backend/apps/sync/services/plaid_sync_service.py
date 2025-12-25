@@ -310,6 +310,7 @@ class PlaidSyncService:
             account = connection.account
 
             oldest_date = None
+            newest_date = None
             total_synced = 0
             total_skipped = 0
             transactions_categorized = 0
@@ -355,9 +356,11 @@ class PlaidSyncService:
                             else ""
                         )
 
-                        # Track oldest date
+                        # Track oldest and newest dates
                         if oldest_date is None or txn_date < oldest_date:
                             oldest_date = txn_date
+                        if newest_date is None or txn_date > newest_date:
+                            newest_date = txn_date
 
                         # Check if already exists
                         existing = self.transaction_repository.get_by_external_id(
@@ -439,7 +442,9 @@ class PlaidSyncService:
             if synced_balance is not None:
                 results["balance_synced"] = float(synced_balance)
 
-            connection.mark_synced(backfill_complete=True, oldest_date=oldest_date)
+            connection.mark_synced(
+                backfill_complete=True, oldest_date=oldest_date, newest_date=newest_date
+            )
             job.mark_completed(total_synced, total_skipped)
 
             results["success"] = True
@@ -447,7 +452,8 @@ class PlaidSyncService:
                 f"Successfully synced {total_synced} transactions, "
                 f"skipped {total_skipped} duplicates across "
                 f"{results['batches_processed']} batches. "
-                f"Oldest transaction: {oldest_date if oldest_date else 'N/A'}. "
+                f"Date range: {oldest_date if oldest_date else 'N/A'} to "
+                f"{newest_date if newest_date else 'N/A'}. "
                 f"{transactions_categorized} categorized during sync."
             )
 
@@ -491,6 +497,14 @@ class PlaidSyncService:
             user = connection.user
             account = connection.account
 
+            # Get the last synced transaction date for filtering
+            last_synced_date = connection.newest_transaction_date
+            if last_synced_date:
+                logger.info(
+                    f"Incremental sync: will skip transactions on or before "
+                    f"{last_synced_date} for Plaid connection {connection.id}"
+                )
+
             transaction_limit = min(
                 getattr(settings, "PLAID_TRANSACTION_LIMIT", 500), 100
             )
@@ -499,13 +513,14 @@ class PlaidSyncService:
             )
 
             logger.info(
-                f"Fetched {len(transactions)} recent transactions for "
+                f"Fetched {len(transactions)} transactions for "
                 f"Plaid connection {connection.id}"
             )
 
             synced_count = 0
             skipped_count = 0
             categorized_count = 0
+            newest_date = connection.newest_transaction_date  # Start with existing
 
             for txn in transactions:
                 try:
@@ -519,6 +534,16 @@ class PlaidSyncService:
                     txn_amount = abs(txn_amount_raw)
                     txn_description = txn.get("description", "")
                     txn_id = txn.get("id", "")
+
+                    # Track newest date for future incremental syncs
+                    if newest_date is None or txn_date > newest_date:
+                        newest_date = txn_date
+
+                    # Skip transactions on or before the last synced date
+                    # (Plaid doesn't support date filtering at API level, so we filter here)
+                    if last_synced_date and txn_date <= last_synced_date:
+                        skipped_count += 1
+                        continue
 
                     plaid_details = txn.get("details", {})
                     plaid_category = (
@@ -593,13 +618,15 @@ class PlaidSyncService:
             if synced_balance is not None:
                 results["balance_synced"] = float(synced_balance)
 
-            connection.mark_synced()
+            # Mark connection as synced with updated newest_date
+            connection.mark_synced(newest_date=newest_date)
             job.mark_completed(synced_count, skipped_count)
 
             results["success"] = True
             results["message"] = (
                 f"Successfully synced {synced_count} new transactions, "
                 f"skipped {skipped_count} duplicates. "
+                f"Newest transaction: {newest_date if newest_date else 'N/A'}. "
                 f"{categorized_count} categorized during sync."
             )
 

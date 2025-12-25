@@ -1,7 +1,7 @@
 """Refactored Teller sync service using new unified architecture."""
 
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Optional, Tuple
 
@@ -281,8 +281,9 @@ class TellerSyncService:
             user = connection.user
             account = connection.account
 
-            # Track oldest transaction date and categorization stats
+            # Track oldest and newest transaction dates and categorization stats
             oldest_date = None
+            newest_date = None
             total_synced = 0
             total_skipped = 0
             transactions_categorized = 0
@@ -324,9 +325,11 @@ class TellerSyncService:
                             teller_details.get("category", "") if teller_details else ""
                         )
 
-                        # Track oldest date
+                        # Track oldest and newest dates
                         if oldest_date is None or txn_date < oldest_date:
                             oldest_date = txn_date
+                        if newest_date is None or txn_date > newest_date:
+                            newest_date = txn_date
 
                         # Check if already exists by external_id
                         existing = self.transaction_repository.get_by_external_id(
@@ -414,7 +417,9 @@ class TellerSyncService:
                 results["balance_synced"] = float(synced_balance)
 
             # Mark connection as successfully synced
-            connection.mark_synced(backfill_complete=True, oldest_date=oldest_date)
+            connection.mark_synced(
+                backfill_complete=True, oldest_date=oldest_date, newest_date=newest_date
+            )
 
             # Mark job as completed
             job.mark_completed(total_synced, total_skipped)
@@ -424,7 +429,8 @@ class TellerSyncService:
                 f"Successfully synced {total_synced} transactions, "
                 f"skipped {total_skipped} duplicates across "
                 f"{results['batches_processed']} batches. "
-                f"Oldest transaction: {oldest_date if oldest_date else 'N/A'}. "
+                f"Date range: {oldest_date if oldest_date else 'N/A'} to "
+                f"{newest_date if newest_date else 'N/A'}. "
                 f"{transactions_categorized} categorized during sync."
             )
 
@@ -469,22 +475,39 @@ class TellerSyncService:
             user = connection.user
             account = connection.account
 
-            # Fetch recent transactions
+            # Determine start_date for incremental sync
+            # Use the day after the newest transaction we have, to avoid re-fetching
+            start_date = None
+            if connection.newest_transaction_date:
+                # Start from the day after the last synced transaction
+                start_date = (
+                    connection.newest_transaction_date + timedelta(days=1)
+                ).strftime("%Y-%m-%d")
+                logger.info(
+                    f"Incremental sync starting from {start_date} for "
+                    f"connection {connection.id}"
+                )
+
+            # Fetch recent transactions with start_date filter
             transaction_limit = min(
                 getattr(settings, "TELLER_TRANSACTION_LIMIT", 500), 100
             )
             transactions = client.get_transactions(
-                connection.external_account_id, count=transaction_limit
+                connection.external_account_id,
+                count=transaction_limit,
+                start_date=start_date,
             )
 
             logger.info(
-                f"Fetched {len(transactions)} recent transactions for "
+                f"Fetched {len(transactions)} transactions for "
                 f"connection {connection.id}"
+                + (f" (from {start_date})" if start_date else " (no date filter)")
             )
 
             synced_count = 0
             skipped_count = 0
             categorized_count = 0
+            newest_date = connection.newest_transaction_date  # Start with existing
 
             for txn in transactions:
                 try:
@@ -499,6 +522,10 @@ class TellerSyncService:
                     teller_category = (
                         teller_details.get("category", "") if teller_details else ""
                     )
+
+                    # Track newest date for future incremental syncs
+                    if newest_date is None or txn_date > newest_date:
+                        newest_date = txn_date
 
                     # Check if already exists
                     existing = self.transaction_repository.get_by_external_id(
@@ -574,8 +601,8 @@ class TellerSyncService:
             if synced_balance is not None:
                 results["balance_synced"] = float(synced_balance)
 
-            # Mark connection as synced
-            connection.mark_synced()
+            # Mark connection as synced with updated newest_date
+            connection.mark_synced(newest_date=newest_date)
 
             # Mark job as completed
             job.mark_completed(synced_count, skipped_count)
@@ -584,6 +611,7 @@ class TellerSyncService:
             results["message"] = (
                 f"Successfully synced {synced_count} new transactions, "
                 f"skipped {skipped_count} duplicates. "
+                f"Newest transaction: {newest_date if newest_date else 'N/A'}. "
                 f"{categorized_count} categorized during sync."
             )
 

@@ -9,8 +9,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    host: true,
-    allowedHosts: ['localhost', '127.0.0.1'],
+    host: true, // Allow access from all network interfaces
+    // Removed allowedHosts restriction to allow local network access
     proxy: {
       '/api': {
         target: `http://${backendHost}:8000`,

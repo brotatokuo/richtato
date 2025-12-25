@@ -51,7 +51,7 @@ class FinancialAccount(models.Model):
         blank=True,
     )
     account_number_last4 = models.CharField(
-        max_length=4, blank=True, help_text="Last 4 digits of account number"
+        max_length=4, blank=True, null=True, help_text="Last 4 digits of account number"
     )
     account_type = models.CharField(
         max_length=20, choices=ACCOUNT_TYPE_CHOICES, default="checking"
