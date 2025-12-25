@@ -6,12 +6,12 @@ from unittest.mock import MagicMock, patch
 from apps.financial_account.models import FinancialAccount
 from apps.richtato_user.models import User
 from apps.sync.models import SyncConnection
-from apps.sync.services.teller_sync_service import TellerSyncService
+from apps.sync.services.plaid_sync_service import PlaidSyncService
 from apps.transaction.models import Transaction, TransactionCategory
 from django.test import TestCase
 
 
-class TellerSyncServiceCategorizationTest(TestCase):
+class PlaidSyncServiceCategorizationTest(TestCase):
     """Tests for transaction categorization during sync."""
 
     def setUp(self):
@@ -27,7 +27,7 @@ class TellerSyncServiceCategorizationTest(TestCase):
             account_type="checking",
             balance=Decimal("1000.00"),
         )
-        self.sync_service = TellerSyncService()
+        self.sync_service = PlaidSyncService()
 
     def test_ensure_user_categories_exist_creates_categories(self):
         """Test that categories are auto-created for users without categories."""

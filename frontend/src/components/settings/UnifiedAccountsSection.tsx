@@ -7,17 +7,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { usePlaidLink } from '@/hooks/usePlaidLink';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
-import { useTellerConnect } from '@/hooks/useTellerConnect';
+import { bankConnectionsApiService } from '@/lib/api/bankConnections';
 import { syncService } from '@/lib/api/sync';
-import { TellerSyncResult, tellerApiService } from '@/lib/api/teller';
 import { Account, transactionsApiService } from '@/lib/api/transactions';
 import {
   getBankLogo,
@@ -27,7 +20,6 @@ import {
 } from '@/lib/imageMapping';
 import {
   Building2,
-  ChevronDown,
   Cloud,
   CreditCard,
   Landmark,
@@ -39,7 +31,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { AccountDetailModal } from './AccountDetailModal';
 import { DisconnectConfirmModal } from './DisconnectConfirmModal';
-import { TellerSyncModal } from './TellerSyncModal';
+
+interface SyncResult {
+  success: boolean;
+  accounts_synced: number;
+  transactions_synced: number;
+  errors: string[];
+  message: string;
+}
 
 export function UnifiedAccountsSection() {
   const [loading, setLoading] = useState(false);
@@ -50,12 +49,10 @@ export function UnifiedAccountsSection() {
   const [showCreate, setShowCreate] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
   const [showDisconnect, setShowDisconnect] = useState(false);
-  const [showSync, setShowSync] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
 
   // Sync states
   const [syncLoading, setSyncLoading] = useState(false);
-  const [syncResult, setSyncResult] = useState<TellerSyncResult | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Field choices for account creation
@@ -65,13 +62,6 @@ export function UnifiedAccountsSection() {
   const [entityOptions, setEntityOptions] = useState<
     Array<{ value: string; label: string }>
   >([]);
-
-  const {
-    openTellerConnect,
-    loading: tellerLoading,
-    error: tellerError,
-    clearError: clearTellerError,
-  } = useTellerConnect();
 
   const {
     openPlaidLink,
@@ -101,8 +91,9 @@ export function UnifiedAccountsSection() {
       const data = await transactionsApiService.getAccounts();
       setAccounts(data);
       setError(null);
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to load accounts');
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Failed to load accounts';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -113,7 +104,7 @@ export function UnifiedAccountsSection() {
       const choices = await transactionsApiService.getAccountFieldChoices();
       setAccountTypeOptions(choices.type || []);
       setEntityOptions(choices.entity || []);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to load field choices:', e);
       setAccountTypeOptions([
         { value: 'checking', label: 'Checking' },
@@ -135,13 +126,6 @@ export function UnifiedAccountsSection() {
   }, []);
 
   useEffect(() => {
-    if (tellerError) {
-      setError(tellerError);
-      clearTellerError();
-    }
-  }, [tellerError, clearTellerError]);
-
-  useEffect(() => {
     if (plaidError) {
       setError(plaidError);
       clearPlaidError();
@@ -151,7 +135,7 @@ export function UnifiedAccountsSection() {
   // Polling for sync progress
   const pollSyncProgress = useCallback(async (connectionId: number) => {
     try {
-      const progress = await tellerApiService.getSyncJobProgress(connectionId);
+      const progress = await bankConnectionsApiService.getSyncJobProgress(connectionId);
       if (progress) {
         if (progress.status !== 'running') {
           if (pollIntervalRef.current) {
@@ -160,22 +144,15 @@ export function UnifiedAccountsSection() {
           }
           setSyncLoading(false);
           if (progress.status === 'completed') {
-            setSyncResult({
-              success: true,
-              accounts_synced: 1,
-              transactions_synced: progress.transactions_synced,
-              errors: [],
-              message: `Synced ${progress.transactions_synced} transactions`,
+            toast.success('Sync completed', {
+              description: `Synced ${progress.transactions_synced} transactions`,
             });
           } else if (progress.status === 'failed') {
-            setSyncResult({
-              success: false,
-              accounts_synced: 0,
-              transactions_synced: 0,
-              errors: progress.errors || ['Sync failed'],
-              message: 'Sync failed',
+            toast.error('Sync failed', {
+              description: progress.errors?.[0] || 'Unknown error',
             });
           }
+          refresh();
         }
       }
     } catch (e) {
@@ -202,8 +179,9 @@ export function UnifiedAccountsSection() {
       });
       await refresh();
       setShowCreate(false);
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to create account');
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Failed to create account';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -225,8 +203,9 @@ export function UnifiedAccountsSection() {
       await refresh();
       setShowDetail(false);
       setSelectedAccount(null);
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to update account');
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Failed to update account';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -240,8 +219,9 @@ export function UnifiedAccountsSection() {
       await refresh();
       setShowDetail(false);
       setSelectedAccount(null);
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to delete account');
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Failed to delete account';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -251,27 +231,24 @@ export function UnifiedAccountsSection() {
     if (!selectedAccount?.connection_id) return;
 
     setSyncLoading(true);
-    setSyncResult(null);
     setShowDetail(false);
-    setShowSync(true);
 
     try {
-      const result = await tellerApiService.syncConnection(
+      await bankConnectionsApiService.syncConnection(
         selectedAccount.connection_id
       );
-      setSyncResult(result);
+      toast.info('Sync started', {
+        description: 'Syncing transactions...',
+      });
 
       // Start polling for progress
       pollIntervalRef.current = setInterval(() => {
         pollSyncProgress(selectedAccount.connection_id!);
       }, 1000);
-    } catch (e: any) {
-      setSyncResult({
-        success: false,
-        accounts_synced: 0,
-        transactions_synced: 0,
-        errors: [e?.message || 'Unknown error'],
-        message: 'Sync failed',
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Sync failed';
+      toast.error('Sync failed', {
+        description: errorMessage,
       });
       setSyncLoading(false);
     }
@@ -287,24 +264,19 @@ export function UnifiedAccountsSection() {
 
     try {
       setLoading(true);
-      await tellerApiService.deleteConnection(
+      await bankConnectionsApiService.deleteConnection(
         selectedAccount.connection_id,
         deleteData
       );
       await refresh();
       setShowDisconnect(false);
       setSelectedAccount(null);
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to disconnect');
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Failed to disconnect';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleConnectTeller = () => {
-    openTellerConnect(() => {
-      refresh();
-    });
   };
 
   const handleConnectPlaid = () => {
@@ -327,30 +299,17 @@ export function UnifiedAccountsSection() {
           description: 'Connect a bank account first to sync transactions',
         });
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Failed to start sync';
       toast.error('Sync failed', {
-        description: e?.message ?? 'Failed to start sync',
+        description: errorMessage,
       });
     }
   };
 
-  // Check which providers are available
-  const isTellerAvailable =
-    typeof window !== 'undefined' &&
-    !!window.TellerConnect &&
-    !!import.meta.env.VITE_TELLER_APP_ID;
+  // Check if Plaid is available
   const isPlaidAvailable = typeof window !== 'undefined' && !!window.Plaid;
-  const isConnecting = tellerLoading || plaidLoading;
-
-  const closeSync = () => {
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = null;
-    }
-    setShowSync(false);
-    setSyncResult(null);
-    refresh();
-  };
+  const isConnecting = plaidLoading;
 
   // Sync status badge component
   const SyncBadge = ({ account }: { account: Account }) => {
@@ -365,7 +324,7 @@ export function UnifiedAccountsSection() {
     return (
       <div
         className={`absolute top-2 right-2 z-20 p-1 rounded-full ${statusColors[account.connection_status || 'active']} shadow-md`}
-        title={`Synced via Teller - ${account.connection_status}`}
+        title={`Synced via Plaid - ${account.connection_status}`}
       >
         <Cloud className="h-3 w-3 text-white" />
       </div>
@@ -560,34 +519,17 @@ export function UnifiedAccountsSection() {
                 </>
               )}
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline" disabled={isConnecting}>
-                  <Building2 className="h-4 w-4 mr-2" />
-                  {isConnecting ? 'Connecting...' : 'Connect Bank'}
-                  <ChevronDown className="h-4 w-4 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {isTellerAvailable && (
-                  <DropdownMenuItem onClick={handleConnectTeller}>
-                    <span className="mr-2">🏦</span>
-                    Connect via Teller
-                  </DropdownMenuItem>
-                )}
-                {isPlaidAvailable && (
-                  <DropdownMenuItem onClick={handleConnectPlaid}>
-                    <span className="mr-2">💳</span>
-                    Connect via Plaid
-                  </DropdownMenuItem>
-                )}
-                {!isTellerAvailable && !isPlaidAvailable && (
-                  <DropdownMenuItem disabled>
-                    No providers configured
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {isPlaidAvailable && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleConnectPlaid}
+                disabled={isConnecting}
+              >
+                <Building2 className="h-4 w-4 mr-2" />
+                {isConnecting ? 'Connecting...' : 'Connect Bank'}
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -667,7 +609,7 @@ export function UnifiedAccountsSection() {
         onDisconnect={handleDisconnect}
         accountTypeOptions={accountTypeOptions}
         entityOptions={entityOptions}
-        loading={loading}
+        loading={loading || syncLoading}
       />
 
       {/* Disconnect Confirm Modal */}
@@ -680,14 +622,6 @@ export function UnifiedAccountsSection() {
         onConfirm={confirmDisconnect}
         loading={loading}
         accountName={selectedAccount?.name}
-      />
-
-      {/* Sync Modal */}
-      <TellerSyncModal
-        isOpen={showSync}
-        onClose={closeSync}
-        loading={syncLoading}
-        result={syncResult}
       />
     </Card>
   );

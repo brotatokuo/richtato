@@ -12,24 +12,17 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import os
 from pathlib import Path
-from urllib.parse import urlparse
 
-from colorama import Fore
 from dotenv import load_dotenv
-from loguru import logger
 
-DEPLOY_STAGE = os.getenv("DEPLOY_STAGE") or "DEV".upper()
+load_dotenv()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
-
-# Teller API Configuration
-TELLER_CERT_PATH = os.path.join(BASE_DIR, "certs", "certificate.pem")
-TELLER_KEY_PATH = os.path.join(BASE_DIR, "certs", "private_key.pem")
-TELLER_TRANSACTION_LIMIT = int(os.getenv("TELLER_TRANSACTION_LIMIT", "500"))
 
 # Plaid API Configuration
 PLAID_CLIENT_ID = os.getenv("PLAID_CLIENT_ID")
@@ -43,19 +36,15 @@ PLAID_ENV = os.getenv("PLAID_ENV", "sandbox")  # sandbox, development, productio
 DEBUG = True  # Force DEBUG to True for local development
 # DEBUG = False
 
-# Allow all hosts in development for local network access
-if DEPLOY_STAGE == "DEV":
-    ALLOWED_HOSTS = ["*"]  # Allow all hosts in development
-else:
-    ALLOWED_HOSTS = [
-        "localhost",
-        "127.0.0.1",
-        "0.0.0.0",
-        "backend",
-        "frontend",
-        "richtato-latest.onrender.com",
-        "richtato.com",
-    ]
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "0.0.0.0",
+    "backend",
+    "frontend",
+    "richtato-latest.onrender.com",
+    "richtato.com",
+]
 # Application definition
 
 INSTALLED_APPS = [
@@ -92,12 +81,9 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.richtato_user.middleware.CleanupDemoUsersMiddleware",
-    "apps.sync.middleware.AutoSyncMiddleware",  # Auto-trigger bank sync
+    "apps.sync.middleware.AutoSyncMiddleware",
+    "apps.core.middleware.SelfPingMiddleware",
 ]
-
-if DEPLOY_STAGE == "PROD":
-    MIDDLEWARE.insert(5, "apps.core.middleware.SelfPingMiddleware")
-
 
 ROOT_URLCONF = "richtato.urls"
 
@@ -118,50 +104,16 @@ TEMPLATES = [
 ]
 
 
-def log_deploy_stage_message(
-    deploy_stage: str, color: str, icon: str, message: str, emoji: str
-) -> None:
-    logger.info(
-        f"{color}{'=' * 20} {emoji} DEPLOY_STAGE: {deploy_stage.upper()} {emoji} {'=' * 20}{Fore.RESET}\n"
-        f"{color}{message}{Fore.RESET}"
-    )
-
-
-# Load environment variables and set DEPLOY_STAGE
-def configure_database_for_stage(deploy_stage: str) -> dict:
-    """Configure Postgres for all stages (no sqlite)."""
-
-    db_url = os.getenv("DATABASE_URL")
-
-    if db_url:
-        # Parse the DATABASE_URL string (format: postgresql://user:password@host:port/dbname)
-        parsed = urlparse(db_url)
-        return {
-            "default": {
-                "ENGINE": "django.db.backends.postgresql",
-                "NAME": parsed.path.lstrip("/"),
-                "USER": parsed.username,
-                "PASSWORD": parsed.password,
-                "HOST": parsed.hostname,
-                "PORT": parsed.port or 5432,
-            }
-        }
-    else:
-        logger.info("DATABASE_URL is not set, using environment variables values")
-        return {
-            "default": {
-                "ENGINE": "django.db.backends.postgresql",
-                "NAME": os.getenv("POSTGRES_DB", "richtato"),
-                "USER": os.getenv("POSTGRES_USER", "postgres"),
-                "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
-                "HOST": os.getenv("POSTGRES_HOST", "db"),
-                "PORT": os.getenv("POSTGRES_PORT", 5433),
-            }
-        }
-
-
-load_dotenv()
-DATABASES = configure_database_for_stage(DEPLOY_STAGE)
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("POSTGRES_DB", "richtato"),
+        "USER": os.getenv("POSTGRES_USER", "postgres"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
+        "HOST": os.getenv("POSTGRES_HOST", "db"),
+        "PORT": os.getenv("POSTGRES_PORT", 5433),
+    }
+}
 
 
 # Password validation
@@ -217,18 +169,14 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # CORS Configuration for React frontend
-# In development, allow all origins for local network access
-if DEPLOY_STAGE == "DEV":
-    CORS_ALLOW_ALL_ORIGINS = True
-else:
-    CORS_ALLOWED_ORIGINS = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://frontend:3000",
-        "https://richtato.com",
-    ]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://frontend:3000",
+    "https://richtato.com",
+]
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -238,28 +186,15 @@ CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to access CSRF token
 CSRF_COOKIE_NAME = "csrftoken"  # Default Django CSRF cookie name
 CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"  # Header name for CSRF token
 
-# CSRF trusted origins - allow all in development for local network access
-if DEPLOY_STAGE == "DEV":
-    # In development, allow all HTTP origins on common ports
-    # This allows access from any device on your local network
-    CSRF_TRUSTED_ORIGINS = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ]
-    # Add common local network IP patterns (you can add your specific IP)
-    # Example: "http://192.168.1.100:3000" - replace with your local IP
-else:
-    CSRF_TRUSTED_ORIGINS = [
-        "https://richtato-latest.onrender.com",
-        "https://richtato.com",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",  # Vite dev server
-        "http://127.0.0.1:5173",  # Vite dev server
-        "http://0.0.0.0:8000",
-    ]
+CSRF_TRUSTED_ORIGINS = [
+    "https://richtato-latest.onrender.com",
+    "https://richtato.com",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",  # Vite dev server
+    "http://127.0.0.1:5173",  # Vite dev server
+    "http://0.0.0.0:8000",
+]
 
 # REST Framework Configuration
 REST_FRAMEWORK = {

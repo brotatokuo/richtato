@@ -76,7 +76,7 @@ class SyncJobSerializer(serializers.ModelSerializer):
 
 
 class SyncConnectionCreateSerializer(serializers.Serializer):
-    """Serializer for creating sync connections (Teller or Plaid).
+    """Serializer for creating sync connections (Plaid).
 
     Supports two modes:
     1. Enrollment mode: Provide access_token, institution_name, and external_enrollment_id.
@@ -84,9 +84,9 @@ class SyncConnectionCreateSerializer(serializers.Serializer):
     2. Direct mode: Provide all fields including external_account_id for a single account.
     """
 
-    # Provider: 'teller' or 'plaid' (defaults to 'teller' for backwards compatibility)
+    # Provider: 'plaid'
     provider = serializers.ChoiceField(
-        choices=["teller", "plaid"], required=False, default="teller"
+        choices=["plaid"], required=False, default="plaid"
     )
     # Either provide account_id OR account_name + account_type to auto-create
     account_id = serializers.IntegerField(required=False)

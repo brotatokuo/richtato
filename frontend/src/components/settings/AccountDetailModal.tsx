@@ -142,7 +142,7 @@ export function AccountDetailModal({
 
   const isConnected = account?.has_connection;
 
-  // Format provider name for display (e.g., "teller" -> "Teller", "plaid" -> "Plaid")
+  // Format provider name for display (e.g., "plaid" -> "Plaid")
   const getProviderDisplayName = () => {
     const source = account?.sync_source;
     if (!source) return 'Bank';

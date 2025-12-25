@@ -72,8 +72,7 @@ src/
 │   │   ├── transactions.ts    # Transactions & categories
 │   │   ├── asset-dashboard.ts # Net worth metrics
 │   │   ├── budget-dashboard.ts# Budget analytics
-│   │   ├── bankConnections.ts # Bank sync management
-│   │   ├── teller.ts          # Teller integration
+│   │   ├── bankConnections.ts # Bank sync management (Plaid)
 │   │   ├── user.ts            # User profile & settings
 │   │   └── csrf.ts            # CSRF token handling
 │   └── utils.ts        # Utility functions (cn, formatting)
@@ -84,8 +83,7 @@ src/
 │   └── ThemeContext.tsx       # Theme management
 │
 ├── hooks/              # Custom React hooks
-│   ├── usePlaidLink.ts        # Plaid bank connection
-│   └── useTellerConnect.ts    # Teller bank connection
+│   └── usePlaidLink.ts        # Plaid bank connection
 │
 └── types/              # TypeScript type definitions
 ```
@@ -207,7 +205,7 @@ useEffect(() => {
 ### Settings (`components/settings/`)
 - `CategoriesSection` - Manage transaction categories
 - `BudgetsSection` - Budget allocation management
-- `TellerSection` - Bank connection management
+- `BankConnectionsSection` - Bank connection management
 - `UnifiedAccountsSection` - Account overview
 
 ## UI Components (`components/ui/`)

@@ -34,10 +34,10 @@ Successfully implemented a hybrid transaction categorization system that keeps s
 - **Admin Interface**: Full monitoring in Django admin
 
 ### 4. Hybrid Sync Service
-- **File**: `backend/apps/sync/services/teller_sync_service.py`
+- **File**: `backend/apps/sync/services/plaid_sync_service.py`
 - **Flow**:
   1. **During Sync (Fast)**:
-     - Fetch transactions from Teller
+     - Fetch transactions from Plaid
      - Create transaction records
      - Try rule-based categorization (< 1ms per transaction)
      - If matched → mark as `categorized`, done ✓
@@ -74,7 +74,7 @@ Successfully implemented a hybrid transaction categorization system that keeps s
 ```
 1. User triggers sync
    ↓
-2. Teller transactions fetched
+2. Plaid transactions fetched
    ↓
 3. For each transaction:
    ├─ Create in database
@@ -221,7 +221,7 @@ Access Django admin to:
 ## Next Steps
 
 1. **Apply Migrations**: Start database and run `python manage.py migrate`
-2. **Test Sync**: Trigger a Teller sync and verify transactions are created
+2. **Test Sync**: Trigger a Plaid sync and verify transactions are created
 3. **Process Queue**: Run the management command to categorize pending transactions
 4. **Set Up Cron**: Schedule automatic queue processing
 5. **Update Frontend**: Add UI for pending_ai status visualization
@@ -241,7 +241,7 @@ Access Django admin to:
 - `backend/apps/transaction/serializers.py` - Added status to serializers
 - `backend/apps/categorization/models.py` - Added CategorizationQueue model
 - `backend/apps/categorization/admin.py` - Added queue admin interface
-- `backend/apps/sync/services/teller_sync_service.py` - Hybrid categorization
+- `backend/apps/sync/services/plaid_sync_service.py` - Hybrid categorization
 - `backend/env.template` - Added TELLER_TRANSACTION_LIMIT
 - `backend/richtato/settings.py` - Added TELLER_TRANSACTION_LIMIT setting
 

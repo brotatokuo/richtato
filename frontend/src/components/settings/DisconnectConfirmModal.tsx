@@ -47,7 +47,7 @@ export function DisconnectConfirmModal({
             Disconnect Bank Connection
           </DialogTitle>
           <DialogDescription>
-            Choose how to disconnect {accountName ? `"${accountName}"` : 'this account'} from Teller.
+            Choose how to disconnect {accountName ? `"${accountName}"` : 'this account'} from bank sync.
           </DialogDescription>
         </DialogHeader>
 

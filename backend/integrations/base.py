@@ -8,7 +8,7 @@ class BaseBankingClient(ABC):
     """
     Abstract base class defining the common interface for banking provider clients.
 
-    All provider implementations (Teller, Plaid, etc.) should implement this interface
+    All provider implementations (Plaid, etc.) should implement this interface
     to ensure consistent behavior across the application.
     """
 

@@ -111,7 +111,7 @@ class PlaidSyncService:
         """
         Detect the nature of a transaction based on multiple signals.
 
-        Note: Plaid amounts are OPPOSITE of Teller:
+        Note: Plaid amounts are:
         - Plaid: positive = money leaving account (expense), negative = money entering (income)
         - This method normalizes to our internal convention
 

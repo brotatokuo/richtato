@@ -32,7 +32,7 @@ class FinancialAccount(models.Model):
     ]
 
     SYNC_SOURCE_CHOICES = [
-        ("teller", "Teller"),
+        ("plaid", "Plaid"),
         ("manual", "Manual Entry"),
         ("csv", "CSV Import"),
     ]

@@ -1,19 +1,16 @@
 """Sync services."""
 
-from typing import Union
-
 from .plaid_sync_service import PlaidSyncService
-from .teller_sync_service import TellerSyncService
 
-__all__ = ["TellerSyncService", "PlaidSyncService", "get_sync_service"]
+__all__ = ["PlaidSyncService", "get_sync_service"]
 
 
-def get_sync_service(provider: str) -> Union[TellerSyncService, PlaidSyncService]:
+def get_sync_service(provider: str) -> PlaidSyncService:
     """
     Factory function to get the appropriate sync service for a provider.
 
     Args:
-        provider: The provider name ('teller', 'plaid')
+        provider: The provider name ('plaid')
 
     Returns:
         The appropriate sync service instance
@@ -21,9 +18,7 @@ def get_sync_service(provider: str) -> Union[TellerSyncService, PlaidSyncService
     Raises:
         ValueError: If the provider is unknown
     """
-    if provider == "teller":
-        return TellerSyncService()
-    elif provider == "plaid":
+    if provider == "plaid":
         return PlaidSyncService()
     else:
         raise ValueError(f"Unknown provider: {provider}")

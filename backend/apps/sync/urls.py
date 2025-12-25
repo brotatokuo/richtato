@@ -5,7 +5,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # Connection management (works for both Teller and Plaid)
+    # Connection management (Plaid)
     path(
         "connections/",
         views.SyncConnectionListCreateAPIView.as_view(),

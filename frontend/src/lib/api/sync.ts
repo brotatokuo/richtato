@@ -27,7 +27,7 @@ export interface SyncJob {
   id: number;
   connection_id: number;
   institution_name: string;
-  provider: 'teller' | 'plaid';
+  provider: 'plaid';
   status: 'running' | 'completed' | 'failed' | 'cancelled';
   started_at: string | null;
   completed_at: string | null;

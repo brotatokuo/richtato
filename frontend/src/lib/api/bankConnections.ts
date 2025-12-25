@@ -1,9 +1,9 @@
 /**
- * Bank Connections API service - supports both Teller and Plaid providers
+ * Bank Connections API service - Plaid provider
  */
 import { csrfService } from './csrf';
 
-export type Provider = 'teller' | 'plaid';
+export type Provider = 'plaid';
 
 export interface BankConnection {
   id: number;
@@ -109,14 +109,14 @@ class BankConnectionsApiService {
   }
 
   // ============================================================================
-  // Generic Connection Management (works for both Teller and Plaid)
+  // Connection Management (Plaid)
   // ============================================================================
 
   /**
    * Get all bank connections for the authenticated user
    */
   async getConnections(): Promise<BankConnection[]> {
-    const response = await fetch(`${this.baseUrl}/teller/connections/`, {
+    const response = await fetch(`${this.baseUrl}/sync/connections/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -136,7 +136,7 @@ class BankConnectionsApiService {
     input: CreateConnectionInput
   ): Promise<CreateConnectionResponse> {
     const response = await this.fetchWithCsrf(
-      `${this.baseUrl}/teller/connections/`,
+      `${this.baseUrl}/sync/connections/`,
       {
         method: 'POST',
         body: JSON.stringify(input),
@@ -156,8 +156,8 @@ class BankConnectionsApiService {
     deleteData: boolean = false
   ): Promise<void> {
     const url = deleteData
-      ? `${this.baseUrl}/teller/connections/${id}/?delete_data=true`
-      : `${this.baseUrl}/teller/connections/${id}/`;
+      ? `${this.baseUrl}/sync/connections/${id}/?delete_data=true`
+      : `${this.baseUrl}/sync/connections/${id}/`;
 
     const response = await this.fetchWithCsrf(url, {
       method: 'DELETE',
@@ -176,7 +176,7 @@ class BankConnectionsApiService {
     fullSync: boolean = false
   ): Promise<SyncResult> {
     const response = await this.fetchWithCsrf(
-      `${this.baseUrl}/teller/connections/${id}/sync/`,
+      `${this.baseUrl}/sync/connections/${id}/sync/`,
       {
         method: 'POST',
         body: JSON.stringify({ full_sync: fullSync }),
@@ -193,7 +193,7 @@ class BankConnectionsApiService {
     connectionId: number
   ): Promise<SyncJobProgress | null> {
     const response = await fetch(
-      `${this.baseUrl}/teller/connections/${connectionId}/progress/`,
+      `${this.baseUrl}/sync/connections/${connectionId}/progress/`,
       {
         method: 'GET',
         headers: this.getHeaders(),
@@ -216,7 +216,7 @@ class BankConnectionsApiService {
    */
   async createPlaidLinkToken(): Promise<string> {
     const response = await this.fetchWithCsrf(
-      `${this.baseUrl}/teller/plaid/link-token/`,
+      `${this.baseUrl}/sync/plaid/link-token/`,
       {
         method: 'POST',
         body: JSON.stringify({}),
@@ -235,7 +235,7 @@ class BankConnectionsApiService {
     institutionName: string
   ): Promise<CreateConnectionResponse> {
     const response = await this.fetchWithCsrf(
-      `${this.baseUrl}/teller/plaid/exchange-token/`,
+      `${this.baseUrl}/sync/plaid/exchange-token/`,
       {
         method: 'POST',
         body: JSON.stringify({
@@ -248,22 +248,6 @@ class BankConnectionsApiService {
     return this.handleResponse<CreateConnectionResponse>(response);
   }
 
-  // ============================================================================
-  // Teller-specific helpers (for backwards compatibility)
-  // ============================================================================
-
-  /**
-   * Create Teller connections (convenience wrapper)
-   */
-  async saveTellerConnection(
-    input: Omit<CreateConnectionInput, 'provider'>
-  ): Promise<CreateConnectionResponse> {
-    return this.createConnection({
-      ...input,
-      provider: 'teller',
-    });
-  }
-
   /**
    * Check if Plaid is configured/available
    */
@@ -271,29 +255,13 @@ class BankConnectionsApiService {
     // Check if Plaid SDK is loaded
     return typeof window !== 'undefined' && !!window.Plaid;
   }
-
-  /**
-   * Check if Teller is configured/available
-   */
-  isTellerConfigured(): boolean {
-    // Check if Teller SDK is loaded and app ID is set
-    return (
-      typeof window !== 'undefined' &&
-      !!window.TellerConnect &&
-      !!import.meta.env.VITE_TELLER_APP_ID
-    );
-  }
 }
 
 // Extend Window interface for SDK checks
 declare global {
   interface Window {
-    Plaid?: any;
-    TellerConnect?: any;
+    Plaid?: unknown;
   }
 }
 
 export const bankConnectionsApiService = new BankConnectionsApiService();
-
-// Re-export for backwards compatibility
-export { bankConnectionsApiService as tellerApiService };

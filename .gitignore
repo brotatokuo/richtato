@@ -54,3 +54,5 @@ coverage
 
 .vscode
 certs/
+
+richtato_tep_data/

@@ -62,7 +62,7 @@ class AccountService:
             user: Account owner
             name: Account nickname/name
             account_type: Type (checking/savings/credit_card)
-            institution_name: Optional bank/institution name (for Teller accounts)
+            institution_name: Optional bank/institution name (for synced accounts)
             institution_slug: Optional institution slug (for manually selected preset banks)
             account_number_last4: Last 4 digits of account number
             initial_balance: Starting balance
@@ -78,7 +78,7 @@ class AccountService:
         if institution_slug and institution_slug != "other":
             institution = self.institution_repository.get_by_slug(institution_slug)
 
-        # If no slug match, try by name (for Teller accounts or custom entries)
+        # If no slug match, try by name (for synced accounts or custom entries)
         if not institution and institution_name:
             slug = institution_name.lower().replace(" ", "_").replace("-", "_")
             institution = self.institution_repository.get_or_create_institution(

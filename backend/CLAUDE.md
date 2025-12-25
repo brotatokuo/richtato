@@ -4,7 +4,7 @@ This file provides guidance when working with the Richtato backend codebase.
 
 ## Project Overview
 
-Richtato Backend is a **Django REST Framework API** for personal finance management. It handles transaction tracking, budget management, bank account syncing (Teller/Plaid), and AI-powered categorization.
+Richtato Backend is a **Django REST Framework API** for personal finance management. It handles transaction tracking, budget management, bank account syncing (Plaid), and AI-powered categorization.
 
 ## Tech Stack
 
@@ -13,7 +13,7 @@ Richtato Backend is a **Django REST Framework API** for personal finance managem
 - **Gunicorn** WSGI server
 - **Loguru** for logging
 - **OpenAI API** for AI categorization
-- **Teller/Plaid** for bank sync integrations
+- **Plaid** for bank sync integration
 
 ## Development Commands
 
@@ -72,7 +72,7 @@ apps/{app_name}/
 | `budget` | Budget creation and allocation |
 | `budget_dashboard` | Budget analytics and trends |
 | `asset_dashboard` | Net worth, income/expense metrics |
-| `sync` | Bank sync (Teller, Plaid integration) |
+| `sync` | Bank sync (Plaid integration) |
 | `categorization` | AI categorization, keywords, history |
 | `richtato_user` | User model, auth, demo user |
 | `core` | Shared utilities, middleware |
@@ -102,7 +102,7 @@ Extended Django user with preferences.
 - date: Date
 - description: str
 - merchant_name: str
-- external_id: str  # Teller/Plaid ID
+- external_id: str  # Plaid ID
 ```
 
 ### TransactionCategory (`transaction.TransactionCategory`)
@@ -129,7 +129,7 @@ Extended Django user with preferences.
 ### BankConnection (`sync.BankConnection`)
 ```python
 - user: FK(User)
-- provider: str  # 'teller' or 'plaid'
+- provider: str  # 'plaid'
 - institution_name: str
 - access_token: str (encrypted)
 - last_synced: DateTime
@@ -172,10 +172,11 @@ Extended Django user with preferences.
 - `GET /api/v1/budget-dashboard/metrics/` - Budget vs actual
 - `GET /api/v1/budget-dashboard/category-breakdown/` - Spending by category
 
-### Bank Sync (`/api/v1/teller/`)
-- `POST /connect/` - Initialize bank connection
-- `POST /sync/` - Trigger transaction sync
+### Bank Sync (`/api/v1/sync/`)
+- `POST /plaid/link-token/` - Get Plaid Link token
+- `POST /plaid/exchange-token/` - Exchange public token and create connections
 - `GET /connections/` - List bank connections
+- `POST /connections/{id}/sync/` - Trigger transaction sync
 - `DELETE /connections/{id}/` - Disconnect bank
 
 ## Key Files
@@ -185,7 +186,6 @@ Extended Django user with preferences.
 | `richtato/settings.py` | Django configuration |
 | `richtato/urls.py` | Root URL routing |
 | `config/categories_defaults.yaml` | Default category definitions |
-| `integrations/teller/client.py` | Teller API client |
 | `integrations/plaid/client.py` | Plaid API client |
 | `artificial_intelligence/ai.py` | OpenAI categorization |
 
@@ -245,13 +245,8 @@ class TransactionService:
 
 ## Integrations
 
-### Teller (`integrations/teller/`)
-- Syncs bank accounts and transactions
-- OAuth-based connection flow
-- Webhook support for real-time updates
-
 ### Plaid (`integrations/plaid/`)
-- Alternative to Teller
+- Syncs bank accounts and transactions
 - Link token flow for connection
 
 ### OpenAI (`artificial_intelligence/ai.py`)
@@ -279,7 +274,6 @@ coverage report
 |----------|---------|
 | `SECRET_KEY` | Django secret key |
 | `DATABASE_URL` | PostgreSQL connection |
-| `TELLER_API_KEY` | Teller API credentials |
 | `PLAID_CLIENT_ID` | Plaid client ID |
 | `PLAID_SECRET` | Plaid secret |
 | `OPENAI_API_KEY` | OpenAI API key |

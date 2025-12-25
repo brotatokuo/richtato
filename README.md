@@ -5,7 +5,7 @@ A comprehensive personal finance management application for tracking expenses, i
 ## Features
 
 - **Transaction Tracking**: Track all financial transactions with automatic categorization
-- **Bank Sync**: Connect bank accounts via Teller or Plaid for automatic transaction import
+- **Bank Sync**: Connect bank accounts via Plaid for automatic transaction import
 - **Budget Management**: Set and monitor budgets by category with visual progress
 - **Net Worth Dashboard**: Track assets, liabilities, and net worth over time
 - **AI Categorization**: Intelligent transaction categorization using OpenAI
@@ -20,7 +20,7 @@ A comprehensive personal finance management application for tracking expenses, i
 - **PostgreSQL** database
 - **Gunicorn** WSGI server
 - **OpenAI** for AI categorization
-- **Teller/Plaid** for bank sync
+- **Plaid** for bank sync
 
 ### Frontend
 - **React 19** with TypeScript
@@ -44,12 +44,11 @@ richtato/
 │   │   ├── budget/              # Budget management
 │   │   ├── budget_dashboard/    # Budget analytics
 │   │   ├── asset_dashboard/     # Net worth and metrics
-│   │   ├── sync/                # Bank sync (Teller, Plaid)
+│   │   ├── sync/                # Bank sync (Plaid)
 │   │   ├── categorization/      # AI categorization
 │   │   ├── richtato_user/       # User management
 │   │   └── core/                # Shared utilities
 │   ├── integrations/            # External API clients
-│   │   ├── teller/              # Teller API
 │   │   └── plaid/               # Plaid API
 │   ├── artificial_intelligence/ # OpenAI integration
 │   ├── statement_imports/       # Bank statement parsers
@@ -131,7 +130,6 @@ DATABASE_URL=postgresql://user:password@localhost/richtato_db
 OPENAI_API_KEY=your_openai_api_key
 
 # Bank Sync (optional)
-TELLER_API_KEY=your_teller_api_key
 PLAID_CLIENT_ID=your_plaid_client_id
 PLAID_SECRET=your_plaid_secret
 
@@ -183,7 +181,7 @@ Key endpoints:
 - `/api/v1/budgets/` - Budget management
 - `/api/v1/asset-dashboard/` - Net worth metrics
 - `/api/v1/budget-dashboard/` - Budget analytics
-- `/api/v1/teller/` - Bank sync
+- `/api/v1/sync/` - Bank sync
 
 ## Deployment
 

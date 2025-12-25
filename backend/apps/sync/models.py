@@ -8,10 +8,9 @@ from django.utils import timezone
 
 
 class SyncConnection(models.Model):
-    """External data source connections (e.g., Teller, Plaid)."""
+    """External data source connections (e.g., Plaid)."""
 
     PROVIDER_CHOICES = [
-        ("teller", "Teller"),
         ("plaid", "Plaid"),
         ("manual", "Manual"),
     ]

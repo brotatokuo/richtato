@@ -191,16 +191,16 @@ Budget tracking and analytics endpoints.
 
 ---
 
-## Bank Sync (`/api/v1/teller/`)
+## Bank Sync (`/api/v1/sync/`)
 
-Bank connection and transaction sync endpoints.
+Bank connection and transaction sync endpoints (Plaid integration).
 
 ### Connections
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/connections/` | List bank connections |
-| POST | `/connections/` | Create connection (from Teller enrollment) |
+| POST | `/connections/` | Create connection |
 | GET | `/connections/{id}/` | Get connection details |
 | DELETE | `/connections/{id}/` | Disconnect bank |
 | POST | `/connections/{id}/sync/` | Trigger transaction sync |

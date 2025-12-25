@@ -102,7 +102,7 @@ def transaction_post_save(sender, instance: Transaction, created: bool, **kwargs
     Handle transaction creation or update.
 
     Updates balance history for the transaction date and all subsequent dates.
-    Note: Account.balance is NOT updated here - it's the anchor from Teller sync
+    Note: Account.balance is NOT updated here - it's the anchor from bank sync
     or manual entry, and balance history is derived from it.
     """
     account = instance.account
@@ -123,7 +123,7 @@ def transaction_post_delete(sender, instance: Transaction, **kwargs):
     Handle transaction deletion.
 
     Updates balance history for the deleted transaction's date and all subsequent dates.
-    Note: Account.balance is NOT updated here - it's the anchor from Teller sync
+    Note: Account.balance is NOT updated here - it's the anchor from bank sync
     or manual entry, and balance history is derived from it.
     """
     account = instance.account
