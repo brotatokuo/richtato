@@ -15,7 +15,7 @@ interface AccountBalanceFormProps {
 }
 
 export function AccountBalanceForm({
-  accountId,
+  accountId: _accountId,
   accountName,
   initialData,
   onSubmit,
@@ -111,7 +111,7 @@ export function AccountBalanceForm({
           <Label htmlFor="balance">Balance</Label>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-muted-foreground px-3 py-2 bg-muted rounded-md border border-input">
-              {getCurrencySymbol(preferences.currency)}
+              {getCurrencySymbol(preferences.currency || 'USD')}
             </span>
             <Input
               id="balance"

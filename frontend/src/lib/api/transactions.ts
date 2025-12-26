@@ -315,6 +315,7 @@ class TransactionsApiService {
     name: string;
     type: string;
     institution_slug?: string;
+    asset_entity_name?: string;
   }): Promise<Account> {
     let response = await fetch(`${this.baseUrl}/accounts/`, {
       method: 'POST',

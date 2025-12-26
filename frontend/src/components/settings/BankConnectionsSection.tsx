@@ -9,7 +9,6 @@ import {
 import { usePlaidLink } from '@/hooks/usePlaidLink';
 import {
   BankConnection,
-  SyncResult,
   bankConnectionsApiService,
 } from '@/lib/api/bankConnections';
 import { Building2, Cloud, Plus, RefreshCw, Unlink } from 'lucide-react';

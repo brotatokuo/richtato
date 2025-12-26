@@ -19,7 +19,7 @@ function Calendar({
   ...props
 }: CalendarProps) {
   // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/865d0811-47b7-40c2-94b4-9a9a09a7dc1a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'calendar.tsx:23',message:'Calendar component rendering',data:{mode:props.mode,selected:props.selected?'defined':'undefined',showOutsideDays},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+  fetch('http://127.0.0.1:7242/ingest/865d0811-47b7-40c2-94b4-9a9a09a7dc1a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'calendar.tsx:23',message:'Calendar component rendering',data:{mode:props.mode,showOutsideDays},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
   // #endregion
   return (
     <DayPicker
@@ -60,8 +60,10 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
-        IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
+        Chevron: ({ orientation }) => {
+          const Icon = orientation === 'left' ? ChevronLeft : ChevronRight;
+          return <Icon className="h-4 w-4" />;
+        },
       }}
       {...props}
     />

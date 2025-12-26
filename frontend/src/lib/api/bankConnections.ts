@@ -253,15 +253,10 @@ class BankConnectionsApiService {
    */
   isPlaidConfigured(): boolean {
     // Check if Plaid SDK is loaded
-    return typeof window !== 'undefined' && !!window.Plaid;
+    return typeof window !== 'undefined' && !!(window as any).Plaid;
   }
 }
 
-// Extend Window interface for SDK checks
-declare global {
-  interface Window {
-    Plaid?: unknown;
-  }
-}
+// Plaid type is declared in usePlaidLink.ts
 
 export const bankConnectionsApiService = new BankConnectionsApiService();

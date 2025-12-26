@@ -19,8 +19,10 @@ from apps.financial_account.models import (
 )
 from apps.richtato_user.models import User
 from apps.transaction.models import Transaction, TransactionCategory
+from apps.transaction.signals import transaction_post_save
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.db import transaction as db_transaction
+from django.db.models.signals import post_save
 from django.utils.text import slugify
 
 
@@ -101,7 +103,7 @@ class Command(BaseCommand):
             )
 
         try:
-            with transaction.atomic():
+            with db_transaction.atomic():
                 # Step 1: Create User
                 self.stdout.write("\n" + "=" * 50)
                 self.stdout.write("Step 1: Creating User")
@@ -432,113 +434,138 @@ class Command(BaseCommand):
     # =========================================================================
     def import_transactions(self, source_dir: Path, legacy_user_id: int):
         """Import Transactions from income.csv and expense.csv."""
-        # Import income transactions
-        income_records = self._read_csv(source_dir / "income.csv")
-        income_count = 0
-        income_category_id = self.category_id_map.get("income")
+        # Disable signals during bulk import for performance
+        post_save.disconnect(transaction_post_save, sender=Transaction)
 
-        for record in income_records:
-            if int(record["user_id"]) != legacy_user_id:
-                continue
+        try:
+            # Import income transactions
+            income_records = self._read_csv(source_dir / "income.csv")
+            income_transactions = []
+            income_count = 0
+            income_category_id = self.category_id_map.get("income")
 
-            old_account_id = int(record["account_name_id"])
-            new_account_id = self.account_id_map.get(old_account_id)
+            for record in income_records:
+                if int(record["user_id"]) != legacy_user_id:
+                    continue
 
-            if not new_account_id:
-                self._log_verbose(
-                    f"Skipping income: account {old_account_id} not found"
+                old_account_id = int(record["account_name_id"])
+                new_account_id = self.account_id_map.get(old_account_id)
+
+                if not new_account_id:
+                    self._log_verbose(
+                        f"Skipping income: account {old_account_id} not found"
+                    )
+                    continue
+
+                amount = Decimal(record["amount"])
+                if amount <= 0:
+                    continue
+
+                income_transactions.append(
+                    Transaction(
+                        user=self.new_user,
+                        account_id=new_account_id,
+                        date=record["date"],
+                        amount=amount,
+                        description=record["description"],
+                        transaction_type="credit",  # Income is credit
+                        category_id=income_category_id,
+                        status="posted",
+                        sync_source="csv",
+                        categorization_status="categorized",
+                    )
                 )
-                continue
+                income_count += 1
+                self._log_verbose(f"Income: {record['description']} - ${amount}")
 
-            amount = Decimal(record["amount"])
-            if amount <= 0:
-                continue
-
-            Transaction.objects.create(
-                user=self.new_user,
-                account_id=new_account_id,
-                date=record["date"],
-                amount=amount,
-                description=record["description"],
-                transaction_type="credit",  # Income is credit
-                category_id=income_category_id,
-                status="posted",
-                sync_source="csv",
-                categorization_status="categorized",
+            # Bulk create income transactions
+            if income_transactions:
+                self.stdout.write(
+                    f"  Creating {len(income_transactions)} income transactions..."
+                )
+                Transaction.objects.bulk_create(income_transactions, batch_size=500)
+            self.stdout.write(
+                self.style.SUCCESS(f"Income transactions imported: {income_count}")
             )
 
-            income_count += 1
-            self._log_verbose(f"Income: {record['description']} - ${amount}")
+            # Import expense transactions
+            expense_records = self._read_csv(source_dir / "expense.csv")
+            expense_transactions = []
+            expense_count = 0
 
-        self.stdout.write(
-            self.style.SUCCESS(f"Income transactions imported: {income_count}")
-        )
+            for record in expense_records:
+                if int(record["user_id"]) != legacy_user_id:
+                    continue
 
-        # Import expense transactions
-        expense_records = self._read_csv(source_dir / "expense.csv")
-        expense_count = 0
+                old_account_id = int(record["account_name_id"])
+                old_category_id = int(record["category_id"])
 
-        for record in expense_records:
-            if int(record["user_id"]) != legacy_user_id:
-                continue
+                # Check if this is a card or bank account
+                new_account_id = self.account_id_map.get(old_account_id)
+                if not new_account_id:
+                    new_account_id = self.card_to_account_map.get(old_account_id)
 
-            old_account_id = int(record["account_name_id"])
-            old_category_id = int(record["category_id"])
+                if not new_account_id:
+                    self._log_verbose(
+                        f"Skipping expense: account {old_account_id} not found"
+                    )
+                    continue
 
-            # Check if this is a card or bank account
-            new_account_id = self.account_id_map.get(old_account_id)
-            if not new_account_id:
-                new_account_id = self.card_to_account_map.get(old_account_id)
+                new_category_id = self.category_id_map.get(old_category_id)
+                if not new_category_id:
+                    # Use uncategorized
+                    new_category_id = None
 
-            if not new_account_id:
-                self._log_verbose(
-                    f"Skipping expense: account {old_account_id} not found"
+                # Amount in old system is negative for expenses, make positive
+                amount = Decimal(record["amount"])
+                if amount < 0:
+                    amount = abs(amount)
+
+                # Determine transaction type based on sign
+                # Negative amounts in old system = expense (debit)
+                # Positive amounts in old system = refund (credit)
+                original_amount = Decimal(record["amount"])
+                if original_amount < 0:
+                    transaction_type = "debit"
+                else:
+                    transaction_type = "credit"
+
+                expense_transactions.append(
+                    Transaction(
+                        user=self.new_user,
+                        account_id=new_account_id,
+                        date=record["date"],
+                        amount=amount,
+                        description=record["description"],
+                        transaction_type=transaction_type,
+                        category_id=new_category_id,
+                        status="posted",
+                        sync_source="csv",
+                        categorization_status="categorized"
+                        if new_category_id
+                        else "uncategorized",
+                        notes=record.get("details", "")
+                        if record.get("details") != "{}"
+                        else "",
+                    )
                 )
-                continue
+                expense_count += 1
+                self._log_verbose(f"Expense: {record['description']} - ${amount}")
 
-            new_category_id = self.category_id_map.get(old_category_id)
-            if not new_category_id:
-                # Use uncategorized
-                new_category_id = None
-
-            # Amount in old system is negative for expenses, make positive
-            amount = Decimal(record["amount"])
-            if amount < 0:
-                amount = abs(amount)
-
-            # Determine transaction type based on sign
-            # Negative amounts in old system = expense (debit)
-            # Positive amounts in old system = refund (credit)
-            original_amount = Decimal(record["amount"])
-            if original_amount < 0:
-                transaction_type = "debit"
-            else:
-                transaction_type = "credit"
-
-            Transaction.objects.create(
-                user=self.new_user,
-                account_id=new_account_id,
-                date=record["date"],
-                amount=amount,
-                description=record["description"],
-                transaction_type=transaction_type,
-                category_id=new_category_id,
-                status="posted",
-                sync_source="csv",
-                categorization_status="categorized"
-                if new_category_id
-                else "uncategorized",
-                notes=record.get("details", "")
-                if record.get("details") != "{}"
-                else "",
+            # Bulk create expense transactions
+            if expense_transactions:
+                self.stdout.write(
+                    f"  Creating {len(expense_transactions)} expense transactions..."
+                )
+                Transaction.objects.bulk_create(expense_transactions, batch_size=500)
+            self.stdout.write(
+                self.style.SUCCESS(f"Expense transactions imported: {expense_count}")
             )
 
-            expense_count += 1
-            self._log_verbose(f"Expense: {record['description']} - ${amount}")
-
-        self.stdout.write(
-            self.style.SUCCESS(f"Expense transactions imported: {expense_count}")
-        )
+        finally:
+            # Re-enable signals
+            post_save.connect(transaction_post_save, sender=Transaction)
+            # Note: Balance history is imported from CSV in Step 6, no recalculation needed
 
     # =========================================================================
     # Step 6: Import Account Balance History

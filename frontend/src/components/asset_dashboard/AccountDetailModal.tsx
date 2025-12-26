@@ -169,7 +169,7 @@ export function AccountDetailModal({
       <div className="space-y-4">
         {/* Trend chart at top */}
         <div className="pt-2">
-          <TrendFromHistory rows={history} currency={preferences.currency} />
+          <TrendFromHistory rows={history} currency={preferences.currency || 'USD'} />
         </div>
 
         {/* Balance and Date inputs */}
@@ -234,8 +234,8 @@ export function AccountDetailModal({
                     <HistoryRow
                       key={row.id}
                       row={row}
-                      currency={preferences.currency}
-                      dateFormat={preferences.date_format}
+                      currency={preferences.currency || 'USD'}
+                      dateFormat={preferences.date_format || 'MM/DD/YYYY'}
                       onSave={editHistoryRow}
                       onDelete={() => setDeleteConfirmId(row.id)}
                       isConfirmingDelete={deleteConfirmId === row.id}

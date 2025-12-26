@@ -32,14 +32,6 @@ import { toast } from 'sonner';
 import { AccountDetailModal } from './AccountDetailModal';
 import { DisconnectConfirmModal } from './DisconnectConfirmModal';
 
-interface SyncResult {
-  success: boolean;
-  accounts_synced: number;
-  transactions_synced: number;
-  errors: string[];
-  message: string;
-}
-
 export function UnifiedAccountsSection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
