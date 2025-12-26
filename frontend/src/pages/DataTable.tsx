@@ -1,9 +1,9 @@
-import { AccountHistoryTable } from '@/components/accounts/AccountHistoryTable';
-import { AccountTiles } from '@/components/accounts/AccountTiles';
+import { RecategorizeDialog } from '@/components/transactions/RecategorizeDialog';
+import { RecategorizeProgressModal } from '@/components/transactions/RecategorizeProgressModal';
 import { TransactionTable } from '@/components/transactions/TransactionTable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { usePreferences } from '@/contexts/PreferencesContext';
+import { useSyncStatus } from '@/hooks/useSyncStatus';
 import {
   Account,
   Category,
@@ -12,27 +12,19 @@ import {
 import { DisplayTransaction, transformTransaction } from '@/types/transactions';
 import { useEffect, useState } from 'react';
 
-// Main DataTable Component
+// Main DataTable Component - Transactions Only
 export function DataTable() {
-  const { preferences } = usePreferences();
-  const [incomeTransactions, setIncomeTransactions] = useState<
-    DisplayTransaction[]
-  >([]);
-  const [expenseTransactions, setExpenseTransactions] = useState<
-    DisplayTransaction[]
-  >([]);
-  const [incomeAccounts, setIncomeAccounts] = useState<Account[]>([]);
-  const [expenseAccounts, setExpenseAccounts] = useState<Account[]>([]);
+  const [transactions, setTransactions] = useState<DisplayTransaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'income' | 'expense' | 'accounts'>(
-    'income'
-  );
-  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(
+  const [showRecategorizeDialog, setShowRecategorizeDialog] = useState(false);
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [recategorizeTaskId, setRecategorizeTaskId] = useState<number | null>(
     null
   );
+  const { clearNewCount } = useSyncStatus();
 
   const loadData = async () => {
     try {
@@ -40,21 +32,17 @@ export function DataTable() {
       setError(null);
 
       // Load all data in parallel
-      const [incomeData, expenseData, expenseChoices, incomeAccts] =
+      const [transactionsData, categoriesData, accountsData] =
         await Promise.all([
-          transactionsApiService.getIncomeTransactions(),
-          transactionsApiService.getExpenseTransactions(),
-          transactionsApiService.getExpenseFieldChoices(),
+          transactionsApiService.getTransactions(),
+          transactionsApiService.getCategories(),
           transactionsApiService.getAccounts(),
         ]);
 
       // Transform and set data
-      setIncomeTransactions(incomeData.map(transformTransaction));
-      setExpenseTransactions(expenseData.map(transformTransaction));
-      setExpenseAccounts(expenseChoices.accounts);
-      setIncomeAccounts(incomeAccts);
-      setAccounts(incomeAccts);
-      setCategories(expenseChoices.categories);
+      setTransactions(transactionsData.map(transformTransaction));
+      setAccounts(accountsData);
+      setCategories(categoriesData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
       console.error('Error loading data:', err);
@@ -65,7 +53,33 @@ export function DataTable() {
 
   useEffect(() => {
     loadData();
-  }, []);
+    // Clear the new transaction count badge when user views this page
+    clearNewCount();
+  }, [clearNewCount]);
+
+  const handleRecategorize = async (keepExisting: boolean) => {
+    setShowRecategorizeDialog(false);
+
+    try {
+      const { task_id } =
+        await transactionsApiService.startRecategorization(keepExisting);
+      setRecategorizeTaskId(task_id);
+      setShowProgressModal(true);
+    } catch (error) {
+      console.error('Error starting recategorization:', error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to start recategorization'
+      );
+    }
+  };
+
+  const handleRecategorizeComplete = () => {
+    setShowProgressModal(false);
+    setRecategorizeTaskId(null);
+    loadData(); // Reload transactions to show updated categories
+  };
 
   if (error) {
     return (
@@ -87,80 +101,34 @@ export function DataTable() {
   return (
     <div className="min-h-screen bg-background">
       <div className="w-full max-w-full mx-auto space-y-8 sm:space-y-12 min-w-0">
-        {/* Tab toggle for both mobile and desktop */}
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant={activeTab === 'income' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setActiveTab('income')}
-            aria-pressed={activeTab === 'income'}
-          >
-            Income
-          </Button>
-          <Button
-            type="button"
-            variant={activeTab === 'expense' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setActiveTab('expense')}
-            aria-pressed={activeTab === 'expense'}
-          >
-            Expense
-          </Button>
-          <Button
-            type="button"
-            variant={activeTab === 'accounts' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setActiveTab('accounts')}
-            aria-pressed={activeTab === 'accounts'}
-          >
-            Accounts
-          </Button>
-        </div>
-
-        {/* Unified view: show one table at a time based on active tab */}
+        {/* Main content */}
         <div className="overflow-x-auto min-w-0">
-          {activeTab === 'income' ? (
-            <div className="min-w-0 max-w-full">
-              <TransactionTable
-                type="income"
-                transactions={incomeTransactions}
-                onTransactionsChange={setIncomeTransactions}
-                accounts={incomeAccounts}
-                categories={categories}
-                loading={loading}
-                onRefresh={loadData}
-              />
-            </div>
-          ) : activeTab === 'expense' ? (
-            <div className="min-w-0 max-w-full">
-              <TransactionTable
-                type="expense"
-                transactions={expenseTransactions}
-                onTransactionsChange={setExpenseTransactions}
-                accounts={expenseAccounts}
-                categories={categories}
-                loading={loading}
-                onRefresh={loadData}
-              />
-            </div>
-          ) : (
-            <div className="min-w-0 max-w-full space-y-6">
-              <AccountTiles
-                accounts={accounts}
-                selectedAccountId={selectedAccountId}
-                onAccountSelect={setSelectedAccountId}
-                currency={preferences.currency || 'USD'}
-              />
-              <AccountHistoryTable
-                accountId={selectedAccountId}
-                accounts={accounts}
-                onDataChange={loadData}
-              />
-            </div>
-          )}
+          <div className="min-w-0 max-w-full">
+            <TransactionTable
+              transactions={transactions}
+              onTransactionsChange={setTransactions}
+              accounts={accounts}
+              categories={categories}
+              loading={loading}
+              onRefresh={loadData}
+              onRecategorizeClick={() => setShowRecategorizeDialog(true)}
+            />
+          </div>
         </div>
       </div>
+
+      <RecategorizeDialog
+        open={showRecategorizeDialog}
+        onClose={() => setShowRecategorizeDialog(false)}
+        onConfirm={handleRecategorize}
+        transactionCount={transactions.length}
+      />
+
+      <RecategorizeProgressModal
+        open={showProgressModal}
+        taskId={recategorizeTaskId}
+        onComplete={handleRecategorizeComplete}
+      />
     </div>
   );
 }

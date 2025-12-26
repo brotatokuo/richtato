@@ -1,7 +1,9 @@
 import { AccountsSection } from '@/components/settings/AccountsSection';
 import { AppearanceSection } from '@/components/settings/AppearanceSection';
+import { BankConnectionsSection } from '@/components/settings/BankConnectionsSection';
+import { BudgetsSection } from '@/components/settings/BudgetsSection';
 import { CardsSection } from '@/components/settings/CardsSection';
-import { CategoriesBudgetsSection } from '@/components/settings/CategoriesBudgetsSection';
+import { CategoriesSection } from '@/components/settings/CategoriesSection';
 import { NotificationsSection } from '@/components/settings/NotificationsSection';
 
 export function Settings() {
@@ -10,9 +12,11 @@ export function Settings() {
       <div className="grid gap-6 lg:grid-cols-1">
         <AppearanceSection />
         <NotificationsSection />
+        <BankConnectionsSection />
         <AccountsSection />
         <CardsSection />
-        <CategoriesBudgetsSection />
+        <CategoriesSection />
+        <BudgetsSection />
       </div>
     </div>
   );

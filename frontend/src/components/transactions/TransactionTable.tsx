@@ -1,10 +1,14 @@
-import { SearchAndFilter } from '@/components/transactions/SearchAndFilter';
 import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ContextMenu } from '@/components/ui/ContextMenu';
+import {
+  ColumnFilterPopover,
+  FilterOption,
+} from '@/components/ui/ColumnFilterPopover';
+import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
+import { SortableHeader } from '@/components/ui/SortableHeader';
 import {
   Table,
   TableBody,
@@ -14,31 +18,26 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { formatCurrency, formatDate, formatSignedCurrency } from '@/lib/format';
 import {
   Account,
   Category,
-  CreateExpenseTransactionInput,
-  CreateIncomeTransactionInput,
-  Transaction,
   transactionsApiService,
 } from '@/lib/api/transactions';
+import { formatCurrency, formatDate } from '@/lib/format';
 import {
   DisplayTransaction,
-  FilterOption,
   TransactionFormData,
   TransactionTableProps,
   transformTransaction,
 } from '@/types/transactions';
 import {
-  ArrowUpDown,
+  ArrowLeftRight,
   Calendar,
   CreditCard,
-  Filter,
   Plus,
+  RefreshCw,
+  Search,
   Tag,
-  TrendingDown,
-  TrendingUp,
 } from 'lucide-react';
 import { Fragment, useEffect, useState } from 'react';
 
@@ -51,13 +50,13 @@ const getLocalDateString = (): string => {
 };
 
 export function TransactionTable({
-  type,
   transactions,
   onTransactionsChange,
   accounts,
   categories,
   loading,
   onRefresh,
+  onRecategorizeClick,
 }: TransactionTableProps & {
   accounts: Account[];
   categories: Category[];
@@ -66,7 +65,7 @@ export function TransactionTable({
 }) {
   const { preferences } = usePreferences();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterCategory, setFilterCategory] = useState('');
+  const [filterCategories, setFilterCategories] = useState<string[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [sortField, setSortField] = useState<keyof DisplayTransaction>('date');
@@ -76,35 +75,29 @@ export function TransactionTable({
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
-  // Context menu state
-  const [contextMenu, setContextMenu] = useState({
-    isOpen: false,
-    position: { x: 0, y: 0 },
-    field: '',
-    title: '',
-  } as {
-    isOpen: boolean;
-    position: { x: number; y: number };
-    field: string;
-    title: string;
-  });
+  // Additional filters (now arrays for multi-select)
+  const [dateFilters, setDateFilters] = useState<string[]>([]);
+  const [descriptionFilters, setDescriptionFilters] = useState<string[]>([]);
+  const [categoryTypeFilters, setCategoryTypeFilters] = useState<string[]>([]);
+  const [accountFilters, setAccountFilters] = useState<string[]>([]);
+  const [amountFilters, setAmountFilters] = useState<string[]>([]);
 
-  // Additional filters
-  const [dateFilter, setDateFilter] = useState('');
-  const [accountFilter, setAccountFilter] = useState('');
-
-  const isIncome = type === 'income';
-  const colorClass = isIncome ? 'green' : 'red';
-  const title = isIncome ? 'Income' : 'Expense';
-  const icon = isIncome ? TrendingUp : TrendingDown;
-  const IconComponent = icon;
+  // Column search terms (for filtering while typing in popover)
+  const [dateSearch, setDateSearch] = useState('');
+  const [descriptionSearch, setDescriptionSearch] = useState('');
+  const [categoryTypeSearch, setCategoryTypeSearch] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
+  const [accountSearch, setAccountSearch] = useState('');
+  const [amountSearch, setAmountSearch] = useState('');
 
   const [formData, setFormData] = useState<TransactionFormData>({
     description: '',
     date: getLocalDateString(),
     amount: '',
     account_name: '',
-    ...(isIncome ? {} : { category: '', isPositive: false }),
+    category: '',
+    notes: '',
+    transactionType: 'debit',
   });
 
   // Edit modal state
@@ -115,13 +108,29 @@ export function TransactionTable({
     date: getLocalDateString(),
     amount: '',
     account_name: '',
-    ...(isIncome ? {} : { category: '', isPositive: false }),
+    category: '',
+    notes: '',
+    transactionType: 'debit',
   });
 
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterCategory, dateFilter, accountFilter]);
+  }, [
+    searchTerm,
+    filterCategories,
+    categoryTypeFilters,
+    dateFilters,
+    descriptionFilters,
+    accountFilters,
+    amountFilters,
+    dateSearch,
+    descriptionSearch,
+    categoryTypeSearch,
+    categorySearch,
+    accountSearch,
+    amountSearch,
+  ]);
 
   const evaluateAmountField = (value: string): string => {
     const val = String(value || '').trim();
@@ -140,22 +149,80 @@ export function TransactionTable({
 
   const filteredTransactions = transactions
     .filter(transaction => {
+      // Global search bar
       const matchesSearch =
         transaction.description
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
         transaction.account.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (isIncome
-          ? false
-          : transaction.category
-              .toLowerCase()
-              .includes(searchTerm.toLowerCase()));
+        transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Checkbox selections
       const matchesCategory =
-        isIncome || !filterCategory || transaction.category === filterCategory;
-      const matchesDate = !dateFilter || transaction.date === dateFilter;
+        filterCategories.length === 0 ||
+        filterCategories.includes(transaction.category);
+      const matchesDate =
+        dateFilters.length === 0 || dateFilters.includes(transaction.date);
+      const matchesDescription =
+        descriptionFilters.length === 0 ||
+        descriptionFilters.includes(transaction.description);
+      const matchesCategoryType =
+        categoryTypeFilters.length === 0 ||
+        categoryTypeFilters.includes(transaction.categoryType);
       const matchesAccount =
-        !accountFilter || transaction.account === accountFilter;
-      return matchesSearch && matchesCategory && matchesDate && matchesAccount;
+        accountFilters.length === 0 ||
+        accountFilters.includes(transaction.account);
+      const matchesAmount =
+        amountFilters.length === 0 ||
+        amountFilters.includes(String(transaction.amount));
+
+      // Column search terms (typed in filter popover)
+      const matchesDateSearch =
+        !dateSearch ||
+        transaction.date.toLowerCase().includes(dateSearch.toLowerCase()) ||
+        formatDate(transaction.date, preferences.date_format)
+          .toLowerCase()
+          .includes(dateSearch.toLowerCase());
+      const matchesDescriptionSearch =
+        !descriptionSearch ||
+        transaction.description
+          .toLowerCase()
+          .includes(descriptionSearch.toLowerCase());
+      const matchesCategoryTypeSearch =
+        !categoryTypeSearch ||
+        transaction.categoryType
+          .toLowerCase()
+          .includes(categoryTypeSearch.toLowerCase());
+      const matchesCategorySearch =
+        !categorySearch ||
+        transaction.category
+          .toLowerCase()
+          .includes(categorySearch.toLowerCase());
+      const matchesAccountSearch =
+        !accountSearch ||
+        transaction.account.toLowerCase().includes(accountSearch.toLowerCase());
+      const matchesAmountSearch =
+        !amountSearch ||
+        String(transaction.amount).includes(amountSearch) ||
+        formatCurrency(Math.abs(transaction.amount), preferences.currency)
+          .toLowerCase()
+          .includes(amountSearch.toLowerCase());
+
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesCategoryType &&
+        matchesDate &&
+        matchesDescription &&
+        matchesAccount &&
+        matchesAmount &&
+        matchesDateSearch &&
+        matchesDescriptionSearch &&
+        matchesCategoryTypeSearch &&
+        matchesCategorySearch &&
+        matchesAccountSearch &&
+        matchesAmountSearch
+      );
     })
     .sort((a, b) => {
       const aValue = a[sortField];
@@ -184,71 +251,185 @@ export function TransactionTable({
     endIndex
   );
 
-  const categoryNames = Array.from(
-    new Set(transactions.map(t => t.category))
-  ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  // Helper: filter transactions by all filters EXCEPT the specified column
+  // This allows each column's filter options to show only relevant values
+  const getFilteredForColumn = (excludeColumn: string) => {
+    return transactions.filter(transaction => {
+      const matchesSearch =
+        transaction.description
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        transaction.account.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
 
-  // Generate filter options for context menu
-  const getFilterOptions = (field: string): FilterOption[] => {
-    switch (field) {
-      case 'date': {
-        const dates = Array.from(new Set(transactions.map(t => t.date)))
-          .sort()
-          .reverse(); // Most recent first
-        return dates.map(date => ({
-          label: formatDate(date, preferences.date_format),
-          value: date,
-          count: transactions.filter(t => t.date === date).length,
-        }));
-      }
-      case 'category':
-        return categoryNames.map(category => ({
-          label: category,
-          value: category,
-          count: transactions.filter(t => t.category === category).length,
-        }));
-      case 'account': {
-        const accountNames = Array.from(
-          new Set(transactions.map(t => t.account))
-        );
-        return accountNames.map(account => ({
-          label: account,
-          value: account,
-          count: transactions.filter(t => t.account === account).length,
-        }));
-      }
-      default:
-        return [];
-    }
-  };
+      const matchesCategory =
+        excludeColumn === 'category' ||
+        filterCategories.length === 0 ||
+        filterCategories.includes(transaction.category);
+      const matchesDate =
+        excludeColumn === 'date' ||
+        dateFilters.length === 0 ||
+        dateFilters.includes(transaction.date);
+      const matchesDescription =
+        excludeColumn === 'description' ||
+        descriptionFilters.length === 0 ||
+        descriptionFilters.includes(transaction.description);
+      const matchesCategoryType =
+        excludeColumn === 'categoryType' ||
+        categoryTypeFilters.length === 0 ||
+        categoryTypeFilters.includes(transaction.categoryType);
+      const matchesAccount =
+        excludeColumn === 'account' ||
+        accountFilters.length === 0 ||
+        accountFilters.includes(transaction.account);
+      const matchesAmount =
+        excludeColumn === 'amount' ||
+        amountFilters.length === 0 ||
+        amountFilters.includes(String(transaction.amount));
 
-  const handleContextMenu = (
-    e: React.MouseEvent,
-    field: string,
-    title: string
-  ) => {
-    e.preventDefault();
-    setContextMenu({
-      isOpen: true,
-      position: { x: e.clientX, y: e.clientY },
-      field,
-      title,
+      const matchesDateSearch =
+        excludeColumn === 'date' ||
+        !dateSearch ||
+        transaction.date.toLowerCase().includes(dateSearch.toLowerCase()) ||
+        formatDate(transaction.date, preferences.date_format)
+          .toLowerCase()
+          .includes(dateSearch.toLowerCase());
+      const matchesDescriptionSearch =
+        excludeColumn === 'description' ||
+        !descriptionSearch ||
+        transaction.description
+          .toLowerCase()
+          .includes(descriptionSearch.toLowerCase());
+      const matchesCategoryTypeSearch =
+        excludeColumn === 'categoryType' ||
+        !categoryTypeSearch ||
+        transaction.categoryType
+          .toLowerCase()
+          .includes(categoryTypeSearch.toLowerCase());
+      const matchesCategorySearch =
+        excludeColumn === 'category' ||
+        !categorySearch ||
+        transaction.category
+          .toLowerCase()
+          .includes(categorySearch.toLowerCase());
+      const matchesAccountSearch =
+        excludeColumn === 'account' ||
+        !accountSearch ||
+        transaction.account.toLowerCase().includes(accountSearch.toLowerCase());
+      const matchesAmountSearch =
+        excludeColumn === 'amount' ||
+        !amountSearch ||
+        String(transaction.amount).includes(amountSearch) ||
+        formatCurrency(Math.abs(transaction.amount), preferences.currency)
+          .toLowerCase()
+          .includes(amountSearch.toLowerCase());
+
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesCategoryType &&
+        matchesDate &&
+        matchesDescription &&
+        matchesAccount &&
+        matchesAmount &&
+        matchesDateSearch &&
+        matchesDescriptionSearch &&
+        matchesCategoryTypeSearch &&
+        matchesCategorySearch &&
+        matchesAccountSearch &&
+        matchesAmountSearch
+      );
     });
   };
 
-  const handleFilterSelect = (value: string) => {
-    switch (contextMenu.field) {
-      case 'date':
-        setDateFilter(value);
-        break;
-      case 'category':
-        setFilterCategory(value);
-        break;
-      case 'account':
-        setAccountFilter(value);
-        break;
-    }
-  };
+  // Generate filter options based on filtered data (excluding own column's filter)
+  const dateFilterOptions: FilterOption[] = (() => {
+    const filtered = getFilteredForColumn('date');
+    return Array.from(new Set(filtered.map(t => t.date)))
+      .sort()
+      .reverse()
+      .map(date => ({
+        label: formatDate(date, preferences.date_format),
+        value: date,
+        count: filtered.filter(t => t.date === date).length,
+      }));
+  })();
+
+  const descriptionFilterOptions: FilterOption[] = (() => {
+    const filtered = getFilteredForColumn('description');
+    return Array.from(new Set(filtered.map(t => t.description)))
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+      .map(description => ({
+        label: description,
+        value: description,
+        count: filtered.filter(t => t.description === description).length,
+      }));
+  })();
+
+  const categoryTypeFilterOptions: FilterOption[] = (() => {
+    const filtered = getFilteredForColumn('categoryType');
+    const typeOrder = [
+      'income',
+      'expense',
+      'transfer',
+      'investment',
+      'other',
+      'uncategorized',
+    ];
+    const types = Array.from(new Set(filtered.map(t => t.categoryType))).sort(
+      (a, b) => typeOrder.indexOf(a) - typeOrder.indexOf(b)
+    );
+    const typeLabels: Record<string, string> = {
+      income: 'Income',
+      expense: 'Expense',
+      transfer: 'Transfer',
+      investment: 'Investment',
+      other: 'Other',
+      uncategorized: 'Uncategorized',
+    };
+    return types.map(type => ({
+      label: typeLabels[type] || type,
+      value: type,
+      count: filtered.filter(t => t.categoryType === type).length,
+    }));
+  })();
+
+  const categoryFilterOptions: FilterOption[] = (() => {
+    const filtered = getFilteredForColumn('category');
+    const cats = Array.from(new Set(filtered.map(t => t.category))).sort(
+      (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })
+    );
+    return cats.map(category => ({
+      label: category,
+      value: category,
+      count: filtered.filter(t => t.category === category).length,
+    }));
+  })();
+
+  const accountFilterOptions: FilterOption[] = (() => {
+    const filtered = getFilteredForColumn('account');
+    return Array.from(new Set(filtered.map(t => t.account)))
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+      .map(account => ({
+        label: account,
+        value: account,
+        count: filtered.filter(t => t.account === account).length,
+      }));
+  })();
+
+  const amountFilterOptions: FilterOption[] = (() => {
+    const filtered = getFilteredForColumn('amount');
+    return Array.from(new Set(filtered.map(t => String(t.amount))))
+      .sort((a, b) => parseFloat(a) - parseFloat(b))
+      .map(amount => ({
+        label: formatCurrency(
+          Math.abs(parseFloat(amount)),
+          preferences.currency
+        ),
+        value: amount,
+        count: filtered.filter(t => String(t.amount) === amount).length,
+      }));
+  })();
 
   const handleSort = (field: keyof DisplayTransaction) => {
     if (sortField === field) {
@@ -261,12 +442,7 @@ export function TransactionTable({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (
-      !formData.description ||
-      !formData.amount ||
-      !formData.account_name ||
-      (!isIncome && !formData.category)
-    ) {
+    if (!formData.description || !formData.amount || !formData.account_name) {
       return;
     }
 
@@ -279,47 +455,30 @@ export function TransactionTable({
         throw new Error('Account not found');
       }
 
-      // Find the category ID for expenses
+      // Find the category ID
       let categoryId: number | undefined;
-      if (!isIncome && formData.category) {
+      if (formData.category) {
         const category = categories.find(
           cat => String(cat.id) === String(formData.category)
         );
-        if (!category) {
-          throw new Error('Category not found');
+        if (category) {
+          categoryId = category.id;
         }
-        categoryId = category.id;
       }
 
       const rawAmount = evaluateAmountField(formData.amount);
       const amountNum = parseFloat(rawAmount);
-      const signedAmount = isIncome
-        ? amountNum
-        : formData.isPositive
-          ? amountNum
-          : -amountNum;
+      const notesValue = (formData.notes ?? '').trim();
 
-      let newTransaction: Transaction;
-      if (isIncome) {
-        const incomePayload: CreateIncomeTransactionInput = {
-          description: formData.description,
-          date: formData.date,
-          amount: signedAmount,
-          Account: account.id,
-        };
-        newTransaction =
-          await transactionsApiService.createIncomeTransaction(incomePayload);
-      } else {
-        const expensePayload: CreateExpenseTransactionInput = {
-          description: formData.description,
-          date: formData.date,
-          amount: signedAmount,
-          account_name: account.id,
-          category: categoryId,
-        };
-        newTransaction =
-          await transactionsApiService.createExpenseTransaction(expensePayload);
-      }
+      const newTransaction = await transactionsApiService.createTransaction({
+        account_id: account.id,
+        date: formData.date,
+        amount: amountNum,
+        description: formData.description,
+        transaction_type: formData.transactionType,
+        category_id: categoryId,
+        notes: notesValue,
+      });
 
       // Transform and add to local state
       const transformedTransaction = transformTransaction(newTransaction);
@@ -331,13 +490,14 @@ export function TransactionTable({
         date: getLocalDateString(),
         amount: '',
         account_name: '',
-        ...(isIncome ? {} : { category: '', isPositive: false }),
+        category: '',
+        notes: '',
+        transactionType: 'debit',
       });
       setShowAddModal(false);
       onRefresh();
     } catch (error) {
       console.error('Error creating transaction:', error);
-      // You might want to show a toast notification here
     }
   };
 
@@ -345,23 +505,19 @@ export function TransactionTable({
     setSelectedTransaction(t);
     // Find account ID from account name
     const account = accounts.find(acc => acc.name === t.account);
-    // Find category ID from category name (for expenses only)
-    const category =
-      !isIncome && t.category
-        ? categories.find(cat => cat.name === t.category)
-        : null;
+    // Find category ID from category name
+    const category = t.category
+      ? categories.find(cat => cat.name === t.category)
+      : null;
 
     setEditFormData({
       description: t.description,
       date: t.date,
       amount: Math.abs(t.amount).toString(),
       account_name: account ? String(account.id) : '',
-      ...(isIncome
-        ? {}
-        : {
-            category: category ? String(category.id) : '',
-            isPositive: t.amount >= 0,
-          }),
+      category: category ? String(category.id) : '',
+      notes: t.notes ?? '',
+      transactionType: t.transactionType,
     });
     setShowEditModal(true);
   };
@@ -376,9 +532,9 @@ export function TransactionTable({
       );
       if (!account) throw new Error('Account not found');
 
-      // Find the category ID for expenses
+      // Find the category ID
       let categoryId: number | undefined;
-      if (!isIncome && editFormData.category) {
+      if (editFormData.category) {
         const category = categories.find(
           cat => String(cat.id) === String(editFormData.category)
         );
@@ -387,63 +543,21 @@ export function TransactionTable({
         }
       }
 
-      let payload: any;
       const rawEditAmount = evaluateAmountField(editFormData.amount);
       const amountValue = parseFloat(rawEditAmount);
-      const signedAmount = isIncome
-        ? amountValue
-        : editFormData.isPositive
-          ? amountValue
-          : -amountValue;
-      if (isIncome) {
-        // Income expects Account as primary key id
-        payload = {
-          description: editFormData.description,
-          date: editFormData.date,
-          amount: signedAmount,
-          Account: account.id,
-        };
-      } else {
-        // Expense expects account_name (id) and optional category (id)
-        payload = {
-          description: editFormData.description,
-          date: editFormData.date,
-          amount: signedAmount,
-          account_name: account.id,
-          ...(categoryId !== undefined ? { category: categoryId } : {}),
-        };
-      }
+      const notesValue = (editFormData.notes ?? '').trim();
 
       const idNum = Number(selectedTransaction.id);
-      let updated: Transaction;
-      if (isIncome) {
-        updated = await transactionsApiService.updateIncomeTransaction(
-          idNum,
-          payload
-        );
-      } else {
-        updated = await transactionsApiService.updateExpenseTransaction(
-          idNum,
-          payload
-        );
-      }
+      const updated = await transactionsApiService.updateTransaction(idNum, {
+        description: editFormData.description,
+        date: editFormData.date,
+        amount: amountValue,
+        category_id: categoryId ?? null,
+        transaction_type: editFormData.transactionType,
+        notes: notesValue,
+      });
 
-      // Enrich with names for consistent display mapping
-      const categoryName =
-        !isIncome && categoryId
-          ? categories.find(cat => cat.id === categoryId)?.name ||
-            selectedTransaction.category
-          : selectedTransaction.category;
-      const enriched = (
-        isIncome
-          ? { ...updated, Account: account.name }
-          : {
-              ...updated,
-              Account: account.name,
-              Category: categoryName,
-            }
-      ) as any;
-      const transformed = transformTransaction(enriched);
+      const transformed = transformTransaction(updated);
       const next = transactions.map(t =>
         t.id === selectedTransaction.id ? transformed : t
       );
@@ -463,11 +577,7 @@ export function TransactionTable({
     if (!confirmDelete) return;
     try {
       const idNum = Number(selectedTransaction.id);
-      if (isIncome) {
-        await transactionsApiService.deleteIncomeTransaction(idNum);
-      } else {
-        await transactionsApiService.deleteExpenseTransaction(idNum);
-      }
+      await transactionsApiService.deleteTransaction(idNum);
       const next = transactions.filter(t => t.id !== selectedTransaction.id);
       onTransactionsChange(next);
       setShowEditModal(false);
@@ -479,7 +589,7 @@ export function TransactionTable({
   };
 
   const getTableHeaders = () => {
-    const baseHeaders = [
+    return [
       {
         field: 'date' as keyof DisplayTransaction,
         label: 'Date',
@@ -491,27 +601,26 @@ export function TransactionTable({
         filterable: false,
       },
       {
+        field: 'categoryType' as keyof DisplayTransaction,
+        label: 'Type',
+        filterable: true,
+      },
+      {
+        field: 'category' as keyof DisplayTransaction,
+        label: 'Category',
+        filterable: true,
+      },
+      {
         field: 'account' as keyof DisplayTransaction,
         label: 'Account',
         filterable: true,
       },
+      {
+        field: 'amount' as keyof DisplayTransaction,
+        label: 'Amount',
+        filterable: false,
+      },
     ];
-
-    if (!isIncome) {
-      baseHeaders.splice(2, 0, {
-        field: 'category' as keyof DisplayTransaction,
-        label: 'Category',
-        filterable: true,
-      });
-    }
-
-    baseHeaders.push({
-      field: 'amount' as keyof DisplayTransaction,
-      label: 'Amount',
-      filterable: false,
-    });
-
-    return baseHeaders;
   };
 
   const renderTableCell = (
@@ -536,29 +645,79 @@ export function TransactionTable({
         );
       case 'account':
         return <TableCell key={String(field)}>{transaction.account}</TableCell>;
-      case 'category':
+      case 'categoryType': {
+        const typeConfig = {
+          income: {
+            label: 'Income',
+            bgColor: 'bg-emerald-100 dark:bg-emerald-900/20',
+            textColor: 'text-emerald-800 dark:text-emerald-400',
+          },
+          expense: {
+            label: 'Expense',
+            bgColor: 'bg-orange-100 dark:bg-orange-900/20',
+            textColor: 'text-orange-800 dark:text-orange-400',
+          },
+          transfer: {
+            label: 'Transfer',
+            bgColor: 'bg-blue-100 dark:bg-blue-900/20',
+            textColor: 'text-blue-800 dark:text-blue-400',
+          },
+          investment: {
+            label: 'Investment',
+            bgColor: 'bg-purple-100 dark:bg-purple-900/20',
+            textColor: 'text-purple-800 dark:text-purple-400',
+          },
+          other: {
+            label: 'Other',
+            bgColor: 'bg-gray-100 dark:bg-gray-900/20',
+            textColor: 'text-gray-800 dark:text-gray-400',
+          },
+          uncategorized: {
+            label: 'Uncategorized',
+            bgColor: 'bg-muted',
+            textColor: 'text-muted-foreground',
+          },
+        };
+        const config = typeConfig[transaction.categoryType];
         return (
           <TableCell key={String(field)}>
-            <span className="px-2 py-1 rounded text-xs bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+            <span
+              className={`px-2 py-1 rounded text-xs font-medium ${config.bgColor} ${config.textColor}`}
+            >
+              {config.label}
+            </span>
+          </TableCell>
+        );
+      }
+      case 'category': {
+        const isCredit = transaction.transactionType === 'credit';
+        const bgColor = isCredit
+          ? 'bg-green-100 dark:bg-green-900/20'
+          : 'bg-red-100 dark:bg-red-900/20';
+        const textColor = isCredit
+          ? 'text-green-800 dark:text-green-400'
+          : 'text-red-800 dark:text-red-400';
+        return (
+          <TableCell key={String(field)}>
+            <span
+              className={`px-2 py-1 rounded text-xs ${bgColor} ${textColor}`}
+            >
               {transaction.category}
             </span>
           </TableCell>
         );
+      }
       case 'amount': {
-        const amount = transaction.amount;
-        const isPositiveAmount = amount >= 0;
-        const sign = isIncome ? '+' : isPositiveAmount ? '+' : '-';
-        const color = isIncome
-          ? 'text-green-600'
-          : isPositiveAmount
-            ? 'text-green-600'
-            : 'text-red-600';
+        const isCredit = transaction.transactionType === 'credit';
+        const sign = isCredit ? '+' : '-';
+        const color = isCredit ? 'text-green-600' : 'text-red-600';
         return (
           <TableCell
             key={String(field)}
             className={`text-right font-medium ${color}`}
           >
-            {sign}{formatCurrency(Math.abs(amount), preferences.currency)}
+            {sign}
+            {formatCurrency(Math.abs(transaction.amount), preferences.currency)}
           </TableCell>
         );
       }
@@ -572,70 +731,141 @@ export function TransactionTable({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-card-foreground flex items-center gap-2">
-            <IconComponent className={`h-6 w-6 text-${colorClass}-600`} />
-            {title}
-          </h2>
-          {/* Active filters indicator */}
-          {(dateFilter || accountFilter || (!isIncome && filterCategory)) && (
-            <div className="flex items-center gap-2 mt-2">
-              <span className="text-sm text-muted-foreground">
-                Active filters:
-              </span>
-              {dateFilter && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/15 text-primary text-xs rounded-full dark:bg-primary/20 dark:text-primary">
-                  <Calendar className="h-3 w-3" />
-                  {formatDate(dateFilter, preferences.date_format)}
-                </span>
-              )}
-              {!isIncome && filterCategory && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground text-xs rounded-full dark:bg-secondary/20 dark:text-secondary-foreground">
-                  <Tag className="h-3 w-3" />
-                  {filterCategory}
-                </span>
-              )}
-              {accountFilter && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full dark:bg-green-900/20 dark:text-green-400">
-                  <CreditCard className="h-3 w-3" />
-                  {accountFilter}
-                </span>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setDateFilter('');
-                  setAccountFilter('');
-                  setFilterCategory('');
-                  setCurrentPage(1);
-                }}
-                className="text-xs h-6 px-2"
-              >
-                Clear all
-              </Button>
-            </div>
-          )}
+    <div className="space-y-3">
+      {/* Header with Search and Filters */}
+      <div className="flex items-center gap-4 flex-wrap py-2">
+        <h2 className="text-xl font-bold text-card-foreground flex items-center gap-2 shrink-0">
+          <ArrowLeftRight className="h-5 w-5 text-primary" />
+          Transactions
+        </h2>
+        <div className="flex-1 min-w-[200px] relative">
+          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Search transactions..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="pl-8 h-8 text-sm"
+          />
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setShowAddModal(true)} variant="default">
-            <Plus className="h-4 w-4 mr-2" />
-            Add {isIncome ? 'Income' : 'Expense'}
+        <Button
+          onClick={() => setShowAddModal(true)}
+          variant="default"
+          size="sm"
+        >
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
+          Add Transaction
+        </Button>
+        {onRecategorizeClick && (
+          <Button
+            onClick={onRecategorizeClick}
+            disabled={loading || transactions.length === 0}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+            Recategorize All
+          </Button>
+        )}
+      </div>
+
+      {/* Active filters indicator */}
+      {(dateFilters.length > 0 ||
+        descriptionFilters.length > 0 ||
+        categoryTypeFilters.length > 0 ||
+        accountFilters.length > 0 ||
+        filterCategories.length > 0 ||
+        amountFilters.length > 0 ||
+        dateSearch ||
+        descriptionSearch ||
+        categoryTypeSearch ||
+        categorySearch ||
+        accountSearch ||
+        amountSearch) && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm text-muted-foreground">Active filters:</span>
+          {dateFilters.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/15 text-primary text-xs rounded-full">
+              <Calendar className="h-3 w-3" />
+              {dateFilters.length === 1
+                ? formatDate(dateFilters[0], preferences.date_format)
+                : `${dateFilters.length} dates`}
+            </span>
+          )}
+          {descriptionFilters.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full dark:bg-blue-900/20 dark:text-blue-400">
+              {descriptionFilters.length === 1
+                ? descriptionFilters[0].substring(0, 20) +
+                  (descriptionFilters[0].length > 20 ? '...' : '')
+                : `${descriptionFilters.length} descriptions`}
+            </span>
+          )}
+          {categoryTypeFilters.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full dark:bg-purple-900/20 dark:text-purple-400">
+              <Tag className="h-3 w-3" />
+              {categoryTypeFilters.length === 1
+                ? categoryTypeFilters[0].charAt(0).toUpperCase() +
+                  categoryTypeFilters[0].slice(1)
+                : `${categoryTypeFilters.length} types`}
+            </span>
+          )}
+          {filterCategories.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-secondary text-secondary-foreground text-xs rounded-full">
+              <Tag className="h-3 w-3" />
+              {filterCategories.length === 1
+                ? filterCategories[0]
+                : `${filterCategories.length} categories`}
+            </span>
+          )}
+          {accountFilters.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full dark:bg-green-900/20 dark:text-green-400">
+              <CreditCard className="h-3 w-3" />
+              {accountFilters.length === 1
+                ? accountFilters[0]
+                : `${accountFilters.length} accounts`}
+            </span>
+          )}
+          {amountFilters.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-800 text-xs rounded-full dark:bg-amber-900/20 dark:text-amber-400">
+              {amountFilters.length === 1
+                ? formatCurrency(
+                    Math.abs(parseFloat(amountFilters[0])),
+                    preferences.currency
+                  )
+                : `${amountFilters.length} amounts`}
+            </span>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setDateFilters([]);
+              setDescriptionFilters([]);
+              setCategoryTypeFilters([]);
+              setAccountFilters([]);
+              setFilterCategories([]);
+              setAmountFilters([]);
+              setDateSearch('');
+              setDescriptionSearch('');
+              setCategoryTypeSearch('');
+              setCategorySearch('');
+              setAccountSearch('');
+              setAmountSearch('');
+              setCurrentPage(1);
+            }}
+            className="text-xs h-6 px-2"
+          >
+            Clear all
           </Button>
         </div>
-      </div>
+      )}
 
       {/* Add Modal */}
       <Modal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        title={`Add New ${isIncome ? 'Income' : 'Expense'}`}
+        title="Add New Transaction"
       >
         <TransactionForm
-          type={type}
           formData={formData}
           onFormChange={setFormData}
           onSubmit={handleSubmit}
@@ -643,16 +873,6 @@ export function TransactionTable({
           categories={categories}
         />
       </Modal>
-
-      {/* Search and Filters */}
-      <SearchAndFilter
-        type={type}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        filterCategory={filterCategory}
-        onFilterChange={setFilterCategory}
-        categories={categoryNames}
-      />
 
       {/* Mobile list (<= md) */}
       <div className="md:hidden">
@@ -665,32 +885,32 @@ export function TransactionTable({
             ) : (
               <div className="divide-y">
                 {paginatedTransactions.map((t, index) => {
-                  const amount = t.amount;
-                  const isPositiveAmount = amount >= 0;
-                  const sign = isIncome ? '+' : isPositiveAmount ? '+' : '-';
-                  const color = isIncome
-                    ? 'text-green-600'
-                    : isPositiveAmount
-                      ? 'text-green-600'
-                      : 'text-red-600';
+                  const isCredit = t.transactionType === 'credit';
+                  const sign = isCredit ? '+' : '-';
+                  const color = isCredit ? 'text-green-600' : 'text-red-600';
                   return (
                     <div
                       key={`${t.id}-${index}`}
-                      className="p-4 w-full flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
+                      className="p-4 w-full flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between cursor-pointer hover:bg-muted/50"
+                      onClick={() => openEditModal(t)}
                     >
                       <div className="space-y-1 min-w-0 sm:pr-2">
                         <div className="text-sm font-medium whitespace-normal break-words">
                           {t.description}
                         </div>
                         <div className="text-xs text-muted-foreground whitespace-normal break-words">
-                          {formatDate(t.date, preferences.date_format)} • {t.account}
-                          {!isIncome && t.category ? ` • ${t.category}` : ''}
+                          {formatDate(t.date, preferences.date_format)} •{' '}
+                          {t.account} • {t.category}
                         </div>
                       </div>
                       <div
                         className={`sm:ml-4 sm:text-right text-sm font-semibold ${color}`}
                       >
-                        {sign}{formatCurrency(Math.abs(amount), preferences.currency)}
+                        {sign}
+                        {formatCurrency(
+                          Math.abs(t.amount),
+                          preferences.currency
+                        )}
                       </div>
                     </div>
                   );
@@ -712,31 +932,85 @@ export function TransactionTable({
                     {getTableHeaders().map(header => (
                       <TableHead
                         key={header.field}
-                        className={`cursor-pointer hover:bg-muted/50 whitespace-normal break-words ${
+                        className={`whitespace-normal break-words ${
                           header.field === 'amount' ? 'text-right' : ''
                         } min-w-0`}
-                        onClick={() =>
-                          handleSort(header.field as keyof DisplayTransaction)
-                        }
-                        onContextMenu={
-                          header.filterable
-                            ? e =>
-                                handleContextMenu(e, header.field, header.label)
-                            : undefined
-                        }
                       >
                         <div
-                          className={`flex items-center gap-2 min-w-0 ${
+                          className={`flex items-center gap-1 min-w-0 ${
                             header.field === 'amount' ? 'justify-end' : ''
-                          } flex-wrap`}
+                          }`}
                         >
-                          {header.label}
-                          <div className="flex items-center gap-1">
-                            {header.filterable && (
-                              <Filter className="h-3 w-3 text-muted-foreground" />
-                            )}
-                            <ArrowUpDown className="h-4 w-4" />
-                          </div>
+                          <SortableHeader
+                            label={header.label}
+                            field={header.field}
+                            sortField={sortField}
+                            sortDirection={sortDirection}
+                            onSort={field =>
+                              handleSort(field as keyof DisplayTransaction)
+                            }
+                            align={header.field === 'amount' ? 'right' : 'left'}
+                          />
+                          {header.field === 'date' && (
+                            <ColumnFilterPopover
+                              title="Filter by Date"
+                              options={dateFilterOptions}
+                              selectedValues={dateFilters}
+                              onSelectionChange={setDateFilters}
+                              searchTerm={dateSearch}
+                              onSearchChange={setDateSearch}
+                            />
+                          )}
+                          {header.field === 'description' && (
+                            <ColumnFilterPopover
+                              title="Filter by Description"
+                              options={descriptionFilterOptions}
+                              selectedValues={descriptionFilters}
+                              onSelectionChange={setDescriptionFilters}
+                              searchTerm={descriptionSearch}
+                              onSearchChange={setDescriptionSearch}
+                            />
+                          )}
+                          {header.field === 'categoryType' && (
+                            <ColumnFilterPopover
+                              title="Filter by Type"
+                              options={categoryTypeFilterOptions}
+                              selectedValues={categoryTypeFilters}
+                              onSelectionChange={setCategoryTypeFilters}
+                              searchTerm={categoryTypeSearch}
+                              onSearchChange={setCategoryTypeSearch}
+                            />
+                          )}
+                          {header.field === 'category' && (
+                            <ColumnFilterPopover
+                              title="Filter by Category"
+                              options={categoryFilterOptions}
+                              selectedValues={filterCategories}
+                              onSelectionChange={setFilterCategories}
+                              searchTerm={categorySearch}
+                              onSearchChange={setCategorySearch}
+                            />
+                          )}
+                          {header.field === 'account' && (
+                            <ColumnFilterPopover
+                              title="Filter by Account"
+                              options={accountFilterOptions}
+                              selectedValues={accountFilters}
+                              onSelectionChange={setAccountFilters}
+                              searchTerm={accountSearch}
+                              onSearchChange={setAccountSearch}
+                            />
+                          )}
+                          {header.field === 'amount' && (
+                            <ColumnFilterPopover
+                              title="Filter by Amount"
+                              options={amountFilterOptions}
+                              selectedValues={amountFilters}
+                              onSelectionChange={setAmountFilters}
+                              searchTerm={amountSearch}
+                              onSearchChange={setAmountSearch}
+                            />
+                          )}
                         </div>
                       </TableHead>
                     ))}
@@ -789,22 +1063,10 @@ export function TransactionTable({
       {totalItems === 0 && (
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardContent className="text-center py-8">
-            <p className="text-muted-foreground">
-              No {isIncome ? 'income' : 'expense'} transactions found.
-            </p>
+            <p className="text-muted-foreground">No transactions found.</p>
           </CardContent>
         </Card>
       )}
-
-      {/* Context Menu */}
-      <ContextMenu
-        isOpen={contextMenu.isOpen}
-        position={contextMenu.position}
-        onClose={() => setContextMenu(prev => ({ ...prev, isOpen: false }))}
-        options={getFilterOptions(contextMenu.field)}
-        onSelect={handleFilterSelect}
-        title={contextMenu.title}
-      />
 
       {/* Edit Modal */}
       <Modal
@@ -813,10 +1075,9 @@ export function TransactionTable({
           setShowEditModal(false);
           setSelectedTransaction(null);
         }}
-        title={`Edit ${isIncome ? 'Income' : 'Expense'}`}
+        title="Edit Transaction"
       >
         <TransactionForm
-          type={type}
           formData={editFormData}
           onFormChange={setEditFormData}
           onSubmit={handleEditSubmit}

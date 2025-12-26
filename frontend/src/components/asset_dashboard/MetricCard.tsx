@@ -19,6 +19,8 @@ interface MetricCardProps {
   };
   icon?: React.ReactNode;
   info?: React.ReactNode;
+  valueClassName?: string;
+  children?: React.ReactNode;
 }
 
 export function MetricCard({
@@ -28,12 +30,14 @@ export function MetricCard({
   trend,
   icon,
   info,
+  valueClassName,
+  children,
 }: MetricCardProps) {
   const isPositiveTrend = trend && trend.value > 0;
   const isNegativeTrend = trend && trend.value < 0;
 
   return (
-    <Card>
+    <Card className="bg-card/50 backdrop-blur-sm border-border/50">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -62,7 +66,9 @@ export function MetricCard({
         {icon}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-foreground">{value}</div>
+        <div className={`text-2xl font-bold ${valueClassName || 'text-foreground'}`}>
+          {value}
+        </div>
         {subtitle && (
           <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
         )}
@@ -87,6 +93,7 @@ export function MetricCard({
             </span>
           </div>
         )}
+        {children}
       </CardContent>
     </Card>
   );

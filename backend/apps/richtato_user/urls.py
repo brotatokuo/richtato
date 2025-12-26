@@ -13,27 +13,13 @@ urlpatterns = [
     path("change-password/", views.change_password, name="change_password"),
     path("update-preferences/", views.update_preferences, name="update_preferences"),
     path("delete-account/", views.delete_account, name="delete_account"),
-    # Data endpoints
-    path(
-        "timeseries-data/", views.CombinedGraphAPIView.as_view(), name="timeseries_data"
-    ),
-    path("categories/", views.CategoryView.as_view(), name="categories"),
-    path("categories/<int:pk>/", views.CategoryView.as_view(), name="category_detail"),
-    path(
-        "categories/field-choices/",
-        views.CategoryFieldChoicesAPIView.as_view(),
-        name="category_field_choices",
-    ),
+    # Category endpoints
+    path("categories/", views.CategoriesAPIView.as_view(), name="categories"),
+    # Category settings endpoint
     path(
         "category-settings/",
         views.CategorySettingsAPIView.as_view(),
         name="category_settings",
-    ),
-    path("card-accounts/", views.CardBanksAPIView.as_view(), name="card_accounts"),
-    path(
-        "card-accounts/<int:pk>/",
-        views.CardBanksAPIView.as_view(),
-        name="card_account_detail",
     ),
     path("preferences/", views.UserPreferenceAPIView.as_view(), name="preferences"),
     path(

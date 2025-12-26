@@ -1,20 +1,24 @@
 """Service layer for graph and timeseries data generation."""
 
 from datetime import datetime, timedelta
+
 import pytz
 from dateutil.relativedelta import relativedelta
+from django.db.models import Sum
+
+from apps.transaction.models import Transaction
 
 
 class GraphService:
-    """Service for generating graph and timeseries data."""
+    """Service for generating graph and timeseries data using unified Transaction model."""
 
     def __init__(self):
         self.pst = pytz.timezone("US/Pacific")
 
-    def get_combined_graph_data(self, user, expense_model, income_model) -> dict:
+    def get_combined_graph_data(self, user) -> dict:
         """Get combined income and expense graph data."""
-        expense_data = self.get_line_graph_data_by_month(user, expense_model)
-        income_data = self.get_line_graph_data_by_month(user, income_model)
+        expense_data = self.get_transaction_data_by_month(user, "debit")
+        income_data = self.get_transaction_data_by_month(user, "credit")
 
         chart_data = {
             "labels": expense_data["labels"],  # assumes income labels match
@@ -42,15 +46,22 @@ class GraphService:
 
         return chart_data
 
-    def get_line_graph_data_by_month(self, user, model) -> dict:
-        """Generate line graph data aggregated by month."""
+    def get_transaction_data_by_month(
+        self, user, transaction_type: str = "debit"
+    ) -> dict:
+        """Generate line graph data aggregated by month for a transaction type."""
         today = datetime.now(self.pst).date()
 
-        earliest_record = model.objects.filter(user=user).order_by("date").first()
-        if earliest_record:
-            start_date = earliest_record.date.replace(day=1)
+        # Get earliest transaction of this type
+        earliest_transaction = (
+            Transaction.objects.filter(user=user, transaction_type=transaction_type)
+            .order_by("date")
+            .first()
+        )
+
+        if earliest_transaction:
+            start_date = earliest_transaction.date.replace(day=1)
         else:
-            # If no records, use today as start date
             start_date = today.replace(day=1)
 
         # Generate months range from start date to today
@@ -61,18 +72,19 @@ class GraphService:
             months_range.append(current_month.strftime("%b %Y"))
             current_month += relativedelta(months=1)
 
-        # Query items - if months is None, we'll use the calculated start_date from earliest record
-        items = model.objects.filter(
+        # Query transactions
+        transactions = Transaction.objects.filter(
             user=user,
+            transaction_type=transaction_type,
             date__gte=start_date,
         ).order_by("date")
 
         line_graph_data = {month: 0 for month in months_range}
 
-        for item in items:
-            month_year = item.date.strftime("%b %Y")
+        for txn in transactions:
+            month_year = txn.date.strftime("%b %Y")
             if month_year in line_graph_data:
-                line_graph_data[month_year] += item.amount
+                line_graph_data[month_year] += float(txn.amount)
 
         sorted_labels = list(months_range)
         sorted_data = [line_graph_data[label] for label in sorted_labels]
@@ -84,28 +96,30 @@ class GraphService:
 
         return chart_data
 
-    def get_line_graph_data_by_day(self, user, model) -> dict:
+    def get_transaction_data_by_day(
+        self, user, transaction_type: str = "debit"
+    ) -> dict:
         """Generate line graph data aggregated by day (last 30 days)."""
         today = datetime.now(self.pst).date()
-        start_date = today - timedelta(
-            days=29
-        )  # Include today + 29 previous days = 30 days
+        start_date = today - timedelta(days=29)
 
         # Generate daily range
         days_range = [(start_date + timedelta(days=i)) for i in range(30)]
         formatted_days = [day.strftime("%b %d") for day in days_range]
 
-        # Query items within the last 30 days
-        items = model.objects.filter(
-            user=user, date__range=(start_date, today)
+        # Query transactions within the last 30 days
+        transactions = Transaction.objects.filter(
+            user=user,
+            transaction_type=transaction_type,
+            date__range=(start_date, today),
         ).order_by("date")
 
         line_graph_data = {day.strftime("%b %d"): 0 for day in days_range}
 
-        for item in items:
-            day_label = item.date.strftime("%b %d")
+        for txn in transactions:
+            day_label = txn.date.strftime("%b %d")
             if day_label in line_graph_data:
-                line_graph_data[day_label] += item.amount
+                line_graph_data[day_label] += float(txn.amount)
 
         chart_data = {
             "labels": formatted_days,

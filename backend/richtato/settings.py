@@ -12,19 +12,25 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import os
 from pathlib import Path
-from urllib.parse import urlparse
 
-from colorama import Fore
 from dotenv import load_dotenv
-from loguru import logger
 
-DEPLOY_STAGE = os.getenv("DEPLOY_STAGE") or "DEV".upper()
+load_dotenv()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
+
+# Plaid API Configuration
+PLAID_CLIENT_ID = os.getenv("PLAID_CLIENT_ID")
+
+# Cron Job Security
+CRON_SECRET_KEY = os.getenv("CRON_SECRET_KEY")
+PLAID_SECRET = os.getenv("PLAID_SECRET")
+PLAID_ENV = os.getenv("PLAID_ENV", "sandbox")  # sandbox, development, production
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True  # Force DEBUG to True for local development
@@ -43,15 +49,15 @@ ALLOWED_HOSTS = [
 
 INSTALLED_APPS = [
     "apps.richtato_user",
-    "apps.category",
-    "apps.card",
     "apps.core",
-    "apps.account",
-    "apps.budget",
-    "apps.income",
-    "apps.expense",
     "apps.budget_dashboard",
     "apps.asset_dashboard",
+    # Unified models
+    "apps.financial_account",
+    "apps.transaction",
+    "apps.categorization",
+    "apps.sync",
+    "apps.budget",
     "django.contrib.humanize",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -75,11 +81,9 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.richtato_user.middleware.CleanupDemoUsersMiddleware",
+    "apps.sync.middleware.AutoSyncMiddleware",
+    "apps.core.middleware.SelfPingMiddleware",
 ]
-
-if DEPLOY_STAGE == "PROD":
-    MIDDLEWARE.insert(5, "apps.core.middleware.SelfPingMiddleware")
-
 
 ROOT_URLCONF = "richtato.urls"
 
@@ -100,50 +104,16 @@ TEMPLATES = [
 ]
 
 
-def log_deploy_stage_message(
-    deploy_stage: str, color: str, icon: str, message: str, emoji: str
-) -> None:
-    logger.info(
-        f"{color}{'=' * 20} {emoji} DEPLOY_STAGE: {deploy_stage.upper()} {emoji} {'=' * 20}{Fore.RESET}\n"
-        f"{color}{message}{Fore.RESET}"
-    )
-
-
-# Load environment variables and set DEPLOY_STAGE
-def configure_database_for_stage(deploy_stage: str) -> dict:
-    """Configure Postgres for all stages (no sqlite)."""
-
-    db_url = os.getenv("DATABASE_URL")
-
-    if db_url:
-        # Parse the DATABASE_URL string (format: postgresql://user:password@host:port/dbname)
-        parsed = urlparse(db_url)
-        return {
-            "default": {
-                "ENGINE": "django.db.backends.postgresql",
-                "NAME": parsed.path.lstrip("/"),
-                "USER": parsed.username,
-                "PASSWORD": parsed.password,
-                "HOST": parsed.hostname,
-                "PORT": parsed.port or 5432,
-            }
-        }
-    else:
-        logger.info("DATABASE_URL is not set, using environment variables values")
-        return {
-            "default": {
-                "ENGINE": "django.db.backends.postgresql",
-                "NAME": os.getenv("POSTGRES_DB", "richtato"),
-                "USER": os.getenv("POSTGRES_USER", "postgres"),
-                "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
-                "HOST": os.getenv("POSTGRES_HOST", "db"),
-                "PORT": os.getenv("POSTGRES_PORT", 5433),
-            }
-        }
-
-
-load_dotenv()
-DATABASES = configure_database_for_stage(DEPLOY_STAGE)
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("POSTGRES_DB", "richtato"),
+        "USER": os.getenv("POSTGRES_USER", "postgres"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
+        "HOST": os.getenv("POSTGRES_HOST", "db"),
+        "PORT": os.getenv("POSTGRES_PORT", 5433),
+    }
+}
 
 
 # Password validation
@@ -215,6 +185,7 @@ CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to access CSRF token
 CSRF_COOKIE_NAME = "csrftoken"  # Default Django CSRF cookie name
 CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"  # Header name for CSRF token
+
 CSRF_TRUSTED_ORIGINS = [
     "https://richtato-latest.onrender.com",
     "https://richtato.com",
@@ -260,3 +231,33 @@ SWAGGER_SETTINGS = {
     "SHOW_EXTENSIONS": True,
     "SHOW_COMMON_EXTENSIONS": True,
 }
+
+# #region agent log
+try:
+    import json
+    import time
+
+    log_path = "/app/.cursor_logs/debug.log"
+    log_entry = {
+        "timestamp": int(time.time() * 1000),
+        "location": "settings.py:end",
+        "message": "Settings loaded",
+        "data": {
+            "STATIC_ROOT": str(STATIC_ROOT),
+            "STATIC_URL": STATIC_URL,
+            "DEBUG": DEBUG,
+            "STATIC_ROOT_EXISTS": os.path.exists(STATIC_ROOT),
+            "STATIC_ROOT_LIST": os.listdir(STATIC_ROOT)
+            if os.path.exists(STATIC_ROOT)
+            else [],
+        },
+        "sessionId": "debug-session",
+        "runId": "run1",
+        "hypothesisId": "missing-static",
+    }
+    if os.path.exists(os.path.dirname(log_path)):
+        with open(log_path, "a") as f:
+            f.write(json.dumps(log_entry) + "\n")
+except Exception as e:
+    pass
+# #endregion

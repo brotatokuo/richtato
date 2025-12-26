@@ -1,14 +1,16 @@
-import { AccountsSection } from '@/components/settings/AccountsSection';
-import { CardsSection } from '@/components/settings/CardsSection';
-import { CategoriesBudgetsSection } from '@/components/settings/CategoriesBudgetsSection';
+import { BudgetsSection } from '@/components/settings/BudgetsSection';
+import { CategoriesSection } from '@/components/settings/CategoriesSection';
+import { SyncHistorySection } from '@/components/settings/SyncHistorySection';
+import { UnifiedAccountsSection } from '@/components/settings/UnifiedAccountsSection';
 
 export function Setup() {
   return (
     <div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-1">
-        <AccountsSection />
-        <CardsSection />
-        <CategoriesBudgetsSection />
+        <UnifiedAccountsSection />
+        <SyncHistorySection />
+        <CategoriesSection />
+        <BudgetsSection />
       </div>
     </div>
   );

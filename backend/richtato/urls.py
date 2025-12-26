@@ -16,6 +16,7 @@ Including another URLconf
 """
 
 from apps.richtato_user import views as user_views
+from apps.sync import views as sync_views
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -51,26 +52,30 @@ urlpatterns = [
         name="schema-swagger-ui",
     ),
     path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
-    # API URLs - organized by resource (v1)
-    path("api/v1/auth/", include("apps.richtato_user.urls")),
-    path("api/v1/accounts/", include("apps.account.urls")),
-    path("api/v1/budget/", include("apps.budget.urls")),
-    path("api/v1/income/", include("apps.income.urls")),
-    path("api/v1/expense/", include("apps.expense.urls")),
-    path("api/v1/budget-dashboard/", include("apps.budget_dashboard.urls")),
-    path("api/v1/asset-dashboard/", include("apps.asset_dashboard.urls")),
-    path("api/v1/card-accounts/", include("apps.card.urls")),
-    # Legacy API URLs (redirect or keep for backward compatibility)
+    # New Unified API URLs
+    path("api/accounts/", include("apps.financial_account.urls")),
+    path("api/transactions/", include("apps.transaction.urls")),
+    path("api/sync/", include("apps.sync.urls")),
+    path("api/budgets/", include("apps.budget.urls")),
+    # V1 API URLs (for frontend compatibility)
+    path("api/v1/accounts/", include("apps.financial_account.urls")),
+    path("api/v1/card-accounts/", include("apps.financial_account.urls_card_accounts")),
+    path("api/v1/transactions/", include("apps.transaction.urls")),
+    path("api/v1/budgets/", include("apps.budget.urls")),
+    # Auth and User management
     path("api/auth/", include("apps.richtato_user.urls")),
-    path("api/accounts/", include("apps.account.urls")),
-    path("api/budget/", include("apps.budget.urls")),
-    path("api/income/", include("apps.income.urls")),
-    path("api/expense/", include("apps.expense.urls")),
+    path("api/v1/auth/", include("apps.richtato_user.urls")),
+    # Dashboard endpoints
     path("api/budget-dashboard/", include("apps.budget_dashboard.urls")),
     path("api/asset-dashboard/", include("apps.asset_dashboard.urls")),
-    path("api/card-accounts/", include("apps.card.urls")),
+    path("api/v1/budget-dashboard/", include("apps.budget_dashboard.urls")),
+    path("api/v1/asset-dashboard/", include("apps.asset_dashboard.urls")),
     # Demo login for development
     path("demo-login/", user_views.demo_login, name="demo_login"),
+    # Cron endpoint for scheduled sync (used by Render Cron Jobs)
+    path("api/cron/sync/", sync_views.CronSyncAPIView.as_view(), name="cron-sync"),
+    # Add sync status endpoint at both /api/sync/ and /api/v1/sync/
+    path("api/v1/sync/", include("apps.sync.urls")),
 ]
 
 # Serve static files during development

@@ -1,405 +1,220 @@
 # Richtato - Personal Finance Management Platform
 
-A comprehensive personal finance management application built with Django, featuring expense tracking, income management, budget planning, and advanced analytics with interactive visualizations.
+A comprehensive personal finance management application for tracking expenses, income, budgets, and net worth. Features bank account syncing, AI-powered categorization, and interactive dashboards.
 
-## 🚀 Features
+## Features
 
-- **Expense & Income Tracking**: Categorize and track all financial transactions
-- **Budget Management**: Set and monitor budgets by category with visual progress indicators
-- **Interactive Dashboards**: Real-time analytics with Chart.js and Plotly.js visualizations
-- **Sankey Diagrams**: Advanced cash flow visualization showing money movement
-- **Account Management**: Multiple account types (checking, savings, investment, retirement)
-- **Statement Import**: Automated import from bank statements and credit cards
-- **AI-Powered Insights**: Intelligent financial analysis and recommendations
-- **Responsive Design**: Modern, mobile-friendly interface
+- **Transaction Tracking**: Track all financial transactions with automatic categorization
+- **Bank Sync**: Connect bank accounts via Plaid for automatic transaction import
+- **Budget Management**: Set and monitor budgets by category with visual progress
+- **Net Worth Dashboard**: Track assets, liabilities, and net worth over time
+- **AI Categorization**: Intelligent transaction categorization using OpenAI
+- **Interactive Charts**: Visualize spending patterns, trends, and cash flow
+- **Multi-Account Support**: Checking, savings, credit cards, investments
 - **Demo Mode**: Try the application with sample data
 
-## 🏗️ Project Structure
+## Tech Stack
+
+### Backend
+- **Django 5.x** with Django REST Framework
+- **PostgreSQL** database
+- **Gunicorn** WSGI server
+- **OpenAI** for AI categorization
+- **Plaid** for bank sync
+
+### Frontend
+- **React 19** with TypeScript
+- **Vite 7** build tool
+- **Tailwind CSS** for styling
+- **Shadcn/UI** component library
+- **Lucide React** icons
+
+### Infrastructure
+- **Docker** containerization
+- **Nginx** reverse proxy (production)
+
+## Project Structure
 
 ```
 richtato/
-├── richtato/                    # Main Django project
-│   ├── apps/                   # Django applications
-│   │   ├── account/           # Account management
-│   │   ├── budget/            # Budget planning and tracking
-│   │   ├── dashboard/         # Dashboard views and analytics
-│   │   ├── expense/           # Expense tracking and categorization
-│   │   ├── income/            # Income management
-│   │   ├── richtato_user/     # User management and profiles
-│   │   └── settings/          # Application settings
-│   ├── categories/            # Expense categorization system
-│   │   ├── categories.py      # Category definitions with icons and colors
-│   │   └── categories_manager.py
-│   ├── statement_imports/     # Bank statement import system
-│   │   ├── accounts/          # Account-specific importers
-│   │   └── cards/             # Credit card importers
-│   │       ├── american_express.py
-│   │       ├── bank_of_america.py
-│   │       ├── chase.py
-│   │       ├── citi.py
-│   │       └── card_canonicalizer.py
-│   ├── artificial_intelligence/ # AI features and insights
-│   │   └── ai.py
-│   ├── utilities/             # Utility functions and helpers
-│   │   ├── postgres/          # PostgreSQL utilities
-│   │   └── tools.py
-│   ├── static/                # Static assets (CSS, JS, images)
-│   │   ├── css/              # Stylesheets
-│   │   ├── js/               # JavaScript files
-│   │   ├── images/           # Image assets
-│   │   └── webfonts/         # Font files
-│   ├── pages/                 # HTML templates
-│   └── richtato/              # Django project settings
-├── pyproject.toml             # Python project configuration
-├── run.sh                     # Development server script
-├── create_or_reset_demo.sh    # Demo data setup script
-└── README.md                  # This file
+├── backend/
+│   ├── apps/                    # Django applications
+│   │   ├── transaction/         # Transactions and categories
+│   │   ├── financial_account/   # Bank accounts and balances
+│   │   ├── budget/              # Budget management
+│   │   ├── budget_dashboard/    # Budget analytics
+│   │   ├── asset_dashboard/     # Net worth and metrics
+│   │   ├── sync/                # Bank sync (Plaid)
+│   │   ├── categorization/      # AI categorization
+│   │   ├── richtato_user/       # User management
+│   │   └── core/                # Shared utilities
+│   ├── integrations/            # External API clients
+│   │   └── plaid/               # Plaid API
+│   ├── artificial_intelligence/ # OpenAI integration
+│   ├── statement_imports/       # Bank statement parsers
+│   ├── richtato/                # Django settings
+│   └── config/                  # Configuration files
+├── frontend/
+│   ├── src/
+│   │   ├── pages/               # Route components
+│   │   ├── components/          # UI components
+│   │   ├── lib/api/             # API services
+│   │   ├── contexts/            # React contexts
+│   │   └── hooks/               # Custom hooks
+│   └── public/                  # Static assets
+├── .cursorrules                 # AI assistant context
+├── API_REFERENCE.md             # API documentation
+└── docker-compose.yml           # Docker configuration
 ```
 
-## 🛠️ Technology Stack
+## Quick Start
 
-### Backend
-
-- **Django 4.x**: Web framework
-- **PostgreSQL**: Primary database
-- **Python 3.9+**: Programming language
-- **Pandas**: Data manipulation and analysis
-- **Plotly**: Interactive visualizations
-
-### Frontend
-
-- **HTML5/CSS3**: Structure and styling
-- **JavaScript (ES6+)**: Client-side functionality
-- **Chart.js**: Chart visualizations
-- **Plotly.js**: Advanced charts and Sankey diagrams
-- **Font Awesome**: Icons
-- **DataTables**: Enhanced table functionality
-
-### AI & Integrations
-
-- **OpenAI**: AI-powered insights and analysis
-- **Custom AI Models**: Built-in intelligent categorization
-
-## 📦 Installation
-
-### Prerequisites
-
-- Python 3.9 or higher
-- PostgreSQL 12 or higher
-- Node.js (for frontend assets)
-
-### Quick Start
-
-1. **Clone the repository**
-
-   ```bash
-   git clone <repository-url>
-   cd richtato
-   ```
-
-2. **Set up Python environment**
-
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -e .
-   ```
-
-3. **Configure database**
-
-   ```bash
-   # Create PostgreSQL database
-   createdb richtato_db
-
-   # Run migrations
-   python richtato/manage.py migrate
-   ```
-
-4. **Set up environment variables**
-
-   ```bash
-   # Create .env file with your configuration
-   cp .env.example .env
-   # Edit .env with your database and API credentials
-   ```
-
-5. **Run the development server**
-
-   ```bash
-   ./run.sh
-   # Or manually:
-   python richtato/manage.py runserver
-   ```
-
-6. **Access the application**
-   - Open http://localhost:8000
-   - Create a demo account or sign up
-
-## 🎯 Key Components
-
-### Expense Categorization System
-
-- **Smart Categorization**: AI-powered automatic categorization
-- **Custom Categories**: 20+ predefined categories with icons and colors
-- **Keyword Matching**: Intelligent transaction matching
-- **Visual Indicators**: Color-coded categories in charts and tables
-
-### Dashboard Analytics
-
-- **Income vs Expenses**: Monthly comparison charts
-- **Cash Flow Sankey**: Interactive money flow visualization
-- **Budget Progress**: Real-time budget tracking
-- **Top Categories**: Spending analysis by category
-- **Savings Trends**: Investment and savings tracking
-
-### Statement Import System
-
-- **Multi-format Support**: CSV, Excel, PDF imports
-- **Bank Integration**: Support for major banks
-- **Credit Card Support**: American Express, Chase, Citi, Bank of America
-- **Automated Processing**: Smart transaction extraction and categorization
-- **File Upload**: Direct file upload interface
-
-### Budget Management
-
-- **Category Budgets**: Set limits by expense category
-- **Progress Tracking**: Visual progress bars and alerts
-- **Monthly/Annual Views**: Flexible budget periods
-- **Overspending Alerts**: Real-time notifications
-
-## 🔧 Configuration
-
-### Environment Variables
+### Docker (Recommended)
 
 ```bash
-# Database
-DATABASE_URL=postgresql://user:password@localhost/richtato_db
+# Clone the repository
+git clone <repository-url>
+cd richtato
 
-# OpenAI
+# Copy environment template
+cp env.template .env
+# Edit .env with your configuration
+
+# Start all services
+docker compose up -d
+
+# Access the application
+open http://localhost:5927
+```
+
+### Manual Setup
+
+#### Backend
+
+```bash
+cd backend
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -e .
+
+# Set up database
+createdb richtato_db
+python manage.py migrate
+
+# Run server
+python manage.py runserver
+```
+
+#### Frontend
+
+```bash
+cd frontend
+
+# Install dependencies
+yarn install
+
+# Run development server
+yarn dev
+```
+
+## Environment Variables
+
+```bash
+# Backend
+SECRET_KEY=your_django_secret_key
+DATABASE_URL=postgresql://user:password@localhost/richtato_db
 OPENAI_API_KEY=your_openai_api_key
 
-# Django
-SECRET_KEY=your_django_secret_key
-DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1
+# Bank Sync (optional)
+PLAID_CLIENT_ID=your_plaid_client_id
+PLAID_SECRET=your_plaid_secret
+
+# Deployment
+DEPLOY_STAGE=DEV  # or PROD
 ```
 
-### Database Configuration
+## Development
 
-The application uses PostgreSQL for optimal performance with financial data. Key features:
-
-- JSON fields for flexible data storage
-- Full-text search capabilities
-- Efficient indexing for large datasets
-- Transaction support for data integrity
-
-## 🚀 Deployment
-
-### Production Setup
-
-1. **Configure production database**
-2. **Set up static file serving** (nginx recommended)
-3. **Configure environment variables**
-4. **Set up SSL certificates**
-5. **Configure backup strategy**
-
-### Docker Deployment (Single Service: Frontend + Backend + Nginx)
-
-You can deploy with a single container that serves the React SPA via Nginx and proxies API requests to Django (Gunicorn) at `/api`.
+### Commands
 
 ```bash
-# Build the multi-stage Docker image (inject the API base URL used by Vite build)
-./scripts/build.sh richtato:latest https://your-hostname/api
+# Backend
+docker compose logs -f backend
+docker compose exec backend python manage.py shell
+docker compose exec backend python manage.py migrate
 
-# Run locally (expects a Postgres instance; update DATABASE_URL as needed)
-./start.sh richtato:latest 10000
-
-# Open the app
-open http://localhost:10000
+# Frontend
+yarn dev          # Development server
+yarn build        # Production build
+yarn lint         # Run linter
+yarn type-check   # TypeScript check
 ```
 
-#### Environment Variables (Required)
+### Architecture
 
-Set these in your container or hosting environment:
+The backend follows a **Repository → Service → View** pattern:
+- **Views**: Thin HTTP handlers
+- **Services**: Business logic
+- **Repositories**: Database access
+
+See `backend/CLAUDE.md` for detailed backend documentation.
+
+The frontend uses a **Page → Component → API Service** pattern:
+- **Pages**: Route-level components
+- **Components**: Reusable UI elements
+- **API Services**: Backend communication
+
+See `frontend/CLAUDE.md` for detailed frontend documentation.
+
+## API Documentation
+
+See [API_REFERENCE.md](API_REFERENCE.md) for complete API documentation.
+
+Key endpoints:
+- `/api/v1/auth/` - Authentication
+- `/api/v1/transactions/` - Transaction management
+- `/api/v1/accounts/` - Account management
+- `/api/v1/budgets/` - Budget management
+- `/api/v1/asset-dashboard/` - Net worth metrics
+- `/api/v1/budget-dashboard/` - Budget analytics
+- `/api/v1/sync/` - Bank sync
+
+## Deployment
+
+### Docker (Single Container)
 
 ```bash
-# Django secret key
-SECRET_KEY=your_django_secret
+# Build production image
+./scripts/build.sh richtato:latest
 
-# Database connection (Render Postgres URL works; includes sslmode=require)
-DATABASE_URL=postgresql://user:pass@host:5432/dbname?sslmode=require
-
-# Deployment stage: PROD on Render, DEV/LOCAL for local
-DEPLOY_STAGE=PROD
-
-# Render sets this automatically; default to 10000 locally
-PORT=10000
+# Run with environment variables
+docker run -p 10000:10000 \
+  -e SECRET_KEY=... \
+  -e DATABASE_URL=... \
+  richtato:latest
 ```
 
-Vite frontend is built with `VITE_API_BASE_URL` passed as a build-arg and baked into the static assets. When using the single-container image with Nginx, use `/api` so the SPA and API share the same origin and cookies:
-
-```bash
-# Example build arg in CI/Render
-VITE_API_BASE_URL=/api
-```
-
-#### Render (Docker) Deployment
+### Render
 
 1. Create a Render Web Service (Docker)
+2. Set build arg: `VITE_API_BASE_URL=/api`
+3. Configure environment variables
+4. Deploy
 
-   - Root: repository root
-   - Dockerfile: `Dockerfile`
-   - Build Command: uses Dockerfile (no command needed)
-   - Start Command: leave blank (Dockerfile CMD runs `/app/start.sh`)
-   - Build Args:
-     - `VITE_API_BASE_URL=/api`
-   - Environment:
-     - `SECRET_KEY=...`
-     - `DATABASE_URL=...` (Render Postgres)
-     - `DEPLOY_STAGE=PROD`
-
-2. Ensure Allowed Hosts
-
-   - Add your Render hostname to Django `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` if not already included.
-
-3. Post-deploy
-   - Migrations and collectstatic run automatically via the startup script.
-   - Nginx listens on `$PORT` and proxies `/api` and `/admin` to Django on 8000.
-
-## 📊 Data Models
-
-### Core Models
-
-- **User**: Extended user model with financial preferences
-- **Account**: Bank accounts, credit cards, investment accounts
-- **Expense**: Transaction records with categorization
-- **Income**: Income sources and amounts
-- **Category**: Expense categories with icons and colors
-- **Budget**: Budget limits and tracking
-
-### Relationships
-
-- Users have multiple accounts
-- Accounts have multiple transactions
-- Transactions belong to categories
-- Budgets are linked to categories and users
-
-## 🎨 UI/UX Features
-
-### Design System
-
-- **Color Scheme**: Consistent color palette with category-specific colors
-- **Typography**: Modern, readable fonts
-- **Icons**: Font Awesome icons throughout
-- **Responsive**: Mobile-first design approach
-
-### Interactive Elements
-
-- **Charts**: Interactive Chart.js visualizations
-- **Sankey Diagrams**: Plotly.js cash flow diagrams
-- **Tables**: Enhanced DataTables with sorting and filtering
-- **Forms**: Real-time validation and feedback
-
-## 🔒 Security
-
-### Authentication
-
-- Django's built-in authentication system
-- Password reset functionality
-- Session management
-- CSRF protection
-
-### Data Protection
-
-- Encrypted sensitive data
-- Secure API endpoints
-- Input validation and sanitization
-- SQL injection prevention
-
-## 🧪 Testing
-
-### Running Tests
+## Testing
 
 ```bash
-# Run all tests
-python richtato/manage.py test
+# Backend tests
+docker compose exec backend python manage.py test
 
-# Run specific app tests
-python richtato/manage.py test richtato.apps.expense
-
-# Run with coverage
-coverage run --source='.' manage.py test
-coverage report
+# Frontend tests
+cd frontend && yarn test
 ```
 
-### Test Structure
+## License
 
-- Unit tests for models and utilities
-- Integration tests for API endpoints
-- Frontend tests for JavaScript components
-- End-to-end tests for critical user flows
-
-## 📈 Performance
-
-### Optimization Strategies
-
-- **Database Indexing**: Optimized queries for large datasets
-- **Caching**: Redis caching for frequently accessed data
-- **Static Assets**: Minified CSS and JavaScript
-- **CDN**: Content delivery network for static files
-- **Lazy Loading**: On-demand data loading
-
-### Monitoring
-
-- **Application Metrics**: Performance monitoring
-- **Error Tracking**: Comprehensive error logging
-- **User Analytics**: Usage pattern analysis
-
-## 🤝 Contributing
-
-### Development Workflow
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Submit a pull request
-
-### Code Standards
-
-- **Python**: PEP 8 style guide
-- **JavaScript**: ESLint configuration
-- **CSS**: Consistent naming conventions
-- **Documentation**: Comprehensive docstrings
-
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🆘 Support
-
-### Documentation
-
-- [User Guide](docs/user-guide.md)
-- [API Documentation](docs/api.md)
-- [Development Guide](docs/development.md)
-
-### Community
-
-- [Issues](https://github.com/your-repo/issues)
-- [Discussions](https://github.com/your-repo/discussions)
-- [Wiki](https://github.com/your-repo/wiki)
-
-## 🔄 Changelog
-
-### Version 1.0.0
-
-- Initial release with core functionality
-- Expense and income tracking
-- Basic dashboard analytics
-- Statement import system
-- Budget management features
-
----
-
-**Richtato** - Take control of your financial future with intelligent insights and powerful analytics.
+MIT License - see LICENSE file for details.

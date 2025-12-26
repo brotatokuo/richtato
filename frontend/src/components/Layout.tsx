@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { Sidebar } from './Sidebar';
 
 // Route to page title and icon mapping
@@ -30,6 +32,26 @@ const routeConfig: Record<
 export function Layout() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Global sync status monitoring for toast notifications
+  useSyncStatus({
+    onSyncComplete: newCount => {
+      if (newCount > 0) {
+        toast.success('Sync complete', {
+          description: `${newCount} new transaction${newCount === 1 ? '' : 's'} synced`,
+        });
+      } else {
+        toast.success('Sync complete', {
+          description: 'All accounts are up to date',
+        });
+      }
+    },
+    onSyncError: error => {
+      toast.error('Sync failed', {
+        description: error || 'An error occurred during sync',
+      });
+    },
+  });
 
   // Get the current page config based on the route (supports nested paths)
   const matchedKey = Object.keys(routeConfig).find(
@@ -89,8 +111,8 @@ export function Layout() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto scrollbar-thin">
-          <div className="mx-auto p-6">
+        <main className="flex-1 overflow-auto scrollbar-thin min-w-0">
+          <div className="w-full max-w-full p-6 overflow-x-hidden">
             <Outlet />
           </div>
         </main>

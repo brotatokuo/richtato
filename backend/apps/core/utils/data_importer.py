@@ -1,18 +1,20 @@
 """Data importer utility for CSV imports."""
 
 import os
+from decimal import Decimal
 
-import colorama
 import pandas as pd
-from apps.account.models import Account, AccountTransaction
-from apps.card.models import CardAccount
-from apps.category.models import Category
-from apps.expense.models import Expense
-from apps.income.models import Income
+from loguru import logger
+
+from apps.financial_account.models import FinancialAccount, FinancialInstitution
+from apps.transaction.models import Transaction, TransactionCategory
 
 
 class DataImporter:
-    """Utility class for importing data from CSV files."""
+    """Utility class for importing data from CSV files.
+
+    Uses the unified Transaction model for all transactions.
+    """
 
     def __init__(self, user, path):
         """
@@ -30,20 +32,22 @@ class DataImporter:
 
     def generate_csv_templates(self):
         """Generate blank CSV template files for all import types."""
-        self._generate_csv_template("Card.csv", ["name"])
         self._generate_csv_template(
-            "Category.csv", ["name", "keywords", "budget", "type", "color"]
+            "Account.csv", ["name", "account_type", "institution", "last4"]
         )
         self._generate_csv_template(
-            "Expense.csv",
-            ["description", "date", "amount", "account_name", "category_name"],
+            "Category.csv", ["name", "slug", "type", "icon", "color"]
         )
         self._generate_csv_template(
-            "Income.csv", ["description", "date", "amount", "account_name"]
-        )
-        self._generate_csv_template("Account.csv", ["type", "name"])
-        self._generate_csv_template(
-            "AccountTransactions.csv", ["amount", "date", "account_name"]
+            "Transaction.csv",
+            [
+                "description",
+                "date",
+                "amount",
+                "transaction_type",
+                "account_name",
+                "category_slug",
+            ],
         )
 
     def _generate_csv_template(self, name, necessary_columns):
@@ -57,96 +61,94 @@ class DataImporter:
         df = pd.DataFrame(columns=necessary_columns)
         df.to_csv(os.path.join(self.path, name), index=False)
 
-    def import_cards_from_csv(self):
-        """Import card accounts from Card.csv."""
-        cards_df = pd.read_csv(os.path.join(self.path, "Card.csv"))
-        print(cards_df.head())
-        for index, row in cards_df.iterrows():
-            card = CardAccount(user=self.user, name=row["name"])
-            card.save()
+    def import_accounts_from_csv(self):
+        """Import financial accounts from Account.csv."""
+        accounts_df = pd.read_csv(os.path.join(self.path, "Account.csv"))
+        logger.debug(f"Importing accounts: {accounts_df.head().to_dict()}")
+        for index, row in accounts_df.iterrows():
+            # Get or create institution if provided
+            institution = None
+            if pd.notna(row.get("institution")) and row["institution"]:
+                institution, _ = FinancialInstitution.objects.get_or_create(
+                    name=row["institution"],
+                    defaults={
+                        "slug": row["institution"]
+                        .lower()
+                        .replace(" ", "_")
+                        .replace("-", "_")
+                    },
+                )
+
+            FinancialAccount.objects.create(
+                user=self.user,
+                name=row["name"],
+                account_type=row.get("account_type", "checking"),
+                institution=institution,
+                account_number_last4=row.get("last4", ""),
+            )
 
     def import_categories_from_csv(self):
-        """Import categories from Category.csv."""
+        """Import transaction categories from Category.csv."""
         categories_df = pd.read_csv(os.path.join(self.path, "Category.csv"))
-        print(categories_df.head())
+        logger.debug(f"Importing categories: {categories_df.head().to_dict()}")
         for index, row in categories_df.iterrows():
-            category_type = row["type"].lower().replace(" ", "").strip()
-            assert category_type in [
-                "essential",
-                "nonessential",
-            ], "Category type must be either essential or nonessential"
-            category = Category(
+            TransactionCategory.objects.create(
                 user=self.user,
                 name=row["name"],
-                keywords=row["keywords"],
-                budget=row["budget"],
-                type=category_type,
-                color=row["color"],
+                slug=row["slug"],
+                type=row.get("type", "expense"),
+                icon=row.get("icon", ""),
+                color=row.get("color", ""),
             )
-            category.save()
 
-    def import_expenses_from_csv(self):
-        """Import expenses from Expense.csv."""
-        expenses_df = pd.read_csv(os.path.join(self.path, "Expense.csv"))
-        print(expenses_df.head())
-        for index, row in expenses_df.iterrows():
-            account = CardAccount.objects.get(user=self.user, name=row["account_name"])
-            category = Category.objects.get(user=self.user, name=row["category_name"])
+    def import_transactions_from_csv(self):
+        """Import transactions from Transaction.csv."""
+        transactions_df = pd.read_csv(os.path.join(self.path, "Transaction.csv"))
+        logger.debug(f"Importing transactions: {transactions_df.head().to_dict()}")
+        for index, row in transactions_df.iterrows():
             try:
-                expense = Expense(
+                # Get the account
+                account = FinancialAccount.objects.get(
+                    user=self.user, name=row["account_name"]
+                )
+
+                # Get the category if provided
+                category = None
+                if pd.notna(row.get("category_slug")) and row["category_slug"]:
+                    try:
+                        category = TransactionCategory.objects.get(
+                            user=self.user, slug=row["category_slug"]
+                        )
+                    except TransactionCategory.DoesNotExist:
+                        pass  # Category not found, will remain None
+
+                # Determine transaction type
+                transaction_type = row.get("transaction_type", "debit")
+                if transaction_type not in ["debit", "credit"]:
+                    # Infer from amount if not specified
+                    amount = Decimal(str(row["amount"]))
+                    transaction_type = "credit" if amount > 0 else "debit"
+
+                Transaction.objects.create(
                     user=self.user,
+                    account=account,
                     description=row["description"],
                     date=row["date"],
-                    amount=row["amount"],
-                    account_name=account,
+                    amount=abs(Decimal(str(row["amount"]))),
+                    transaction_type=transaction_type,
                     category=category,
+                    sync_source="csv",
                 )
-                expense.save()
             except Exception as e:
-                print(
-                    colorama.Fore.RED
-                    + f"Error importing {row}"
-                    + colorama.Style.RESET_ALL
-                )
-                print(e)
-                print(f"Error importing {row}")
+                logger.error(f"Error importing row: {row}", exc_info=e)
 
-    def import_accounts_from_csv(self):
-        """Import accounts from Account.csv."""
-        accounts_df = pd.read_csv(os.path.join(self.path, "Account.csv"))
-        print(accounts_df.head())
-        for index, row in accounts_df.iterrows():
-            account = Account(
-                user=self.user,
-                type=row["type"],
-                name=row["name"],
-            )
-            account.save()
+    # Legacy import methods for backward compatibility
+    # These can be removed after full migration
 
-    def import_account_transactions_from_csv(self):
-        """Import account transactions from AccountTransactions.csv."""
-        transactions_df = pd.read_csv(
-            os.path.join(self.path, "AccountTransactions.csv")
-        )
-        print(transactions_df.head())
-        for index, row in transactions_df.iterrows():
-            account = Account.objects.get(user=self.user, name=row["account_name"])
-            transaction = AccountTransaction(
-                account=account, amount=row["amount"], date=row["date"]
-            )
-            transaction.save()
+    def import_expenses_from_csv(self):
+        """Import expenses from Expense.csv (legacy format)."""
+        self.import_transactions_from_csv()
 
     def import_incomes_from_csv(self):
-        """Import incomes from Income.csv."""
-        incomes_df = pd.read_csv(os.path.join(self.path, "Income.csv"))
-        print(incomes_df.head())
-        for index, row in incomes_df.iterrows():
-            account = Account.objects.get(user=self.user, name=row["account_name"])
-            income = Income(
-                user=self.user,
-                description=row["description"],
-                date=row["date"],
-                amount=row["amount"],
-                account_name=account,
-            )
-            income.save()
+        """Import incomes from Income.csv (legacy format)."""
+        self.import_transactions_from_csv()

@@ -6,10 +6,11 @@ export interface TransactionFormData {
   amount: string;
   account_name: string;
   category?: string;
-  isPositive?: boolean;
+  notes?: string;
+  transactionType: 'debit' | 'credit';
 }
 
-export type TransactionType = 'income' | 'expense';
+export type TransactionTypeFilter = 'all' | 'credit' | 'debit';
 
 export interface FilterOption {
   label: string;
@@ -27,9 +28,9 @@ export interface ContextMenuProps {
 }
 
 export interface TransactionTableProps {
-  type: TransactionType;
   transactions: DisplayTransaction[];
   onTransactionsChange: (transactions: DisplayTransaction[]) => void;
+  onRecategorizeClick?: () => void;
 }
 
 // Display transaction interface (different from API)
@@ -38,8 +39,17 @@ export interface DisplayTransaction {
   date: string;
   description: string;
   category: string;
+  categoryType:
+    | 'income'
+    | 'expense'
+    | 'transfer'
+    | 'investment'
+    | 'other'
+    | 'uncategorized';
   amount: number;
   account: string;
+  transactionType: 'debit' | 'credit';
+  notes?: string | null;
 }
 
 // Helper function to transform API transaction to display format
@@ -50,8 +60,11 @@ export const transformTransaction = (
     id: apiTransaction.id.toString(),
     date: apiTransaction.date,
     description: apiTransaction.description,
-    category: apiTransaction.Category || 'Uncategorized',
-    amount: apiTransaction.amount,
-    account: apiTransaction.Account || 'Unknown',
+    category: apiTransaction.category_name || 'Uncategorized',
+    categoryType: apiTransaction.category_type,
+    amount: Number(apiTransaction.signed_amount),
+    account: apiTransaction.account_name || 'Unknown',
+    transactionType: apiTransaction.transaction_type,
+    notes: apiTransaction.notes ?? '',
   };
 };

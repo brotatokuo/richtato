@@ -41,9 +41,9 @@ export function CardsSection() {
     await createCard(name, bank);
   };
 
-  const handleEdit = async (name: string, bank: string) => {
+  const handleEdit = async (name: string, bank: string, imageKey: string | null) => {
     if (selectedCard) {
-      await updateCard(selectedCard.id, name, bank);
+      await updateCard(selectedCard.id, name, bank, imageKey);
     }
   };
 

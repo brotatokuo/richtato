@@ -39,8 +39,8 @@ class CSRFService {
         this.token = data.csrfToken;
         return data.csrfToken as string;
       }
-    } catch (error) {
-      console.warn('Failed to get CSRF token:', error);
+    } catch {
+      // Ignore CSRF errors - will throw below
     }
 
     throw new Error('Unable to obtain CSRF token');
@@ -69,6 +69,7 @@ class CSRFService {
     return {
       'Content-Type': 'application/json',
       'X-CSRFToken': token,
+      'X-Requested-With': 'XMLHttpRequest',
     };
   }
 }

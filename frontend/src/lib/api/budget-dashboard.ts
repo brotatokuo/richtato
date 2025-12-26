@@ -27,6 +27,31 @@ export interface BudgetProgressData {
   end_date: string;
 }
 
+export interface MonthlyBudgetData {
+  year: number;
+  month: number;
+  month_name: string;
+  label: string;
+  total_budget: number;
+  total_spent: number;
+  total_remaining: number;
+  percentage: number;
+  categories: Array<{
+    category: string;
+    spent: number;
+    budget: number;
+    percentage: number;
+    remaining: number;
+  }>;
+  start_date: string;
+  end_date: string;
+}
+
+export interface MultiMonthBudgetProgressData {
+  monthly_data: MonthlyBudgetData[];
+  months_requested: number;
+}
+
 class BudgetDashboardApiService {
   private baseUrl: string;
 
@@ -133,6 +158,25 @@ class BudgetDashboardApiService {
     });
     const data = await this.handleResponse<{ years: number[] }>(response);
     return data.years || [];
+  }
+
+  /**
+   * Get budget progress for multiple months (for timeline and trends)
+   */
+  async getBudgetProgressMultiMonth(params?: {
+    months?: number;
+  }): Promise<MultiMonthBudgetProgressData> {
+    const url = new URL(
+      `${this.baseUrl}/progress/multi-month/`,
+      window.location.origin
+    );
+    if (params?.months) url.searchParams.append('months', String(params.months));
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
+    return this.handleResponse<MultiMonthBudgetProgressData>(response);
   }
 }
 

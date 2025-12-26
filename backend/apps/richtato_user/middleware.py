@@ -5,6 +5,7 @@ import time
 
 from django.db import close_old_connections
 from django.utils import timezone
+from loguru import logger
 
 from .models import User
 
@@ -30,15 +31,9 @@ class CleanupDemoUsersMiddleware:
                 count = expired_users.count()
                 if count:
                     expired_users.delete()
-                    print(
-                        f"[CleanupDemoUsersMiddleware] Deleted {count} expired demo users at {now}."
-                    )
-                else:
-                    print(
-                        f"[CleanupDemoUsersMiddleware] No expired demo users at {now}."
-                    )
+                    logger.info(f"Deleted {count} expired demo users at {now}")
             except Exception as e:
-                print(f"[CleanupDemoUsersMiddleware] Error during cleanup: {e}")
+                logger.error(f"Error during demo user cleanup: {e}")
             # Wait for 10 minutes (600 seconds) before next cleanup
             time.sleep(600)
 

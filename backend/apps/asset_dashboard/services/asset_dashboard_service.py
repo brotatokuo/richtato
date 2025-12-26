@@ -205,6 +205,7 @@ class AssetDashboardService:
         Calculate key dashboard metrics.
 
         Business logic: Aggregates multiple metrics for dashboard cards.
+        Net worth = Assets - Liabilities
 
         Args:
             user: User instance
@@ -212,8 +213,12 @@ class AssetDashboardService:
         Returns:
             Dictionary with formatted metrics
         """
-        # Calculate networth
-        networth = self.repo.get_networth(user)
+        # Calculate assets and liabilities separately
+        total_assets = self.repo.get_networth(user)  # This returns asset accounts only
+        total_liabilities = self.repo.get_total_liabilities(user)
+
+        # Net worth = Assets - Liabilities
+        networth = total_assets - total_liabilities
 
         # Calculate networth growth
         networth_growth = self._calculate_networth_growth(user)
@@ -251,6 +256,8 @@ class AssetDashboardService:
 
         return {
             "networth": float(networth),
+            "total_assets": float(total_assets),
+            "total_liabilities": float(total_liabilities),
             "networth_growth": networth_growth,
             "networth_growth_class": networth_growth_class,
             "expense_sum": float(expense_30_days),
@@ -259,6 +266,33 @@ class AssetDashboardService:
             "savings_rate_context": savings_rate_context,
             "savings_rate_class": savings_rate_class,
         }
+
+    def get_networth_history(self, user, period: str = "6m") -> dict:
+        """
+        Get net worth history over time.
+
+        Args:
+            user: User instance
+            period: Time period ("1m", "3m", "6m", "1y", "all")
+
+        Returns:
+            Dictionary with history array
+        """
+        history = self.repo.get_networth_history(user, period)
+        return {"history": history}
+
+    def get_account_breakdown(self, user) -> dict:
+        """
+        Get account balances grouped by type.
+
+        Args:
+            user: User instance
+
+        Returns:
+            Dictionary with breakdown array
+        """
+        breakdown = self.repo.get_account_type_breakdown(user)
+        return {"breakdown": breakdown}
 
     def _calculate_monthly_cash_flow(
         self, user, start_date: date, end_date: date
@@ -307,6 +341,7 @@ class AssetDashboardService:
         Calculate networth growth for the current month.
 
         Business logic: Compares current networth to previous month.
+        Only includes asset accounts (excludes liabilities like credit cards).
 
         Returns:
             Formatted string like "+5.2% this month"
@@ -316,14 +351,14 @@ class AssetDashboardService:
             current_month_start = current_date.replace(day=1)
             previous_month_end = current_month_start - timedelta(days=1)
 
-            # Get current networth
+            # Get current networth (excludes liability accounts)
             current_networth = self.repo.get_networth(user)
 
-            # Get previous month's networth
+            # Get previous month's networth (only asset accounts)
             previous_networth = Decimal("0")
-            accounts = self.repo.get_user_accounts(user)
+            asset_accounts = self.repo.get_user_asset_accounts(user)
 
-            for account in accounts:
+            for account in asset_accounts:
                 balance = self.repo.get_account_balance_before_date(
                     account, current_month_start
                 )

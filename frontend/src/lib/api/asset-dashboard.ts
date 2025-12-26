@@ -3,14 +3,16 @@
  */
 
 export interface AssetDashboardData {
-  networth: string;
+  networth: number;
+  total_assets: number;
+  total_liabilities: number;
   networth_growth: string;
   networth_growth_class: string;
   savings_rate: string;
   savings_rate_class: string;
   savings_rate_context: string;
-  expense_sum: string;
-  income_sum: string;
+  expense_sum: number;
+  income_sum: number;
 }
 
 export interface CashFlowData {
@@ -26,6 +28,29 @@ export interface CashFlowData {
     type?: string;
     borderDash?: number[];
   }>;
+}
+
+export interface NetWorthHistoryPoint {
+  date: string;
+  networth: number;
+  assets: number;
+  liabilities: number;
+}
+
+export interface NetWorthHistoryData {
+  history: NetWorthHistoryPoint[];
+}
+
+export interface AccountBreakdownItem {
+  type: string;
+  type_display: string;
+  total: number;
+  count: number;
+  is_liability: boolean;
+}
+
+export interface AccountBreakdownData {
+  breakdown: AccountBreakdownItem[];
 }
 
 class AssetDashboardApiService {
@@ -141,6 +166,37 @@ class AssetDashboardApiService {
     });
 
     return this.handleResponse<any>(response);
+  }
+
+  /**
+   * Get net worth history over time
+   */
+  async getNetWorthHistory(
+    period: '1m' | '3m' | '6m' | '1y' | 'all' = '6m'
+  ): Promise<NetWorthHistoryData> {
+    const response = await fetch(
+      `${this.baseUrl}/networth-history/?period=${period}`,
+      {
+        method: 'GET',
+        headers: this.getHeaders(),
+        credentials: 'include',
+      }
+    );
+
+    return this.handleResponse<NetWorthHistoryData>(response);
+  }
+
+  /**
+   * Get account balances grouped by type
+   */
+  async getAccountBreakdown(): Promise<AccountBreakdownData> {
+    const response = await fetch(`${this.baseUrl}/account-breakdown/`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
+
+    return this.handleResponse<AccountBreakdownData>(response);
   }
 }
 

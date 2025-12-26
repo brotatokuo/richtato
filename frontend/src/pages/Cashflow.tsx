@@ -1,10 +1,16 @@
 import { IncomeExpenseChart } from '@/components/asset_dashboard/IncomeExpenseChart';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { transactionsApiService } from '@/lib/api/transactions';
+import { Card, CardContent } from '@/components/ui/card';
+import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
+import { Category, transactionsApiService } from '@/lib/api/transactions';
 import ReactECharts from 'echarts-for-react';
-import { AlertTriangle, TrendingDown, TrendingUp } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
+  PiggyBank,
+  TrendingUp,
+  Wallet,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 // Function to get computed CSS values
@@ -15,143 +21,195 @@ const getCSSValue = (property: string) => {
     .trim();
 };
 
+// Color palette for the Sankey diagram
+const COLORS = {
+  income: '#22c55e', // green-500
+  incomeLight: '#86efac', // green-300
+  expense: '#ef4444', // red-500
+  expenseLight: '#fca5a5', // red-300
+  investment: '#3b82f6', // blue-500
+  investmentLight: '#93c5fd', // blue-300
+  savings: '#eab308', // yellow-500
+  savingsLight: '#fde047', // yellow-300
+  neutral: '#6b7280', // gray-500
+};
+
 interface CashflowData {
-  income: number;
-  expenses: number;
-  netFlow: number;
-  categories: {
-    income: Array<{ name: string; value: number; color: string }>;
-    expenses: Array<{ name: string; value: number; color: string }>;
-  };
+  totalIncome: number;
+  totalExpenses: number;
+  totalInvestments: number;
+  netSavings: number;
+  incomeByCategory: Map<string, number>;
+  expensesByCategory: Map<string, number>;
+  investmentsByCategory: Map<string, number>;
 }
 
 export function Cashflow() {
   const [cashflowData, setCashflowData] = useState<CashflowData>({
-    income: 0,
-    expenses: 0,
-    netFlow: 0,
-    categories: {
-      income: [],
-      expenses: [],
-    },
+    totalIncome: 0,
+    totalExpenses: 0,
+    totalInvestments: 0,
+    netSavings: 0,
+    incomeByCategory: new Map(),
+    expensesByCategory: new Map(),
+    investmentsByCategory: new Map(),
   });
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [themeKey, setThemeKey] = useState(0); // Force re-render when theme changes
-  // Income vs Expenses chart is independent now; no local state needed for it
+  const [themeKey, setThemeKey] = useState(0);
 
-  const getCurrentMonthRange = () => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    const toIso = (d: Date) =>
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-        d.getDate()
-      ).padStart(2, '0')}`;
-    return { startDate: toIso(start), endDate: toIso(end) };
+  // Year and month state for date filtering
+  const now = new Date();
+  const [year, setYear] = useState<number>(now.getFullYear());
+  const [month, setMonth] = useState<number>(now.getMonth() + 1);
+
+  const handleDateChange = (newYear: number, newMonth: number) => {
+    setYear(newYear);
+    setMonth(newMonth);
   };
 
-  const initialRange = getCurrentMonthRange();
-  const [startDate, setStartDate] = useState<string>(initialRange.startDate);
-  const [endDate, setEndDate] = useState<string>(initialRange.endDate);
+  // Build category hierarchy map
+  const buildCategoryMap = (
+    cats: Category[]
+  ): Map<
+    number,
+    { name: string; parentId: number | null; parentName: string | null }
+  > => {
+    const map = new Map<
+      number,
+      { name: string; parentId: number | null; parentName: string | null }
+    >();
+    cats.forEach(cat => {
+      map.set(cat.id, {
+        name: cat.name,
+        parentId: cat.parent || null,
+        parentName: cat.parent_name || null,
+      });
+    });
+    return map;
+  };
+
+  // Check if a category is an investment category
+  const isInvestmentCategory = (
+    categoryName: string | null,
+    categoryId: number | null,
+    categoryMap: Map<
+      number,
+      { name: string; parentId: number | null; parentName: string | null }
+    >
+  ): boolean => {
+    if (!categoryName) return false;
+    const lowerName = categoryName.toLowerCase();
+
+    // Direct match on investment-related keywords
+    if (
+      lowerName.includes('investment') ||
+      lowerName.includes('401k') ||
+      lowerName.includes('ira') ||
+      lowerName.includes('stock') ||
+      lowerName.includes('brokerage') ||
+      lowerName.includes('retirement') ||
+      lowerName.includes('crypto')
+    ) {
+      return true;
+    }
+
+    // Check parent category
+    if (categoryId && categoryMap.has(categoryId)) {
+      const cat = categoryMap.get(categoryId)!;
+      if (cat.parentName) {
+        const parentLower = cat.parentName.toLowerCase();
+        if (
+          parentLower.includes('investment') ||
+          parentLower.includes('retirement')
+        ) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  };
 
   // Fetch real data from APIs
   const fetchCashflowData = async () => {
     try {
       setLoading(true);
       setError(null);
-      // Validate date range
-      if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
-        throw new Error('Start date must be before or equal to end date');
-      }
 
-      // Fetch data from APIs
-      const [incomeTransactions, expenseTransactions] = await Promise.all([
-        transactionsApiService.getIncomeTransactions({
-          startDate,
-          endDate,
-        }),
-        transactionsApiService.getExpenseTransactions({
-          startDate,
-          endDate,
-        }),
-      ]);
+      // Compute date range from year and month
+      const pad2 = (n: number) => String(n).padStart(2, '0');
+      const startDate = `${year}-${pad2(month)}-01`;
+      const endOfMonth = new Date(year, month, 0);
+      const endDate = `${endOfMonth.getFullYear()}-${pad2(endOfMonth.getMonth() + 1)}-${pad2(endOfMonth.getDate())}`;
 
-      // Get theme-aware colors
-      const chart1 = getCSSValue('--chart-1');
-      const chart2 = getCSSValue('--chart-2');
-      const chart3 = getCSSValue('--chart-3');
-      const chart4 = getCSSValue('--chart-4');
-      const chart5 = getCSSValue('--chart-5');
-      const chart6 = getCSSValue('--chart-6');
-      const chart7 = getCSSValue('--chart-7');
+      // Fetch all data in parallel
+      const [incomeTransactions, expenseTransactions, categoriesData] =
+        await Promise.all([
+          transactionsApiService.getIncomeTransactions({ startDate, endDate }),
+          transactionsApiService.getExpenseTransactions({ startDate, endDate }),
+          transactionsApiService.getCategories(),
+        ]);
 
-      // Calculate total income and expenses
-      const totalIncome = incomeTransactions.reduce(
-        (sum, transaction) => sum + transaction.amount,
-        0
-      );
-      const totalExpenses = expenseTransactions.reduce(
-        (sum, transaction) => sum + transaction.amount,
-        0
-      );
-      const netFlow = totalIncome - totalExpenses;
+      const categoryMap = buildCategoryMap(categoriesData);
 
-      // Group income by source (using Account field as source)
-      const incomeBySource = incomeTransactions.reduce(
-        (acc, transaction) => {
-          const source = transaction.Account || 'Unknown';
-          if (!acc[source]) {
-            acc[source] = 0;
-          }
-          acc[source] += transaction.amount;
-          return acc;
-        },
-        {} as Record<string, number>
-      );
+      // Group income by category (not by account)
+      const incomeByCategory = new Map<string, number>();
+      let totalIncome = 0;
 
-      // Group expenses by category
-      const expensesByCategory = expenseTransactions.reduce(
-        (acc, transaction) => {
-          const category = transaction.Category || 'Uncategorized';
-          if (!acc[category]) {
-            acc[category] = 0;
-          }
-          acc[category] += transaction.amount;
-          return acc;
-        },
-        {} as Record<string, number>
-      );
+      incomeTransactions.forEach(tx => {
+        const categoryName = tx.category_name || 'Other Income';
+        const amount = Number(tx.amount);
+        totalIncome += amount;
+        incomeByCategory.set(
+          categoryName,
+          (incomeByCategory.get(categoryName) || 0) + amount
+        );
+      });
 
-      // Convert to arrays with colors
-      const incomeCategories = Object.entries(incomeBySource).map(
-        ([name, value], index) => ({
-          name,
-          value,
-          color: `hsl(${[chart1, chart2, chart3, chart4][index % 4]})`,
-        })
-      );
+      // Group expenses and investments by category (simple flat structure)
+      const expensesByCategory = new Map<string, number>();
+      const investmentsByCategory = new Map<string, number>();
 
-      const expenseCategories = Object.entries(expensesByCategory).map(
-        ([name, value], index) => ({
-          name,
-          value,
-          color: `hsl(${[chart5, chart6, chart7, chart1, chart2, chart3, chart4][index % 7]})`,
-        })
-      );
+      let totalExpenses = 0;
+      let totalInvestments = 0;
 
-      const cashflowData: CashflowData = {
-        income: totalIncome,
-        expenses: totalExpenses,
-        netFlow,
-        categories: {
-          income: incomeCategories,
-          expenses: expenseCategories,
-        },
-      };
+      expenseTransactions.forEach(tx => {
+        const amount = Number(tx.amount);
+        const categoryName = tx.category_name || 'Uncategorized';
+        const isInvestment = isInvestmentCategory(
+          categoryName,
+          tx.category,
+          categoryMap
+        );
 
-      setCashflowData(cashflowData);
+        if (isInvestment) {
+          totalInvestments += amount;
+          investmentsByCategory.set(
+            categoryName,
+            (investmentsByCategory.get(categoryName) || 0) + amount
+          );
+        } else {
+          totalExpenses += amount;
+          expensesByCategory.set(
+            categoryName,
+            (expensesByCategory.get(categoryName) || 0) + amount
+          );
+        }
+      });
+
+      const netSavings = totalIncome - totalExpenses - totalInvestments;
+
+      setCashflowData({
+        totalIncome,
+        totalExpenses,
+        totalInvestments,
+        netSavings,
+        incomeByCategory,
+        expensesByCategory,
+        investmentsByCategory,
+      });
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to load cashflow data'
@@ -163,15 +221,15 @@ export function Cashflow() {
 
   useEffect(() => {
     fetchCashflowData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, month]);
 
   // Listen for theme changes
   useEffect(() => {
     const handleThemeChange = () => {
-      setThemeKey(prev => prev + 1); // Force re-render with new colors
+      setThemeKey(prev => prev + 1);
     };
 
-    // Listen for theme changes by watching for class changes on document
     const observer = new MutationObserver(mutations => {
       mutations.forEach(mutation => {
         if (
@@ -192,28 +250,144 @@ export function Cashflow() {
   }, []);
 
   const getSankeyOption = () => {
-    // Get theme-aware colors
-    const sankeyNode = getCSSValue('--sankey-node');
-    const sankeyText = getCSSValue('--sankey-text');
-    const sankeyBg = getCSSValue('--sankey-bg');
-    const sankeyBorder = getCSSValue('--sankey-border');
+    const sankeyText =
+      getCSSValue('--sankey-text') || getCSSValue('--foreground');
+    const sankeyBg = getCSSValue('--sankey-bg') || getCSSValue('--card');
+    const sankeyBorder =
+      getCSSValue('--sankey-border') || getCSSValue('--border');
 
-    const nodes = [
-      { name: 'Total Income', itemStyle: { color: `hsl(${sankeyNode})` } },
-      ...cashflowData.categories.expenses.map(cat => ({
-        name: cat.name,
-        itemStyle: { color: cat.color },
-      })),
+    const nodes: Array<{ name: string; itemStyle: { color: string } }> = [];
+    const links: Array<{ source: string; target: string; value: number }> = [];
+    const nodeSet = new Set<string>();
+
+    // Track which names are used at which level to avoid conflicts
+    const usedNames = new Set<string>();
+
+    const addNode = (name: string, color: string) => {
+      if (!nodeSet.has(name)) {
+        nodeSet.add(name);
+        nodes.push({ name, itemStyle: { color } });
+      }
+    };
+
+    // Level 1: Income Sources - prefix with "Income: " to avoid conflicts
+    const incomeColors = [
+      COLORS.income,
+      COLORS.incomeLight,
+      '#4ade80',
+      '#16a34a',
     ];
+    let incomeColorIndex = 0;
+    const incomeNodeNames = new Map<string, string>();
+    cashflowData.incomeByCategory.forEach((_value, name) => {
+      const nodeName = `${name}`;
+      incomeNodeNames.set(name, nodeName);
+      usedNames.add(nodeName);
+      const color = incomeColors[incomeColorIndex % incomeColors.length];
+      addNode(nodeName, color);
+      incomeColorIndex++;
+    });
 
-    const links = [
-      // Flow income into expense categories
-      ...cashflowData.categories.expenses.map(cat => ({
+    // Level 2: Total Income (central node)
+    addNode('Total Income', COLORS.income);
+    usedNames.add('Total Income');
+
+    // Level 3: Expense Categories
+    const expenseColors = [
+      COLORS.expense,
+      COLORS.expenseLight,
+      '#f87171',
+      '#dc2626',
+      '#b91c1c',
+      '#991b1b',
+      '#7f1d1d',
+    ];
+    let expenseColorIndex = 0;
+    const expenseNodeNames = new Map<string, string>();
+
+    cashflowData.expensesByCategory.forEach((_value, categoryName) => {
+      let nodeName = categoryName;
+      // Avoid conflicts with income sources
+      if (usedNames.has(categoryName)) {
+        nodeName = `${categoryName} (Expense)`;
+      }
+      expenseNodeNames.set(categoryName, nodeName);
+      usedNames.add(nodeName);
+
+      const color = expenseColors[expenseColorIndex % expenseColors.length];
+      addNode(nodeName, color);
+      expenseColorIndex++;
+    });
+
+    // Level 3: Investment Categories
+    const investmentColors = [
+      COLORS.investment,
+      COLORS.investmentLight,
+      '#60a5fa',
+      '#2563eb',
+    ];
+    let investmentColorIndex = 0;
+    const investmentNodeNames = new Map<string, string>();
+
+    cashflowData.investmentsByCategory.forEach((_value, categoryName) => {
+      let nodeName = categoryName;
+      if (usedNames.has(categoryName)) {
+        nodeName = `${categoryName} (Investment)`;
+      }
+      investmentNodeNames.set(categoryName, nodeName);
+      usedNames.add(nodeName);
+
+      const color =
+        investmentColors[investmentColorIndex % investmentColors.length];
+      addNode(nodeName, color);
+      investmentColorIndex++;
+    });
+
+    // Add Net Savings node if positive
+    if (cashflowData.netSavings > 0) {
+      addNode('Net Savings', COLORS.savings);
+    }
+
+    // Links: Income Sources → Total Income
+    cashflowData.incomeByCategory.forEach((value, name) => {
+      if (value > 0) {
+        const nodeName = incomeNodeNames.get(name) || name;
+        links.push({ source: nodeName, target: 'Total Income', value });
+      }
+    });
+
+    // Links: Total Income → Expense Categories
+    cashflowData.expensesByCategory.forEach((value, categoryName) => {
+      if (value > 0) {
+        const nodeName = expenseNodeNames.get(categoryName) || categoryName;
+        links.push({
+          source: 'Total Income',
+          target: nodeName,
+          value,
+        });
+      }
+    });
+
+    // Links: Total Income → Investment Categories
+    cashflowData.investmentsByCategory.forEach((value, categoryName) => {
+      if (value > 0) {
+        const nodeName = investmentNodeNames.get(categoryName) || categoryName;
+        links.push({
+          source: 'Total Income',
+          target: nodeName,
+          value,
+        });
+      }
+    });
+
+    // Links: Total Income → Net Savings
+    if (cashflowData.netSavings > 0) {
+      links.push({
         source: 'Total Income',
-        target: cat.name,
-        value: cat.value,
-      })),
-    ];
+        target: 'Net Savings',
+        value: cashflowData.netSavings,
+      });
+    }
 
     return {
       backgroundColor: 'transparent',
@@ -225,11 +399,31 @@ export function Cashflow() {
         textStyle: {
           color: `hsl(${sankeyText})`,
         },
-        formatter: (params: any) => {
+        formatter: (params: {
+          dataType: 'node' | 'edge';
+          data: {
+            name?: string;
+            value?: number;
+            source?: string;
+            target?: string;
+          };
+        }) => {
           if (params.dataType === 'node') {
-            return `${params.data.name}<br/>Value: $${params.data.value?.toLocaleString() || '0'}`;
+            const value = params.data.value || 0;
+            const percentage =
+              cashflowData.totalIncome > 0
+                ? ((value / cashflowData.totalIncome) * 100).toFixed(1)
+                : 0;
+            return `<strong>${params.data.name}</strong><br/>Amount: $${value.toLocaleString()}<br/>% of Income: ${percentage}%`;
           } else if (params.dataType === 'edge') {
-            return `${params.data.source} → ${params.data.target}<br/>Amount: $${params.data.value.toLocaleString()}`;
+            const percentage =
+              cashflowData.totalIncome > 0
+                ? (
+                    ((params.data.value || 0) / cashflowData.totalIncome) *
+                    100
+                  ).toFixed(1)
+                : 0;
+            return `<strong>${params.data.source} → ${params.data.target}</strong><br/>Amount: $${(params.data.value || 0).toLocaleString()}<br/>% of Income: ${percentage}%`;
           }
           return '';
         },
@@ -242,6 +436,28 @@ export function Cashflow() {
           emphasis: {
             focus: 'adjacency',
           },
+          levels: [
+            {
+              depth: 0,
+              itemStyle: { borderWidth: 0 },
+              lineStyle: { opacity: 0.6 },
+            },
+            {
+              depth: 1,
+              itemStyle: { borderWidth: 0 },
+              lineStyle: { opacity: 0.5 },
+            },
+            {
+              depth: 2,
+              itemStyle: { borderWidth: 0 },
+              lineStyle: { opacity: 0.4 },
+            },
+            {
+              depth: 3,
+              itemStyle: { borderWidth: 0 },
+              lineStyle: { opacity: 0.3 },
+            },
+          ],
           lineStyle: {
             color: 'gradient',
             curveness: 0.5,
@@ -252,11 +468,23 @@ export function Cashflow() {
           },
           label: {
             color: `hsl(${sankeyText})`,
-            fontSize: 12,
+            fontSize: 11,
+            fontWeight: 500,
           },
+          nodeAlign: 'justify',
+          layoutIterations: 32,
         },
       ],
     };
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
   };
 
   if (loading) {
@@ -289,52 +517,15 @@ export function Cashflow() {
     );
   }
 
-  // Check if there's no data
-  const hasNoData = cashflowData.income === 0 && cashflowData.expenses === 0;
+  const hasNoData =
+    cashflowData.totalIncome === 0 && cashflowData.totalExpenses === 0;
 
   return (
     <div className="min-h-screen bg-background p-6">
+      {/* Floating Month/Year Picker */}
+      <MonthYearPicker year={year} month={month} onChange={handleDateChange} />
+
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Date Range Controls */}
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-          <CardContent className="p-4">
-            <div className="flex flex-wrap items-end gap-4">
-              <div className="flex flex-col">
-                <label className="text-sm text-muted-foreground mb-1">
-                  Start date
-                </label>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={e => setStartDate(e.target.value)}
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm text-muted-foreground mb-1">
-                  End date
-                </label>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={e => setEndDate(e.target.value)}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={fetchCashflowData}>Apply</Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const r = getCurrentMonthRange();
-                    setStartDate(r.startDate);
-                    setEndDate(r.endDate);
-                  }}
-                >
-                  This month
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
         {hasNoData ? (
           <Card className="bg-card/50 backdrop-blur-sm border-border/50">
             <CardContent>
@@ -346,96 +537,164 @@ export function Cashflow() {
                   No Cashflow Data
                 </h2>
                 <p className="text-muted-foreground">
-                  No income or expense transactions found for this range. Adjust
-                  dates above.
+                  No income or expense transactions found for this month. Select
+                  a different month using the picker.
                 </p>
               </div>
             </CardContent>
           </Card>
         ) : (
           <>
+            {/* Summary Stats Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Total Income */}
+              <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-500/20 rounded-lg">
+                      <ArrowUpRight className="h-5 w-5 text-green-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Total Income
+                      </p>
+                      <p className="text-xl font-bold text-green-500">
+                        {formatCurrency(cashflowData.totalIncome)}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Total Expenses */}
+              <Card className="bg-gradient-to-br from-red-500/10 to-red-600/5 border-red-500/20">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-red-500/20 rounded-lg">
+                      <ArrowDownRight className="h-5 w-5 text-red-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Total Expenses
+                      </p>
+                      <p className="text-xl font-bold text-red-500">
+                        {formatCurrency(cashflowData.totalExpenses)}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Total Investments */}
+              <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-500/20 rounded-lg">
+                      <Wallet className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Investments
+                      </p>
+                      <p className="text-xl font-bold text-blue-500">
+                        {formatCurrency(cashflowData.totalInvestments)}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Net Savings */}
+              <Card
+                className={`bg-gradient-to-br ${
+                  cashflowData.netSavings >= 0
+                    ? 'from-yellow-500/10 to-yellow-600/5 border-yellow-500/20'
+                    : 'from-orange-500/10 to-orange-600/5 border-orange-500/20'
+                }`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2 rounded-lg ${
+                        cashflowData.netSavings >= 0
+                          ? 'bg-yellow-500/20'
+                          : 'bg-orange-500/20'
+                      }`}
+                    >
+                      <PiggyBank
+                        className={`h-5 w-5 ${
+                          cashflowData.netSavings >= 0
+                            ? 'text-yellow-500'
+                            : 'text-orange-500'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Net Savings
+                      </p>
+                      <p
+                        className={`text-xl font-bold ${
+                          cashflowData.netSavings >= 0
+                            ? 'text-yellow-500'
+                            : 'text-orange-500'
+                        }`}
+                      >
+                        {formatCurrency(cashflowData.netSavings)}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
             {/* Sankey Diagram */}
             <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-              <CardContent>
-                <div className="h-96">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold mb-4 text-foreground">
+                  Money Flow
+                </h3>
+                <div className="h-[500px]">
                   <ReactECharts
-                    key={themeKey} // Force re-render when theme changes
+                    key={themeKey}
                     option={getSankeyOption()}
                     style={{ height: '100%', width: '100%' }}
                     opts={{ renderer: 'canvas' }}
                   />
                 </div>
+                <div className="flex flex-wrap gap-4 mt-4 justify-center text-sm">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: COLORS.income }}
+                    />
+                    <span className="text-muted-foreground">Income</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: COLORS.expense }}
+                    />
+                    <span className="text-muted-foreground">Expenses</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: COLORS.investment }}
+                    />
+                    <span className="text-muted-foreground">Investments</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: COLORS.savings }}
+                    />
+                    <span className="text-muted-foreground">Savings</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
-            {/* Category Breakdown */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Income Categories */}
-              <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold text-green-600 flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    Income Sources
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {cashflowData.categories.income.map((category, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-4 h-4 rounded-full"
-                            style={{ backgroundColor: category.color }}
-                          />
-                          <span className="text-foreground">
-                            {category.name}
-                          </span>
-                        </div>
-                        <span className="font-semibold text-foreground">
-                          ${category.value.toLocaleString()}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Expense Categories */}
-              <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold text-red-600 flex items-center gap-2">
-                    <TrendingDown className="h-5 w-5" />
-                    Expense Categories
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {cashflowData.categories.expenses.map((category, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-4 h-4 rounded-full"
-                            style={{ backgroundColor: category.color }}
-                          />
-                          <span className="text-foreground">
-                            {category.name}
-                          </span>
-                        </div>
-                        <span className="font-semibold text-foreground">
-                          ${category.value.toLocaleString()}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
             {/* Income vs Expenses Chart (independent) */}
             <div className="lg:col-span-2 min-w-0 overflow-x-auto">
               <IncomeExpenseChart />

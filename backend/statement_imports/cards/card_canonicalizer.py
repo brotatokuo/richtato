@@ -1,14 +1,13 @@
+import re
 from abc import ABC, abstractmethod
+from decimal import Decimal
 
 import pandas as pd
-from loguru import logger
-import re
-
-from apps.expense.models import Expense
-from apps.category.models import Category
-from apps.card.models import CardAccount
+from apps.financial_account.models import FinancialAccount
+from apps.transaction.models import Transaction, TransactionCategory
+from apps.transaction.services.transaction_service import TransactionService
 from artificial_intelligence.ai import OpenAI
-from categories.categories_manager import CategoriesManager
+from loguru import logger
 
 
 class CardCanonicalizer(ABC):
@@ -21,6 +20,8 @@ class CardCanonicalizer(ABC):
         Initializes the CardCanonicalizer with a DataFrame.
 
         Args:
+            user: User instance
+            card_name: Name of the card/account
             df (pd.DataFrame): The DataFrame containing card data.
         """
         self.user = user
@@ -116,9 +117,17 @@ class CardCanonicalizer(ABC):
         """
         Computes the category for each transaction in the DataFrame.
         """
-        categories_manager = CategoriesManager(self.user)
+        transaction_service = TransactionService()
+
+        def match_category(description: str) -> str:
+            """Match category via keywords and return category name or None."""
+            category = transaction_service._match_category_via_keywords(
+                self.user, description
+            )
+            return category.name if category else None
+
         self.formatted_df["Category"] = self.formatted_df["Description"].apply(
-            categories_manager.search
+            match_category
         )
         uncategorized_mask = self.formatted_df["Category"].isna()
         logger.debug(
@@ -142,25 +151,51 @@ class CardCanonicalizer(ABC):
             category_name = row["Category"]
             date = row["Date"]
             amount = row["Amount"]
-            card_account = CardAccount.objects.get(name=card_name, user=self.user)
-            try:
-                category, _ = Category.objects.get_or_create(
-                    name=category_name,
+
+            # Get or create the financial account
+            account = FinancialAccount.objects.filter(
+                name=card_name, user=self.user
+            ).first()
+
+            if not account:
+                # Create the account if it doesn't exist
+                account = FinancialAccount.objects.create(
                     user=self.user,
+                    name=card_name,
+                    account_type="credit_card",
+                    sync_source="csv",
                 )
 
-                transaction = Expense(
+            try:
+                # Get or create the category
+                category, _ = TransactionCategory.objects.get_or_create(
+                    name=category_name,
                     user=self.user,
-                    account_name=card_account,
+                    defaults={
+                        "slug": category_name.lower()
+                        .replace(" ", "-")
+                        .replace("/", "-"),
+                        "type": "expense",
+                    },
+                )
+
+                # Create the transaction
+                transaction = Transaction(
+                    user=self.user,
+                    account=account,
                     description=description,
                     category=category,
                     date=date,
-                    amount=amount,
+                    amount=Decimal(str(amount)),
+                    transaction_type="debit",
+                    sync_source="csv",
                 )
                 transaction.save()
-            except Category.DoesNotExist:
-                available_categories = Category.objects.values_list("name", flat=True)
+            except TransactionCategory.DoesNotExist:
+                available_categories = TransactionCategory.objects.filter(
+                    user=self.user
+                ).values_list("name", flat=True)
                 logger.error(
-                    f"Category '{category}' does not exist. Available categories: {list(available_categories)}"
+                    f"Category '{category_name}' does not exist. Available categories: {list(available_categories)}"
                 )
                 break

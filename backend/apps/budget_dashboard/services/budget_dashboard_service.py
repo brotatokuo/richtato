@@ -116,40 +116,43 @@ class BudgetDashboardService:
 
         results = []
         for budget in budgets:
-            # Get total expenses for this category during the period
-            total_spent = self.repo.get_category_expense_sum(
-                user, budget.category, start_date, end_date
-            )
+            # Iterate through each budget category allocation
+            for budget_category in budget.budget_categories.all():
+                category = budget_category.category
+                # Get total expenses for this category during the period
+                total_spent = self.repo.get_category_expense_sum(
+                    user, category, start_date, end_date
+                )
 
-            budget_amount = budget.amount or Decimal(0)
-            percentage = (
-                int(round((total_spent / budget_amount) * 100))
-                if budget_amount > 0
-                else 0
-            )
+                budget_amount = budget_category.allocated_amount or Decimal(0)
+                percentage = (
+                    int(round((total_spent / budget_amount) * 100))
+                    if budget_amount > 0
+                    else 0
+                )
 
-            # Round monetary values to 2 decimals
-            budget_amount_q = budget_amount.quantize(
-                Decimal("0.01"), rounding=ROUND_HALF_UP
-            )
-            total_spent_q = total_spent.quantize(
-                Decimal("0.01"), rounding=ROUND_HALF_UP
-            )
-            remaining_q = (budget_amount - total_spent).quantize(
-                Decimal("0.01"), rounding=ROUND_HALF_UP
-            )
+                # Round monetary values to 2 decimals
+                budget_amount_q = budget_amount.quantize(
+                    Decimal("0.01"), rounding=ROUND_HALF_UP
+                )
+                total_spent_q = total_spent.quantize(
+                    Decimal("0.01"), rounding=ROUND_HALF_UP
+                )
+                remaining_q = (budget_amount - total_spent).quantize(
+                    Decimal("0.01"), rounding=ROUND_HALF_UP
+                )
 
-            results.append(
-                {
-                    "category": budget.category.name,
-                    "budget": float(budget_amount_q),
-                    "spent": float(total_spent_q),
-                    "percentage": percentage,
-                    "remaining": float(remaining_q),
-                    "year": year or start_date.year,
-                    "month": month or start_date.month,
-                }
-            )
+                results.append(
+                    {
+                        "category": category.name,
+                        "budget": float(budget_amount_q),
+                        "spent": float(total_spent_q),
+                        "percentage": percentage,
+                        "remaining": float(remaining_q),
+                        "year": year or start_date.year,
+                        "month": month or start_date.month,
+                    }
+                )
 
         # Sort by highest percentage to lowest
         results = sorted(results, key=lambda x: x["percentage"], reverse=True)
@@ -189,29 +192,37 @@ class BudgetDashboardService:
 
         budget_expenses = []
         for budget in budgets:
-            # Get total expenses for this category during the month
-            total_expense = self.repo.get_category_expense_sum(
-                user, budget.category, start_of_month, end_of_month
-            )
+            # Iterate through each budget category allocation
+            for budget_category in budget.budget_categories.all():
+                category = budget_category.category
+                # Get total expenses for this category during the month
+                total_expense = self.repo.get_category_expense_sum(
+                    user, category, start_of_month, end_of_month
+                )
 
-            # Calculate percentage of budget used
-            percent_budget = (
-                round(total_expense / budget.amount * 100) if budget.amount else 0
-            )
+                allocated_amount = budget_category.allocated_amount or Decimal(0)
+                # Calculate percentage of budget used
+                percent_budget = (
+                    round(total_expense / allocated_amount * 100)
+                    if allocated_amount
+                    else 0
+                )
 
-            # Calculate difference and message
-            difference = total_expense - budget.amount
-            message = self._calculate_budget_diff_message(difference, percent_budget)
+                # Calculate difference and message
+                difference = total_expense - allocated_amount
+                message = self._calculate_budget_diff_message(
+                    difference, percent_budget
+                )
 
-            budget_expenses.append(
-                {
-                    "name": budget.category.name,
-                    "budget": budget.amount,
-                    "spent": total_expense,
-                    "percent": percent_budget,
-                    "message": message,
-                }
-            )
+                budget_expenses.append(
+                    {
+                        "name": category.name,
+                        "budget": allocated_amount,
+                        "spent": total_expense,
+                        "percent": percent_budget,
+                        "message": message,
+                    }
+                )
 
         # Sort by percentage used (highest first)
         rankings = sorted(budget_expenses, key=lambda x: x["percent"], reverse=True)
@@ -238,12 +249,15 @@ class BudgetDashboardService:
         total_spent = Decimal(0)
 
         for budget in budgets:
-            if budget.amount > 0:
-                total_budget += budget.amount
-                cat_expense = self.repo.get_category_expense_sum(
-                    user, budget.category, start_date, end_date
-                )
-                total_spent += Decimal(cat_expense)
+            # Iterate through each budget category allocation
+            for budget_category in budget.budget_categories.all():
+                allocated_amount = budget_category.allocated_amount or Decimal(0)
+                if allocated_amount > 0:
+                    total_budget += allocated_amount
+                    cat_expense = self.repo.get_category_expense_sum(
+                        user, budget_category.category, start_date, end_date
+                    )
+                    total_spent += Decimal(cat_expense)
 
         if total_budget > 0:
             utilization = (total_spent / total_budget) * Decimal(100)
@@ -305,6 +319,72 @@ class BudgetDashboardService:
             return f"{float(abs(difference))} left ({percent}%)"
         else:
             return f"{float(abs(difference))} over ({percent}%)"
+
+    def get_budget_progress_multi_month(
+        self,
+        user,
+        months: int = 12,
+    ) -> dict:
+        """
+        Get budget progress for the last N months.
+
+        Business logic: Aggregates budget progress data for multiple months
+        to support timeline and trend visualizations.
+
+        Args:
+            user: User instance
+            months: Number of months to fetch (default 12)
+
+        Returns:
+            Dictionary with monthly_data list and metadata
+        """
+        today = date.today()
+        monthly_data = []
+
+        for i in range(months - 1, -1, -1):
+            # Calculate the target month (going backwards from current)
+            year = today.year
+            month = today.month - i
+            while month <= 0:
+                month += 12
+                year -= 1
+
+            # Get budget progress for this month
+            progress = self.get_budget_progress(user, year=year, month=month)
+
+            # Calculate totals for this month
+            budgets = progress.get("budgets", [])
+            total_budget = sum(b.get("budget", 0) for b in budgets)
+            total_spent = sum(b.get("spent", 0) for b in budgets)
+            total_remaining = total_budget - total_spent
+            percentage = (
+                int(round((total_spent / total_budget) * 100))
+                if total_budget > 0
+                else 0
+            )
+
+            month_name = calendar.month_abbr[month]
+
+            monthly_data.append(
+                {
+                    "year": year,
+                    "month": month,
+                    "month_name": month_name,
+                    "label": f"{month_name} {year}",
+                    "total_budget": round(total_budget, 2),
+                    "total_spent": round(total_spent, 2),
+                    "total_remaining": round(total_remaining, 2),
+                    "percentage": percentage,
+                    "categories": budgets,
+                    "start_date": progress.get("start_date"),
+                    "end_date": progress.get("end_date"),
+                }
+            )
+
+        return {
+            "monthly_data": monthly_data,
+            "months_requested": months,
+        }
 
     def _determine_date_range(
         self,

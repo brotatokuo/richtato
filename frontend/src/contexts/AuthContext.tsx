@@ -35,19 +35,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const demoLogin = async () => {
     try {
-      console.log('Demo login attempt');
       const response = await authApi.demoLogin();
 
       if (response.success) {
         setUser(response.user);
         setOrganization(response.organization || null);
-        console.log('Demo login successful:', response.user);
       } else {
-        console.error('Demo login failed:', response.message);
         throw new Error(response.message);
       }
     } catch (error) {
-      console.error('Demo login error:', error);
       throw error;
     }
   };

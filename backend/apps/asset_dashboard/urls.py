@@ -12,6 +12,16 @@ urlpatterns = [
     path("savings/", views.savings_data, name="asset_dashboard_savings"),
     path("metrics/", views.dashboard_metrics, name="asset_dashboard_metrics"),
     path(
+        "networth-history/",
+        views.networth_history,
+        name="asset_dashboard_networth_history",
+    ),
+    path(
+        "account-breakdown/",
+        views.account_breakdown,
+        name="asset_dashboard_account_breakdown",
+    ),
+    path(
         "top-categories/",
         views.top_categories_data,
         name="asset_dashboard_top_categories",

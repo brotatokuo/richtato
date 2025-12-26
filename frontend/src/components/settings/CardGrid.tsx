@@ -21,9 +21,9 @@ function CreditCardItem({
 }) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
-  const hasSpecificImage = hasSpecificCardImage(card.name);
+  const hasSpecificImage = hasSpecificCardImage(card.name, card.imageKey);
   const cardImage = hasSpecificImage
-    ? getCardImage(card.name, card.bank)
+    ? getCardImage(card.name, card.bank, card.imageKey)
     : '/images/credit_cards/default.png';
   const bankLogo = getBankLogo(card.bank);
 

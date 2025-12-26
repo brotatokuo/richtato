@@ -1,14 +1,15 @@
-from apps.category.models import Category
+from apps.transaction.models import TransactionCategory
 from rest_framework import serializers
 
 from .models import UserPreference
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Category
-        fields = ["id", "name", "type", "enabled"]
+    """Serializer for TransactionCategory model."""
 
+    class Meta:
+        model = TransactionCategory
+        fields = ["id", "name", "slug", "icon", "color"]
         read_only_fields = ["id"]
 
 

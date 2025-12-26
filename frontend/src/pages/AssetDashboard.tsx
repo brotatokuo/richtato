@@ -1,22 +1,28 @@
-import { AccountDetailModal } from '@/components/asset_dashboard/AccountDetailModal';
-import { AccountsSection } from '@/components/asset_dashboard/AccountsSection';
+import { AccountBreakdownChart } from '@/components/asset_dashboard/AccountBreakdownChart';
+import {
+  AccountGroup,
+  AccountsList,
+  AccountWithBalance,
+} from '@/components/asset_dashboard/AccountsList';
+import { AssetTrendsChart } from '@/components/asset_dashboard/AssetTrendsChart';
 import { MetricCard } from '@/components/asset_dashboard/MetricCard';
-import { SavingsChart } from '@/components/asset_dashboard/SavingsChart';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { assetDashboardApiService } from '@/lib/api/asset-dashboard';
 import { formatCurrency } from '@/lib/format';
-import { AlertTriangle, PiggyBank, TrendingUp } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, PiggyBank, TrendingUp, Wallet } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface AssetDashboardData {
-  networth: string | number;
+  networth: number;
+  total_assets: number;
+  total_liabilities: number;
   networth_growth: string;
   networth_growth_class: string;
   savings_rate: string;
   savings_rate_class: string;
   savings_rate_context: string;
-  total_income: string | number;
-  total_expenses: string | number;
+  income_sum: number;
+  expense_sum: number;
 }
 
 export function AssetDashboard() {
@@ -26,9 +32,9 @@ export function AssetDashboard() {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const stableSavingsChart = useMemo(() => <SavingsChart />, []);
-  const [accountModalOpen, setAccountModalOpen] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState<any | null>(null);
+  const [selectedAccount, setSelectedAccount] =
+    useState<AccountWithBalance | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<AccountGroup | null>(null);
   const [accountsReloadKey, setAccountsReloadKey] = useState(0);
 
   const loadDashboardData = async () => {
@@ -36,19 +42,20 @@ export function AssetDashboard() {
       setLoading(true);
       setError(null);
 
-      // Fetch data from asset dashboard API
       const dashboardMetrics =
         await assetDashboardApiService.getDashboardMetrics();
 
       setDashboardData({
         networth: dashboardMetrics.networth,
+        total_assets: dashboardMetrics.total_assets,
+        total_liabilities: dashboardMetrics.total_liabilities,
         networth_growth: dashboardMetrics.networth_growth,
         networth_growth_class: dashboardMetrics.networth_growth_class,
         savings_rate: dashboardMetrics.savings_rate,
         savings_rate_class: dashboardMetrics.savings_rate_class,
         savings_rate_context: dashboardMetrics.savings_rate_context,
-        total_income: dashboardMetrics.income_sum,
-        total_expenses: dashboardMetrics.expense_sum,
+        income_sum: dashboardMetrics.income_sum,
+        expense_sum: dashboardMetrics.expense_sum,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -61,12 +68,26 @@ export function AssetDashboard() {
     loadDashboardData();
   }, []);
 
-  const openAccountModal = (account: any) => {
+  const handleAccountSelect = (account: AccountWithBalance | null) => {
     setSelectedAccount(account);
-    setAccountModalOpen(true);
+    if (account) {
+      setSelectedGroup(null); // Clear group when selecting individual account
+    }
   };
 
-  const handleAccountUpdated = () => {
+  const handleGroupSelect = (group: AccountGroup | null) => {
+    setSelectedGroup(group);
+    if (group) {
+      setSelectedAccount(null); // Clear individual account when selecting group
+    }
+  };
+
+  const handleResetSelection = () => {
+    setSelectedAccount(null);
+    setSelectedGroup(null);
+  };
+
+  const handleDataChange = () => {
     setAccountsReloadKey(v => v + 1);
     loadDashboardData();
   };
@@ -106,70 +127,173 @@ export function AssetDashboard() {
 
   return (
     <div className="space-y-6 w-full max-w-full overflow-x-hidden">
-      {/* Asset KPI Summary Row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 w-full min-w-0">
-        <MetricCard
-          title="Net Worth"
-          value={formatCurrency(
-            typeof dashboardData.networth === 'string'
-              ? parseFloat(dashboardData.networth)
-              : dashboardData.networth,
-            preferences.currency,
-            0
-          )}
-          subtitle={dashboardData.networth_growth}
-          icon={<TrendingUp className="h-4 w-4" />}
-          info={
-            <div className="space-y-2">
-              <p className="text-foreground">
-                Net Worth = Sum of all account balances.
-              </p>
-              <p>
-                Currently simplified to total assets across linked accounts.
-              </p>
+      {/* Top KPI Row */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 w-full min-w-0">
+        {/* Net Worth Card - Large with breakdown */}
+        <div className="lg:col-span-2">
+          <MetricCard
+            title="Net Worth"
+            value={formatCurrency(
+              dashboardData.networth,
+              preferences.currency,
+              0
+            )}
+            subtitle={dashboardData.networth_growth}
+            icon={<TrendingUp className="h-4 w-4" />}
+            valueClassName={
+              dashboardData.networth >= 0 ? 'text-green-500' : 'text-red-500'
+            }
+            info={
+              <div className="space-y-2">
+                <p className="text-foreground">
+                  Net Worth = Total Assets - Total Liabilities
+                </p>
+                <div className="grid grid-cols-2 gap-4 mt-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Assets</p>
+                    <p className="font-semibold text-green-500">
+                      {formatCurrency(
+                        dashboardData.total_assets,
+                        preferences.currency,
+                        0
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Liabilities</p>
+                    <p className="font-semibold text-red-500">
+                      {formatCurrency(
+                        dashboardData.total_liabilities,
+                        preferences.currency,
+                        0
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            }
+          >
+            {/* Assets vs Liabilities breakdown bar */}
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-green-500" />
+                  <span className="text-muted-foreground">Assets</span>
+                  <span className="font-medium text-green-500">
+                    {formatCurrency(
+                      dashboardData.total_assets,
+                      preferences.currency,
+                      0
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-red-500">
+                    {formatCurrency(
+                      dashboardData.total_liabilities,
+                      preferences.currency,
+                      0
+                    )}
+                  </span>
+                  <span className="text-muted-foreground">Liabilities</span>
+                </div>
+              </div>
+              {/* Visual bar */}
+              <div className="h-2 bg-red-500/20 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-green-500 rounded-full transition-all duration-500"
+                  style={{
+                    width: `${
+                      dashboardData.total_assets +
+                        dashboardData.total_liabilities >
+                      0
+                        ? (dashboardData.total_assets /
+                            (dashboardData.total_assets +
+                              dashboardData.total_liabilities)) *
+                          100
+                        : 50
+                    }%`,
+                  }}
+                />
+              </div>
             </div>
-          }
-        />
+          </MetricCard>
+        </div>
 
+        {/* Savings Rate Card */}
         <MetricCard
           title="Savings Rate"
           value={dashboardData.savings_rate}
           subtitle={dashboardData.savings_rate_context}
           icon={<PiggyBank className="h-4 w-4" />}
+          valueClassName={
+            parseFloat(dashboardData.savings_rate) >= 20
+              ? 'text-green-500'
+              : parseFloat(dashboardData.savings_rate) >= 10
+                ? 'text-yellow-500'
+                : 'text-red-500'
+          }
           info={
             <div className="space-y-2">
               <p className="text-foreground">
-                Savings Rate = (Income - Expenses) / Income.
+                Savings Rate = (Income - Expenses) / Income
               </p>
-              <p>Income and expenses are summed over the selected period.</p>
+              <p className="text-sm text-muted-foreground">
+                Based on the last 30 days of transactions.
+              </p>
+              <div className="grid grid-cols-2 gap-4 mt-3">
+                <div>
+                  <p className="text-sm text-muted-foreground">Income</p>
+                  <p className="font-semibold text-green-500">
+                    {formatCurrency(
+                      dashboardData.income_sum,
+                      preferences.currency,
+                      0
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Expenses</p>
+                  <p className="font-semibold text-red-500">
+                    {formatCurrency(
+                      dashboardData.expense_sum,
+                      preferences.currency,
+                      0
+                    )}
+                  </p>
+                </div>
+              </div>
             </div>
           }
         />
-
-        {/* Removed Investment Performance card until backed by real data */}
       </div>
 
-      {/* Main Asset Analytics Grid */}
-      <div className="grid gap-6 lg:grid-cols-1 w-full min-w-0">
-        {/* Savings Trend */}
-        <div className="w-full overflow-x-auto">{stableSavingsChart}</div>
+      {/* Asset Trends - unified chart */}
+      <AssetTrendsChart
+        selectedAccount={selectedAccount}
+        selectedGroup={selectedGroup}
+        onResetSelection={handleResetSelection}
+        onDataChange={handleDataChange}
+      />
 
-        {/* Accounts */}
-        <div className="lg:col-span-2 w-full overflow-x-auto">
-          <AccountsSection
-            onAccountClick={openAccountModal}
+      {/* Account Breakdown + Accounts List */}
+      <div className="grid gap-6 lg:grid-cols-5">
+        {/* Account Breakdown Chart */}
+        <div className="lg:col-span-2">
+          <AccountBreakdownChart />
+        </div>
+
+        {/* Accounts List */}
+        <div className="lg:col-span-3">
+          <AccountsList
+            selectedAccountId={selectedAccount?.id ?? null}
+            selectedGroupType={selectedGroup?.type ?? null}
+            onAccountSelect={handleAccountSelect}
+            onGroupSelect={handleGroupSelect}
             reloadKey={accountsReloadKey}
           />
         </div>
       </div>
-
-      {/* Account Update Modal */}
-      <AccountDetailModal
-        account={selectedAccount}
-        isOpen={accountModalOpen}
-        onClose={() => setAccountModalOpen(false)}
-        onAccountUpdated={handleAccountUpdated}
-      />
     </div>
   );
 }

@@ -1,31 +1,46 @@
 /**
- * Transactions API service for fetching income and expense data
+ * Transactions API service for fetching transaction data
  */
 import { csrfService } from './csrf';
 
 export interface Transaction {
   id: number;
-  description: string;
+  account: number;
+  account_name: string;
   date: string;
   amount: number;
-  Account?: string;
-  Category?: string;
+  signed_amount: number;
+  description: string;
+  transaction_type: 'debit' | 'credit';
+  transaction_type_display: string;
+  category: number | null;
+  category_name: string | null;
+  category_type:
+    | 'income'
+    | 'expense'
+    | 'transfer'
+    | 'investment'
+    | 'other'
+    | 'uncategorized';
+  status: string;
+  is_recurring: boolean;
+  sync_source: string;
+  categorization_status: string;
+  categorization_status_display: string;
+  created_at: string;
+  updated_at: string;
+  notes?: string | null;
 }
 
-// Creation payloads differ from the read model. Backend expects numeric IDs.
-export interface CreateIncomeTransactionInput {
-  description: string;
+export interface CreateTransactionInput {
+  account_id: number;
   date: string; // YYYY-MM-DD
   amount: number;
-  Account: number; // account primary key
-}
-
-export interface CreateExpenseTransactionInput {
   description: string;
-  date: string; // YYYY-MM-DD
-  amount: number;
-  account_name: number; // account primary key
-  category?: number; // category primary key
+  transaction_type: 'debit' | 'credit';
+  category_id?: number;
+  status?: 'pending' | 'posted' | 'reconciled';
+  notes?: string | null;
 }
 
 export interface Account {
@@ -37,22 +52,34 @@ export interface Account {
   entity?: string;
   entity_display?: string;
   date?: string;
+  // Account type
+  account_type?: string;
+  account_type_display?: string;
+  account_number_last4?: string;
+  institution_name?: string;
+  currency?: string;
+  is_active?: boolean;
+  // Card customization
+  image_key?: string | null;
+  // Sync connection fields
+  sync_source?: string;
+  has_connection?: boolean;
+  connection_id?: number | null;
+  connection_status?: 'active' | 'disconnected' | 'error' | null;
+  last_sync?: string | null;
 }
 
 export interface Category {
   id: number;
   name: string;
-  type: string;
-}
-
-export interface FieldChoiceItem {
-  value: number;
-  label: string;
-}
-
-export interface ExpenseFieldChoicesResponse {
-  account: FieldChoiceItem[];
-  category: FieldChoiceItem[];
+  slug: string;
+  parent?: number;
+  parent_name?: string;
+  full_path?: string;
+  icon?: string;
+  color?: string;
+  type: 'income' | 'expense' | 'transfer' | 'investment' | 'other';
+  type_display?: string;
 }
 
 export interface Budget {
@@ -87,20 +114,30 @@ class TransactionsApiService {
   }
 
   /**
-   * Get income transactions
+   * Get transactions with optional filters
    */
-  async getIncomeTransactions(input?: {
+  async getTransactions(input?: {
     limit?: number;
     startDate?: string; // YYYY-MM-DD
     endDate?: string; // YYYY-MM-DD
+    type?: 'debit' | 'credit'; // debit = expense, credit = income
+    accountId?: number;
+    categoryId?: number;
+    search?: string;
   }): Promise<Transaction[]> {
-    const url = new URL(`${this.baseUrl}/income/`, window.location.origin);
-    if (input?.limit) {
-      url.searchParams.append('limit', input.limit.toString());
-    }
+    const url = new URL(
+      `${this.baseUrl}/transactions/`,
+      window.location.origin
+    );
     if (input?.startDate)
       url.searchParams.append('start_date', input.startDate);
     if (input?.endDate) url.searchParams.append('end_date', input.endDate);
+    if (input?.type) url.searchParams.append('type', input.type);
+    if (input?.accountId)
+      url.searchParams.append('account_id', String(input.accountId));
+    if (input?.categoryId)
+      url.searchParams.append('category_id', String(input.categoryId));
+    if (input?.search) url.searchParams.append('search', input.search);
 
     const response = await fetch(url.toString(), {
       method: 'GET',
@@ -108,25 +145,58 @@ class TransactionsApiService {
       credentials: 'include',
     });
 
-    const data = await this.handleResponse<{ rows: Transaction[] }>(response);
-    return data.rows || [];
+    const data = await this.handleResponse<{ transactions: Transaction[] }>(
+      response
+    );
+    return data.transactions || [];
   }
 
   /**
-   * Get expense transactions
+   * Get income transactions (credits)
+   */
+  async getIncomeTransactions(input?: {
+    limit?: number;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<Transaction[]> {
+    return this.getTransactions({
+      ...input,
+      type: 'credit',
+    });
+  }
+
+  /**
+   * Get expense transactions (debits)
    */
   async getExpenseTransactions(input?: {
     limit?: number;
-    startDate?: string; // YYYY-MM-DD
-    endDate?: string; // YYYY-MM-DD
+    startDate?: string;
+    endDate?: string;
   }): Promise<Transaction[]> {
-    const url = new URL(`${this.baseUrl}/expense/`, window.location.origin);
-    if (input?.limit) {
-      url.searchParams.append('limit', input.limit.toString());
-    }
-    if (input?.startDate)
-      url.searchParams.append('start_date', input.startDate);
-    if (input?.endDate) url.searchParams.append('end_date', input.endDate);
+    return this.getTransactions({
+      ...input,
+      type: 'debit',
+    });
+  }
+
+  /**
+   * Get balance history for an account
+   */
+  async getAccountBalanceHistory(
+    accountId: number,
+    input?: { days?: number }
+  ): Promise<{
+    current_balance: number;
+    starting_balance: number;
+    change: number;
+    change_percent: number;
+    data_points: Array<{ date: string; balance: number }>;
+  }> {
+    const url = new URL(
+      `${this.baseUrl}/accounts/${accountId}/balance-history/`,
+      window.location.origin
+    );
+    if (input?.days) url.searchParams.append('days', String(input.days));
 
     const response = await fetch(url.toString(), {
       method: 'GET',
@@ -134,8 +204,7 @@ class TransactionsApiService {
       credentials: 'include',
     });
 
-    const data = await this.handleResponse<{ rows: Transaction[] }>(response);
-    return data.rows || [];
+    return this.handleResponse(response);
   }
 
   /**
@@ -153,7 +222,7 @@ class TransactionsApiService {
   }
 
   /**
-   * Get transactions (balance history) for an account
+   * Get transactions for an account
    */
   async getAccountTransactions(
     accountId: number,
@@ -163,7 +232,13 @@ class TransactionsApiService {
     }
   ): Promise<{
     columns: Array<{ field: string; title: string }>;
-    rows: Array<{ id: number; date: string; amount: string }>;
+    rows: Array<{
+      id: number;
+      date: string;
+      description: string;
+      amount: string;
+      transaction_type: 'credit' | 'debit';
+    }>;
     page: number;
     page_size: number;
     total: number;
@@ -190,14 +265,14 @@ class TransactionsApiService {
     account: number;
     amount: number;
     date: string; // YYYY-MM-DD
-  }): Promise<any> {
+  }): Promise<unknown> {
     const response = await fetch(`${this.baseUrl}/accounts/details/`, {
       method: 'POST',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
       body: JSON.stringify(input),
     });
-    return this.handleResponse(response);
+    return this.handleResponse<unknown>(response);
   }
 
   async updateAccountTransaction(
@@ -207,7 +282,7 @@ class TransactionsApiService {
       amount?: number;
       date?: string;
     }
-  ): Promise<any> {
+  ): Promise<unknown> {
     const response = await fetch(
       `${this.baseUrl}/accounts/${accountId}/transactions/`,
       {
@@ -217,7 +292,7 @@ class TransactionsApiService {
         body: JSON.stringify(input),
       }
     );
-    return this.handleResponse(response);
+    return this.handleResponse<unknown>(response);
   }
 
   async deleteAccountTransaction(accountId: number, id: number): Promise<void> {
@@ -239,14 +314,33 @@ class TransactionsApiService {
   async createAccount(input: {
     name: string;
     type: string;
-    asset_entity_name?: string;
+    institution_slug?: string;
   }): Promise<Account> {
-    const response = await fetch(`${this.baseUrl}/accounts/`, {
+    let response = await fetch(`${this.baseUrl}/accounts/`, {
       method: 'POST',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
-      body: JSON.stringify(input),
+      body: JSON.stringify({
+        name: input.name,
+        account_type: input.type,
+        institution_slug: input.institution_slug,
+      }),
     });
+
+    // If CSRF token is invalid, refresh it and retry once
+    if (response.status === 403) {
+      await csrfService.refreshToken();
+      response = await fetch(`${this.baseUrl}/accounts/`, {
+        method: 'POST',
+        headers: await csrfService.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          name: input.name,
+          account_type: input.type,
+          institution_slug: input.institution_slug,
+        }),
+      });
+    }
 
     return this.handleResponse<Account>(response);
   }
@@ -256,14 +350,30 @@ class TransactionsApiService {
    */
   async updateAccount(
     id: number,
-    input: Partial<{ name: string; type: string; asset_entity_name: string }>
+    input: Partial<{
+      name: string;
+      type: string;
+      asset_entity_name: string;
+      image_key: string | null;
+    }>
   ): Promise<Account> {
-    const response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
+    let response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
       method: 'PATCH',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
       body: JSON.stringify(input),
     });
+
+    // If CSRF token is invalid, refresh it and retry once
+    if (response.status === 403) {
+      await csrfService.refreshToken();
+      response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
+        method: 'PATCH',
+        headers: await csrfService.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(input),
+      });
+    }
 
     return this.handleResponse<Account>(response);
   }
@@ -272,11 +382,21 @@ class TransactionsApiService {
    * Delete an account
    */
   async deleteAccount(id: number): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
+    let response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
       method: 'DELETE',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
     });
+
+    // If CSRF token is invalid, refresh it and retry once
+    if (response.status === 403) {
+      await csrfService.refreshToken();
+      response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
+        method: 'DELETE',
+        headers: await csrfService.getHeaders(),
+        credentials: 'include',
+      });
+    }
 
     if (!response.ok) {
       throw new Error(`Failed to delete account: ${response.status}`);
@@ -284,207 +404,230 @@ class TransactionsApiService {
   }
 
   /**
-   * Get all categories
+   * Get all categories for the current user
    */
   async getCategories(): Promise<Category[]> {
-    const response = await fetch(`${this.baseUrl}/auth/categories/`, {
-      method: 'GET',
-      headers: this.getHeaders(),
-      credentials: 'include',
-    });
+    const response = await fetch(
+      `${this.baseUrl}/transactions/categories/`,
+      {
+        method: 'GET',
+        headers: this.getHeaders(),
+        credentials: 'include',
+      }
+    );
 
-    const data = await this.handleResponse<{ results: Category[] }>(response);
-    return data.results || [];
+    const data = await this.handleResponse<{ categories: Category[] }>(
+      response
+    );
+    return data.categories || [];
   }
 
   /**
-   * Get expense field choices (CardAccounts and Categories)
+   * Create a new transaction
    */
-  async getExpenseFieldChoices(): Promise<{
-    accounts: Account[];
-    categories: Category[];
+  async createTransaction(
+    transaction: CreateTransactionInput
+  ): Promise<Transaction> {
+    let response = await fetch(`${this.baseUrl}/transactions/`, {
+      method: 'POST',
+      headers: await csrfService.getHeaders(),
+      credentials: 'include',
+      body: JSON.stringify(transaction),
+    });
+
+    // If CSRF token is invalid, refresh it and retry once
+    if (response.status === 403) {
+      await csrfService.refreshToken();
+      response = await fetch(`${this.baseUrl}/transactions/`, {
+        method: 'POST',
+        headers: await csrfService.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(transaction),
+      });
+    }
+
+    return this.handleResponse<Transaction>(response);
+  }
+
+  /**
+   * Create a new income transaction (credit)
+   */
+  async createIncomeTransaction(input: {
+    account_id: number;
+    date: string;
+    amount: number;
+    description: string;
+    category_id?: number;
+  }): Promise<Transaction> {
+    return this.createTransaction({
+      ...input,
+      transaction_type: 'credit',
+    });
+  }
+
+  /**
+   * Create a new expense transaction (debit)
+   */
+  async createExpenseTransaction(input: {
+    account_id: number;
+    date: string;
+    amount: number;
+    description: string;
+    category_id?: number;
+  }): Promise<Transaction> {
+    return this.createTransaction({
+      ...input,
+      transaction_type: 'debit',
+    });
+  }
+
+  /**
+   * Update a transaction
+   */
+  async updateTransaction(
+    id: number,
+    updates: Partial<{
+      date: string;
+      amount: number;
+      description: string;
+      transaction_type: 'debit' | 'credit';
+      category_id: number | null;
+      status: string;
+      notes: string | null;
+    }>
+  ): Promise<Transaction> {
+    const doPatch = async () =>
+      fetch(`${this.baseUrl}/transactions/${id}/`, {
+        method: 'PATCH',
+        headers: await csrfService.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(updates),
+      });
+
+    let response = await doPatch();
+
+    // If CSRF token is invalid, clear + refresh and retry once
+    if (response.status === 403) {
+      csrfService.clearToken();
+      await csrfService.refreshToken();
+      response = await doPatch();
+    }
+
+    return this.handleResponse<Transaction>(response);
+  }
+
+  /**
+   * Delete a transaction
+   */
+  async deleteTransaction(id: number): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/transactions/${id}/`, {
+      method: 'DELETE',
+      headers: await csrfService.getHeaders(),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete transaction: ${response.status}`);
+    }
+  }
+
+  /**
+   * Categorize a transaction
+   */
+  async categorizeTransaction(
+    transactionId: number,
+    categoryId: number
+  ): Promise<Transaction> {
+    let response = await fetch(
+      `${this.baseUrl}/transactions/${transactionId}/categorize/`,
+      {
+        method: 'POST',
+        headers: await csrfService.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ category_id: categoryId }),
+      }
+    );
+
+    if (response.status === 403) {
+      await csrfService.refreshToken();
+      response = await fetch(
+        `${this.baseUrl}/transactions/${transactionId}/categorize/`,
+        {
+          method: 'POST',
+          headers: await csrfService.getHeaders(),
+          credentials: 'include',
+          body: JSON.stringify({ category_id: categoryId }),
+        }
+      );
+    }
+
+    return this.handleResponse<Transaction>(response);
+  }
+
+  /**
+   * Get transaction summary for a date range
+   */
+  async getTransactionSummary(
+    startDate: string,
+    endDate: string
+  ): Promise<{
+    total_income: number;
+    total_expenses: number;
+    net: number;
+    transaction_count: number;
   }> {
-    const response = await fetch(`${this.baseUrl}/expense/field-choices/`, {
+    const url = new URL(
+      `${this.baseUrl}/transactions/summary/`,
+      window.location.origin
+    );
+    url.searchParams.append('start_date', startDate);
+    url.searchParams.append('end_date', endDate);
+
+    const response = await fetch(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
     });
 
-    const data =
-      await this.handleResponse<ExpenseFieldChoicesResponse>(response);
-    const accounts: Account[] = (data.account || []).map(item => ({
-      id: item.value,
-      name: item.label,
-      type: 'card',
-    }));
-    const categories: Category[] = (data.category || []).map(item => ({
-      id: item.value,
-      name: item.label,
-      type: 'expense',
-    }));
-    return { accounts, categories };
+    return this.handleResponse(response);
   }
 
   /**
-   * Create a new income transaction
+   * Get uncategorized transactions
    */
-  async createIncomeTransaction(
-    transaction: CreateIncomeTransactionInput
-  ): Promise<Transaction> {
-    let response = await fetch(`${this.baseUrl}/income/`, {
-      method: 'POST',
-      headers: await csrfService.getHeaders(),
-      credentials: 'include',
-      body: JSON.stringify(transaction),
-    });
+  async getUncategorizedTransactions(
+    limit: number = 100
+  ): Promise<Transaction[]> {
+    const url = new URL(
+      `${this.baseUrl}/transactions/uncategorized/`,
+      window.location.origin
+    );
+    url.searchParams.append('limit', String(limit));
 
-    // If CSRF token is invalid, refresh it and retry once
-    if (response.status === 403) {
-      console.log('CSRF token invalid for income creation, refreshing...');
-      await csrfService.refreshToken();
-      response = await fetch(`${this.baseUrl}/income/`, {
-        method: 'POST',
-        headers: await csrfService.getHeaders(),
-        credentials: 'include',
-        body: JSON.stringify(transaction),
-      });
-    }
-
-    return this.handleResponse<Transaction>(response);
-  }
-
-  /**
-   * Create a new expense transaction
-   */
-  async createExpenseTransaction(
-    transaction: CreateExpenseTransactionInput
-  ): Promise<Transaction> {
-    let response = await fetch(`${this.baseUrl}/expense/`, {
-      method: 'POST',
-      headers: await csrfService.getHeaders(),
-      credentials: 'include',
-      body: JSON.stringify(transaction),
-    });
-
-    // If CSRF token is invalid, refresh it and retry once
-    if (response.status === 403) {
-      console.log('CSRF token invalid for expense creation, refreshing...');
-      await csrfService.refreshToken();
-      response = await fetch(`${this.baseUrl}/expense/`, {
-        method: 'POST',
-        headers: await csrfService.getHeaders(),
-        credentials: 'include',
-        body: JSON.stringify(transaction),
-      });
-    }
-
-    return this.handleResponse<Transaction>(response);
-  }
-
-  /**
-   * Update an income transaction
-   */
-  async updateIncomeTransaction(
-    id: number,
-    transaction: Partial<Transaction>
-  ): Promise<Transaction> {
-    let response = await fetch(`${this.baseUrl}/income/${id}/`, {
-      method: 'PATCH',
-      headers: await csrfService.getHeaders(),
-      credentials: 'include',
-      body: JSON.stringify(transaction),
-    });
-
-    // If CSRF token is invalid, refresh it and retry once
-    if (response.status === 403) {
-      console.log('CSRF token invalid for income update, refreshing...');
-      await csrfService.refreshToken();
-      response = await fetch(`${this.baseUrl}/income/${id}/`, {
-        method: 'PATCH',
-        headers: await csrfService.getHeaders(),
-        credentials: 'include',
-        body: JSON.stringify(transaction),
-      });
-    }
-
-    return this.handleResponse<Transaction>(response);
-  }
-
-  /**
-   * Update an expense transaction
-   */
-  async updateExpenseTransaction(
-    id: number,
-    transaction: Partial<Transaction>
-  ): Promise<Transaction> {
-    let response = await fetch(`${this.baseUrl}/expense/${id}/`, {
-      method: 'PATCH',
-      headers: await csrfService.getHeaders(),
-      credentials: 'include',
-      body: JSON.stringify(transaction),
-    });
-
-    // If CSRF token is invalid, refresh it and retry once
-    if (response.status === 403) {
-      console.log('CSRF token invalid for expense update, refreshing...');
-      await csrfService.refreshToken();
-      response = await fetch(`${this.baseUrl}/expense/${id}/`, {
-        method: 'PATCH',
-        headers: await csrfService.getHeaders(),
-        credentials: 'include',
-        body: JSON.stringify(transaction),
-      });
-    }
-
-    return this.handleResponse<Transaction>(response);
-  }
-
-  /**
-   * Delete an income transaction
-   */
-  async deleteIncomeTransaction(id: number): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/income/${id}/`, {
-      method: 'DELETE',
-      headers: await csrfService.getHeaders(),
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: this.getHeaders(),
       credentials: 'include',
     });
 
-    if (!response.ok) {
-      throw new Error(
-        `Failed to delete income transaction: ${response.status}`
-      );
-    }
-  }
-
-  /**
-   * Delete an expense transaction
-   */
-  async deleteExpenseTransaction(id: number): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/expense/${id}/`, {
-      method: 'DELETE',
-      headers: await csrfService.getHeaders(),
-      credentials: 'include',
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to delete expense transaction: ${response.status}`
-      );
-    }
+    const data = await this.handleResponse<{ transactions: Transaction[] }>(
+      response
+    );
+    return data.transactions || [];
   }
 
   /**
    * Get all budgets
    */
   async getBudgets(): Promise<Budget[]> {
-    const response = await fetch(`${this.baseUrl}/budget/`, {
+    const response = await fetch(`${this.baseUrl}/budgets/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
     });
 
-    const data = await this.handleResponse<{ rows: Budget[] }>(response);
-    return data.rows || [];
+    const data = await this.handleResponse<{ budgets: Budget[] }>(response);
+    return data.budgets || [];
   }
 
   /**
@@ -507,7 +650,7 @@ class TransactionsApiService {
     }>;
   }> {
     const url = new URL(
-      `${this.baseUrl}/budget/progress/`,
+      `${this.baseUrl}/budget-dashboard/progress/`,
       window.location.origin
     );
     if (input.year) url.searchParams.append('year', String(input.year));
@@ -526,36 +669,6 @@ class TransactionsApiService {
   }
 
   /**
-   * Categorize an expense description using AI
-   */
-  async categorizeExpenseDescription(input: {
-    description: string;
-  }): Promise<{ category: number }> {
-    let response = await fetch(
-      `${this.baseUrl}/expense/categorize-transaction/`,
-      {
-        method: 'POST',
-        headers: await csrfService.getHeaders(),
-        credentials: 'include',
-        body: JSON.stringify(input),
-      }
-    );
-    if (response.status === 403) {
-      await csrfService.refreshToken();
-      response = await fetch(
-        `${this.baseUrl}/expense/categorize-transaction/`,
-        {
-          method: 'POST',
-          headers: await csrfService.getHeaders(),
-          credentials: 'include',
-          body: JSON.stringify(input),
-        }
-      );
-    }
-    return this.handleResponse<{ category: number }>(response);
-  }
-
-  /**
    * Get account field choices (types and entities)
    */
   async getAccountFieldChoices(): Promise<{
@@ -567,6 +680,60 @@ class TransactionsApiService {
       headers: this.getHeaders(),
       credentials: 'include',
     });
+
+    return this.handleResponse(response);
+  }
+
+  /**
+   * Start bulk recategorization of all transactions
+   */
+  async startRecategorization(
+    keepExistingForUnmatched: boolean
+  ): Promise<{ task_id: number }> {
+    let response = await fetch(`${this.baseUrl}/transactions/recategorize/`, {
+      method: 'POST',
+      headers: await csrfService.getHeaders(),
+      credentials: 'include',
+      body: JSON.stringify({
+        keep_existing_for_unmatched: keepExistingForUnmatched,
+      }),
+    });
+
+    // If CSRF token is invalid, refresh it and retry once
+    if (response.status === 403) {
+      await csrfService.refreshToken();
+      response = await fetch(`${this.baseUrl}/transactions/recategorize/`, {
+        method: 'POST',
+        headers: await csrfService.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          keep_existing_for_unmatched: keepExistingForUnmatched,
+        }),
+      });
+    }
+
+    return this.handleResponse<{ task_id: number }>(response);
+  }
+
+  /**
+   * Get recategorization task progress
+   */
+  async getRecategorizeProgress(taskId: number): Promise<{
+    status: 'pending' | 'processing' | 'completed' | 'failed';
+    total: number;
+    processed: number;
+    updated: number;
+    progress_percent: number;
+    error: string | null;
+  }> {
+    const response = await fetch(
+      `${this.baseUrl}/transactions/recategorize/${taskId}/`,
+      {
+        method: 'GET',
+        headers: this.getHeaders(),
+        credentials: 'include',
+      }
+    );
 
     return this.handleResponse(response);
   }

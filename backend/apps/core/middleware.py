@@ -6,6 +6,7 @@ import time
 
 import dotenv
 import requests
+from loguru import logger
 
 dotenv.load_dotenv()
 
@@ -26,12 +27,9 @@ class SelfPingMiddleware:
                 prod_url = os.getenv("PROD_URL")
                 if prod_url:
                     response = requests.get(prod_url)
-                    print(f"Pinged {prod_url} Status code: {response.status_code}")
-                else:
-                    print("No production URL found")
-
+                    logger.debug(f"Pinged {prod_url} - Status: {response.status_code}")
             except requests.RequestException as e:
-                print(f"Failed to ping self: {e}")
+                logger.warning(f"Failed to ping self: {e}")
 
             # Wait for 2 minutes (120 seconds) before pinging again
             time.sleep(120)

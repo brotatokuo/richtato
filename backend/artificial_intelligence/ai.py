@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 import httpx
 import pandas as pd
 from apps.richtato_user.models import User
-from apps.category.models import Category
+from apps.transaction.models import TransactionCategory
 from dotenv import load_dotenv
 from loguru import logger
 
@@ -42,16 +42,21 @@ class OpenAI(BaseAI):
         content = response.choices[0].message.content or ""
         return content.strip()
 
+    def one_shot_prompt(self, prompt: str) -> str:
+        """Execute a single prompt and return the response."""
+        return self._ask(prompt)
+
     def simplify_description(self, input: str) -> str:
         prompt = f'Simplify this transaction description: "{input}", into a more concise description.'
         return self._ask(prompt)
 
     def get_user_categories(self, user: User) -> list[str]:
-        return list(
-            Category.objects.filter(user=user)
-            .exclude(name="Unknown")
-            .values_list("name", flat=True)
-        )
+        """Get all category names for a user."""
+        # Get user's expense categories
+        user_categories = TransactionCategory.objects.filter(
+            user=user, type="expense"
+        ).values_list("name", flat=True)
+        return list(user_categories)
 
     def categorize_transaction(self, user: User, input: str) -> str:
         category_list = self.get_user_categories(user)

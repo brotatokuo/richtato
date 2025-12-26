@@ -1,4 +1,5 @@
 import pandas as pd
+from loguru import logger
 
 from apps.richtato_user.models import User
 from statement_imports.cards.card_canonicalizer import CardCanonicalizer
@@ -36,7 +37,7 @@ class ChaseCards(CardCanonicalizer):
         """
         Canonicalizes the given Chase card data.
         """
-        print(self.df.columns)
+        logger.debug(f"Chase card columns: {list(self.df.columns)}")
         self.format_date()
         self.format_description()
         self.format_amount()

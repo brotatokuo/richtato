@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
@@ -19,6 +20,7 @@ function App() {
   return (
     <AuthProvider>
       <PreferencesProvider>
+        <Toaster position="top-right" richColors closeButton />
         <BrowserRouter>
           <Routes>
             <Route path="/welcome" element={<Welcome />} />

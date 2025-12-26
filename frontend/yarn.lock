@@ -3639,9 +3639,9 @@ pretty-format@^27.0.2:
     ansi-styles "^5.0.0"
     react-is "^17.0.1"
 
-prop-types@^15.8.1:
+prop-types@^15.7.2, prop-types@^15.8.1:
   version "15.8.1"
-  resolved "https://registry.npmjs.org/prop-types/-/prop-types-15.8.1.tgz"
+  resolved "https://registry.yarnpkg.com/prop-types/-/prop-types-15.8.1.tgz#67d87bf1a694f48435cf332c24af10214a3140b5"
   integrity sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==
   dependencies:
     loose-envify "^1.4.0"
@@ -3674,6 +3674,14 @@ react-is@^17.0.1:
   version "17.0.2"
   resolved "https://registry.npmjs.org/react-is/-/react-is-17.0.2.tgz"
   integrity sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==
+
+react-plaid-link@^3.5.2:
+  version "3.6.1"
+  resolved "https://registry.yarnpkg.com/react-plaid-link/-/react-plaid-link-3.6.1.tgz#a2deec2e98af494f72131aa5f424e2184eb68dcf"
+  integrity sha512-nKxFPm9z8NiFCqOczNhhIp5R/xZY5BQ0lcQjkflIzpQ3Bx9Dsq2F1kORse0EU1aYkuGfVCfnySLwXhsu7rJSjQ==
+  dependencies:
+    prop-types "^15.7.2"
+    react-script-hook "^1.7.2"
 
 react-refresh@^0.17.0:
   version "0.17.0"
@@ -3713,6 +3721,11 @@ react-router@7.9.1, react-router@^7.1.1:
   dependencies:
     cookie "^1.0.1"
     set-cookie-parser "^2.6.0"
+
+react-script-hook@^1.7.2:
+  version "1.7.2"
+  resolved "https://registry.yarnpkg.com/react-script-hook/-/react-script-hook-1.7.2.tgz#ec130d67f9a25fcde57fbfd1faa87e5b97521948"
+  integrity sha512-fhyCEfXb94fag34UPRF0zry1XGwmVY+79iibWwTqAoOiCzYJQOYTiWJ7CnqglA9tMSV8g45cQpHCMcBwr7dwhA==
 
 react-style-singleton@^2.2.2, react-style-singleton@^2.2.3:
   version "2.2.3"
@@ -4016,6 +4029,11 @@ size-sensor@^1.0.1:
   version "1.0.2"
   resolved "https://registry.npmjs.org/size-sensor/-/size-sensor-1.0.2.tgz"
   integrity sha512-2NCmWxY7A9pYKGXNBfteo4hy14gWu47rg5692peVMst6lQLPKrVjhY+UTEsPI5ceFRJSl3gVgMYaUi/hKuaiKw==
+
+sonner@^2.0.7:
+  version "2.0.7"
+  resolved "https://registry.yarnpkg.com/sonner/-/sonner-2.0.7.tgz#810c1487a67ec3370126e0f400dfb9edddc3e4f6"
+  integrity sha512-W6ZN4p58k8aDKA4XPcx2hpIQXBRAgyiWVkYhT7CvK6D3iAu7xjvVyhQHg2/iaKJZ1XVJ4r7XuwGL+WGEK37i9w==
 
 source-map-js@^1.2.0, source-map-js@^1.2.1:
   version "1.2.1"

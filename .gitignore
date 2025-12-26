@@ -53,3 +53,6 @@ coverage
 .env.production.local
 
 .vscode
+certs/
+
+richtato_tep_data/
