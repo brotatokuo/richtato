@@ -627,23 +627,26 @@ export function AssetTrendsChart({
   return (
     <Card className="bg-card/50 backdrop-blur-sm border-border/50 w-full">
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="text-lg">Asset Trends</span>
-            <span className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary">
-              {contextLabel}
-            </span>
-            {(selectedAccount || selectedGroup) && (
-              <Button
-                size="xs"
-                variant="ghost"
-                onClick={onResetSelection}
-                className="h-7 px-2 gap-1"
-              >
-                <RefreshCw className="h-3 w-3" />
-                Reset
-              </Button>
-            )}
+        <CardTitle className="flex flex-col gap-3">
+          {/* Top row: title and context */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-lg">Asset Trends</span>
+              <span className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary whitespace-nowrap">
+                {contextLabel}
+              </span>
+              {(selectedAccount || selectedGroup) && (
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  onClick={onResetSelection}
+                  className="h-7 px-2 gap-1"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  Reset
+                </Button>
+              )}
+            </div>
             {selectedAccount && (
               <Button
                 size="sm"
@@ -651,12 +654,14 @@ export function AssetTrendsChart({
                 className="gap-1"
               >
                 <Plus className="h-4 w-4" />
-                Add Transaction
+                <span className="hidden sm:inline">Add Transaction</span>
+                <span className="sm:hidden">Add</span>
               </Button>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
+          {/* Bottom row: range controls */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
               {(['30', '90', '180', '365'] as RangePreset[]).map(preset => (
                 <Button
                   key={preset}
@@ -675,7 +680,7 @@ export function AssetTrendsChart({
                 className="gap-1 transition-all hover:scale-105"
               >
                 <Calendar className="h-3 w-3" />
-                Custom
+                <span className="hidden xs:inline">Custom</span>
               </Button>
             </div>
             <Button
@@ -685,26 +690,26 @@ export function AssetTrendsChart({
               className="gap-1.5 transition-all hover:scale-105"
             >
               <TableProperties className="h-4 w-4" />
-              Data
+              <span className="hidden sm:inline">Data</span>
             </Button>
           </div>
         </CardTitle>
         {rangePreset === 'custom' && (
-          <div className="flex items-center gap-2 mt-3">
+          <div className="flex flex-wrap items-center gap-2 mt-3">
             <Input
               type="date"
               value={customStart}
               onChange={e => setCustomStart(e.target.value)}
               disabled={rangePreset !== 'custom'}
-              className="w-36"
+              className="w-full sm:w-36"
             />
-            <span className="text-sm text-muted-foreground">to</span>
+            <span className="text-sm text-muted-foreground hidden sm:inline">to</span>
             <Input
               type="date"
               value={customEnd}
               onChange={e => setCustomEnd(e.target.value)}
               disabled={disableCustomRange}
-              className="w-36"
+              className="w-full sm:w-36"
             />
           </div>
         )}
@@ -748,31 +753,35 @@ export function AssetTrendsChart({
           <div className="space-y-4 mt-6">
             {/* Transaction summary */}
             {transactionSummary && (
-              <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/30 text-sm">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                  <span className="text-muted-foreground">Credits:</span>
-                  <span className="font-medium text-green-500">
+              <div className="grid grid-cols-3 gap-2 p-3 rounded-lg bg-muted/30 text-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <div className="flex items-center gap-1">
+                    <TrendingUp className="h-4 w-4 text-green-500" />
+                    <span className="text-muted-foreground text-xs sm:text-sm">Credits</span>
+                  </div>
+                  <span className="font-medium text-green-500 text-xs sm:text-sm">
                     {formatCurrency(
                       transactionSummary.totalCredits,
                       preferences.currency
                     )}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <TrendingDown className="h-4 w-4 text-red-500" />
-                  <span className="text-muted-foreground">Debits:</span>
-                  <span className="font-medium text-red-500">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <div className="flex items-center gap-1">
+                    <TrendingDown className="h-4 w-4 text-red-500" />
+                    <span className="text-muted-foreground text-xs sm:text-sm">Debits</span>
+                  </div>
+                  <span className="font-medium text-red-500 text-xs sm:text-sm">
                     {formatCurrency(
                       transactionSummary.totalDebits,
                       preferences.currency
                     )}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">Net:</span>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <span className="text-muted-foreground text-xs sm:text-sm">Net</span>
                   <span
-                    className={`font-semibold ${transactionSummary.net >= 0 ? 'text-green-500' : 'text-red-500'}`}
+                    className={`font-semibold text-xs sm:text-sm ${transactionSummary.net >= 0 ? 'text-green-500' : 'text-red-500'}`}
                   >
                     {transactionSummary.net >= 0 ? '+' : ''}
                     {formatCurrency(
@@ -851,7 +860,7 @@ export function AssetTrendsChart({
             className="absolute inset-0 bg-black/30"
             onClick={() => setShowDataPanel(false)}
           />
-          <div className="absolute right-0 top-0 h-full w-full max-w-md bg-card border-l border-border/50 shadow-2xl flex flex-col">
+          <div className="absolute right-0 top-0 h-full w-full sm:max-w-md bg-card border-l border-border/50 shadow-2xl flex flex-col">
             <div className="p-4 flex items-center justify-between border-b border-border/50">
               <div className="space-y-1">
                 <div className="font-semibold">Trend Data</div>

@@ -5,6 +5,7 @@ import { ExpenseBreakdown } from '@/components/budget_dashboard/ExpenseBreakdown
 import { ExpenseDetailModal } from '@/components/budget_dashboard/ExpenseDetailModal';
 import { MonthTimeline } from '@/components/budget_dashboard/MonthTimeline';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
 import {
   BudgetDateRangeProvider,
   useBudgetDateRange,
@@ -42,6 +43,11 @@ function DashboardContent() {
     useState<MonthlyBudgetData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const lastFetchRef = useRef<string | null>(null);
+
+  // Year and month state for the picker
+  const now = new Date();
+  const [year, setYear] = useState<number>(now.getFullYear());
+  const [month, setMonth] = useState<number>(now.getMonth() + 1);
 
   // Calculate aggregate KPIs from monthly data
   const currentMonthData =
@@ -112,6 +118,33 @@ function DashboardContent() {
     setSelectedMonth(null);
   };
 
+  // Handle year/month change from picker
+  const handleDateChange = (newYear: number, newMonth: number) => {
+    setYear(newYear);
+    setMonth(newMonth);
+
+    // Find the corresponding month in our data
+    const found = monthlyData.find(
+      m => m.year === newYear && m.month === newMonth
+    );
+
+    if (found) {
+      setDisplayedMonth(found);
+      setRange({
+        startDate: found.start_date,
+        endDate: found.end_date,
+      });
+    }
+  };
+
+  // Sync picker state when displayedMonth changes (e.g., from timeline click)
+  useEffect(() => {
+    if (displayedMonth) {
+      setYear(displayedMonth.year);
+      setMonth(displayedMonth.month);
+    }
+  }, [displayedMonth]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -155,25 +188,8 @@ function DashboardContent() {
 
   return (
     <div className="space-y-6 w-full max-w-full overflow-hidden">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Budget Dashboard
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Track your budget usage across the last 12 months
-          </p>
-        </div>
-        {displayedMonth && (
-          <div className="text-right">
-            <span className="text-sm text-muted-foreground">Viewing</span>
-            <h2 className="text-lg font-semibold text-primary">
-              {displayedMonth.label}
-            </h2>
-          </div>
-        )}
-      </div>
+      {/* Month/Year Picker */}
+      <MonthYearPicker year={year} month={month} onChange={handleDateChange} />
 
       {/* Selected Month Budget Breakdown - At the Top */}
       <div className="w-full min-w-0">

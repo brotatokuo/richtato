@@ -22,7 +22,7 @@ const ESSENTIAL_COLOR = '#22c55e'; // green-500
 const NON_ESSENTIAL_COLOR = '#f97316'; // orange-500
 const INCOME_COLOR = '#3b82f6'; // blue-500
 
-export function AnnualAnalysisPage() {
+export function ReportPage() {
   const { preferences } = usePreferences();
   const [data, setData] = useState<AnnualAnalysisData | null>(null);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
@@ -486,7 +486,7 @@ export function AnnualAnalysisPage() {
       : 0;
 
   return (
-    <div className="space-y-6 p-6">
+    <>
       {/* Floating Year Picker */}
       <YearPicker
         year={selectedYear}
@@ -494,116 +494,120 @@ export function AnnualAnalysisPage() {
         onChange={setSelectedYear}
       />
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-border bg-card">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Income</p>
-                <p className="text-2xl font-bold text-green-500">
-                  {formatCurrency(data.total_income, preferences.currency)}
-                </p>
+      <div className="space-y-6">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card className="border-border bg-card">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Income</p>
+                  <p className="text-2xl font-bold text-green-500">
+                    {formatCurrency(data.total_income, preferences.currency)}
+                  </p>
+                </div>
+                <ArrowUpRight className="h-8 w-8 text-green-500" />
               </div>
-              <ArrowUpRight className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="border-border bg-card">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Expenses</p>
-                <p className="text-2xl font-bold text-orange-500">
-                  {formatCurrency(totalExpenses, preferences.currency)}
-                </p>
+          <Card className="border-border bg-card">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Total Expenses
+                  </p>
+                  <p className="text-2xl font-bold text-orange-500">
+                    {formatCurrency(totalExpenses, preferences.currency)}
+                  </p>
+                </div>
+                <ArrowDownRight className="h-8 w-8 text-orange-500" />
               </div>
-              <ArrowDownRight className="h-8 w-8 text-orange-500" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="border-border bg-card">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Essential %</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {essentialPercent}%
-                </p>
+          <Card className="border-border bg-card">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Essential %</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {essentialPercent}%
+                  </p>
+                </div>
+                <Wallet className="h-8 w-8 text-primary" />
               </div>
-              <Wallet className="h-8 w-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="border-border bg-card">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Savings Rate</p>
-                <p
-                  className={`text-2xl font-bold ${savingsAmount >= 0 ? 'text-green-500' : 'text-red-500'}`}
-                >
-                  {savingsRate}%
-                </p>
+          <Card className="border-border bg-card">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Savings Rate</p>
+                  <p
+                    className={`text-2xl font-bold ${savingsAmount >= 0 ? 'text-green-500' : 'text-red-500'}`}
+                  >
+                    {savingsRate}%
+                  </p>
+                </div>
+                <TrendingUp
+                  className={`h-8 w-8 ${savingsAmount >= 0 ? 'text-green-500' : 'text-red-500'}`}
+                />
               </div>
-              <TrendingUp
-                className={`h-8 w-8 ${savingsAmount >= 0 ? 'text-green-500' : 'text-red-500'}`}
-              />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Charts Row 1 */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Essential vs Non-Essential Donut */}
+          <Card className="border-border bg-card">
+            <CardHeader>
+              <CardTitle className="text-lg">
+                Essential vs Non-Essential
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div ref={donutChartRef} className="h-80" />
+            </CardContent>
+          </Card>
+
+          {/* Monthly Spending Trends */}
+          <Card className="border-border bg-card">
+            <CardHeader>
+              <CardTitle className="text-lg">Monthly Spending Trends</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div ref={barChartRef} className="h-80" />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Charts Row 2 */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Category Treemap */}
+          <Card className="border-border bg-card">
+            <CardHeader>
+              <CardTitle className="text-lg">Category Breakdown</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div ref={treemapChartRef} className="h-80" />
+            </CardContent>
+          </Card>
+
+          {/* Income Flow Sankey */}
+          <Card className="border-border bg-card">
+            <CardHeader>
+              <CardTitle className="text-lg">Income Flow</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div ref={sankeyChartRef} className="h-80" />
+            </CardContent>
+          </Card>
+        </div>
       </div>
-
-      {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Essential vs Non-Essential Donut */}
-        <Card className="border-border bg-card">
-          <CardHeader>
-            <CardTitle className="text-lg">
-              Essential vs Non-Essential
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div ref={donutChartRef} className="h-80" />
-          </CardContent>
-        </Card>
-
-        {/* Monthly Spending Trends */}
-        <Card className="border-border bg-card">
-          <CardHeader>
-            <CardTitle className="text-lg">Monthly Spending Trends</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div ref={barChartRef} className="h-80" />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Category Treemap */}
-        <Card className="border-border bg-card">
-          <CardHeader>
-            <CardTitle className="text-lg">Category Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div ref={treemapChartRef} className="h-80" />
-          </CardContent>
-        </Card>
-
-        {/* Income Flow Sankey */}
-        <Card className="border-border bg-card">
-          <CardHeader>
-            <CardTitle className="text-lg">Income Flow</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div ref={sankeyChartRef} className="h-80" />
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    </>
   );
 }

@@ -41,8 +41,8 @@ const navigationItems = [
     icon: PieChart,
   },
   {
-    name: 'Annual',
-    href: '/annual-analysis',
+    name: 'Report',
+    href: '/report',
     icon: BarChart3,
   },
   {

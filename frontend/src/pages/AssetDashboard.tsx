@@ -277,14 +277,14 @@ export function AssetDashboard() {
       />
 
       {/* Account Breakdown + Accounts List */}
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid gap-6 lg:grid-cols-5 w-full min-w-0">
         {/* Account Breakdown Chart */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 min-w-0 w-full overflow-hidden">
           <AccountBreakdownChart />
         </div>
 
         {/* Accounts List */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 min-w-0">
           <AccountsList
             selectedAccountId={selectedAccount?.id ?? null}
             selectedGroupType={selectedGroup?.type ?? null}

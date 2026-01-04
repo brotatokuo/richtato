@@ -151,92 +151,94 @@ export function BudgetsSection() {
         </CardHeader>
         <CardContent className="space-y-1">
           {error && <div className="text-sm text-red-600 mb-3">{error}</div>}
-          {loading && <div className="text-sm">Loading...</div>}
-          {!loading && expenseCategories.length === 0 && (
+          {expenseCategories.length === 0 && !loading && (
             <div className="text-sm text-muted-foreground py-4 text-center">
               No expense categories found. Add categories in the section above.
             </div>
           )}
-          {!loading && (
-            <div className="flex flex-wrap gap-3">
-              {categoriesWithProgress.map(cat => {
-                const hasBudget = cat.budget != null && cat.budget.amount > 0;
-                const budgetAmount = cat.budget?.amount ?? 0;
-                const isOverBudget = hasBudget && cat.spent > budgetAmount;
-                const progressPercent = hasBudget
-                  ? Math.min((cat.spent / budgetAmount) * 100, 100)
-                  : 0;
+          <div
+            className={cn(
+              'flex flex-wrap gap-3 transition-opacity',
+              loading && 'opacity-50 pointer-events-none'
+            )}
+          >
+            {categoriesWithProgress.map(cat => {
+              const hasBudget = cat.budget != null && cat.budget.amount > 0;
+              const budgetAmount = cat.budget?.amount ?? 0;
+              const isOverBudget = hasBudget && cat.spent > budgetAmount;
+              const progressPercent = hasBudget
+                ? Math.min((cat.spent / budgetAmount) * 100, 100)
+                : 0;
 
-                return (
-                  <div
-                    key={cat.name}
-                    onClick={() => openModal(cat)}
-                    className={cn(
-                      'rounded-xl border p-4 w-[180px] cursor-pointer transition-all',
-                      'hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5',
-                      isOverBudget
-                        ? 'border-destructive/50 bg-destructive/5'
-                        : 'bg-card'
-                    )}
-                  >
-                    {/* Header: Icon + Name */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-2xl" aria-hidden>
-                        {cat.icon}
-                      </span>
-                      <span className="font-medium text-sm truncate flex-1">
-                        {cat.display}
-                      </span>
-                    </div>
-
-                    {/* Budget Amount */}
-                    <div className="mb-2">
-                      {hasBudget ? (
-                        <div className="text-lg font-semibold">
-                          {formatCurrency(budgetAmount, preferences.currency)}
-                        </div>
-                      ) : (
-                        <div className="text-sm text-muted-foreground italic">
-                          No budget
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Progress Section */}
-                    {hasBudget ? (
-                      <>
-                        <div className="h-1.5 bg-muted rounded-full overflow-hidden mb-2">
-                          <div
-                            className={cn(
-                              'h-full rounded-full transition-all duration-300',
-                              isOverBudget
-                                ? 'bg-destructive'
-                                : progressPercent > 80
-                                  ? 'bg-amber-500'
-                                  : 'bg-primary'
-                            )}
-                            style={{ width: `${progressPercent}%` }}
-                          />
-                        </div>
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span
-                            className={cn(
-                              isOverBudget && 'text-destructive font-medium'
-                            )}
-                          >
-                            {formatCurrency(cat.spent, preferences.currency)}
-                          </span>
-                          <span>
-                            {Math.round(cat.percentage || progressPercent)}%
-                          </span>
-                        </div>
-                      </>
-                    ) : null}
+              return (
+                <div
+                  key={cat.name}
+                  onClick={() => openModal(cat)}
+                  className={cn(
+                    'rounded-xl border p-4 w-[180px] cursor-pointer transition-all',
+                    'hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5',
+                    isOverBudget
+                      ? 'border-destructive/50 bg-destructive/5'
+                      : 'bg-card'
+                  )}
+                >
+                  {/* Header: Icon + Name */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-2xl" aria-hidden>
+                      {cat.icon}
+                    </span>
+                    <span className="font-medium text-sm truncate flex-1">
+                      {cat.display}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-          )}
+
+                  {/* Budget Amount */}
+                  <div className="mb-2">
+                    {hasBudget ? (
+                      <div className="text-lg font-semibold">
+                        {formatCurrency(budgetAmount, preferences.currency)}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground italic">
+                        No budget
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Progress Section */}
+                  {hasBudget ? (
+                    <>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden mb-2">
+                        <div
+                          className={cn(
+                            'h-full rounded-full transition-all duration-300',
+                            isOverBudget
+                              ? 'bg-destructive'
+                              : progressPercent > 80
+                                ? 'bg-amber-500'
+                                : 'bg-primary'
+                          )}
+                          style={{ width: `${progressPercent}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span
+                          className={cn(
+                            isOverBudget && 'text-destructive font-medium'
+                          )}
+                        >
+                          {formatCurrency(cat.spent, preferences.currency)}
+                        </span>
+                        <span>
+                          {Math.round(cat.percentage || progressPercent)}%
+                        </span>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
 

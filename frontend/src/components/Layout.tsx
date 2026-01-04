@@ -1,3 +1,4 @@
+import { useSyncStatus } from '@/hooks/useSyncStatus';
 import {
   BarChart3,
   CloudUpload,
@@ -12,7 +13,6 @@ import {
 import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
-import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { Sidebar } from './Sidebar';
 
 // Route to page title and icon mapping
@@ -24,7 +24,7 @@ const routeConfig: Record<
   '/assets': { title: 'Assets', icon: PieChart },
   '/data': { title: 'Data', icon: Table },
   '/cashflow': { title: 'Cashflow', icon: TrendingUp },
-  '/annual-analysis': { title: 'Annual Analysis', icon: BarChart3 },
+  '/report': { title: 'Report', icon: BarChart3 },
   '/upload': { title: 'Upload', icon: CloudUpload },
   '/preferences': { title: 'Preferences', icon: Settings },
   '/setup': { title: 'Setup', icon: SlidersHorizontal },
