@@ -9,6 +9,7 @@ from apps.transaction.serializers import (
     CategoryCreateSerializer,
     CategoryKeywordCreateSerializer,
     CategoryKeywordSerializer,
+    CategoryUpdateSerializer,
     TransactionCategorizeSerializer,
     TransactionCategorySerializer,
     TransactionCreateSerializer,
@@ -328,6 +329,83 @@ class CategoryListCreateAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error creating category: {str(e)}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class CategoryDetailAPIView(APIView):
+    """Retrieve, update or delete a category."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.category_repository = CategoryRepository()
+
+    def get(self, request, pk):
+        """Get category details."""
+        category = self.category_repository.get_by_id(pk)
+
+        if not category or category.user != request.user:
+            return Response(
+                {"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = TransactionCategorySerializer(category)
+        return Response(serializer.data)
+
+    def patch(self, request, pk):
+        """Update category (including expense_priority)."""
+        category = self.category_repository.get_by_id(pk)
+
+        if not category or category.user != request.user:
+            return Response(
+                {"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = CategoryUpdateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Update fields
+            for field, value in serializer.validated_data.items():
+                setattr(category, field, value)
+            category.save()
+
+            response_serializer = TransactionCategorySerializer(category)
+            return Response(response_serializer.data)
+
+        except Exception as e:
+            logger.error(f"Error updating category {pk}: {str(e)}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def delete(self, request, pk):
+        """Delete a category."""
+        category = self.category_repository.get_by_id(pk)
+
+        if not category or category.user != request.user:
+            return Response(
+                {"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Don't allow deleting uncategorized
+        if category.slug == "uncategorized":
+            return Response(
+                {"error": "Cannot delete the Uncategorized category"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            self.category_repository.delete_category(category)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        except Exception as e:
+            logger.error(f"Error deleting category {pk}: {str(e)}")
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

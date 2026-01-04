@@ -17,4 +17,15 @@ urlpatterns = [
     path("progress/", views.budget_progress, name="budget_dashboard_progress"),
     path("rankings/", views.budget_rankings, name="budget_dashboard_rankings"),
     path("expense-years/", views.expense_years, name="budget_dashboard_expense_years"),
+    # Annual Analysis
+    path(
+        "annual-analysis/",
+        views.annual_analysis,
+        name="budget_dashboard_annual_analysis",
+    ),
+    path(
+        "annual-analysis/years/",
+        views.annual_analysis_years,
+        name="budget_dashboard_annual_analysis_years",
+    ),
 ]

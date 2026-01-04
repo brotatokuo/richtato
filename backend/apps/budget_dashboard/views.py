@@ -13,7 +13,9 @@ from django.http import JsonResponse
 from loguru import logger
 
 from .repositories import BudgetDashboardRepository
+from .repositories.annual_analysis_repository import AnnualAnalysisRepository
 from .services import BudgetDashboardService
+from .services.annual_analysis_service import AnnualAnalysisService
 
 
 @login_required
@@ -232,4 +234,45 @@ def budget_progress_multi_month(request):
 
     except Exception as e:
         logger.error(f"Error in budget_progress_multi_month: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@login_required
+def annual_analysis(request):
+    """Get comprehensive annual analysis data - delegates to service layer."""
+    try:
+        # Extract year parameter (default to current year)
+        year_param = request.GET.get("year")
+        try:
+            year = int(year_param) if year_param else date.today().year
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "Invalid year"}, status=400)
+
+        # Inject dependencies and delegate to service
+        repo = AnnualAnalysisRepository()
+        service = AnnualAnalysisService(repo)
+
+        # Delegate to service
+        result = service.get_annual_analysis(request.user, year)
+        return JsonResponse(result)
+
+    except Exception as e:
+        logger.error(f"Error in annual_analysis: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@login_required
+def annual_analysis_years(request):
+    """Get list of years with transaction data - delegates to service layer."""
+    try:
+        # Inject dependencies and delegate to service
+        repo = AnnualAnalysisRepository()
+        service = AnnualAnalysisService(repo)
+
+        # Delegate to service
+        years = service.get_available_years(request.user)
+        return JsonResponse({"years": years})
+
+    except Exception as e:
+        logger.error(f"Error in annual_analysis_years: {e}")
         return JsonResponse({"error": str(e)}, status=500)

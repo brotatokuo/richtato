@@ -21,6 +21,10 @@ class TransactionCategorySerializer(serializers.ModelSerializer):
     full_path = serializers.CharField(read_only=True)
     keywords = CategoryKeywordSerializer(many=True, read_only=True)
     type_display = serializers.CharField(source="get_type_display", read_only=True)
+    expense_priority_display = serializers.CharField(
+        source="get_expense_priority_display", read_only=True
+    )
+    is_essential = serializers.SerializerMethodField()
 
     class Meta:
         model = TransactionCategory
@@ -35,10 +39,17 @@ class TransactionCategorySerializer(serializers.ModelSerializer):
             "color",
             "type",
             "type_display",
+            "expense_priority",
+            "expense_priority_display",
+            "is_essential",
             "keywords",
             "created_at",
         ]
         read_only_fields = ["id", "created_at"]
+
+    def get_is_essential(self, obj):
+        """Return True if category is essential, False otherwise."""
+        return obj.expense_priority == "essential"
 
 
 class TransactionSerializer(serializers.ModelSerializer):
@@ -152,11 +163,31 @@ class CategoryCreateSerializer(serializers.Serializer):
     type = serializers.ChoiceField(
         choices=["income", "expense", "transfer"], default="expense"
     )
+    expense_priority = serializers.ChoiceField(
+        choices=["essential", "non_essential"],
+        required=False,
+        allow_null=True,
+        help_text="Only applies to expense categories",
+    )
     keywords = serializers.ListField(
         child=serializers.CharField(max_length=200),
         required=False,
         allow_empty=True,
         help_text="List of keywords for this category",
+    )
+
+
+class CategoryUpdateSerializer(serializers.Serializer):
+    """Serializer for updating categories."""
+
+    name = serializers.CharField(max_length=255, required=False)
+    icon = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    color = serializers.CharField(max_length=7, required=False, allow_blank=True)
+    expense_priority = serializers.ChoiceField(
+        choices=["essential", "non_essential"],
+        required=False,
+        allow_null=True,
+        help_text="Only applies to expense categories",
     )
 
 

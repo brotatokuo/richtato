@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   CloudUpload,
   Menu,
   PieChart,
@@ -23,6 +24,7 @@ const routeConfig: Record<
   '/assets': { title: 'Assets', icon: PieChart },
   '/data': { title: 'Data', icon: Table },
   '/cashflow': { title: 'Cashflow', icon: TrendingUp },
+  '/annual-analysis': { title: 'Annual Analysis', icon: BarChart3 },
   '/upload': { title: 'Upload', icon: CloudUpload },
   '/preferences': { title: 'Preferences', icon: Settings },
   '/setup': { title: 'Setup', icon: SlidersHorizontal },

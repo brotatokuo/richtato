@@ -19,6 +19,7 @@ import {
   CategoryCatalogItem,
   CategorySettingsPayload,
   CategoryType,
+  ExpensePriority,
   categorySettingsApi,
 } from '@/lib/api/user';
 import { cn } from '@/lib/utils';
@@ -120,6 +121,23 @@ export function CategoriesSection() {
   const getCategoryType = (cat: CategoryCatalogItemWithId): CategoryType => {
     // Use type field if available, fallback to expense for backward compatibility
     return (cat.type as CategoryType) || 'expense';
+  };
+
+  const toggleEssential = async (categoryId: number, isCurrentlyEssential: boolean) => {
+    const newPriority: ExpensePriority = isCurrentlyEssential ? 'non_essential' : 'essential';
+    try {
+      await categorySettingsApi.updateCategoryExpensePriority(categoryId, newPriority);
+      // Update local state
+      setCatalog(prev =>
+        prev.map(c =>
+          c.id === categoryId
+            ? { ...c, expense_priority: newPriority, is_essential: newPriority === 'essential' }
+            : c
+        )
+      );
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to update essential status');
+    }
   };
 
   const toggleGroup = (type: CategoryType) => {
@@ -416,6 +434,29 @@ export function CategoriesSection() {
                                 </SelectContent>
                               </Select>
                             </div>
+
+                            {/* Essential Toggle (only for expense categories) */}
+                            {catType === 'expense' && (
+                              <div
+                                onClick={e => e.stopPropagation()}
+                                className="flex items-center gap-1.5"
+                                title="Mark as essential expense (needs vs wants)"
+                              >
+                                <span className="text-[10px] text-muted-foreground">
+                                  Essential
+                                </span>
+                                <Switch
+                                  checked={item.expense_priority === 'essential' || item.is_essential === true}
+                                  onCheckedChange={() =>
+                                    toggleEssential(
+                                      item.id,
+                                      item.expense_priority === 'essential' || item.is_essential === true
+                                    )
+                                  }
+                                  className="data-[state=checked]:bg-green-500"
+                                />
+                              </div>
+                            )}
 
                             {/* Right: Enabled Toggle */}
                             <div onClick={e => e.stopPropagation()}>

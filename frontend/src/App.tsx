@@ -4,6 +4,7 @@ import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 import { PreferencesProvider } from './contexts/PreferencesContext';
+import { AnnualAnalysisPage } from './pages/AnnualAnalysisPage';
 import { AssetDashboard } from './pages/AssetDashboard';
 import { Dashboard } from './pages/BudgetDashboard';
 import { Cashflow } from './pages/Cashflow';
@@ -39,6 +40,7 @@ function App() {
               <Route path="assets" element={<AssetDashboard />} />
               <Route path="data" element={<DataTable />} />
               <Route path="cashflow" element={<Cashflow />} />
+              <Route path="annual-analysis" element={<AnnualAnalysisPage />} />
               <Route path="upload" element={<Upload />} />
               <Route path="profile" element={<Profile />} />
               <Route path="preferences" element={<Preferences />} />

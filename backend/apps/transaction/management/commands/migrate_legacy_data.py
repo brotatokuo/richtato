@@ -387,32 +387,31 @@ class Command(BaseCommand):
             old_type = category.get("type", "essential")  # essential or nonessential
             enabled = category.get("enabled", "true").lower() == "true"
 
-            # Generate unique slug
+            # Use get_or_create to avoid duplicating categories that were
+            # already initialized by the user signal
             base_slug = slugify(name)
-            slug = base_slug
-            suffix = 1
-            while TransactionCategory.objects.filter(
-                user=self.new_user, slug=slug
-            ).exists():
-                slug = f"{base_slug}-{suffix}"
-                suffix += 1
 
             # Map old type to new type (all are expense categories)
             # Store the essential/nonessential distinction in icon
             icon = "💰" if old_type == "essential" else "🎯"
 
-            new_category = TransactionCategory.objects.create(
+            new_category, created = TransactionCategory.objects.get_or_create(
                 user=self.new_user,
-                name=name,
-                slug=slug,
-                type="expense",  # All legacy categories are expense type
-                icon=icon,
-                color="#6366f1" if old_type == "essential" else "#8b5cf6",
+                slug=base_slug,
+                defaults={
+                    "name": name,
+                    "type": "expense",  # All legacy categories are expense type
+                    "icon": icon,
+                    "color": "#6366f1" if old_type == "essential" else "#8b5cf6",
+                },
             )
 
             self.category_id_map[old_id] = new_category.id
-            count += 1
-            self._log_verbose(f"Category: {name} (slug: {slug}, type: {old_type})")
+            if created:
+                count += 1
+            self._log_verbose(
+                f"Category: {name} (slug: {base_slug}, type: {old_type}, created: {created})"
+            )
 
         # Create an "Income" category for income transactions
         income_category, _ = TransactionCategory.objects.get_or_create(

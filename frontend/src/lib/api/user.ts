@@ -137,6 +137,8 @@ export interface CategoryKeyword {
   created_at: string;
 }
 
+export type ExpensePriority = 'essential' | 'non_essential' | null;
+
 export interface CategoryCatalogItem {
   id: number;
   name: string;
@@ -144,6 +146,8 @@ export interface CategoryCatalogItem {
   icon: string;
   color: string;
   type: string | null;
+  expense_priority?: ExpensePriority;
+  is_essential?: boolean;
   enabled: boolean;
   keywords?: CategoryKeyword[];
   budget: {
@@ -239,6 +243,21 @@ export class CategorySettingsApi {
       }
     );
     if (!res.ok) throw new Error('Failed to delete keyword');
+  }
+
+  async updateCategoryExpensePriority(
+    categoryId: number,
+    expensePriority: ExpensePriority
+  ): Promise<CategoryCatalogItem> {
+    await csrfService.refreshToken();
+    const res = await fetch(`${this.keywordBase}/${categoryId}/`, {
+      method: 'PATCH',
+      headers: await this.getHeaders(),
+      credentials: 'include',
+      body: JSON.stringify({ expense_priority: expensePriority }),
+    });
+    if (!res.ok) throw new Error('Failed to update category');
+    return res.json();
   }
 }
 

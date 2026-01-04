@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { cn } from '@/lib/utils';
 import {
+  BarChart3,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -40,6 +41,11 @@ const navigationItems = [
     icon: PieChart,
   },
   {
+    name: 'Annual',
+    href: '/annual-analysis',
+    icon: BarChart3,
+  },
+  {
     name: 'Data',
     href: '/data',
     icon: Table,
@@ -54,11 +60,6 @@ const navigationItems = [
     href: '/preferences',
     icon: SettingsIcon,
   },
-  // {
-  //   name: 'Upload',
-  //   href: '/upload',
-  //   icon: CloudUpload,
-  // },
 ];
 
 export function Sidebar({

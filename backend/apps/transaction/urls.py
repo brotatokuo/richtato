@@ -33,6 +33,11 @@ urlpatterns = [
         views.CategoryListCreateAPIView.as_view(),
         name="category-list-create",
     ),
+    path(
+        "categories/<int:pk>/",
+        views.CategoryDetailAPIView.as_view(),
+        name="category-detail",
+    ),
     # Category keywords
     path(
         "categories/<int:category_id>/keywords/",

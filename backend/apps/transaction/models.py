@@ -17,6 +17,11 @@ class TransactionCategory(models.Model):
         ("other", "Other"),
     ]
 
+    EXPENSE_PRIORITY_CHOICES = [
+        ("essential", "Essential"),
+        ("non_essential", "Non-Essential"),
+    ]
+
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255)
     parent = models.ForeignKey(
@@ -33,6 +38,13 @@ class TransactionCategory(models.Model):
         choices=CATEGORY_TYPE_CHOICES,
         default="expense",
         help_text="Category type determines transaction classification",
+    )
+    expense_priority = models.CharField(
+        max_length=20,
+        choices=EXPENSE_PRIORITY_CHOICES,
+        null=True,
+        blank=True,
+        help_text="Only applies to expense categories. Essential = needs, Non-essential = wants",
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -87,6 +99,14 @@ class TransactionCategory(models.Model):
             },
         )
         return category
+
+    def save(self, *args, **kwargs):
+        """Auto-set expense_priority default for expense categories."""
+        if self.type == "expense" and self.expense_priority is None:
+            self.expense_priority = "non_essential"
+        elif self.type != "expense":
+            self.expense_priority = None
+        super().save(*args, **kwargs)
 
 
 class CategoryKeyword(models.Model):
