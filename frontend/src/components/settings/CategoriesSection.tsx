@@ -100,15 +100,15 @@ export function CategoriesSection() {
   const buildPayload = (
     cat: CategoryCatalogItemWithId[]
   ): CategorySettingsPayload => {
-    const enabled = cat.filter(c => c.enabled).map(c => c.name);
-    const disabled = cat.filter(c => !c.enabled).map(c => c.name);
+    // All categories are considered enabled - no toggle needed
+    const enabled = cat.map(c => c.name);
     const category_types: Record<string, CategoryType> = {};
     for (const c of cat) {
       // Use type field if available, fallback to expense for backward compatibility
       const catType = c.type || 'expense';
       category_types[c.name] = catType as CategoryType;
     }
-    return { enabled, disabled, category_types };
+    return { enabled, disabled: [], category_types };
   };
 
   const saveTimer = useRef<number | undefined>(undefined);
@@ -122,16 +122,6 @@ export function CategoriesSection() {
         setError(e instanceof Error ? e.message : 'Failed to auto-save');
       }
     }, 500);
-  };
-
-  const toggleCategory = (name: string, value: boolean) => {
-    setCatalog(prev => {
-      const next = prev.map(c =>
-        c.name === name ? { ...c, enabled: value } : c
-      );
-      scheduleSave(next);
-      return next;
-    });
   };
 
   const updateCategoryType = (name: string, type: CategoryType) => {
@@ -501,9 +491,6 @@ export function CategoriesSection() {
           {!loading &&
             filteredGroups.map(group => {
               const isExpanded = expandedGroups.has(group.type);
-              const enabledCount = group.categories.filter(
-                c => c.enabled
-              ).length;
 
               return (
                 <div
@@ -537,7 +524,7 @@ export function CategoriesSection() {
                     </div>
                     <div className="flex items-center gap-3">
                       <Badge variant="secondary" className="text-xs">
-                        {enabledCount} / {group.categories.length}
+                        {group.categories.length}
                       </Badge>
                     </div>
                   </button>
@@ -561,8 +548,7 @@ export function CategoriesSection() {
                               'flex items-center justify-between gap-4 px-6 py-3',
                               'hover:bg-accent/50 cursor-pointer',
                               'transition-all duration-150',
-                              'hover:scale-[1.01]',
-                              !item.enabled && 'opacity-50'
+                              'hover:scale-[1.01]'
                             )}
                             onClick={() => openKeywordModal(item)}
                             title="Click to manage keywords for this category"
@@ -671,33 +657,22 @@ export function CategoriesSection() {
                               </div>
                             )}
 
-                            {/* Right: Enabled Toggle + Delete */}
-                            <div
-                              className="flex items-center gap-2"
-                              onClick={e => e.stopPropagation()}
-                            >
-                              <Switch
-                                checked={item.enabled}
-                                onCheckedChange={val =>
-                                  toggleCategory(item.name, Boolean(val))
-                                }
-                              />
-                              {/* Delete button - don't show for Uncategorized */}
-                              {item.name.toLowerCase() !== 'uncategorized' && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                  onClick={e => {
-                                    e.stopPropagation();
-                                    openDeleteModal(item);
-                                  }}
-                                  title="Delete category"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              )}
-                            </div>
+                            {/* Right: Delete button */}
+                            {/* Don't show for Uncategorized */}
+                            {item.name.toLowerCase() !== 'uncategorized' && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  openDeleteModal(item);
+                                }}
+                                title="Delete category"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
                           </div>
                         );
                       })}

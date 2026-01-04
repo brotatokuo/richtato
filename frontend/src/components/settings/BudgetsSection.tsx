@@ -87,8 +87,8 @@ export function BudgetsSection() {
     fetchData();
   }, [fetchData]);
 
-  // Filter to only show enabled expense categories
-  const expenseCategories = catalog.filter(c => c.enabled && c.type === 'expense');
+  // Filter to only show expense categories
+  const expenseCategories = catalog.filter(c => c.type === 'expense');
 
   // Merge budget data with progress
   const categoriesWithProgress = expenseCategories.map(cat => {
@@ -117,12 +117,9 @@ export function BudgetsSection() {
   }) => {
     if (!selectedCategory) return;
 
-    const enabled = catalog.filter(c => c.enabled).map(c => c.name);
-    const disabled = catalog.filter(c => !c.enabled).map(c => c.name);
-
     await categorySettingsApi.updateSettings({
-      enabled,
-      disabled,
+      enabled: catalog.map(c => c.name),
+      disabled: [],
       budgets: {
         [selectedCategory.name]: {
           amount: data.amount,
@@ -139,12 +136,9 @@ export function BudgetsSection() {
   const handleRemoveBudget = async () => {
     if (!selectedCategory) return;
 
-    const enabled = catalog.filter(c => c.enabled).map(c => c.name);
-    const disabled = catalog.filter(c => !c.enabled).map(c => c.name);
-
     await categorySettingsApi.updateSettings({
-      enabled,
-      disabled,
+      enabled: catalog.map(c => c.name),
+      disabled: [],
       budgets: {
         [selectedCategory.name]: { amount: null },
       },
@@ -187,8 +181,7 @@ export function BudgetsSection() {
           {loading && <div className="text-sm">Loading...</div>}
           {!loading && expenseCategories.length === 0 && (
             <div className="text-sm text-muted-foreground py-4 text-center">
-              No expense categories enabled. Enable categories in the section
-              above.
+              No expense categories found. Add categories in the section above.
             </div>
           )}
           {!loading && (
