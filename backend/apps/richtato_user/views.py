@@ -70,6 +70,9 @@ class CategorySettingsAPIView(APIView):
                 }
 
         catalog = []
+        included_slugs = set()
+
+        # First, add categories from the YAML config
         for cat_config in config.get("categories", []):
             name = cat_config.get("name", "")
             if not name:
@@ -77,6 +80,7 @@ class CategorySettingsAPIView(APIView):
 
             # Generate slug to match database (same logic as CategoryInitializationService)
             slug = slugify(name)
+            included_slugs.add(slug)
 
             existing = user_cats.get(slug)
             budget_info = cat_to_budget.get(slug)
@@ -106,11 +110,50 @@ class CategorySettingsAPIView(APIView):
                     "icon": cat_config.get("icon", ""),
                     "color": cat_config.get("color", ""),
                     "type": cat_type,
+                    "expense_priority": existing.expense_priority if existing else None,
+                    "is_essential": existing.expense_priority == "essential"
+                    if existing
+                    else False,
                     "enabled": existing is not None,
                     "budget": budget_info,
                     "keywords": keywords,
                 }
             )
+
+        # Then, add user-created categories that aren't in the YAML config
+        for slug, cat in user_cats.items():
+            if slug in included_slugs:
+                continue  # Already included from config
+            if cat.is_deleted:
+                continue  # Skip soft-deleted categories
+
+            budget_info = cat_to_budget.get(slug)
+            keywords = [
+                {
+                    "id": kw.id,
+                    "keyword": kw.keyword,
+                    "match_count": kw.match_count,
+                    "created_at": kw.created_at.isoformat(),
+                }
+                for kw in cat.keywords.all()
+            ]
+
+            catalog.append(
+                {
+                    "id": cat.id,
+                    "name": slug,
+                    "display": cat.name,
+                    "icon": cat.icon or "📁",
+                    "color": cat.color or "",
+                    "type": cat.type,
+                    "expense_priority": cat.expense_priority,
+                    "is_essential": cat.expense_priority == "essential",
+                    "enabled": True,  # User-created categories are always enabled
+                    "budget": budget_info,
+                    "keywords": keywords,
+                }
+            )
+
         return Response({"categories": catalog})
 
     @swagger_auto_schema(

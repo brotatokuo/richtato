@@ -1,11 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { YearPicker } from '@/components/ui/YearPicker';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import {
   annualAnalysisApiService,
@@ -291,7 +285,10 @@ export function AnnualAnalysisPage() {
           data: [
             {
               name: 'Essential',
-              itemStyle: { color: ESSENTIAL_COLOR, borderColor: ESSENTIAL_COLOR },
+              itemStyle: {
+                color: ESSENTIAL_COLOR,
+                borderColor: ESSENTIAL_COLOR,
+              },
               children: essentialCategories,
             },
             {
@@ -490,30 +487,12 @@ export function AnnualAnalysisPage() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Header with Year Selector */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Annual Analysis</h1>
-          <p className="text-sm text-muted-foreground">
-            Comprehensive spending breakdown for {selectedYear}
-          </p>
-        </div>
-        <Select
-          value={String(selectedYear)}
-          onValueChange={value => setSelectedYear(Number(value))}
-        >
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="Year" />
-          </SelectTrigger>
-          <SelectContent>
-            {availableYears.map(year => (
-              <SelectItem key={year} value={String(year)}>
-                {year}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Floating Year Picker */}
+      <YearPicker
+        year={selectedYear}
+        availableYears={availableYears}
+        onChange={setSelectedYear}
+      />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
