@@ -305,9 +305,17 @@ class CategoryListCreateAPIView(APIView):
                     serializer.validated_data["parent_id"]
                 )
 
+            # Auto-generate slug from name if not provided
+            name = serializer.validated_data["name"]
+            slug = serializer.validated_data.get("slug")
+            if not slug:
+                from django.utils.text import slugify
+
+                slug = slugify(name)
+
             category = self.category_repository.create_category(
-                name=serializer.validated_data["name"],
-                slug=serializer.validated_data["slug"],
+                name=name,
+                slug=slug,
                 user=request.user,
                 parent=parent,
                 icon=serializer.validated_data.get("icon", ""),
@@ -385,7 +393,7 @@ class CategoryDetailAPIView(APIView):
             )
 
     def delete(self, request, pk):
-        """Delete a category."""
+        """Soft-delete a category (hides from UI but preserves transaction assignments)."""
         category = self.category_repository.get_by_id(pk)
 
         if not category or category.user != request.user:

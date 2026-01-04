@@ -23,6 +23,7 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from loguru import logger
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -600,13 +601,15 @@ class APILoginView(APIView):
 
         if user:
             login(request, user)
+            # Generate or get existing token for persistent authentication
+            token, _ = Token.objects.get_or_create(user=user)
             profile_data = user_service.get_user_profile_data(user)
             return Response(
                 {
                     "success": True,
                     "message": "Login successful",
                     "user": profile_data,
-                    "token": "session-based",  # Using session authentication
+                    "token": token.key,
                 },
                 status=200,
             )
@@ -644,7 +647,12 @@ class APIProfileView(APIView):
     )
     def get(self, request):
         profile_data = self.user_service.get_user_profile_data(request.user)
-        return Response(profile_data)
+        return Response(
+            {
+                "success": True,
+                "user": profile_data,
+            }
+        )
 
 
 class APIDemoLoginView(APIView):
@@ -660,10 +668,11 @@ class APIDemoLoginView(APIView):
         },
     )
     def post(self, request):
-
         try:
             demo_user = DemoUserFactory().create_or_reset()
             login(request, demo_user)
+            # Generate or get existing token for persistent authentication
+            token, _ = Token.objects.get_or_create(user=demo_user)
             user_service = UserService()
             profile_data = user_service.get_user_profile_data(demo_user)
             return Response(
@@ -671,7 +680,7 @@ class APIDemoLoginView(APIView):
                     "success": True,
                     "message": "Demo user created and logged in",
                     "user": profile_data,
-                    "token": "session-based",  # Using session authentication
+                    "token": token.key,
                 }
             )
         except Exception as e:

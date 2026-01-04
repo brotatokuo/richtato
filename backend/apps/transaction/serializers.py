@@ -156,12 +156,13 @@ class CategoryCreateSerializer(serializers.Serializer):
     """Serializer for creating custom categories."""
 
     name = serializers.CharField(max_length=255)
-    slug = serializers.SlugField(max_length=255)
+    slug = serializers.SlugField(max_length=255, required=False, allow_blank=True)
     parent_id = serializers.IntegerField(required=False, allow_null=True)
     icon = serializers.CharField(max_length=50, required=False, allow_blank=True)
     color = serializers.CharField(max_length=7, required=False, allow_blank=True)
     type = serializers.ChoiceField(
-        choices=["income", "expense", "transfer"], default="expense"
+        choices=["income", "expense", "transfer", "investment", "other"],
+        default="expense",
     )
     expense_priority = serializers.ChoiceField(
         choices=["essential", "non_essential"],

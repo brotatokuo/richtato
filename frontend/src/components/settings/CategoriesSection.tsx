@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -6,7 +7,16 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -23,7 +33,14 @@ import {
   categorySettingsApi,
 } from '@/lib/api/user';
 import { cn } from '@/lib/utils';
-import { ChevronDown, ChevronRight, Search, Tags } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  Plus,
+  Search,
+  Tags,
+  Trash2,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { BulkKeywordsModal } from './BulkKeywordsModal';
 
@@ -49,6 +66,19 @@ export function CategoriesSection() {
   const [selectedCategory, setSelectedCategory] =
     useState<CategoryCatalogItemWithId | null>(null);
   const [globalKeywordSearch, setGlobalKeywordSearch] = useState('');
+
+  // Add category modal state
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryType, setNewCategoryType] = useState<CategoryType>('expense');
+  const [newCategoryIcon, setNewCategoryIcon] = useState('📁');
+  const [addingCategory, setAddingCategory] = useState(false);
+
+  // Delete confirmation modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] =
+    useState<CategoryCatalogItemWithId | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState(false);
 
   useEffect(() => {
     loadCatalog();
@@ -167,6 +197,55 @@ export function CategoriesSection() {
     loadCatalog();
   };
 
+  // Add new category
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) return;
+
+    setAddingCategory(true);
+    try {
+      await categorySettingsApi.createCategory({
+        name: newCategoryName.trim(),
+        type: newCategoryType,
+        icon: newCategoryIcon || '📁',
+      });
+      await loadCatalog();
+      setAddModalOpen(false);
+      setNewCategoryName('');
+      setNewCategoryType('expense');
+      setNewCategoryIcon('📁');
+      setError(null);
+      // Expand the group to show the new category
+      setExpandedGroups(prev => new Set([...prev, newCategoryType]));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to create category');
+    } finally {
+      setAddingCategory(false);
+    }
+  };
+
+  // Delete category (soft delete)
+  const handleDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+
+    setDeletingCategory(true);
+    try {
+      await categorySettingsApi.deleteCategory(categoryToDelete.id);
+      await loadCatalog();
+      setDeleteModalOpen(false);
+      setCategoryToDelete(null);
+      setError(null);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to delete category');
+    } finally {
+      setDeletingCategory(false);
+    }
+  };
+
+  const openDeleteModal = (category: CategoryCatalogItemWithId) => {
+    setCategoryToDelete(category);
+    setDeleteModalOpen(true);
+  };
+
   // Group categories by type
   // Default to 'expense' if type is null (for backward compatibility)
   const allGroups: CategoryGroup[] = [
@@ -244,15 +323,149 @@ export function CategoriesSection() {
         />
       )}
 
+      {/* Add Category Modal */}
+      <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New Category</DialogTitle>
+            <DialogDescription>
+              Create a new category for organizing your transactions.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="category-name">Name</Label>
+              <Input
+                id="category-name"
+                placeholder="e.g., Subscriptions"
+                value={newCategoryName}
+                onChange={e => setNewCategoryName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddCategory()}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="category-type">Type</Label>
+              <Select
+                value={newCategoryType}
+                onValueChange={v => setNewCategoryType(v as CategoryType)}
+              >
+                <SelectTrigger id="category-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="expense">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-orange-500" />
+                      Expense
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="income">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      Income
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="transfer">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-blue-500" />
+                      Transfer
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="investment">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-purple-500" />
+                      Investment
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="other">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-gray-500" />
+                      Other
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="category-icon">Icon (emoji)</Label>
+              <Input
+                id="category-icon"
+                placeholder="📁"
+                value={newCategoryIcon}
+                onChange={e => setNewCategoryIcon(e.target.value)}
+                className="w-20 text-center text-xl"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAddModalOpen(false)}
+              disabled={addingCategory}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddCategory}
+              disabled={addingCategory || !newCategoryName.trim()}
+            >
+              {addingCategory ? 'Creating...' : 'Create Category'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Category</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{categoryToDelete?.display}"?
+              Existing transactions will keep their current category assignment,
+              but this category will no longer appear in lists.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteModalOpen(false)}
+              disabled={deletingCategory}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteCategory}
+              disabled={deletingCategory}
+            >
+              {deletingCategory ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Tags className="h-5 w-5" />
-            Categories
-          </CardTitle>
-          <CardDescription>
-            Manage your transaction categories and types
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Tags className="h-5 w-5" />
+                Categories
+              </CardTitle>
+              <CardDescription>
+                Manage your transaction categories and types
+              </CardDescription>
+            </div>
+            <Button
+              onClick={() => setAddModalOpen(true)}
+              className="gap-1.5"
+              size="sm"
+            >
+              <Plus className="h-4 w-4" />
+              Add Category
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {error && (
@@ -458,14 +671,32 @@ export function CategoriesSection() {
                               </div>
                             )}
 
-                            {/* Right: Enabled Toggle */}
-                            <div onClick={e => e.stopPropagation()}>
+                            {/* Right: Enabled Toggle + Delete */}
+                            <div
+                              className="flex items-center gap-2"
+                              onClick={e => e.stopPropagation()}
+                            >
                               <Switch
                                 checked={item.enabled}
                                 onCheckedChange={val =>
                                   toggleCategory(item.name, Boolean(val))
                                 }
                               />
+                              {/* Delete button - don't show for Uncategorized */}
+                              {item.name.toLowerCase() !== 'uncategorized' && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    openDeleteModal(item);
+                                  }}
+                                  title="Delete category"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         );

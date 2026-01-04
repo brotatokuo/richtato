@@ -46,10 +46,12 @@ class RecategorizationService:
         task.save(update_fields=["status"])
 
         try:
-            # Get all transactions for the user
-            transactions = Transaction.objects.filter(user=user).select_related(
-                "category"
-            )
+            # Get only uncategorized transactions for the user
+            # This protects manually-categorized transactions from being overwritten
+            transactions = Transaction.objects.filter(
+                user=user,
+                categorization_status="uncategorized",
+            ).select_related("category")
             total_count = transactions.count()
 
             # Update task with total count

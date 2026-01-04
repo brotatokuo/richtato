@@ -51,6 +51,10 @@ class TransactionCategory(models.Model):
         on_delete=models.CASCADE,
         related_name="custom_categories",
     )
+    is_deleted = models.BooleanField(
+        default=False,
+        help_text="Soft delete - hidden from UI but preserves transaction assignments",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

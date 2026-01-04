@@ -26,13 +26,22 @@ class CategoryRepository:
         except TransactionCategory.DoesNotExist:
             return None
 
-    def get_all_for_user(self, user: User) -> List[TransactionCategory]:
-        """Get all categories for a user."""
-        return list(TransactionCategory.objects.filter(user=user).order_by("name"))
+    def get_all_for_user(
+        self, user: User, include_deleted: bool = False
+    ) -> List[TransactionCategory]:
+        """Get all categories for a user, excluding soft-deleted by default."""
+        queryset = TransactionCategory.objects.filter(user=user)
+        if not include_deleted:
+            queryset = queryset.filter(is_deleted=False)
+        return list(queryset.order_by("name"))
 
-    def get_root_categories(self, user: User) -> List[TransactionCategory]:
+    def get_root_categories(
+        self, user: User, include_deleted: bool = False
+    ) -> List[TransactionCategory]:
         """Get top-level categories (no parent) for a user."""
         queryset = TransactionCategory.objects.filter(parent__isnull=True, user=user)
+        if not include_deleted:
+            queryset = queryset.filter(is_deleted=False)
         return list(queryset.order_by("name"))
 
     def get_subcategories(
@@ -75,5 +84,6 @@ class CategoryRepository:
         return category
 
     def delete_category(self, category: TransactionCategory) -> None:
-        """Delete a category."""
-        category.delete()
+        """Soft-delete a category (preserves transaction assignments)."""
+        category.is_deleted = True
+        category.save(update_fields=["is_deleted"])

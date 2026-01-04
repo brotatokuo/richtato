@@ -259,6 +259,36 @@ export class CategorySettingsApi {
     if (!res.ok) throw new Error('Failed to update category');
     return res.json();
   }
+
+  async createCategory(data: {
+    name: string;
+    type: 'income' | 'expense' | 'transfer' | 'investment' | 'other';
+    icon?: string;
+    color?: string;
+  }): Promise<CategoryCatalogItem> {
+    await csrfService.refreshToken();
+    const res = await fetch(`${this.keywordBase}/`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      credentials: 'include',
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to create category');
+    return res.json();
+  }
+
+  async deleteCategory(categoryId: number): Promise<void> {
+    await csrfService.refreshToken();
+    const res = await fetch(`${this.keywordBase}/${categoryId}/`, {
+      method: 'DELETE',
+      headers: await this.getHeaders(),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || 'Failed to delete category');
+    }
+  }
 }
 
 // Export singleton instance
