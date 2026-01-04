@@ -5,13 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { CategoryCatalogItem, categorySettingsApi } from '@/lib/api/user';
@@ -35,38 +29,23 @@ export function BudgetsSection() {
   const [error, setError] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<CategoryCatalogItem[]>([]);
   const [progress, setProgress] = useState<BudgetProgress[]>([]);
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  });
+  const [year, setYear] = useState(() => new Date().getFullYear());
+  const [month, setMonth] = useState(() => new Date().getMonth() + 1);
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] =
     useState<CategoryCatalogItem | null>(null);
 
-  // Generate month options (last 12 months + next 3 months)
-  const monthOptions = (() => {
-    const options: { value: string; label: string }[] = [];
-    const now = new Date();
-    for (let i = -12; i <= 3; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-      const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = d.toLocaleDateString('en-US', {
-        month: 'long',
-        year: 'numeric',
-      });
-      options.push({ value, label });
-    }
-    return options;
-  })();
+  const handleDateChange = (newYear: number, newMonth: number) => {
+    setYear(newYear);
+    setMonth(newMonth);
+  };
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-
-      const [year, month] = selectedMonth.split('-').map(Number);
 
       // Fetch catalog and budget progress in parallel
       const [catalogRes, progressRes] = await Promise.all([
@@ -81,7 +60,7 @@ export function BudgetsSection() {
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth]);
+  }, [year, month]);
 
   useEffect(() => {
     fetchData();
@@ -162,18 +141,12 @@ export function BudgetsSection() {
                 Set spending limits per category
               </CardDescription>
             </div>
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {monthOptions.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MonthYearPicker
+              year={year}
+              month={month}
+              onChange={handleDateChange}
+              className="static"
+            />
           </div>
         </CardHeader>
         <CardContent className="space-y-1">
