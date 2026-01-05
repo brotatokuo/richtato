@@ -237,17 +237,10 @@ export function Welcome() {
               </button>
               <Link
                 to="/login"
-                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
               >
                 Sign In
               </Link>
-              <button
-                onClick={handleDemoLogin}
-                disabled={isLoggingIn}
-                className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all disabled:opacity-50"
-              >
-                {isLoggingIn ? 'Loading...' : 'Try Demo'}
-              </button>
             </div>
           </div>
         </div>
