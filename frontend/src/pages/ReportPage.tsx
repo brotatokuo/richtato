@@ -318,7 +318,6 @@ export function ReportPage() {
       series: [
         {
           type: 'sankey',
-          layout: 'none',
           emphasis: {
             focus: 'adjacency',
           },
