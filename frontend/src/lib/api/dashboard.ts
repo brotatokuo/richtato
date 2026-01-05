@@ -139,7 +139,7 @@ class DashboardApiService {
   async getBudgetDashboardData(
     year?: number,
     month?: number | string
-  ): Promise<any> {
+  ): Promise<unknown> {
     const url = new URL(
       `${this.baseUrl}/budget-progress/`,
       window.location.origin
@@ -152,7 +152,7 @@ class DashboardApiService {
       headers: this.getHeaders(),
       credentials: 'include',
     });
-    return this.handleResponse<any>(response);
+    return this.handleResponse<unknown>(response);
   }
 
   /**
@@ -202,14 +202,14 @@ class DashboardApiService {
   /**
    * Get top spending categories
    */
-  async getTopCategoriesData(): Promise<any> {
+  async getTopCategoriesData(): Promise<unknown> {
     const response = await fetch(`${this.baseUrl}/top-categories/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
     });
 
-    return this.handleResponse<any>(response);
+    return this.handleResponse<unknown>(response);
   }
 }
 

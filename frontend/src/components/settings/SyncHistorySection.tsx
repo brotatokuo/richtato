@@ -31,8 +31,8 @@ export function SyncHistorySection() {
       setError(null);
       const data = await syncService.getSyncJobs();
       setJobs(data);
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to load sync history');
+    } catch (e: unknown) {
+      setError((e as Error)?.message ?? 'Failed to load sync history');
     } finally {
       setLoading(false);
     }
@@ -43,6 +43,8 @@ export function SyncHistorySection() {
     if (isExpanded && jobs.length === 0 && !loading) {
       fetchJobs();
     }
+    // jobs.length and loading are intentionally not deps - only fetch on expand
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isExpanded]);
 
   const formatDate = (dateStr: string | null) => {

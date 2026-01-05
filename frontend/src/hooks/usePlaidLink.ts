@@ -113,9 +113,9 @@ export function usePlaidLink() {
             if (onSuccess) {
               onSuccess();
             }
-          } catch (e: any) {
+          } catch (e: unknown) {
             console.error('Error saving Plaid connection:', e);
-            setError(e?.message ?? 'Failed to save connection');
+            setError((e as Error)?.message ?? 'Failed to save connection');
           } finally {
             setLoading(false);
           }
@@ -134,9 +134,9 @@ export function usePlaidLink() {
 
       // Open Plaid Link
       plaidLink.open();
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Error initializing Plaid Link:', e);
-      setError(e?.message ?? 'Failed to initialize Plaid Link');
+      setError((e as Error)?.message ?? 'Failed to initialize Plaid Link');
       setLoading(false);
     }
   }, []);

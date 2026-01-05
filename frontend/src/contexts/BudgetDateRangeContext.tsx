@@ -42,6 +42,7 @@ export function BudgetDateRangeProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useBudgetDateRange(): BudgetDateRange {
   const ctx = useContext(BudgetDateRangeContext);
   if (!ctx) {

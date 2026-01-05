@@ -82,9 +82,9 @@ export function IncomeExpenseChart() {
         axisPointer: {
           type: 'shadow',
         },
-        formatter: function (params: any) {
+        formatter: function (params: Array<{ name: string; seriesName: string; value: number }>) {
           let result = params[0].name + '<br/>';
-          params.forEach((param: any) => {
+          params.forEach((param) => {
             result +=
               param.seriesName + ': $' + param.value.toLocaleString() + '<br/>';
           });
@@ -123,7 +123,7 @@ export function IncomeExpenseChart() {
         <div className="flex items-center justify-between">
           <CardTitle>Income vs Expenses</CardTitle>
           <div className="w-40">
-            <Select value={period} onValueChange={v => setPeriod(v as any)}>
+            <Select value={period} onValueChange={v => setPeriod(v as '3m' | '6m' | '12m' | 'ytd')}>
               <SelectTrigger aria-label="Select period">
                 <SelectValue placeholder="Period" />
               </SelectTrigger>

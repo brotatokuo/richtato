@@ -48,6 +48,8 @@ export function AccountBalanceForm({
       const day = String(today.getDate()).padStart(2, '0');
       setDate(`${year}-${month}-${day}`);
     }
+    // Only run on mount - intentionally not depending on date
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -55,7 +57,12 @@ export function AccountBalanceForm({
       const balanceStr = String(balance);
       const num = parseFloat(balanceStr.replace(/[,$€£¥₹\s]/g, ''));
       if (!isNaN(num)) {
-        setBalanceDisplay(numberFormatter.format(Math.abs(num)));
+        const formatter = new Intl.NumberFormat('en-US', {
+          style: 'decimal',
+          maximumFractionDigits: 2,
+          minimumFractionDigits: 2,
+        });
+        setBalanceDisplay(formatter.format(Math.abs(num)));
       }
     }
   }, [balance, isBalanceFocused]);

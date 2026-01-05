@@ -94,6 +94,8 @@ export function AccountDetailModal({
         imageKey: account.image_key ?? null,
       });
     }
+    // findEntityValue depends on entityOptions which is already in deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account, entityOptions]);
 
   // Compute auto-detected image key based on current name (for credit cards)

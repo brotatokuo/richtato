@@ -446,7 +446,16 @@ export function AssetTrendsChart({
       symbolSize: number;
       lineStyle: { width: number; color: string };
       itemStyle: { color: string };
-      areaStyle?: any;
+      areaStyle?: {
+        color?: {
+          type: string;
+          x: number;
+          y: number;
+          x2: number;
+          y2: number;
+          colorStops: Array<{ offset: number; color: string }>;
+        };
+      };
     }> = [];
 
     const rows: Array<{ date: string; label: string; value: number }> = [];

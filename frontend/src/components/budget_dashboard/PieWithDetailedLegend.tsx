@@ -13,8 +13,8 @@ import { ReactNode } from 'react';
 
 interface PieWithDetailedLegendProps {
   title: string;
-  chartData: any;
-  chartOptions: any;
+  chartData: { series?: unknown[] } | unknown;
+  chartOptions: Record<string, unknown>;
   centerPrimary: string | number;
   centerSecondaryLabel?: string;
   centerTertiaryLabel?: string;

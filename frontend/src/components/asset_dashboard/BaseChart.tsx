@@ -3,8 +3,8 @@ import { useEffect, useRef } from 'react';
 
 interface BaseChartProps {
   type: 'line' | 'bar' | 'doughnut' | 'pie';
-  data: any;
-  options: any;
+  data: { series?: unknown[] } | unknown;
+  options: Record<string, unknown>;
   height?: string | number;
   width?: string | number;
 }

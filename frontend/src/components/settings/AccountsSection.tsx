@@ -37,8 +37,8 @@ export function AccountsSection() {
       const data = await transactionsApiService.getAccounts();
       setAccounts(data);
       setError(null);
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to load accounts');
+    } catch (e: unknown) {
+      setError((e as Error)?.message ?? 'Failed to load accounts');
     } finally {
       setLoading(false);
     }
@@ -49,7 +49,7 @@ export function AccountsSection() {
       const choices = await transactionsApiService.getAccountFieldChoices();
       setAccountTypeOptions(choices.type || []);
       setEntityOptions(choices.entity || []);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to load field choices:', e);
       // Set default options if fetch fails
       setAccountTypeOptions([
@@ -87,8 +87,8 @@ export function AccountsSection() {
       });
       await refresh();
       setShowCreate(false);
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to create account');
+    } catch (e: unknown) {
+      setError((e as Error)?.message ?? 'Failed to create account');
     } finally {
       setLoading(false);
     }
@@ -110,8 +110,8 @@ export function AccountsSection() {
       await refresh();
       setShowEdit(false);
       setSelectedAccount(null);
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to update account');
+    } catch (e: unknown) {
+      setError((e as Error)?.message ?? 'Failed to update account');
     } finally {
       setLoading(false);
     }
@@ -125,8 +125,8 @@ export function AccountsSection() {
       await refresh();
       setShowDelete(false);
       setSelectedAccount(null);
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to delete account');
+    } catch (e: unknown) {
+      setError((e as Error)?.message ?? 'Failed to delete account');
     } finally {
       setLoading(false);
     }

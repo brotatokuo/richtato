@@ -57,8 +57,8 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         }
       });
       setCurrencySymbols(symbols);
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to load preferences');
+    } catch (e: unknown) {
+      setError((e as Error)?.message ?? 'Failed to load preferences');
       console.error('Failed to load preferences:', e);
     } finally {
       setLoading(false);
@@ -79,8 +79,8 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         date_format: updated.date_format || 'MM/DD/YYYY',
         timezone: updated.timezone || 'UTC',
       });
-    } catch (e: any) {
-      const errorMsg = e?.message ?? 'Failed to update preferences';
+    } catch (e: unknown) {
+      const errorMsg = (e as Error)?.message ?? 'Failed to update preferences';
       setError(errorMsg);
       console.error('Failed to update preferences:', e);
       throw e;
@@ -113,6 +113,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePreferences() {
   const context = useContext(PreferencesContext);
   if (context === undefined) {

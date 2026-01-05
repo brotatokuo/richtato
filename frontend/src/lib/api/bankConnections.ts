@@ -253,7 +253,7 @@ class BankConnectionsApiService {
    */
   isPlaidConfigured(): boolean {
     // Check if Plaid SDK is loaded
-    return typeof window !== 'undefined' && !!(window as any).Plaid;
+    return typeof window !== 'undefined' && !!(window as unknown as { Plaid?: unknown }).Plaid;
   }
 }
 

@@ -133,9 +133,9 @@ export function NetWorthTrendChart() {
         textStyle: {
           color: '#f3f4f6',
         },
-        formatter: function (params: any) {
+        formatter: function (params: Array<{ name?: string; value?: number; color?: string; seriesName?: string }>) {
           const date = params?.[0]?.name ?? '';
-          const lines = (params || []).map((p: any) => {
+          const lines = (params || []).map((p) => {
             const value = p.value ?? 0;
             const color = p.color;
             return `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${color};"></span>${p.seriesName}: ${formatCurrency(value, preferences.currency)}`;

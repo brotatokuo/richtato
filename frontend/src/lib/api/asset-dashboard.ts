@@ -145,27 +145,27 @@ class AssetDashboardApiService {
   /**
    * Get top spending categories
    */
-  async getTopCategoriesData(): Promise<any> {
+  async getTopCategoriesData(): Promise<unknown> {
     const response = await fetch(`${this.baseUrl}/top-categories/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
     });
 
-    return this.handleResponse<any>(response);
+    return this.handleResponse<unknown>(response);
   }
 
   /**
    * Get Sankey diagram data
    */
-  async getSankeyData(): Promise<any> {
+  async getSankeyData(): Promise<unknown> {
     const response = await fetch(`${this.baseUrl}/sankey-data/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
     });
 
-    return this.handleResponse<any>(response);
+    return this.handleResponse<unknown>(response);
   }
 
   /**

@@ -62,6 +62,8 @@ export function AccountDetailModal({
     if (account && isOpen) {
       loadAccountData();
     }
+    // loadAccountData is stable - intentionally not in deps to avoid infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account, isOpen]);
 
   const loadAccountData = async () => {
@@ -464,7 +466,7 @@ function TrendFromHistory({
   const options = {
     tooltip: {
       trigger: 'axis',
-      formatter: (params: any) => {
+      formatter: (params: { name: string; value: number }[]) => {
         const dataPoint = params[0];
         return `${dataPoint.name}<br/>${formatCurrency(dataPoint.value, currency, 2)}`;
       },

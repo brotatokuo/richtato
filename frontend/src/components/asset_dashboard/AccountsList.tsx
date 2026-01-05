@@ -155,16 +155,25 @@ export function AccountsList({
         const accountsData = await transactionsApiService.getAccounts();
 
         const accountsWithBalance: AccountWithBalance[] = accountsData.map(
-          a => ({
-            ...a,
-            balance:
-              typeof (a as any).balance === 'number'
-                ? (a as any).balance
-                : Number(
-                    String((a as any).balance || '0').replace(/[^0-9.-]+/g, '')
-                  ),
-            lastUpdated: String((a as any).date || ''),
-          })
+          a => {
+            const accountWithExtras = a as Account & {
+              balance?: number | string;
+              date?: string;
+            };
+            return {
+              ...a,
+              balance:
+                typeof accountWithExtras.balance === 'number'
+                  ? accountWithExtras.balance
+                  : Number(
+                      String(accountWithExtras.balance || '0').replace(
+                        /[^0-9.-]+/g,
+                        ''
+                      )
+                    ),
+              lastUpdated: String(accountWithExtras.date || ''),
+            };
+          }
         );
 
         setAccounts(accountsWithBalance);

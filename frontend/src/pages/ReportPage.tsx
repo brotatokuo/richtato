@@ -78,7 +78,11 @@ export function ReportPage() {
     const option: echarts.EChartsOption = {
       tooltip: {
         trigger: 'item',
-        formatter: (params: any) => {
+        formatter: (params: {
+          name: string;
+          value: number;
+          percent: number;
+        }) => {
           return `${params.name}: ${formatCurrency(params.value, preferences.currency)} (${params.percent}%)`;
         },
       },
@@ -158,8 +162,15 @@ export function ReportPage() {
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
-        formatter: (params: any) => {
-          const lines = params.map((p: any) => {
+        formatter: (
+          params: Array<{
+            name: string;
+            color: string;
+            seriesName: string;
+            value: number;
+          }>
+        ) => {
+          const lines = params.map(p => {
             return `<span style="color:${p.color}">●</span> ${p.seriesName}: ${formatCurrency(p.value, preferences.currency)}`;
           });
           return `${params[0].name}<br/>${lines.join('<br/>')}`;
@@ -308,11 +319,15 @@ export function ReportPage() {
       tooltip: {
         trigger: 'item',
         triggerOn: 'mousemove',
-        formatter: (params: any) => {
+        formatter: (params: {
+          dataType?: string;
+          name?: string;
+          data?: { source: string; target: string; value: number };
+        }) => {
           if (params.dataType === 'edge') {
-            return `${params.data.source} → ${params.data.target}<br/>${formatCurrency(params.data.value, preferences.currency)}`;
+            return `${params.data?.source} → ${params.data?.target}<br/>${formatCurrency(params.data?.value ?? 0, preferences.currency)}`;
           }
-          return params.name;
+          return params.name ?? '';
         },
       },
       series: [

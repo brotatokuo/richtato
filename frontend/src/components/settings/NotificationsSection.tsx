@@ -22,8 +22,8 @@ export function NotificationsSection() {
         setLoading(true);
         const pref = await preferencesApi.get();
         setNotificationsEnabled(pref.notifications_enabled ?? true);
-      } catch (e: any) {
-        setError(e?.message ?? 'Failed to load preferences');
+      } catch (e: unknown) {
+        setError((e as Error)?.message ?? 'Failed to load preferences');
       } finally {
         setLoading(false);
       }
@@ -36,8 +36,8 @@ export function NotificationsSection() {
       await preferencesApi.update({
         notifications_enabled: value,
       });
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to save preferences');
+    } catch (e: unknown) {
+      setError((e as Error)?.message ?? 'Failed to save preferences');
       // Revert on error
       setNotificationsEnabled(!value);
     }

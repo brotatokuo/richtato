@@ -25,8 +25,8 @@ export function useCards() {
       const data = await cardsApi.list();
       setCards(data);
       setError(null);
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to load cards');
+    } catch (e: unknown) {
+      setError((e as Error)?.message ?? 'Failed to load cards');
       setCards([]);
     } finally {
       setLoading(false);
@@ -47,8 +47,8 @@ export function useCards() {
       setLoading(true);
       await cardsApi.create({ name, bank });
       await refresh();
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to create card');
+    } catch (e: unknown) {
+      setError((e as Error)?.message ?? 'Failed to create card');
       throw e;
     } finally {
       setLoading(false);
@@ -65,8 +65,8 @@ export function useCards() {
       setLoading(true);
       await cardsApi.update(id, { name, bank, image_key: imageKey });
       await refresh();
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to update card');
+    } catch (e: unknown) {
+      setError((e as Error)?.message ?? 'Failed to update card');
       throw e;
     } finally {
       setLoading(false);
@@ -78,8 +78,8 @@ export function useCards() {
       setLoading(true);
       await cardsApi.remove(id);
       await refresh();
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to delete card');
+    } catch (e: unknown) {
+      setError((e as Error)?.message ?? 'Failed to delete card');
       throw e;
     } finally {
       setLoading(false);

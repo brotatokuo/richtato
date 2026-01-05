@@ -51,8 +51,8 @@ export function AppearanceSection() {
         setLoading(true);
         const choices = await preferencesApi.getFieldChoices();
         setFieldChoices(choices);
-      } catch (e: any) {
-        setError(e?.message ?? 'Failed to load field choices');
+      } catch (e: unknown) {
+        setError((e as Error)?.message ?? 'Failed to load field choices');
       } finally {
         setLoading(false);
       }
@@ -64,7 +64,7 @@ export function AppearanceSection() {
     setSettings(updated);
     try {
       await updatePreferences({
-        theme: updated.theme as any,
+        theme: updated.theme as 'light' | 'dark' | 'system',
         currency: updated.currency,
         date_format: updated.dateFormat,
         timezone: updated.timezone,
@@ -77,8 +77,8 @@ export function AppearanceSection() {
         ).matches;
         setTheme(prefersDark ? 'dark' : 'light');
       }
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to save preferences');
+    } catch (e: unknown) {
+      setError((e as Error)?.message ?? 'Failed to save preferences');
     }
   };
 

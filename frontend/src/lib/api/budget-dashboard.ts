@@ -134,7 +134,7 @@ class BudgetDashboardApiService {
     year?: number;
     month?: string;
     count?: number;
-  }): Promise<{ category_rankings: any[] }> {
+  }): Promise<{ category_rankings: Array<{ category: string; amount: number; rank: number }> }> {
     const url = new URL(`${this.baseUrl}/rankings/`, window.location.origin);
     if (params?.year) url.searchParams.append('year', String(params.year));
     if (params?.month) url.searchParams.append('month', params.month);
@@ -144,7 +144,7 @@ class BudgetDashboardApiService {
       headers: this.getHeaders(),
       credentials: 'include',
     });
-    return this.handleResponse<{ category_rankings: any[] }>(response);
+    return this.handleResponse<{ category_rankings: Array<{ category: string; amount: number; rank: number }> }>(response);
   }
 
   /**

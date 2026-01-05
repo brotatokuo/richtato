@@ -7,7 +7,17 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 export function SavingsChart() {
   const [labels, setLabels] = useState<string[]>([]);
-  const [series, setSeries] = useState<any[]>([]);
+  interface ChartSeries {
+    name: string;
+    type: string;
+    data: number[];
+    smooth?: boolean;
+    areaStyle?: object;
+    lineStyle?: { color: string; width: number };
+    itemStyle?: { color: string };
+    barMaxWidth?: number;
+  }
+  const [series, setSeries] = useState<ChartSeries[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const intervalRef = useRef<number | null>(null);
@@ -18,7 +28,14 @@ export function SavingsChart() {
       const data = await assetDashboardApiService.getSavingsData();
       const nextLabels = data.labels || [];
       // Map datasets to ECharts series, preserving types/colors where possible
-      const mappedSeries = (data.datasets || []).map((ds: any) => ({
+      interface DatasetItem {
+        label: string;
+        type?: string;
+        data?: number[];
+        borderColor?: string;
+        backgroundColor?: string;
+      }
+      const mappedSeries = (data.datasets || []).map((ds: DatasetItem) => ({
         name: ds.label,
         type: ds.type || 'line',
         data: ds.data || [],
@@ -48,7 +65,7 @@ export function SavingsChart() {
       }));
       // If all values are zero or empty, treat as no data
       const allValues = (mappedSeries || [])
-        .flatMap((s: any) => s.data as number[])
+        .flatMap((s: ChartSeries) => s.data as number[])
         .filter(v => typeof v === 'number');
       const hasNonZero = allValues.some(v => v !== 0);
 
@@ -76,14 +93,16 @@ export function SavingsChart() {
     return () => {
       if (intervalRef.current) window.clearInterval(intervalRef.current);
     };
+    // fetchSavings is stable - intentionally not in deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const chartOptions = useMemo(
     () => ({
       tooltip: {
         trigger: 'axis',
-        formatter: function (params: any) {
-          const lines = (params || []).map((p: any) => {
+        formatter: function (params: Array<{ name?: string; seriesName?: string; value?: number | number[] }>) {
+          const lines = (params || []).map((p) => {
             const value = Array.isArray(p.value) ? p.value[1] : p.value;
             return `${p.seriesName}: $${Number(value ?? 0).toLocaleString()}`;
           });

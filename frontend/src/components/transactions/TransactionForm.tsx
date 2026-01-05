@@ -87,7 +87,12 @@ export function TransactionForm({
       } else {
         const num = parseFloat(normalizeNumericString(String(formData.amount)));
         if (!isNaN(num)) {
-          setAmountDisplay(numberFormatter.format(Math.abs(num)));
+          const formatter = new Intl.NumberFormat('en-US', {
+            style: 'decimal',
+            maximumFractionDigits: 2,
+            minimumFractionDigits: 2,
+          });
+          setAmountDisplay(formatter.format(Math.abs(num)));
         } else {
           setAmountDisplay(formData.amount);
         }

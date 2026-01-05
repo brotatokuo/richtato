@@ -28,7 +28,7 @@ export interface ColumnDef<T> {
   /** Display label for the column header */
   label: string;
   /** Custom render function for cell content */
-  render?: (value: any, row: T) => ReactNode;
+  render?: (value: T[keyof T], row: T) => ReactNode;
   /** Enable sorting for this column (default: true) */
   sortable?: boolean;
   /** Enable filtering for this column */

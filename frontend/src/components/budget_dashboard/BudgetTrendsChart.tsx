@@ -31,10 +31,10 @@ export function BudgetTrendsChart({
     return {
       tooltip: {
         trigger: 'axis',
-        formatter: function (params: any) {
-          const lines = (params || []).map((p: any) => {
+        formatter: function (params: Array<{ name?: string; color?: string; seriesName?: string; value?: number | number[] }>) {
+          const lines = (params || []).map((p) => {
             const value = Array.isArray(p.value) ? p.value[1] : p.value;
-            return `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${p.color};"></span>${p.seriesName}: ${formatCurrency(value, currency)}`;
+            return `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${p.color};"></span>${p.seriesName}: ${formatCurrency(value as number, currency)}`;
           });
           const name = params?.[0]?.name ?? '';
           return [name, ...lines].join('<br/>');
@@ -114,10 +114,10 @@ export function BudgetTrendsChart({
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
-        formatter: function (params: any) {
-          const lines = (params || []).map((p: any) => {
+        formatter: function (params: Array<{ name?: string; color?: string; seriesName?: string; value?: number | number[] }>) {
+          const lines = (params || []).map((p) => {
             const value = Array.isArray(p.value) ? p.value[1] : p.value;
-            return `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${p.color};"></span>${p.seriesName}: ${formatCurrency(value, currency)}`;
+            return `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${p.color};"></span>${p.seriesName}: ${formatCurrency(value as number, currency)}`;
           });
           const name = params?.[0]?.name ?? '';
           return [name, ...lines].join('<br/>');
@@ -174,7 +174,7 @@ export function BudgetTrendsChart({
           data: monthlyData.map((m) => m.total_spent),
           barMaxWidth: 24,
           itemStyle: {
-            color: function (params: any) {
+            color: function (params: { dataIndex: number }) {
               const spent = monthlyData[params.dataIndex]?.total_spent || 0;
               const budget = monthlyData[params.dataIndex]?.total_budget || 0;
               if (spent > budget) return '#ef4444';
@@ -192,7 +192,7 @@ export function BudgetTrendsChart({
     return {
       tooltip: {
         trigger: 'axis',
-        formatter: function (params: any) {
+        formatter: function (params: Array<{ name?: string; color?: string; value?: number | number[] }>) {
           const p = params?.[0];
           if (!p) return '';
           const value = Array.isArray(p.value) ? p.value[1] : p.value;

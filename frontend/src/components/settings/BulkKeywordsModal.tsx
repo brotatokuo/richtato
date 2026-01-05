@@ -43,6 +43,8 @@ export function BulkKeywordsModal({
     if (open && categoryId) {
       loadKeywords();
     }
+    // loadKeywords is stable - intentionally not in deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, categoryId]);
 
   const loadKeywords = async () => {
