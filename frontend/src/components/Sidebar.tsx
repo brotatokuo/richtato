@@ -26,6 +26,11 @@ interface SidebarProps {
 
 const navigationItems = [
   {
+    name: 'Report',
+    href: '/report',
+    icon: BarChart3,
+  },
+  {
     name: 'Budget',
     href: '/budget',
     icon: Wallet,
@@ -39,11 +44,6 @@ const navigationItems = [
     name: 'Assets',
     href: '/assets',
     icon: PieChart,
-  },
-  {
-    name: 'Report',
-    href: '/report',
-    icon: BarChart3,
   },
   {
     name: 'Data',

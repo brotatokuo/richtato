@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a0a"/>
+      <stop offset="100%" style="stop-color:#1a1a2e"/>
+    </linearGradient>
+    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#22c55e"/>
+      <stop offset="100%" style="stop-color:#16a34a"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#eab308"/>
+      <stop offset="100%" style="stop-color:#ca8a04"/>
+    </linearGradient>
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3b82f6"/>
+      <stop offset="100%" style="stop-color:#2563eb"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bgGrad)" rx="12"/>
+
+  <!-- Header bar -->
+  <rect x="0" y="0" width="800" height="50" fill="#111" rx="12"/>
+  <circle cx="25" cy="25" r="6" fill="#ef4444"/>
+  <circle cx="45" cy="25" r="6" fill="#eab308"/>
+  <circle cx="65" cy="25" r="6" fill="#22c55e"/>
+  <text x="400" y="30" text-anchor="middle" fill="#888" font-family="system-ui" font-size="14">Budget Dashboard</text>
+
+  <!-- Sidebar -->
+  <rect x="0" y="50" width="180" height="450" fill="#111"/>
+  <rect x="15" y="80" width="150" height="35" fill="#22c55e" rx="8" opacity="0.2"/>
+  <rect x="30" y="90" width="80" height="15" fill="#22c55e" rx="4"/>
+  <rect x="30" y="135" width="100" height="12" fill="#444" rx="4"/>
+  <rect x="30" y="165" width="90" height="12" fill="#444" rx="4"/>
+  <rect x="30" y="195" width="110" height="12" fill="#444" rx="4"/>
+  <rect x="30" y="225" width="85" height="12" fill="#444" rx="4"/>
+
+  <!-- Main content area -->
+  <!-- Summary cards -->
+  <rect x="200" y="70" width="180" height="90" fill="#1a1a2e" rx="12" stroke="#333" stroke-width="1"/>
+  <text x="220" y="100" fill="#888" font-family="system-ui" font-size="12">Monthly Budget</text>
+  <text x="220" y="130" fill="#22c55e" font-family="system-ui" font-size="24" font-weight="bold">$4,250</text>
+
+  <rect x="400" y="70" width="180" height="90" fill="#1a1a2e" rx="12" stroke="#333" stroke-width="1"/>
+  <text x="420" y="100" fill="#888" font-family="system-ui" font-size="12">Spent</text>
+  <text x="420" y="130" fill="#eab308" font-family="system-ui" font-size="24" font-weight="bold">$2,847</text>
+
+  <rect x="600" y="70" width="180" height="90" fill="#1a1a2e" rx="12" stroke="#333" stroke-width="1"/>
+  <text x="620" y="100" fill="#888" font-family="system-ui" font-size="12">Remaining</text>
+  <text x="620" y="130" fill="#3b82f6" font-family="system-ui" font-size="24" font-weight="bold">$1,403</text>
+
+  <!-- Chart area -->
+  <rect x="200" y="180" width="380" height="220" fill="#1a1a2e" rx="12" stroke="#333" stroke-width="1"/>
+  <text x="220" y="210" fill="#fff" font-family="system-ui" font-size="14" font-weight="bold">Spending by Category</text>
+
+  <!-- Pie chart placeholder -->
+  <circle cx="390" cy="310" r="80" fill="none" stroke="#22c55e" stroke-width="25" stroke-dasharray="150 503" transform="rotate(-90 390 310)"/>
+  <circle cx="390" cy="310" r="80" fill="none" stroke="#eab308" stroke-width="25" stroke-dasharray="100 503" stroke-dashoffset="-150" transform="rotate(-90 390 310)"/>
+  <circle cx="390" cy="310" r="80" fill="none" stroke="#3b82f6" stroke-width="25" stroke-dasharray="80 503" stroke-dashoffset="-250" transform="rotate(-90 390 310)"/>
+  <circle cx="390" cy="310" r="80" fill="none" stroke="#ef4444" stroke-width="25" stroke-dasharray="60 503" stroke-dashoffset="-330" transform="rotate(-90 390 310)"/>
+  <circle cx="390" cy="310" r="55" fill="#1a1a2e"/>
+  <text x="390" y="315" text-anchor="middle" fill="#fff" font-family="system-ui" font-size="16" font-weight="bold">67%</text>
+
+  <!-- Legend -->
+  <rect x="600" y="180" width="180" height="220" fill="#1a1a2e" rx="12" stroke="#333" stroke-width="1"/>
+  <text x="620" y="210" fill="#fff" font-family="system-ui" font-size="14" font-weight="bold">Categories</text>
+
+  <circle cx="630" cy="245" r="6" fill="#22c55e"/>
+  <text x="645" y="250" fill="#ccc" font-family="system-ui" font-size="12">Housing - 35%</text>
+
+  <circle cx="630" cy="275" r="6" fill="#eab308"/>
+  <text x="645" y="280" fill="#ccc" font-family="system-ui" font-size="12">Food - 22%</text>
+
+  <circle cx="630" cy="305" r="6" fill="#3b82f6"/>
+  <text x="645" y="310" fill="#ccc" font-family="system-ui" font-size="12">Transport - 18%</text>
+
+  <circle cx="630" cy="335" r="6" fill="#ef4444"/>
+  <text x="645" y="340" fill="#ccc" font-family="system-ui" font-size="12">Shopping - 15%</text>
+
+  <circle cx="630" cy="365" r="6" fill="#8b5cf6"/>
+  <text x="645" y="370" fill="#ccc" font-family="system-ui" font-size="12">Other - 10%</text>
+
+  <!-- Progress bars section -->
+  <rect x="200" y="420" width="580" height="60" fill="#1a1a2e" rx="12" stroke="#333" stroke-width="1"/>
+  <text x="220" y="445" fill="#888" font-family="system-ui" font-size="11">Housing</text>
+  <rect x="300" y="438" width="200" height="8" fill="#333" rx="4"/>
+  <rect x="300" y="438" width="180" height="8" fill="url(#greenGrad)" rx="4"/>
+
+  <text x="220" y="465" fill="#888" font-family="system-ui" font-size="11">Food</text>
+  <rect x="300" y="458" width="200" height="8" fill="#333" rx="4"/>
+  <rect x="300" y="458" width="140" height="8" fill="url(#goldGrad)" rx="4"/>
+
+  <text x="530" y="445" fill="#888" font-family="system-ui" font-size="11">Transport</text>
+  <rect x="600" y="438" width="160" height="8" fill="#333" rx="4"/>
+  <rect x="600" y="438" width="90" height="8" fill="url(#blueGrad)" rx="4"/>
+</svg>

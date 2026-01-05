@@ -35,7 +35,7 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Navigate to="/budget" replace />} />
+              <Route index element={<Navigate to="/report" replace />} />
               <Route path="budget" element={<Dashboard />} />
               <Route path="assets" element={<AssetDashboard />} />
               <Route path="data" element={<DataTable />} />
