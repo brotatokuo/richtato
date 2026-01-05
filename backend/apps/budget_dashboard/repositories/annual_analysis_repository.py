@@ -113,7 +113,12 @@ class AnnualAnalysisRepository:
                 date__lte=end_date,
             )
             .filter(self._get_expense_filter())
-            .values("category__name", "category__expense_priority", "category__color")
+            .values(
+                "category__name",
+                "category__expense_priority",
+                "category__color",
+                "category__icon",
+            )
             .annotate(total=Sum("amount"))
             .order_by("-total")
         )
@@ -124,6 +129,7 @@ class AnnualAnalysisRepository:
                 "amount": float(item["total"]),
                 "is_essential": item["category__expense_priority"] == "essential",
                 "color": item["category__color"] or "#6b7280",
+                "icon": item["category__icon"] or "",
             }
             for item in queryset
         ]

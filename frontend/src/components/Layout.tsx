@@ -82,7 +82,7 @@ export function Layout() {
           </div>
         </div>
       )}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col isolate">
         {/* Header */}
         <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
           <div className="mx-auto px-6 py-4">

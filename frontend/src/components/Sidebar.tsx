@@ -91,7 +91,7 @@ export function Sidebar({
   return (
     <div
       className={cn(
-        'group relative flex h-screen flex-col border-r',
+        'group relative z-50 flex h-screen flex-col border-r',
         isCollapsed ? 'w-16' : 'w-64',
         className
       )}

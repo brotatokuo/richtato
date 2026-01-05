@@ -35,13 +35,11 @@ export function ReportPage() {
   // Chart refs
   const donutChartRef = useRef<HTMLDivElement>(null);
   const barChartRef = useRef<HTMLDivElement>(null);
-  const treemapChartRef = useRef<HTMLDivElement>(null);
   const sankeyChartRef = useRef<HTMLDivElement>(null);
 
   // Chart instances
   const donutChartInstance = useRef<echarts.ECharts | null>(null);
   const barChartInstance = useRef<echarts.ECharts | null>(null);
-  const treemapChartInstance = useRef<echarts.ECharts | null>(null);
   const sankeyChartInstance = useRef<echarts.ECharts | null>(null);
 
   const loadData = useCallback(async () => {
@@ -221,102 +219,6 @@ export function ReportPage() {
     };
   }, [data, preferences.currency]);
 
-  // Initialize and update Treemap Chart
-  useEffect(() => {
-    if (!treemapChartRef.current || !data) return;
-
-    if (treemapChartInstance.current) {
-      treemapChartInstance.current.dispose();
-    }
-
-    treemapChartInstance.current = echarts.init(treemapChartRef.current);
-
-    // Group categories by essential/non-essential
-    const essentialCategories = data.category_breakdown
-      .filter(c => c.is_essential)
-      .map(c => ({
-        name: c.name,
-        value: c.amount,
-        itemStyle: { color: c.color || ESSENTIAL_COLOR },
-      }));
-
-    const nonEssentialCategories = data.category_breakdown
-      .filter(c => !c.is_essential)
-      .map(c => ({
-        name: c.name,
-        value: c.amount,
-        itemStyle: { color: c.color || NON_ESSENTIAL_COLOR },
-      }));
-
-    const option: echarts.EChartsOption = {
-      tooltip: {
-        formatter: (params: any) => {
-          return `${params.name}: ${formatCurrency(params.value, preferences.currency)}`;
-        },
-      },
-      series: [
-        {
-          type: 'treemap',
-          roam: false,
-          nodeClick: false,
-          breadcrumb: { show: false },
-          levels: [
-            {
-              itemStyle: {
-                borderColor: '#1f2937',
-                borderWidth: 2,
-                gapWidth: 2,
-              },
-            },
-            {
-              itemStyle: {
-                borderColor: '#374151',
-                borderWidth: 1,
-                gapWidth: 1,
-              },
-              upperLabel: {
-                show: true,
-                height: 24,
-                color: '#f3f4f6',
-                backgroundColor: 'transparent',
-              },
-            },
-          ],
-          data: [
-            {
-              name: 'Essential',
-              itemStyle: {
-                color: ESSENTIAL_COLOR,
-                borderColor: ESSENTIAL_COLOR,
-              },
-              children: essentialCategories,
-            },
-            {
-              name: 'Non-Essential',
-              itemStyle: {
-                color: NON_ESSENTIAL_COLOR,
-                borderColor: NON_ESSENTIAL_COLOR,
-              },
-              children: nonEssentialCategories,
-            },
-          ],
-          label: {
-            show: true,
-            formatter: '{b}',
-            color: '#fff',
-            fontSize: 11,
-          },
-        },
-      ],
-    };
-
-    treemapChartInstance.current.setOption(option);
-
-    return () => {
-      treemapChartInstance.current?.dispose();
-    };
-  }, [data, preferences.currency]);
-
   // Initialize and update Sankey Chart
   useEffect(() => {
     if (!sankeyChartRef.current || !data) return;
@@ -447,7 +349,6 @@ export function ReportPage() {
     const handleResize = () => {
       donutChartInstance.current?.resize();
       barChartInstance.current?.resize();
-      treemapChartInstance.current?.resize();
       sankeyChartInstance.current?.resize();
     };
 
@@ -587,13 +488,61 @@ export function ReportPage() {
 
         {/* Charts Row 2 */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Category Treemap */}
+          {/* Category Breakdown Table */}
           <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle className="text-lg">Category Breakdown</CardTitle>
             </CardHeader>
             <CardContent>
-              <div ref={treemapChartRef} className="h-80" />
+              <div className="h-80 overflow-y-auto">
+                <table className="w-full">
+                  <thead className="sticky top-0 bg-card">
+                    <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                      <th className="pb-2 font-medium">Category</th>
+                      <th className="pb-2 text-right font-medium">Amount</th>
+                      <th className="pb-2 text-right font-medium">%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...data.category_breakdown]
+                      .sort((a, b) => b.amount - a.amount)
+                      .map(category => {
+                        const totalExpenses =
+                          data.essential_total + data.non_essential_total;
+                        const percentage =
+                          totalExpenses > 0
+                            ? (category.amount / totalExpenses) * 100
+                            : 0;
+                        return (
+                          <tr
+                            key={category.name}
+                            className="border-b border-border/50 transition-colors hover:bg-muted/30"
+                          >
+                            <td className="py-2.5">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base shrink-0">
+                                  {category.icon || '📁'}
+                                </span>
+                                <span className="text-sm truncate">
+                                  {category.name}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-2.5 text-right text-sm tabular-nums">
+                              {formatCurrency(
+                                category.amount,
+                                preferences.currency
+                              )}
+                            </td>
+                            <td className="py-2.5 text-right text-sm text-muted-foreground tabular-nums">
+                              {percentage.toFixed(1)}%
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
 

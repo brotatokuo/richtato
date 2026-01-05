@@ -15,6 +15,7 @@ export interface CategoryBreakdown {
   amount: number;
   is_essential: boolean;
   color: string;
+  icon: string;
 }
 
 export interface IncomeSource {
