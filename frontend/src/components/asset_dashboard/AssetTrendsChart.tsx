@@ -703,7 +703,9 @@ export function AssetTrendsChart({
               disabled={rangePreset !== 'custom'}
               className="w-full sm:w-36"
             />
-            <span className="text-sm text-muted-foreground hidden sm:inline">to</span>
+            <span className="text-sm text-muted-foreground hidden sm:inline">
+              to
+            </span>
             <Input
               type="date"
               value={customEnd}
@@ -757,7 +759,9 @@ export function AssetTrendsChart({
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                   <div className="flex items-center gap-1">
                     <TrendingUp className="h-4 w-4 text-green-500" />
-                    <span className="text-muted-foreground text-xs sm:text-sm">Credits</span>
+                    <span className="text-muted-foreground text-xs sm:text-sm">
+                      Credits
+                    </span>
                   </div>
                   <span className="font-medium text-green-500 text-xs sm:text-sm">
                     {formatCurrency(
@@ -769,7 +773,9 @@ export function AssetTrendsChart({
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                   <div className="flex items-center gap-1">
                     <TrendingDown className="h-4 w-4 text-red-500" />
-                    <span className="text-muted-foreground text-xs sm:text-sm">Debits</span>
+                    <span className="text-muted-foreground text-xs sm:text-sm">
+                      Debits
+                    </span>
                   </div>
                   <span className="font-medium text-red-500 text-xs sm:text-sm">
                     {formatCurrency(
@@ -779,7 +785,9 @@ export function AssetTrendsChart({
                   </span>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                  <span className="text-muted-foreground text-xs sm:text-sm">Net</span>
+                  <span className="text-muted-foreground text-xs sm:text-sm">
+                    Net
+                  </span>
                   <span
                     className={`font-semibold text-xs sm:text-sm ${transactionSummary.net >= 0 ? 'text-green-500' : 'text-red-500'}`}
                   >

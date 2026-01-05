@@ -3,9 +3,8 @@
 from datetime import date
 from decimal import Decimal
 
-from django.db.models import Q, Sum
-
 from apps.transaction.models import Transaction
+from django.db.models import Q, Sum
 
 # Canonical slug for Credit Card Payment category (excluded from expenses)
 CC_PAYMENT_CATEGORY_SLUG = "credit-card-payment"

@@ -232,13 +232,17 @@ export function AccountBreakdownChart() {
           {/* Summary below chart */}
           <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-4 text-sm">
             <div className="p-2 sm:p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-              <p className="text-muted-foreground text-xs sm:text-sm">Total Assets</p>
+              <p className="text-muted-foreground text-xs sm:text-sm">
+                Total Assets
+              </p>
               <p className="text-sm sm:text-lg font-semibold text-green-500 truncate">
                 {formatCurrency(totalAssets, preferences.currency)}
               </p>
             </div>
             <div className="p-2 sm:p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-              <p className="text-muted-foreground text-xs sm:text-sm">Total Liabilities</p>
+              <p className="text-muted-foreground text-xs sm:text-sm">
+                Total Liabilities
+              </p>
               <p className="text-sm sm:text-lg font-semibold text-red-500 truncate">
                 {formatCurrency(totalLiabilities, preferences.currency)}
               </p>
