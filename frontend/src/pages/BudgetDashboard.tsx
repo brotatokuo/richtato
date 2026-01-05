@@ -5,6 +5,7 @@ import { ExpenseBreakdown } from '@/components/budget_dashboard/ExpenseBreakdown
 import { ExpenseDetailModal } from '@/components/budget_dashboard/ExpenseDetailModal';
 import { MonthTimeline } from '@/components/budget_dashboard/MonthTimeline';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
 import {
   BudgetDateRangeProvider,
@@ -148,7 +149,7 @@ function DashboardContent() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">Loading dashboard data...</div>
+        <LoadingSpinner />
       </div>
     );
   }

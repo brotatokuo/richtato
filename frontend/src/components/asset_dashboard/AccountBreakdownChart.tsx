@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import {
   AccountBreakdownItem,
@@ -158,7 +159,7 @@ export function AccountBreakdownChart() {
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center">
-            <div className="text-muted-foreground">Loading...</div>
+            <LoadingSpinner />
           </div>
         </CardContent>
       </Card>

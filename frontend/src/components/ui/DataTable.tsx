@@ -4,6 +4,7 @@ import {
   FilterOption,
 } from '@/components/ui/ColumnFilterPopover';
 import { Input } from '@/components/ui/input';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Pagination } from '@/components/ui/Pagination';
 import { SortableHeader } from '@/components/ui/SortableHeader';
 import {
@@ -363,8 +364,8 @@ export function DataTable<T extends { id: string | number }>({
           <Card className="bg-card/50 backdrop-blur-sm border-border/50">
             <CardContent className="p-0">
               {loading ? (
-                <div className="py-8 text-center text-sm text-muted-foreground">
-                  Loading...
+                <div className="py-8 flex items-center justify-center">
+                  <LoadingSpinner />
                 </div>
               ) : paginatedData.length === 0 ? (
                 <div className="py-8 text-center text-sm text-muted-foreground">
@@ -444,9 +445,11 @@ export function DataTable<T extends { id: string | number }>({
                   <TableRow>
                     <TableCell
                       colSpan={columns.length}
-                      className="text-center py-8 text-muted-foreground"
+                      className="text-center py-8"
                     >
-                      Loading...
+                      <div className="flex items-center justify-center">
+                        <LoadingSpinner />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : paginatedData.length === 0 ? (

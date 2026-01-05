@@ -1,5 +1,6 @@
 import { BaseChart } from '@/components/asset_dashboard/BaseChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { assetDashboardApiService } from '@/lib/api/asset-dashboard';
 import { AlertTriangle } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -121,7 +122,7 @@ export function SavingsChart() {
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center">
-            <div className="text-muted-foreground">Loading...</div>
+            <LoadingSpinner />
           </div>
         </CardContent>
       </Card>

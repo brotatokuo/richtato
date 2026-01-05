@@ -1,3 +1,4 @@
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Modal } from '@/components/ui/Modal';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { formatCurrency, formatDate } from '@/lib/format';
@@ -267,7 +268,7 @@ function TransactionList({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="text-muted-foreground">Loading transactions...</div>
+        <LoadingSpinner />
       </div>
     );
   }

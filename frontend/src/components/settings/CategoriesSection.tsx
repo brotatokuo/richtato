@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import {
   Select,
   SelectContent,
@@ -477,7 +478,7 @@ export function CategoriesSection() {
             </div>
           )}
 
-          {loading && <div className="text-sm py-4">Loading...</div>}
+          {loading && <div className="py-4 flex justify-center"><LoadingSpinner /></div>}
           {!loading && catalog.length === 0 && (
             <div className="text-sm text-muted-foreground py-8 text-center">
               No categories found

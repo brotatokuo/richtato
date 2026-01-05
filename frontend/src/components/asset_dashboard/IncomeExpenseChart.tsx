@@ -1,5 +1,6 @@
 import { BaseChart } from '@/components/asset_dashboard/BaseChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import {
   Select,
   SelectContent,
@@ -139,7 +140,7 @@ export function IncomeExpenseChart() {
       <CardContent>
         {loading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="text-muted-foreground">Loading chart data...</div>
+            <LoadingSpinner />
           </div>
         ) : error ? (
           <div className="flex items-center justify-center h-64">
@@ -153,7 +154,7 @@ export function IncomeExpenseChart() {
           />
         ) : (
           <div className="flex items-center justify-center h-64">
-            <div className="text-muted-foreground">Loading chart data...</div>
+            <LoadingSpinner />
           </div>
         )}
       </CardContent>

@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { usePlaidLink } from '@/hooks/usePlaidLink';
 import {
   BankConnection,
@@ -244,7 +245,7 @@ export function BankConnectionsSection() {
       <CardContent>
         {error && <div className="text-sm text-red-600 mb-3">{error}</div>}
         {loading && !connections.length ? (
-          <div className="text-sm">Loading...</div>
+          <div className="py-4 flex justify-center"><LoadingSpinner /></div>
         ) : connections.length === 0 ? (
           <div className="text-sm text-muted-foreground">
             No bank connections yet. Click "Connect Bank" to get started.

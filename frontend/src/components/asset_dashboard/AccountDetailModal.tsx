@@ -1,4 +1,5 @@
 import { BaseChart } from '@/components/asset_dashboard/BaseChart';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Modal } from '@/components/ui/Modal';
 import {
   DropdownMenu,
@@ -217,7 +218,7 @@ export function AccountDetailModal({
 
           {loading ? (
             <div className="flex items-center justify-center h-32 border rounded-md">
-              <div className="text-muted-foreground">Loading history...</div>
+              <LoadingSpinner />
             </div>
           ) : (
             <div className="overflow-x-auto border rounded-md">

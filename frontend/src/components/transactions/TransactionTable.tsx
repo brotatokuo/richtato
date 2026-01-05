@@ -6,8 +6,8 @@ import {
   FilterOption,
 } from '@/components/ui/ColumnFilterPopover';
 import { Input } from '@/components/ui/input';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Modal } from '@/components/ui/Modal';
-import { Pagination } from '@/components/ui/Pagination';
 import { SortableHeader } from '@/components/ui/SortableHeader';
 import {
   Table,
@@ -39,7 +39,7 @@ import {
   Search,
   Tag,
 } from 'lucide-react';
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 
 const getLocalDateString = (): string => {
   const now = new Date();
@@ -71,9 +71,10 @@ export function TransactionTable({
   const [sortField, setSortField] = useState<keyof DisplayTransaction>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  // Infinite scroll state
+  const [displayedCount, setDisplayedCount] = useState(20);
+  const observerTarget = useRef<HTMLDivElement>(null);
+  const ITEMS_PER_LOAD = 20;
 
   // Additional filters (now arrays for multi-select)
   const [dateFilters, setDateFilters] = useState<string[]>([]);
@@ -113,9 +114,9 @@ export function TransactionTable({
     transactionType: 'debit',
   });
 
-  // Reset pagination when filters change
+  // Reset displayed count when filters change
   useEffect(() => {
-    setCurrentPage(1);
+    setDisplayedCount(20);
   }, [
     searchTerm,
     filterCategories,
@@ -241,15 +242,35 @@ export function TransactionTable({
       return 0;
     });
 
-  // Pagination calculations
+  // Infinite scroll: slice to displayed count
   const totalItems = filteredTransactions.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedTransactions = filteredTransactions.slice(
-    startIndex,
-    endIndex
-  );
+  const visibleTransactions = filteredTransactions.slice(0, displayedCount);
+  const hasMore = displayedCount < totalItems;
+
+  // Infinite scroll: load more when sentinel is visible
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasMore) {
+          setDisplayedCount(prev =>
+            Math.min(prev + ITEMS_PER_LOAD, totalItems)
+          );
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [displayedCount, totalItems, hasMore]);
 
   // Helper: filter transactions by all filters EXCEPT the specified column
   // This allows each column's filter options to show only relevant values
@@ -879,12 +900,12 @@ export function TransactionTable({
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardContent className="p-0">
             {loading ? (
-              <div className="py-8 text-center text-sm">
-                Loading transactions...
+              <div className="py-8 flex items-center justify-center">
+                <LoadingSpinner />
               </div>
             ) : (
               <div className="divide-y">
-                {paginatedTransactions.map((t, index) => {
+                {visibleTransactions.map((t, index) => {
                   const isCredit = t.transactionType === 'credit';
                   const sign = isCredit ? '+' : '-';
                   const color = isCredit ? 'text-green-600' : 'text-red-600';
@@ -1023,13 +1044,13 @@ export function TransactionTable({
                         colSpan={getTableHeaders().length}
                         className="text-center py-8"
                       >
-                        <div className="flex items-center justify-center gap-2">
-                          Loading transactions...
+                        <div className="flex items-center justify-center">
+                          <LoadingSpinner />
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    paginatedTransactions.map((transaction, index) => (
+                    visibleTransactions.map((transaction, index) => (
                       <TableRow
                         key={`${transaction.id}-${index}`}
                         className="cursor-pointer hover:bg-muted/50"
@@ -1051,14 +1072,23 @@ export function TransactionTable({
         </Card>
       </div>
 
-      {/* Pagination */}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        totalItems={totalItems}
-        itemsPerPage={itemsPerPage}
-      />
+      {/* Infinite scroll sentinel and loading indicator */}
+      {hasMore && (
+        <div className="flex flex-col items-center py-4">
+          <div ref={observerTarget} className="h-4" />
+          <p className="text-sm text-muted-foreground">
+            Showing {visibleTransactions.length} of {totalItems} transactions
+          </p>
+        </div>
+      )}
+
+      {!hasMore && totalItems > 0 && (
+        <div className="text-center py-4">
+          <p className="text-sm text-muted-foreground">
+            Showing all {totalItems} transactions
+          </p>
+        </div>
+      )}
 
       {totalItems === 0 && (
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">

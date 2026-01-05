@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import {
   Select,
   SelectContent,
@@ -195,7 +196,7 @@ export function NetWorthTrendChart() {
         </CardHeader>
         <CardContent>
           <div className="h-72 flex items-center justify-center">
-            <div className="text-muted-foreground">Loading chart...</div>
+            <LoadingSpinner />
           </div>
         </CardContent>
       </Card>

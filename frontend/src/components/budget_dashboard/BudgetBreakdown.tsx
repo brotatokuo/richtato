@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useBudgetDateRange } from '@/contexts/BudgetDateRangeContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { formatCurrency } from '@/lib/format';
@@ -267,7 +268,7 @@ export function BudgetDashboard({
         </CardHeader>
         <CardContent className="overflow-y-hidden">
           <div className="h-64 flex items-center justify-center">
-            <div className="text-muted-foreground">Loading...</div>
+            <LoadingSpinner />
           </div>
         </CardContent>
       </Card>

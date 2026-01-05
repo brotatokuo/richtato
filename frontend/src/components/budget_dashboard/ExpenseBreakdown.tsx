@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useBudgetDateRange } from '@/contexts/BudgetDateRangeContext';
 import { budgetDashboardApiService } from '@/lib/api/budget-dashboard';
 import { AlertTriangle } from 'lucide-react';
@@ -163,7 +164,7 @@ export function ExpenseBreakdown() {
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center">
-            <div className="text-muted-foreground">Loading...</div>
+            <LoadingSpinner />
           </div>
         </CardContent>
       </Card>

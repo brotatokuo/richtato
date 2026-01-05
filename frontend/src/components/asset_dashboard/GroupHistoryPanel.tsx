@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { formatCurrency } from '@/lib/format';
@@ -266,9 +267,7 @@ export function GroupHistoryPanel({ group, onClose }: GroupHistoryPanelProps) {
       <CardContent>
         {loading ? (
           <div className="h-64 flex items-center justify-center">
-            <div className="text-muted-foreground">
-              Loading history for {group.accounts.length} accounts...
-            </div>
+            <LoadingSpinner />
           </div>
         ) : error ? (
           <div className="h-64 flex items-center justify-center">

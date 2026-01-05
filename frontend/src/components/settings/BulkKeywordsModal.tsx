@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { CategoryKeyword, categorySettingsApi } from '@/lib/api/user';
 import { Search, Trash2, X } from 'lucide-react';
 import { FormEvent, useEffect, useState } from 'react';
@@ -159,8 +160,8 @@ export function BulkKeywordsModal({
           {/* Keywords list */}
           <div className="flex-1 overflow-y-auto border rounded-lg">
             {loading ? (
-              <div className="p-8 text-center text-sm text-muted-foreground">
-                Loading keywords...
+              <div className="p-8 flex items-center justify-center">
+                <LoadingSpinner />
               </div>
             ) : sortedKeywords.length === 0 ? (
               <div className="p-8 text-center text-sm text-muted-foreground">

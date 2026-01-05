@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { usePlaidLink } from '@/hooks/usePlaidLink';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { bankConnectionsApiService } from '@/lib/api/bankConnections';
@@ -537,7 +538,7 @@ export function UnifiedAccountsSection() {
         {error && <div className="text-sm text-red-600 mb-3">{error}</div>}
 
         {loading && !accounts.length ? (
-          <div className="text-sm">Loading...</div>
+          <div className="py-4 flex justify-center"><LoadingSpinner /></div>
         ) : accounts.length === 0 ? (
           <div className="text-sm text-muted-foreground">
             No accounts yet. Connect a bank or add an account manually.

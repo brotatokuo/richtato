@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ColumnDef, DataTable } from '@/components/ui/DataTable';
 import { Input } from '@/components/ui/input';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Modal } from '@/components/ui/Modal';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { transactionsApiService } from '@/lib/api/transactions';
@@ -719,7 +720,7 @@ export function AssetTrendsChart({
       <CardContent>
         {loading ? (
           <div className="h-72 flex items-center justify-center">
-            <div className="text-muted-foreground">Loading asset trends...</div>
+            <LoadingSpinner />
           </div>
         ) : error ? (
           <div className="h-72 flex items-center justify-center">
@@ -804,9 +805,7 @@ export function AssetTrendsChart({
             {/* Collapsible DataTable */}
             {transactionsLoading ? (
               <div className="h-24 flex items-center justify-center">
-                <div className="text-muted-foreground">
-                  Loading transactions...
-                </div>
+                <LoadingSpinner />
               </div>
             ) : transactionsError ? (
               <div className="h-24 flex items-center justify-center">

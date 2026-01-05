@@ -6,6 +6,7 @@ import {
 } from '@/components/asset_dashboard/AccountsList';
 import { AssetTrendsChart } from '@/components/asset_dashboard/AssetTrendsChart';
 import { MetricCard } from '@/components/asset_dashboard/MetricCard';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { assetDashboardApiService } from '@/lib/api/asset-dashboard';
 import { formatCurrency } from '@/lib/format';
@@ -95,9 +96,7 @@ export function AssetDashboard() {
   if (loading && !dashboardData) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">
-          Loading asset dashboard data...
-        </div>
+        <LoadingSpinner />
       </div>
     );
   }

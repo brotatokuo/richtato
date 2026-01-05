@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { Account, transactionsApiService } from '@/lib/api/transactions';
 import { formatSignedCurrency } from '@/lib/format';
@@ -210,7 +211,7 @@ export function AccountsList({
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-48">
-            <div className="text-muted-foreground">Loading accounts...</div>
+            <LoadingSpinner />
           </div>
         </CardContent>
       </Card>

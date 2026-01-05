@@ -1,5 +1,6 @@
 import { IncomeExpenseChart } from '@/components/asset_dashboard/IncomeExpenseChart';
 import { Card, CardContent } from '@/components/ui/card';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
 import { Category, transactionsApiService } from '@/lib/api/transactions';
 import ReactECharts from 'echarts-for-react';
@@ -490,10 +491,7 @@ export function Cashflow() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading cashflow data...</p>
-        </div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }

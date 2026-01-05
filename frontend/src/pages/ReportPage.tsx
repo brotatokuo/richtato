@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { YearPicker } from '@/components/ui/YearPicker';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import {
@@ -11,7 +12,6 @@ import {
   AlertTriangle,
   ArrowDownRight,
   ArrowUpRight,
-  Loader2,
   TrendingUp,
   Wallet,
 } from 'lucide-react';
@@ -358,7 +358,7 @@ export function ReportPage() {
   if (loading) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <LoadingSpinner />
       </div>
     );
   }
