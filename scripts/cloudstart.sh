@@ -9,6 +9,8 @@ service nginx start
 
 cd /app/backend
 python manage.py collectstatic --noinput
+python manage.py migrate --noinput
+
 
 exec gunicorn richtato.wsgi:application \
   --bind 127.0.0.1:8000 \
