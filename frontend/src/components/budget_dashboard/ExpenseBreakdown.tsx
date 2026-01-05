@@ -23,8 +23,8 @@ interface ExpenseCategory {
 
 export function ExpenseBreakdown() {
   const { startDate, endDate } = useBudgetDateRange();
-  const [chartData, setChartData] = useState<{ series: unknown[] } | null>(null);
-  const [chartOptions, setChartOptions] = useState<Record<string, unknown> | null>(null);
+  const [chartData, setChartData] = useState<{ series: unknown[]; [key: string]: unknown } | null>(null);
+  const [chartOptions, setChartOptions] = useState<{ [key: string]: unknown } | null>(null);
   const [themeKey, setThemeKey] = useState(0);
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>(
     []

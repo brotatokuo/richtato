@@ -78,11 +78,8 @@ export function ReportPage() {
     const option: echarts.EChartsOption = {
       tooltip: {
         trigger: 'item',
-        formatter: (params: {
-          name: string;
-          value: number;
-          percent: number;
-        }) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        formatter: (params: any) => {
           return `${params.name}: ${formatCurrency(params.value, preferences.currency)} (${params.percent}%)`;
         },
       },
@@ -162,15 +159,9 @@ export function ReportPage() {
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
-        formatter: (
-          params: Array<{
-            name: string;
-            color: string;
-            seriesName: string;
-            value: number;
-          }>
-        ) => {
-          const lines = params.map(p => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        formatter: (params: any) => {
+          const lines = params.map((p: { color: string; seriesName: string; value: number }) => {
             return `<span style="color:${p.color}">●</span> ${p.seriesName}: ${formatCurrency(p.value, preferences.currency)}`;
           });
           return `${params[0].name}<br/>${lines.join('<br/>')}`;
@@ -319,11 +310,8 @@ export function ReportPage() {
       tooltip: {
         trigger: 'item',
         triggerOn: 'mousemove',
-        formatter: (params: {
-          dataType?: string;
-          name?: string;
-          data?: { source: string; target: string; value: number };
-        }) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        formatter: (params: any) => {
           if (params.dataType === 'edge') {
             return `${params.data?.source} → ${params.data?.target}<br/>${formatCurrency(params.data?.value ?? 0, preferences.currency)}`;
           }

@@ -28,7 +28,8 @@ export interface ColumnDef<T> {
   /** Display label for the column header */
   label: string;
   /** Custom render function for cell content */
-  render?: (value: T[keyof T], row: T) => ReactNode;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  render?: (value: any, row: T) => ReactNode;
   /** Enable sorting for this column (default: true) */
   sortable?: boolean;
   /** Enable filtering for this column */
@@ -117,9 +118,9 @@ export function DataTable<T extends { id: string | number }>({
   const [currentPage, setCurrentPage] = useState(1);
 
   // Filter state - one filter array per filterable column
-  const [columnFilters, setColumnFilters] = useState<
-    Record<string, string[]>
-  >({});
+  const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>(
+    {}
+  );
   const [columnSearchTerms, setColumnSearchTerms] = useState<
     Record<string, string>
   >({});
@@ -172,7 +173,13 @@ export function DataTable<T extends { id: string | number }>({
 
       return true;
     });
-  }, [data, searchTerm, effectiveSearchFields, columnFilters, columnSearchTerms]);
+  }, [
+    data,
+    searchTerm,
+    effectiveSearchFields,
+    columnFilters,
+    columnSearchTerms,
+  ]);
 
   // Sort filtered data
   const sortedData = useMemo(() => {
@@ -310,7 +317,9 @@ export function DataTable<T extends { id: string | number }>({
           {title && (
             <div className="shrink-0">
               {typeof title === 'string' ? (
-                <h2 className="text-xl font-bold text-card-foreground">{title}</h2>
+                <h2 className="text-xl font-bold text-card-foreground">
+                  {title}
+                </h2>
               ) : (
                 title
               )}
@@ -415,7 +424,8 @@ export function DataTable<T extends { id: string | number }>({
                           sortField={sortField ? String(sortField) : null}
                           sortDirection={sortDirection}
                           onSort={() =>
-                            column.sortable !== false && handleSort(column.field)
+                            column.sortable !== false &&
+                            handleSort(column.field)
                           }
                           align={column.align}
                         />
@@ -429,7 +439,9 @@ export function DataTable<T extends { id: string | number }>({
                             onSelectionChange={values =>
                               setColumnFilter(String(column.field), values)
                             }
-                            searchTerm={columnSearchTerms[String(column.field)] || ''}
+                            searchTerm={
+                              columnSearchTerms[String(column.field)] || ''
+                            }
                             onSearchChange={term =>
                               setColumnSearchTerm(String(column.field), term)
                             }
@@ -465,7 +477,9 @@ export function DataTable<T extends { id: string | number }>({
                   paginatedData.map(row => (
                     <TableRow
                       key={row.id}
-                      className={onRowClick ? 'cursor-pointer hover:bg-muted/50' : ''}
+                      className={
+                        onRowClick ? 'cursor-pointer hover:bg-muted/50' : ''
+                      }
                       onClick={() => onRowClick?.(row)}
                     >
                       {columns.map(column => (

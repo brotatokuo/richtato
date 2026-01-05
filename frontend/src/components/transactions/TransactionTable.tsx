@@ -871,7 +871,7 @@ export function TransactionTable({
               setCategorySearch('');
               setAccountSearch('');
               setAmountSearch('');
-              setCurrentPage(1);
+              setDisplayedCount(20);
             }}
             className="text-xs h-6 px-2"
           >

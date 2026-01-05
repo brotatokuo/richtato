@@ -1,10 +1,22 @@
 import * as echarts from 'echarts';
 import { useEffect, useRef } from 'react';
 
+interface ChartData {
+  series?: unknown[];
+  [key: string]: unknown;
+}
+
+interface ChartOptions {
+  grid?: Record<string, unknown>;
+  xAxis?: Record<string, unknown>;
+  yAxis?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 interface BaseChartProps {
   type: 'line' | 'bar' | 'doughnut' | 'pie';
-  data: { series?: unknown[] } | unknown;
-  options: Record<string, unknown>;
+  data: ChartData;
+  options: ChartOptions;
   height?: string | number;
   width?: string | number;
 }

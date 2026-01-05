@@ -11,10 +11,19 @@ import {
 import { Info } from 'lucide-react';
 import { ReactNode } from 'react';
 
+interface ChartData {
+  series?: unknown[];
+  [key: string]: unknown;
+}
+
+interface ChartOptions {
+  [key: string]: unknown;
+}
+
 interface PieWithDetailedLegendProps {
   title: string;
-  chartData: { series?: unknown[] } | unknown;
-  chartOptions: Record<string, unknown>;
+  chartData: ChartData;
+  chartOptions: ChartOptions;
   centerPrimary: string | number;
   centerSecondaryLabel?: string;
   centerTertiaryLabel?: string;

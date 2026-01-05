@@ -18,6 +18,14 @@ interface BudgetCategory {
   remaining: number;
 }
 
+interface BudgetItem {
+  category: string;
+  budget: number;
+  spent: number;
+  percentage: number;
+  remaining: number;
+}
+
 // Function to get computed CSS values
 const getCSSValue = (property: string) => {
   if (typeof window === 'undefined') return '';
@@ -44,8 +52,8 @@ export function BudgetDashboard({
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>(
     []
   );
-  const [chartData, setChartData] = useState<{ series: unknown[] } | null>(null);
-  const [chartOptions, setChartOptions] = useState<Record<string, unknown> | null>(null);
+  const [chartData, setChartData] = useState<{ series: unknown[]; [key: string]: unknown } | null>(null);
+  const [chartOptions, setChartOptions] = useState<{ [key: string]: unknown } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,13 +78,6 @@ export function BudgetDashboard({
       const chart6 = getCSSValue('--chart-6');
 
       // Create budget categories from API response
-      interface BudgetItem {
-        category: string;
-        budget: number;
-        spent: number;
-        percentage: number;
-        remaining: number;
-      }
       const categories: BudgetCategory[] = budgets.map(
         (item: BudgetItem, index: number) => ({
           name: item.category,
