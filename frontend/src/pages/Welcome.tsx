@@ -307,7 +307,7 @@ export function Welcome() {
 
             <Link
               to="/register"
-              className="px-8 py-4 bg-secondary/10 text-secondary-foreground font-semibold rounded-2xl border border-secondary/30 hover:bg-secondary/20 transition-all duration-300 transform hover:scale-105 flex items-center gap-2"
+              className="px-8 py-4 bg-secondary text-secondary-foreground font-semibold rounded-2xl hover:bg-secondary/90 transition-all duration-300 transform hover:scale-105 flex items-center gap-2"
             >
               Create Account
               <ChevronRight className="w-5 h-5" />
