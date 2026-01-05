@@ -34,17 +34,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const demoLogin = async () => {
-    try {
-      const response = await authApi.demoLogin();
+    const response = await authApi.demoLogin();
 
-      if (response.success) {
-        setUser(response.user);
-        setOrganization(response.organization || null);
-      } else {
-        throw new Error(response.message);
-      }
-    } catch (error) {
-      throw error;
+    if (response.success) {
+      setUser(response.user);
+      setOrganization(response.organization || null);
+    } else {
+      throw new Error(response.message);
     }
   };
 

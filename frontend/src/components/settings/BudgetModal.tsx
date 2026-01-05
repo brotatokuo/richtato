@@ -67,7 +67,7 @@ export function BudgetModal({
         end_date: endDate || null,
       });
       onClose();
-    } catch (e) {
+    } catch {
       // Error handling is done by parent
     } finally {
       setSaving(false);
@@ -80,7 +80,7 @@ export function BudgetModal({
     try {
       await onRemove();
       onClose();
-    } catch (e) {
+    } catch {
       // Error handling is done by parent
     } finally {
       setSaving(false);

@@ -88,7 +88,7 @@ export function AccountDetailModal({
       );
       setHistory(tx.rows || []);
       setTxTotal(tx.total || 0);
-    } catch (e) {
+    } catch {
       setHistory([]);
       setTxTotal(0);
     } finally {
