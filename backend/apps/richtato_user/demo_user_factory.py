@@ -3,11 +3,17 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from apps.budget.models import Budget, BudgetCategory
-from apps.financial_account.models import FinancialAccount, FinancialInstitution
+from apps.financial_account.models import (
+    AccountBalanceHistory,
+    FinancialAccount,
+    FinancialInstitution,
+)
 from apps.richtato_user.models import User
 from apps.transaction.models import Transaction, TransactionCategory
+from apps.transaction.signals import transaction_post_delete, transaction_post_save
 from django.db import transaction
-from django.utils.text import slugify
+from django.db.models.signals import post_delete, post_save
+from loguru import logger
 
 
 class DemoUserFactory:
@@ -32,6 +38,83 @@ class DemoUserFactory:
         self._create_income_transactions()
         self._create_expense_transactions()
         self._create_budgets()
+        self._set_category_priorities()
+        return self.user
+
+    @transaction.atomic
+    def get_or_create_demo_user(self):
+        """Get existing demo user or create if missing. Fast lookup, only creates data on first creation."""
+        self.user, created = User.objects.get_or_create(
+            username=self.username,
+            defaults={
+                "email": self.email,
+                "password": self.password,
+                "is_demo": False,
+            },
+        )
+
+        if created:
+            # Only create data if user is new
+            self._create_financial_accounts()
+            self._create_income_transactions()
+            self._create_expense_transactions()
+            self._create_budgets()
+            self._set_category_priorities()
+            logger.info(f"Created new demo user: {self.username}")
+        else:
+            # Set password in case it was changed (ensure consistency)
+            self.user.set_password(self.password)
+            self.user.save()
+
+        return self.user
+
+    @transaction.atomic
+    def reset_demo_data(self):
+        """Reset all demo user data without deleting the user account. Disconnects signals for performance."""
+        self.user = User.objects.filter(username=self.username).first()
+        if not self.user:
+            logger.warning(f"Demo user {self.username} not found, creating new one")
+            return self.get_or_create_demo_user()
+
+        # Disconnect signals to avoid expensive balance history recalculations during bulk deletion
+        post_save.disconnect(transaction_post_save, sender=Transaction)
+        post_delete.disconnect(transaction_post_delete, sender=Transaction)
+
+        try:
+            # Delete transactions first (has FK to accounts and categories)
+            Transaction.objects.filter(user=self.user).delete()
+
+            # Get account IDs before deleting
+            accounts = FinancialAccount.objects.filter(user=self.user)
+            account_ids = list(accounts.values_list("id", flat=True))
+
+            # Delete balance history (FK to accounts)
+            if account_ids:
+                AccountBalanceHistory.objects.filter(
+                    account_id__in=account_ids
+                ).delete()
+
+            # Delete accounts
+            accounts.delete()
+
+            # Delete budgets (cascade deletes budget allocations)
+            Budget.objects.filter(user=self.user).delete()
+
+            # Note: We keep categories as they are user-specific and needed for recreation
+
+            # Recreate all data
+            self._create_financial_accounts()
+            self._create_income_transactions()
+            self._create_expense_transactions()
+            self._create_budgets()
+            self._set_category_priorities()
+
+            logger.info(f"Reset demo user data for: {self.username}")
+        finally:
+            # Re-enable signals
+            post_save.connect(transaction_post_save, sender=Transaction)
+            post_delete.connect(transaction_post_delete, sender=Transaction)
+
         return self.user
 
     def get_previous_friday(self, d):
@@ -436,3 +519,38 @@ class DemoUserFactory:
                     category=category,
                     allocated_amount=Decimal(str(amount)),
                 )
+
+    def _set_category_priorities(self):
+        """Set expense_priority for demo user categories (essential vs non-essential)."""
+        # Categories that are essential (needs)
+        essential_slugs = [
+            "groceries",
+            "housing",
+            "utilities",
+            "medical",
+            "transportation",
+        ]
+
+        # Update essential categories
+        TransactionCategory.objects.filter(
+            user=self.user,
+            slug__in=essential_slugs,
+            type="expense",
+        ).update(expense_priority="essential")
+
+        # Non-essential categories (wants) - already default, but explicitly set for clarity
+        non_essential_slugs = [
+            "dining",
+            "entertainment",
+            "shopping",
+            "online-shopping",
+            "travel",
+            "subscriptions",
+            "gifts",
+        ]
+
+        TransactionCategory.objects.filter(
+            user=self.user,
+            slug__in=non_essential_slugs,
+            type="expense",
+        ).update(expense_priority="non_essential")

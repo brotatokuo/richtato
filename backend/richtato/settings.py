@@ -82,6 +82,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.richtato_user.middleware.CleanupDemoUsersMiddleware",
+    "apps.richtato_user.middleware.ResetDemoUserMiddleware",
     "apps.sync.middleware.AutoSyncMiddleware",
     "apps.core.middleware.SelfPingMiddleware",
 ]

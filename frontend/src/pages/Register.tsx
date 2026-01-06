@@ -44,7 +44,7 @@ export function Register() {
         email: formData.email,
         password: formData.password,
       });
-      navigate('/budget');
+      navigate('/report');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {

@@ -597,7 +597,7 @@ def delete_account(request):
 def demo_login(request):
     """Create or login as a demo user."""
     try:
-        demo_user = DemoUserFactory().create_or_reset()
+        demo_user = DemoUserFactory().get_or_create_demo_user()
         user_service = UserService()
         login(request, demo_user)
         profile_data = user_service.get_user_profile_data(demo_user)
@@ -712,7 +712,7 @@ class APIDemoLoginView(APIView):
     )
     def post(self, request):
         try:
-            demo_user = DemoUserFactory().create_or_reset()
+            demo_user = DemoUserFactory().get_or_create_demo_user()
             login(request, demo_user)
             # Generate or get existing token for persistent authentication
             token, _ = Token.objects.get_or_create(user=demo_user)

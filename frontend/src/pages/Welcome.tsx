@@ -176,7 +176,7 @@ export function Welcome() {
       setIsLoggingIn(true);
       setLoginError(null);
       await demoLogin();
-      navigate('/budget');
+      navigate('/report');
     } catch (error) {
       console.error('Demo login failed:', error);
       setLoginError(
