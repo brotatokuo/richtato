@@ -92,6 +92,7 @@ class TransactionRepository:
         external_id: str = "",
         raw_data: dict = None,
         is_recurring: bool = False,
+        notes: str = "",
     ) -> Transaction:
         """Create a new transaction."""
         transaction = Transaction.objects.create(
@@ -107,6 +108,7 @@ class TransactionRepository:
             external_id=external_id,
             raw_data=raw_data,
             is_recurring=is_recurring,
+            notes=notes,
         )
         return transaction
 
