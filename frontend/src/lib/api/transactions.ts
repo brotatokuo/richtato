@@ -335,14 +335,14 @@ class TransactionsApiService {
     account: number;
     amount: number;
     date: string; // YYYY-MM-DD
-  }): Promise<unknown> {
+  }): Promise<{ id: number; amount: string; date: string }> {
     const response = await fetch(`${this.baseUrl}/accounts/details/`, {
       method: 'POST',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
       body: JSON.stringify(input),
     });
-    return this.handleResponse<unknown>(response);
+    return this.handleResponse<{ id: number; amount: string; date: string }>(response);
   }
 
   async updateAccountTransaction(
@@ -352,7 +352,7 @@ class TransactionsApiService {
       amount?: number;
       date?: string;
     }
-  ): Promise<unknown> {
+  ): Promise<{ id: number; amount: string; date: string }> {
     const response = await fetch(
       `${this.baseUrl}/accounts/${accountId}/transactions/`,
       {
@@ -362,7 +362,7 @@ class TransactionsApiService {
         body: JSON.stringify(input),
       }
     );
-    return this.handleResponse<unknown>(response);
+    return this.handleResponse<{ id: number; amount: string; date: string }>(response);
   }
 
   async deleteAccountTransaction(accountId: number, id: number): Promise<void> {

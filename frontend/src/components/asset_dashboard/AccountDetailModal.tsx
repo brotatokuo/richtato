@@ -103,13 +103,23 @@ export function AccountDetailModal({
     const amount = Number(String(balanceInput).replace(/[^0-9.-]+/g, ''));
     if (!dateInput || isNaN(amount)) return;
 
-    await transactionsApiService.createAccountTransaction({
+    const result = await transactionsApiService.createAccountTransaction({
       account: account.id,
       amount,
       date: dateInput,
     });
 
-    await reloadHistoryPage(1, txPageSize);
+    const newRow: HistoryRow = {
+      id: result.id,
+      date: result.date,
+      amount: result.amount,
+    };
+    setHistory(prev =>
+      [newRow, ...prev]
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, txPageSize)
+    );
+    setTxTotal(prev => prev + 1);
     setTxPage(1);
     onAccountUpdated();
   };
@@ -118,13 +128,21 @@ export function AccountDetailModal({
     if (!account) return;
     const amountNumber = Number(String(row.amount).replace(/[^0-9.-]+/g, ''));
 
-    await transactionsApiService.updateAccountTransaction(account.id, {
+    const result = await transactionsApiService.updateAccountTransaction(account.id, {
       id: row.id,
       amount: amountNumber,
       date: row.date,
     });
 
-    await reloadHistoryPage(txPage, txPageSize);
+    setHistory(prev =>
+      prev
+        .map(r =>
+          r.id === row.id
+            ? { ...r, amount: result.amount, date: result.date }
+            : r
+        )
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    );
     onAccountUpdated();
   };
 
@@ -133,14 +151,18 @@ export function AccountDetailModal({
 
     await transactionsApiService.deleteAccountTransaction(account.id, rowId);
 
-    // If deleting last row on last page, move back a page
+    setHistory(prev => prev.filter(r => r.id !== rowId));
     const newTotal = Math.max(0, txTotal - 1);
-    const maxPage = Math.max(1, Math.ceil(newTotal / txPageSize));
-    const nextPage = Math.min(txPage, maxPage);
-    setTxPage(nextPage);
     setTxTotal(newTotal);
 
-    await reloadHistoryPage(nextPage, txPageSize);
+    const maxPage = Math.max(1, Math.ceil(newTotal / txPageSize));
+    if (txPage > maxPage) {
+      setTxPage(maxPage);
+    }
+    if (history.length <= 1 && txPage > 1) {
+      await reloadHistoryPage(Math.max(1, txPage - 1), txPageSize);
+    }
+
     setDeleteConfirmId(null);
     onAccountUpdated();
   };

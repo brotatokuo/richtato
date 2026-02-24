@@ -89,7 +89,6 @@ export function AssetTrendsChart({
   onDataChange,
 }: AssetTrendsChartProps) {
   const { preferences } = usePreferences();
-  const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
   const [histories, setHistories] = useState<AccountHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -132,7 +131,6 @@ export function AssetTrendsChart({
     setError(null);
     try {
       const accountList = await transactionsApiService.getAccounts();
-      setAccounts(accountList as AccountWithBalance[]);
       const histories = await fetchHistories(
         accountList as AccountWithBalance[],
         effectiveDays
@@ -186,7 +184,7 @@ export function AssetTrendsChart({
         selectedAccount.id,
         {
           page: 1,
-          pageSize: 500,
+          pageSize: 50,
         }
       );
       setTransactions(data.rows || []);
@@ -208,20 +206,52 @@ export function AssetTrendsChart({
     }
   }, [selectedAccount, fetchTransactions]);
 
+  const refreshSingleAccountHistory = useCallback(async () => {
+    if (!selectedAccount) return;
+    try {
+      const data = await transactionsApiService.getAccountBalanceHistory(
+        selectedAccount.id,
+        { days: effectiveDays }
+      );
+      setHistories(prev =>
+        prev.map(h =>
+          h.account.id === selectedAccount.id
+            ? { ...h, history: data?.data_points || [] }
+            : h
+        )
+      );
+    } catch (err) {
+      console.error('Error refreshing account history:', err);
+    }
+  }, [selectedAccount, effectiveDays]);
+
   const handleAddSubmit = async (data: { balance: number; date: string }) => {
     if (!selectedAccount) return;
 
     try {
-      await transactionsApiService.createAccountTransaction({
+      const result = await transactionsApiService.createAccountTransaction({
         account: selectedAccount.id,
         amount: data.balance,
         date: data.date,
       });
-      await fetchTransactions();
-      const histories = await fetchHistories(accounts, effectiveDays);
-      setHistories(histories);
+
+      const txType = data.balance >= 0 ? 'credit' : 'debit';
+      const newItem: TransactionItem = {
+        id: result.id,
+        date: data.date,
+        description: 'Balance update',
+        amount: result.amount,
+        transaction_type: txType as 'credit' | 'debit',
+      };
+      setTransactions(prev =>
+        [newItem, ...prev].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )
+      );
+
       setShowAddModal(false);
       onDataChange?.();
+      refreshSingleAccountHistory();
     } catch (error) {
       console.error('Error adding transaction:', error);
       throw error;
@@ -236,7 +266,7 @@ export function AssetTrendsChart({
     if (!selectedAccount || !selectedItem || !data.id) return;
 
     try {
-      await transactionsApiService.updateAccountTransaction(
+      const result = await transactionsApiService.updateAccountTransaction(
         selectedAccount.id,
         {
           id: data.id,
@@ -244,12 +274,23 @@ export function AssetTrendsChart({
           date: data.date,
         }
       );
-      await fetchTransactions();
-      const histories = await fetchHistories(accounts, effectiveDays);
-      setHistories(histories);
+
+      setTransactions(prev =>
+        prev
+          .map(t =>
+            t.id === data.id
+              ? { ...t, amount: result.amount, date: result.date }
+              : t
+          )
+          .sort(
+            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+          )
+      );
+
       setShowEditModal(false);
       setSelectedItem(null);
       onDataChange?.();
+      refreshSingleAccountHistory();
     } catch (error) {
       console.error('Error updating transaction:', error);
       throw error;
@@ -267,12 +308,13 @@ export function AssetTrendsChart({
         selectedAccount.id,
         selectedItem.id
       );
-      await fetchTransactions();
-      const histories = await fetchHistories(accounts, effectiveDays);
-      setHistories(histories);
+
+      setTransactions(prev => prev.filter(t => t.id !== selectedItem.id));
+
       setShowEditModal(false);
       setSelectedItem(null);
       onDataChange?.();
+      refreshSingleAccountHistory();
     } catch (error) {
       console.error('Error deleting transaction:', error);
     }

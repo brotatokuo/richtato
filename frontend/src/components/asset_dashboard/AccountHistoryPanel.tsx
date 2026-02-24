@@ -66,7 +66,7 @@ export function AccountHistoryPanel({
         account.id,
         {
           page: 1,
-          pageSize: 500, // Fetch more so DataTable can handle pagination
+          pageSize: 50,
         }
       );
       setTransactions(data.rows || []);
@@ -273,14 +273,29 @@ export function AccountHistoryPanel({
 
   const handleAddSubmit = async (data: { balance: number; date: string }) => {
     try {
-      await transactionsApiService.createAccountTransaction({
+      const result = await transactionsApiService.createAccountTransaction({
         account: account.id,
         amount: data.balance,
         date: data.date,
       });
-      await Promise.all([fetchTransactions(), fetchBalanceHistory()]);
+
+      const txType = data.balance >= 0 ? 'credit' : 'debit';
+      const newItem: TransactionItem = {
+        id: result.id,
+        date: data.date,
+        description: 'Balance update',
+        amount: result.amount,
+        transaction_type: txType as 'credit' | 'debit',
+      };
+      setTransactions(prev =>
+        [newItem, ...prev].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )
+      );
+
       setShowAddModal(false);
       onDataChange?.();
+      fetchBalanceHistory();
     } catch (error) {
       console.error('Error adding transaction:', error);
       throw error;
@@ -295,15 +310,28 @@ export function AccountHistoryPanel({
     if (!selectedItem || !data.id) return;
 
     try {
-      await transactionsApiService.updateAccountTransaction(account.id, {
+      const result = await transactionsApiService.updateAccountTransaction(account.id, {
         id: data.id,
         amount: data.balance,
         date: data.date,
       });
-      await Promise.all([fetchTransactions(), fetchBalanceHistory()]);
+
+      setTransactions(prev =>
+        prev
+          .map(t =>
+            t.id === data.id
+              ? { ...t, amount: result.amount, date: result.date }
+              : t
+          )
+          .sort(
+            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+          )
+      );
+
       setShowEditModal(false);
       setSelectedItem(null);
       onDataChange?.();
+      fetchBalanceHistory();
     } catch (error) {
       console.error('Error updating transaction:', error);
       throw error;
@@ -320,10 +348,13 @@ export function AccountHistoryPanel({
         account.id,
         selectedItem.id
       );
-      await Promise.all([fetchTransactions(), fetchBalanceHistory()]);
+
+      setTransactions(prev => prev.filter(t => t.id !== selectedItem.id));
+
       setShowEditModal(false);
       setSelectedItem(null);
       onDataChange?.();
+      fetchBalanceHistory();
     } catch (error) {
       console.error('Error deleting transaction:', error);
     }
