@@ -4,6 +4,9 @@ from datetime import date
 from decimal import Decimal
 from typing import Dict, List, Optional
 
+from django.db.models import QuerySet, Sum
+from django.db.models.functions import Coalesce
+
 from apps.financial_account.models import FinancialAccount
 from apps.richtato_user.models import User
 from apps.transaction.models import CategoryKeyword, Transaction, TransactionCategory
@@ -27,8 +30,8 @@ class TransactionService:
         account: Optional[FinancialAccount] = None,
         category: Optional[TransactionCategory] = None,
         transaction_type: Optional[str] = None,
-    ) -> List[Transaction]:
-        """Get transactions for a user with optional filters."""
+    ) -> QuerySet[Transaction]:
+        """Get transactions for a user with optional filters. Returns lazy queryset."""
         return self.transaction_repository.get_by_user(
             user=user,
             start_date=start_date,
@@ -214,6 +217,70 @@ class TransactionService:
             "total_expenses": total_expenses,
             "net": total_income - total_expenses,
             "by_category": by_category,
+        }
+
+    def get_cashflow_summary(
+        self, user: User, start_date: date, end_date: date
+    ) -> Dict:
+        """
+        Get cashflow summary for a date range using DB aggregation.
+        Returns income/expense/investment totals by category without loading all transactions.
+        """
+        base = Transaction.objects.filter(
+            user=user, date__gte=start_date, date__lte=end_date
+        )
+
+        # Income by category (credits only)
+        income_agg = (
+            base.filter(transaction_type="credit")
+            .values("category__name")
+            .annotate(total=Coalesce(Sum("amount"), Decimal("0")))
+        )
+        income_by_category = {}
+        total_income = Decimal("0")
+        for row in income_agg:
+            name = row["category__name"] or "Other Income"
+            amt = row["total"]
+            income_by_category[name] = float(amt)
+            total_income += amt
+
+        # Debits: split into expenses vs investments by category type
+        debit_agg = (
+            base.filter(transaction_type="debit")
+            .values("category__name", "category__type")
+            .annotate(total=Coalesce(Sum("amount"), Decimal("0")))
+        )
+        expenses_by_category = {}
+        investments_by_category = {}
+        total_expenses = Decimal("0")
+        total_investments = Decimal("0")
+
+        for row in debit_agg:
+            name = row["category__name"] or "Uncategorized"
+            cat_type = row["category__type"] or ""
+            amt = row["total"]
+            is_investment = cat_type == "investment" or (
+                name and "investment" in name.lower()
+            )
+            if is_investment:
+                total_investments += amt
+                investments_by_category[name] = investments_by_category.get(
+                    name, 0
+                ) + float(amt)
+            else:
+                total_expenses += amt
+                expenses_by_category[name] = expenses_by_category.get(name, 0) + float(
+                    amt
+                )
+
+        return {
+            "total_income": float(total_income),
+            "total_expenses": float(total_expenses),
+            "total_investments": float(total_investments),
+            "net_savings": float(total_income - total_expenses - total_investments),
+            "income_by_category": income_by_category,
+            "expenses_by_category": expenses_by_category,
+            "investments_by_category": investments_by_category,
         }
 
     def _match_category_via_keywords(

@@ -7,7 +7,7 @@ from typing import List, Optional
 from apps.financial_account.models import FinancialAccount
 from apps.richtato_user.models import User
 from apps.transaction.models import Transaction, TransactionCategory
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 
 
 class TransactionRepository:
@@ -30,10 +30,12 @@ class TransactionRepository:
         account: Optional[FinancialAccount] = None,
         category: Optional[TransactionCategory] = None,
         transaction_type: Optional[str] = None,
-    ) -> List[Transaction]:
-        """Get transactions for a user with optional filters."""
-        queryset = Transaction.objects.filter(user=user).select_related(
-            "account", "category"
+    ) -> QuerySet[Transaction]:
+        """Get transactions for a user with optional filters. Returns lazy queryset."""
+        queryset = (
+            Transaction.objects.filter(user=user)
+            .select_related("account", "category")
+            .order_by("-date", "-created_at")
         )
 
         if start_date:
@@ -47,7 +49,7 @@ class TransactionRepository:
         if transaction_type:
             queryset = queryset.filter(transaction_type=transaction_type)
 
-        return list(queryset.all())
+        return queryset
 
     def get_by_account(
         self,

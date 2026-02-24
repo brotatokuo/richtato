@@ -10,7 +10,9 @@ import {
   transactionsApiService,
 } from '@/lib/api/transactions';
 import { DisplayTransaction, transformTransaction } from '@/types/transactions';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+
+const PAGE_SIZE = 50;
 
 // Main DataTable Component - Transactions Only
 export function DataTable() {
@@ -18,7 +20,11 @@ export function DataTable() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
   const [showRecategorizeDialog, setShowRecategorizeDialog] = useState(false);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [recategorizeTaskId, setRecategorizeTaskId] = useState<number | null>(
@@ -26,36 +32,65 @@ export function DataTable() {
   );
   const { clearNewCount } = useSyncStatus();
 
-  const loadData = async () => {
+  const loadInitialData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Load all data in parallel
-      const [transactionsData, categoriesData, accountsData] =
+      const [transactionsRes, categoriesData, accountsData] =
         await Promise.all([
-          transactionsApiService.getTransactions(),
+          transactionsApiService.getTransactions({
+            page: 1,
+            pageSize: PAGE_SIZE,
+          }),
           transactionsApiService.getCategories(),
           transactionsApiService.getAccounts(),
         ]);
 
-      // Transform and set data
-      setTransactions(transactionsData.map(transformTransaction));
+      setTransactions(
+        transactionsRes.transactions.map(transformTransaction)
+      );
       setAccounts(accountsData);
       setCategories(categoriesData);
+      setPage(1);
+      setHasNext(transactionsRes.has_next ?? false);
+      setTotalCount(transactionsRes.total_count ?? transactionsRes.transactions.length);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
       console.error('Error loading data:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasNext) return;
+    try {
+      setLoadingMore(true);
+      const nextPage = page + 1;
+      const res = await transactionsApiService.getTransactions({
+        page: nextPage,
+        pageSize: PAGE_SIZE,
+      });
+      const newTxns = res.transactions.map(transformTransaction);
+      setTransactions(prev => [...prev, ...newTxns]);
+      setPage(nextPage);
+      setHasNext(res.has_next ?? false);
+    } catch (err) {
+      console.error('Error loading more:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [page, hasNext, loadingMore]);
+
+  const loadData = useCallback(async () => {
+    await loadInitialData();
+  }, [loadInitialData]);
 
   useEffect(() => {
-    loadData();
-    // Clear the new transaction count badge when user views this page
+    loadInitialData();
     clearNewCount();
-  }, [clearNewCount]);
+  }, [loadInitialData, clearNewCount]);
 
   const handleRecategorize = async (keepExisting: boolean) => {
     setShowRecategorizeDialog(false);
@@ -110,6 +145,10 @@ export function DataTable() {
               accounts={accounts}
               categories={categories}
               loading={loading}
+              loadingMore={loadingMore}
+              hasMore={hasNext}
+              totalCount={totalCount}
+              onLoadMore={loadMore}
               onRefresh={loadData}
               onRecategorizeClick={() => setShowRecategorizeDialog(true)}
             />
@@ -121,7 +160,7 @@ export function DataTable() {
         open={showRecategorizeDialog}
         onClose={() => setShowRecategorizeDialog(false)}
         onConfirm={handleRecategorize}
-        transactionCount={transactions.length}
+        transactionCount={totalCount || transactions.length}
       />
 
       <RecategorizeProgressModal

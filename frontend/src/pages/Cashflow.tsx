@@ -2,7 +2,7 @@ import { IncomeExpenseChart } from '@/components/asset_dashboard/IncomeExpenseCh
 import { Card, CardContent } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
-import { Category, transactionsApiService } from '@/lib/api/transactions';
+import { transactionsApiService } from '@/lib/api/transactions';
 import ReactECharts from 'echarts-for-react';
 import {
   AlertTriangle,
@@ -70,70 +70,7 @@ export function Cashflow() {
     setMonth(newMonth);
   };
 
-  // Build category hierarchy map
-  const buildCategoryMap = (
-    cats: Category[]
-  ): Map<
-    number,
-    { name: string; parentId: number | null; parentName: string | null }
-  > => {
-    const map = new Map<
-      number,
-      { name: string; parentId: number | null; parentName: string | null }
-    >();
-    cats.forEach(cat => {
-      map.set(cat.id, {
-        name: cat.name,
-        parentId: cat.parent || null,
-        parentName: cat.parent_name || null,
-      });
-    });
-    return map;
-  };
-
-  // Check if a category is an investment category
-  const isInvestmentCategory = (
-    categoryName: string | null,
-    categoryId: number | null,
-    categoryMap: Map<
-      number,
-      { name: string; parentId: number | null; parentName: string | null }
-    >
-  ): boolean => {
-    if (!categoryName) return false;
-    const lowerName = categoryName.toLowerCase();
-
-    // Direct match on investment-related keywords
-    if (
-      lowerName.includes('investment') ||
-      lowerName.includes('401k') ||
-      lowerName.includes('ira') ||
-      lowerName.includes('stock') ||
-      lowerName.includes('brokerage') ||
-      lowerName.includes('retirement') ||
-      lowerName.includes('crypto')
-    ) {
-      return true;
-    }
-
-    // Check parent category
-    if (categoryId && categoryMap.has(categoryId)) {
-      const cat = categoryMap.get(categoryId)!;
-      if (cat.parentName) {
-        const parentLower = cat.parentName.toLowerCase();
-        if (
-          parentLower.includes('investment') ||
-          parentLower.includes('retirement')
-        ) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  };
-
-  // Fetch real data from APIs
+  // Fetch cashflow data from server-side aggregation (no raw transactions)
   const fetchCashflowData = async () => {
     try {
       setLoading(true);
@@ -145,68 +82,30 @@ export function Cashflow() {
       const endOfMonth = new Date(year, month, 0);
       const endDate = `${endOfMonth.getFullYear()}-${pad2(endOfMonth.getMonth() + 1)}-${pad2(endOfMonth.getDate())}`;
 
-      // Fetch all data in parallel
-      const [incomeTransactions, expenseTransactions, categoriesData] =
-        await Promise.all([
-          transactionsApiService.getIncomeTransactions({ startDate, endDate }),
-          transactionsApiService.getExpenseTransactions({ startDate, endDate }),
-          transactionsApiService.getCategories(),
-        ]);
+      const summary = await transactionsApiService.getCashflowSummary(
+        startDate,
+        endDate
+      );
 
-      const categoryMap = buildCategoryMap(categoriesData);
-
-      // Group income by category (not by account)
+      // Convert record to Map for compatibility with existing code
       const incomeByCategory = new Map<string, number>();
-      let totalIncome = 0;
-
-      incomeTransactions.forEach(tx => {
-        const categoryName = tx.category_name || 'Other Income';
-        const amount = Number(tx.amount);
-        totalIncome += amount;
-        incomeByCategory.set(
-          categoryName,
-          (incomeByCategory.get(categoryName) || 0) + amount
-        );
-      });
-
-      // Group expenses and investments by category (simple flat structure)
+      Object.entries(summary.income_by_category).forEach(([k, v]) =>
+        incomeByCategory.set(k, v)
+      );
       const expensesByCategory = new Map<string, number>();
+      Object.entries(summary.expenses_by_category).forEach(([k, v]) =>
+        expensesByCategory.set(k, v)
+      );
       const investmentsByCategory = new Map<string, number>();
-
-      let totalExpenses = 0;
-      let totalInvestments = 0;
-
-      expenseTransactions.forEach(tx => {
-        const amount = Number(tx.amount);
-        const categoryName = tx.category_name || 'Uncategorized';
-        const isInvestment = isInvestmentCategory(
-          categoryName,
-          tx.category,
-          categoryMap
-        );
-
-        if (isInvestment) {
-          totalInvestments += amount;
-          investmentsByCategory.set(
-            categoryName,
-            (investmentsByCategory.get(categoryName) || 0) + amount
-          );
-        } else {
-          totalExpenses += amount;
-          expensesByCategory.set(
-            categoryName,
-            (expensesByCategory.get(categoryName) || 0) + amount
-          );
-        }
-      });
-
-      const netSavings = totalIncome - totalExpenses - totalInvestments;
+      Object.entries(summary.investments_by_category).forEach(([k, v]) =>
+        investmentsByCategory.set(k, v)
+      );
 
       setCashflowData({
-        totalIncome,
-        totalExpenses,
-        totalInvestments,
-        netSavings,
+        totalIncome: summary.total_income,
+        totalExpenses: summary.total_expenses,
+        totalInvestments: summary.total_investments,
+        netSavings: summary.net_savings,
         incomeByCategory,
         expensesByCategory,
         investmentsByCategory,

@@ -25,6 +25,167 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 
+class TransactionFilterOptionsAPIView(APIView):
+    """Get distinct filter options for transactions (dates, categories, accounts, etc.)."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.transaction_service = TransactionService()
+        self.account_service = AccountService()
+
+    def get(self, request):
+        """Return distinct values for filterable columns with counts."""
+        from datetime import datetime
+
+        from django.db.models import Count
+
+        from apps.transaction.models import Transaction
+
+        # Parse same filters as transaction list
+        start_date_str = request.query_params.get("start_date")
+        end_date_str = request.query_params.get("end_date")
+        account_id = request.query_params.get("account_id")
+        category_id = request.query_params.get("category_id")
+        transaction_type = request.query_params.get("type")
+
+        start_date = None
+        end_date = None
+        if start_date_str:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        if end_date_str:
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+
+        account = None
+        if account_id:
+            account = self.account_service.get_account_by_id(
+                int(account_id), request.user
+            )
+        category = None
+        if category_id:
+            category_repo = CategoryRepository()
+            category = category_repo.get_by_id(int(category_id))
+
+        base_qs = Transaction.objects.filter(user=request.user).select_related(
+            "account", "category"
+        )
+        if start_date:
+            base_qs = base_qs.filter(date__gte=start_date)
+        if end_date:
+            base_qs = base_qs.filter(date__lte=end_date)
+        if account:
+            base_qs = base_qs.filter(account=account)
+        if category:
+            base_qs = base_qs.filter(category=category)
+        if transaction_type:
+            base_qs = base_qs.filter(transaction_type=transaction_type)
+
+        # Distinct dates with count
+        date_options = list(
+            base_qs.values("date")
+            .annotate(count=Count("id"))
+            .order_by("-date")
+            .values_list("date", "count")
+        )
+        dates = [
+            {"label": d.isoformat(), "value": d.isoformat(), "count": c}
+            for d, c in date_options
+        ]
+
+        # Distinct category types (from category.type or 'uncategorized')
+        from django.db.models import Case, F, Value, When
+
+        type_agg = (
+            base_qs.annotate(
+                cat_type=Case(
+                    When(category__isnull=True, then=Value("uncategorized")),
+                    default=F("category__type"),
+                )
+            )
+            .values("cat_type")
+            .annotate(count=Count("id"))
+        )
+        category_types = [
+            {
+                "label": ct["cat_type"] or "uncategorized",
+                "value": ct["cat_type"] or "uncategorized",
+                "count": ct["count"],
+            }
+            for ct in type_agg
+        ]
+
+        # Distinct category names
+        cat_agg = (
+            base_qs.values("category__name")
+            .annotate(count=Count("id"))
+            .order_by("category__name")
+        )
+        categories = [
+            {
+                "label": c["category__name"] or "Uncategorized",
+                "value": c["category__name"] or "Uncategorized",
+                "count": c["count"],
+            }
+            for c in cat_agg
+        ]
+
+        # Distinct account names
+        acc_agg = (
+            base_qs.values("account__name")
+            .annotate(count=Count("id"))
+            .order_by("account__name")
+        )
+        accounts = [
+            {
+                "label": a["account__name"] or "Unknown",
+                "value": a["account__name"] or "Unknown",
+                "count": a["count"],
+            }
+            for a in acc_agg
+        ]
+
+        # Distinct amounts (as string for display)
+        amount_agg = (
+            base_qs.values("amount", "transaction_type")
+            .annotate(count=Count("id"))
+            .order_by("amount")
+        )
+        amounts = []
+        for a in amount_agg:
+            amt = a["amount"]
+            signed = -float(amt) if a["transaction_type"] == "debit" else float(amt)
+            val = str(signed)
+            amounts.append({"label": val, "value": val, "count": a["count"]})
+
+        # Distinct descriptions (limit to avoid huge response)
+        desc_agg = (
+            base_qs.values("description")
+            .annotate(count=Count("id"))
+            .order_by("-count")[:500]
+        )
+        descriptions = [
+            {
+                "label": d["description"] or "",
+                "value": d["description"] or "",
+                "count": d["count"],
+            }
+            for d in desc_agg
+        ]
+
+        return Response(
+            {
+                "dates": dates,
+                "category_types": category_types,
+                "categories": categories,
+                "accounts": accounts,
+                "amounts": amounts,
+                "descriptions": descriptions,
+            }
+        )
+
+
 class TransactionListCreateAPIView(APIView):
     """List all transactions or create a new manual transaction."""
 
@@ -37,7 +198,7 @@ class TransactionListCreateAPIView(APIView):
         self.account_service = AccountService()
 
     def get(self, request):
-        """List transactions with optional filters."""
+        """List transactions with optional filters and pagination."""
         # Parse filters
         start_date_str = request.query_params.get("start_date")
         end_date_str = request.query_params.get("end_date")
@@ -45,6 +206,11 @@ class TransactionListCreateAPIView(APIView):
         category_id = request.query_params.get("category_id")
         transaction_type = request.query_params.get("type")
         search = request.query_params.get("search")
+        page = int(request.query_params.get("page", 1))
+        page_size = min(
+            int(request.query_params.get("page_size", 50)),
+            100,
+        )
 
         # Convert dates
         start_date = None
@@ -66,23 +232,38 @@ class TransactionListCreateAPIView(APIView):
             category_repo = CategoryRepository()
             category = category_repo.get_by_id(int(category_id))
 
-        # Handle search
+        # Handle search (no pagination for search; returns limited results)
         if search:
             transactions = self.transaction_service.search_transactions(
                 request.user, search
             )
-        else:
-            transactions = self.transaction_service.get_user_transactions(
-                user=request.user,
-                start_date=start_date,
-                end_date=end_date,
-                account=account,
-                category=category,
-                transaction_type=transaction_type,
-            )
+            serializer = TransactionSerializer(transactions, many=True)
+            return Response({"transactions": serializer.data})
 
-        serializer = TransactionSerializer(transactions, many=True)
-        return Response({"transactions": serializer.data})
+        # Paginated list
+        queryset = self.transaction_service.get_user_transactions(
+            user=request.user,
+            start_date=start_date,
+            end_date=end_date,
+            account=account,
+            category=category,
+            transaction_type=transaction_type,
+        )
+        total_count = queryset.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_slice = queryset[start:end]
+        serializer = TransactionSerializer(page_slice, many=True)
+
+        return Response(
+            {
+                "transactions": serializer.data,
+                "page": page,
+                "page_size": page_size,
+                "total_count": total_count,
+                "has_next": end < total_count,
+            }
+        )
 
     def post(self, request):
         """Create a new manual transaction."""
@@ -270,6 +451,48 @@ class TransactionSummaryAPIView(APIView):
             )
         except Exception as e:
             logger.error(f"Error getting transaction summary: {str(e)}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class TransactionCashflowSummaryAPIView(APIView):
+    """Get cashflow summary (income/expense/investment by category) for a date range."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.transaction_service = TransactionService()
+
+    def get(self, request):
+        """Get cashflow summary."""
+        start_date_str = request.query_params.get("start_date")
+        end_date_str = request.query_params.get("end_date")
+
+        if not start_date_str or not end_date_str:
+            return Response(
+                {"error": "start_date and end_date are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+
+            summary = self.transaction_service.get_cashflow_summary(
+                request.user, start_date, end_date
+            )
+            return Response(summary)
+
+        except ValueError as e:
+            return Response(
+                {"error": "Invalid date format. Use YYYY-MM-DD"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            logger.error(f"Error getting cashflow summary: {str(e)}")
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

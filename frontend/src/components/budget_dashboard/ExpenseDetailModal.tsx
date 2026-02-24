@@ -36,14 +36,14 @@ export function ExpenseDetailModal({
       setLoading(true);
       setError(null);
 
-      const txns = await transactionsApiService.getTransactions({
+      const { transactions } = await transactionsApiService.getTransactions({
         startDate: monthData.start_date,
         endDate: monthData.end_date,
         type: 'debit',
       });
 
       // Sort by date descending
-      txns.sort(
+      const txns = [...transactions].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
       );
 

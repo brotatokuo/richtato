@@ -113,22 +113,30 @@ class TransactionsApiService {
     return response.json();
   }
 
-  /**
-   * Get transactions with optional filters
-   */
+  /** Paginated transactions response */
   async getTransactions(input?: {
-    limit?: number;
+    page?: number;
+    pageSize?: number;
     startDate?: string; // YYYY-MM-DD
     endDate?: string; // YYYY-MM-DD
     type?: 'debit' | 'credit'; // debit = expense, credit = income
     accountId?: number;
     categoryId?: number;
     search?: string;
-  }): Promise<Transaction[]> {
+  }): Promise<{
+    transactions: Transaction[];
+    page?: number;
+    page_size?: number;
+    total_count?: number;
+    has_next?: boolean;
+  }> {
     const url = new URL(
       `${this.baseUrl}/transactions/`,
       window.location.origin
     );
+    if (input?.page) url.searchParams.append('page', String(input.page));
+    if (input?.pageSize)
+      url.searchParams.append('page_size', String(input.pageSize));
     if (input?.startDate)
       url.searchParams.append('start_date', input.startDate);
     if (input?.endDate) url.searchParams.append('end_date', input.endDate);
@@ -145,20 +153,75 @@ class TransactionsApiService {
       credentials: 'include',
     });
 
-    const data = await this.handleResponse<{ transactions: Transaction[] }>(
-      response
-    );
-    return data.transactions || [];
+    const data = await this.handleResponse<{
+      transactions: Transaction[];
+      page?: number;
+      page_size?: number;
+      total_count?: number;
+      has_next?: boolean;
+    }>(response);
+    return {
+      transactions: data.transactions || [],
+      page: data.page,
+      page_size: data.page_size,
+      total_count: data.total_count,
+      has_next: data.has_next,
+    };
   }
 
   /**
-   * Get income transactions (credits)
+   * Get filter options for transaction table columns
    */
-  async getIncomeTransactions(input?: {
-    limit?: number;
+  async getFilterOptions(input?: {
     startDate?: string;
     endDate?: string;
-  }): Promise<Transaction[]> {
+    type?: 'debit' | 'credit';
+    accountId?: number;
+    categoryId?: number;
+  }): Promise<{
+    dates: Array<{ label: string; value: string; count: number }>;
+    category_types: Array<{ label: string; value: string; count: number }>;
+    categories: Array<{ label: string; value: string; count: number }>;
+    accounts: Array<{ label: string; value: string; count: number }>;
+    amounts: Array<{ label: string; value: string; count: number }>;
+    descriptions: Array<{ label: string; value: string; count: number }>;
+  }> {
+    const url = new URL(
+      `${this.baseUrl}/transactions/filter-options/`,
+      window.location.origin
+    );
+    if (input?.startDate)
+      url.searchParams.append('start_date', input.startDate);
+    if (input?.endDate) url.searchParams.append('end_date', input.endDate);
+    if (input?.type) url.searchParams.append('type', input.type);
+    if (input?.accountId)
+      url.searchParams.append('account_id', String(input.accountId));
+    if (input?.categoryId)
+      url.searchParams.append('category_id', String(input.categoryId));
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
+    return this.handleResponse(response);
+  }
+
+  /**
+   * Get income transactions (credits). Returns full paginated response.
+   */
+  async getIncomeTransactions(input?: {
+    page?: number;
+    pageSize?: number;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<{
+    transactions: Transaction[];
+    page?: number;
+    page_size?: number;
+    total_count?: number;
+    has_next?: boolean;
+  }> {
     return this.getTransactions({
       ...input,
       type: 'credit',
@@ -166,13 +229,20 @@ class TransactionsApiService {
   }
 
   /**
-   * Get expense transactions (debits)
+   * Get expense transactions (debits). Returns full paginated response.
    */
   async getExpenseTransactions(input?: {
-    limit?: number;
+    page?: number;
+    pageSize?: number;
     startDate?: string;
     endDate?: string;
-  }): Promise<Transaction[]> {
+  }): Promise<{
+    transactions: Transaction[];
+    page?: number;
+    page_size?: number;
+    total_count?: number;
+    has_next?: boolean;
+  }> {
     return this.getTransactions({
       ...input,
       type: 'debit',
@@ -563,6 +633,35 @@ class TransactionsApiService {
     }
 
     return this.handleResponse<Transaction>(response);
+  }
+
+  /**
+   * Get cashflow summary (income/expense/investment by category) for a date range.
+   * Uses server-side aggregation - no raw transactions fetched.
+   */
+  async getCashflowSummary(startDate: string, endDate: string): Promise<{
+    total_income: number;
+    total_expenses: number;
+    total_investments: number;
+    net_savings: number;
+    income_by_category: Record<string, number>;
+    expenses_by_category: Record<string, number>;
+    investments_by_category: Record<string, number>;
+  }> {
+    const url = new URL(
+      `${this.baseUrl}/transactions/cashflow-summary/`,
+      window.location.origin
+    );
+    url.searchParams.append('start_date', startDate);
+    url.searchParams.append('end_date', endDate);
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
+
+    return this.handleResponse(response);
   }
 
   /**

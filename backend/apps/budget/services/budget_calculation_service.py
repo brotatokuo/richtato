@@ -4,6 +4,8 @@ from datetime import date
 from decimal import Decimal
 from typing import Dict, List
 
+from django.db.models import Sum
+
 from apps.budget.models import Budget, BudgetCategory, BudgetProgress
 from apps.transaction.repositories.transaction_repository import TransactionRepository
 from loguru import logger
@@ -79,9 +81,11 @@ class BudgetCalculationService:
             transaction_type="debit",  # Only count expenses
         )
 
-        # Calculate total spent
-        spent_amount = sum(txn.amount for txn in transactions)
-        transaction_count = len(transactions)
+        # Calculate total spent and count via efficient DB aggregation
+        spent_amount = transactions.aggregate(spent=Sum("amount"))["spent"] or Decimal(
+            "0"
+        )
+        transaction_count = transactions.count()
 
         # Calculate remaining and percentage
         total_available = budget_category.total_available

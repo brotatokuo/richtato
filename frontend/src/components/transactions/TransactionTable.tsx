@@ -39,7 +39,16 @@ import {
   Search,
   Tag,
 } from 'lucide-react';
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+
+const CATEGORY_TYPE_LABELS: Record<string, string> = {
+  income: 'Income',
+  expense: 'Expense',
+  transfer: 'Transfer',
+  investment: 'Investment',
+  other: 'Other',
+  uncategorized: 'Uncategorized',
+};
 
 const getLocalDateString = (): string => {
   const now = new Date();
@@ -55,12 +64,20 @@ export function TransactionTable({
   accounts,
   categories,
   loading,
+  loadingMore,
+  hasMore,
+  totalCount,
+  onLoadMore,
   onRefresh,
   onRecategorizeClick,
 }: TransactionTableProps & {
   accounts: Account[];
   categories: Category[];
   loading: boolean;
+  loadingMore?: boolean;
+  hasMore?: boolean;
+  totalCount?: number;
+  onLoadMore?: () => void;
   onRefresh: () => void;
 }) {
   const { preferences } = usePreferences();
@@ -71,10 +88,22 @@ export function TransactionTable({
   const [sortField, setSortField] = useState<keyof DisplayTransaction>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  // Infinite scroll state
-  const [displayedCount, setDisplayedCount] = useState(20);
+  // Infinite scroll sentinel for loading more pages
   const observerTarget = useRef<HTMLDivElement>(null);
-  const ITEMS_PER_LOAD = 20;
+
+  // Filter options from API (replaces client-side computation)
+  const [filterOptions, setFilterOptions] = useState<{
+    dates: Array<{ label: string; value: string; count: number }>;
+    category_types: Array<{ label: string; value: string; count: number }>;
+    categories: Array<{ label: string; value: string; count: number }>;
+    accounts: Array<{ label: string; value: string; count: number }>;
+    amounts: Array<{ label: string; value: string; count: number }>;
+    descriptions: Array<{ label: string; value: string; count: number }>;
+  } | null>(null);
+
+  useEffect(() => {
+    transactionsApiService.getFilterOptions().then(setFilterOptions);
+  }, []);
 
   // Additional filters (now arrays for multi-select)
   const [dateFilters, setDateFilters] = useState<string[]>([]);
@@ -113,25 +142,6 @@ export function TransactionTable({
     notes: '',
     transactionType: 'debit',
   });
-
-  // Reset displayed count when filters change
-  useEffect(() => {
-    setDisplayedCount(20);
-  }, [
-    searchTerm,
-    filterCategories,
-    categoryTypeFilters,
-    dateFilters,
-    descriptionFilters,
-    accountFilters,
-    amountFilters,
-    dateSearch,
-    descriptionSearch,
-    categoryTypeSearch,
-    categorySearch,
-    accountSearch,
-    amountSearch,
-  ]);
 
   const evaluateAmountField = (value: string): string => {
     const val = String(value || '').trim();
@@ -242,19 +252,17 @@ export function TransactionTable({
       return 0;
     });
 
-  // Infinite scroll: slice to displayed count
-  const totalItems = filteredTransactions.length;
-  const visibleTransactions = filteredTransactions.slice(0, displayedCount);
-  const hasMore = displayedCount < totalItems;
+  // All filtered transactions are visible (client-side filter on loaded pages)
+  const visibleTransactions = filteredTransactions;
 
   // Infinite scroll: load more when sentinel is visible
   useEffect(() => {
+    if (!onLoadMore || !hasMore) return;
+
     const observer = new IntersectionObserver(
       entries => {
-        if (entries[0].isIntersecting && hasMore) {
-          setDisplayedCount(prev =>
-            Math.min(prev + ITEMS_PER_LOAD, totalItems)
-          );
+        if (entries[0].isIntersecting) {
+          onLoadMore();
         }
       },
       { threshold: 0.1 }
@@ -270,125 +278,29 @@ export function TransactionTable({
         observer.unobserve(currentTarget);
       }
     };
-  }, [displayedCount, totalItems, hasMore]);
+  }, [onLoadMore, hasMore]);
 
-  // Helper: filter transactions by all filters EXCEPT the specified column
-  // This allows each column's filter options to show only relevant values
-  const getFilteredForColumn = (excludeColumn: string) => {
-    return transactions.filter(transaction => {
-      const matchesSearch =
-        transaction.description
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        transaction.account.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
+  // Filter options from API, formatted for ColumnFilterPopover
+  const dateFilterOptions: FilterOption[] = useMemo(() => {
+    if (!filterOptions?.dates) return [];
+    return filterOptions.dates.map(d => ({
+      label: formatDate(d.value, preferences.date_format),
+      value: d.value,
+      count: d.count,
+    }));
+  }, [filterOptions?.dates, preferences.date_format]);
 
-      const matchesCategory =
-        excludeColumn === 'category' ||
-        filterCategories.length === 0 ||
-        filterCategories.includes(transaction.category);
-      const matchesDate =
-        excludeColumn === 'date' ||
-        dateFilters.length === 0 ||
-        dateFilters.includes(transaction.date);
-      const matchesDescription =
-        excludeColumn === 'description' ||
-        descriptionFilters.length === 0 ||
-        descriptionFilters.includes(transaction.description);
-      const matchesCategoryType =
-        excludeColumn === 'categoryType' ||
-        categoryTypeFilters.length === 0 ||
-        categoryTypeFilters.includes(transaction.categoryType);
-      const matchesAccount =
-        excludeColumn === 'account' ||
-        accountFilters.length === 0 ||
-        accountFilters.includes(transaction.account);
-      const matchesAmount =
-        excludeColumn === 'amount' ||
-        amountFilters.length === 0 ||
-        amountFilters.includes(String(transaction.amount));
+  const descriptionFilterOptions: FilterOption[] = useMemo(() => {
+    if (!filterOptions?.descriptions) return [];
+    return filterOptions.descriptions.map(d => ({
+      label: d.label || '(empty)',
+      value: d.value,
+      count: d.count,
+    }));
+  }, [filterOptions?.descriptions]);
 
-      const matchesDateSearch =
-        excludeColumn === 'date' ||
-        !dateSearch ||
-        transaction.date.toLowerCase().includes(dateSearch.toLowerCase()) ||
-        formatDate(transaction.date, preferences.date_format)
-          .toLowerCase()
-          .includes(dateSearch.toLowerCase());
-      const matchesDescriptionSearch =
-        excludeColumn === 'description' ||
-        !descriptionSearch ||
-        transaction.description
-          .toLowerCase()
-          .includes(descriptionSearch.toLowerCase());
-      const matchesCategoryTypeSearch =
-        excludeColumn === 'categoryType' ||
-        !categoryTypeSearch ||
-        transaction.categoryType
-          .toLowerCase()
-          .includes(categoryTypeSearch.toLowerCase());
-      const matchesCategorySearch =
-        excludeColumn === 'category' ||
-        !categorySearch ||
-        transaction.category
-          .toLowerCase()
-          .includes(categorySearch.toLowerCase());
-      const matchesAccountSearch =
-        excludeColumn === 'account' ||
-        !accountSearch ||
-        transaction.account.toLowerCase().includes(accountSearch.toLowerCase());
-      const matchesAmountSearch =
-        excludeColumn === 'amount' ||
-        !amountSearch ||
-        String(transaction.amount).includes(amountSearch) ||
-        formatCurrency(Math.abs(transaction.amount), preferences.currency)
-          .toLowerCase()
-          .includes(amountSearch.toLowerCase());
-
-      return (
-        matchesSearch &&
-        matchesCategory &&
-        matchesCategoryType &&
-        matchesDate &&
-        matchesDescription &&
-        matchesAccount &&
-        matchesAmount &&
-        matchesDateSearch &&
-        matchesDescriptionSearch &&
-        matchesCategoryTypeSearch &&
-        matchesCategorySearch &&
-        matchesAccountSearch &&
-        matchesAmountSearch
-      );
-    });
-  };
-
-  // Generate filter options based on filtered data (excluding own column's filter)
-  const dateFilterOptions: FilterOption[] = (() => {
-    const filtered = getFilteredForColumn('date');
-    return Array.from(new Set(filtered.map(t => t.date)))
-      .sort()
-      .reverse()
-      .map(date => ({
-        label: formatDate(date, preferences.date_format),
-        value: date,
-        count: filtered.filter(t => t.date === date).length,
-      }));
-  })();
-
-  const descriptionFilterOptions: FilterOption[] = (() => {
-    const filtered = getFilteredForColumn('description');
-    return Array.from(new Set(filtered.map(t => t.description)))
-      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
-      .map(description => ({
-        label: description,
-        value: description,
-        count: filtered.filter(t => t.description === description).length,
-      }));
-  })();
-
-  const categoryTypeFilterOptions: FilterOption[] = (() => {
-    const filtered = getFilteredForColumn('categoryType');
+  const categoryTypeFilterOptions: FilterOption[] = useMemo(() => {
+    if (!filterOptions?.category_types) return [];
     const typeOrder = [
       'income',
       'expense',
@@ -397,60 +309,41 @@ export function TransactionTable({
       'other',
       'uncategorized',
     ];
-    const types = Array.from(new Set(filtered.map(t => t.categoryType))).sort(
-      (a, b) => typeOrder.indexOf(a) - typeOrder.indexOf(b)
-    );
-    const typeLabels: Record<string, string> = {
-      income: 'Income',
-      expense: 'Expense',
-      transfer: 'Transfer',
-      investment: 'Investment',
-      other: 'Other',
-      uncategorized: 'Uncategorized',
-    };
-    return types.map(type => ({
-      label: typeLabels[type] || type,
-      value: type,
-      count: filtered.filter(t => t.categoryType === type).length,
+    return [...filterOptions.category_types].sort(
+      (a, b) => typeOrder.indexOf(a.value) - typeOrder.indexOf(b.value)
+    ).map(ct => ({
+      label: CATEGORY_TYPE_LABELS[ct.value] || ct.label,
+      value: ct.value,
+      count: ct.count,
     }));
-  })();
+  }, [filterOptions?.category_types]);
 
-  const categoryFilterOptions: FilterOption[] = (() => {
-    const filtered = getFilteredForColumn('category');
-    const cats = Array.from(new Set(filtered.map(t => t.category))).sort(
-      (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })
-    );
-    return cats.map(category => ({
-      label: category,
-      value: category,
-      count: filtered.filter(t => t.category === category).length,
+  const categoryFilterOptions: FilterOption[] = useMemo(() => {
+    if (!filterOptions?.categories) return [];
+    return filterOptions.categories.map(c => ({
+      label: c.label,
+      value: c.value,
+      count: c.count,
     }));
-  })();
+  }, [filterOptions?.categories]);
 
-  const accountFilterOptions: FilterOption[] = (() => {
-    const filtered = getFilteredForColumn('account');
-    return Array.from(new Set(filtered.map(t => t.account)))
-      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
-      .map(account => ({
-        label: account,
-        value: account,
-        count: filtered.filter(t => t.account === account).length,
-      }));
-  })();
+  const accountFilterOptions: FilterOption[] = useMemo(() => {
+    if (!filterOptions?.accounts) return [];
+    return filterOptions.accounts.map(a => ({
+      label: a.label,
+      value: a.value,
+      count: a.count,
+    }));
+  }, [filterOptions?.accounts]);
 
-  const amountFilterOptions: FilterOption[] = (() => {
-    const filtered = getFilteredForColumn('amount');
-    return Array.from(new Set(filtered.map(t => String(t.amount))))
-      .sort((a, b) => parseFloat(a) - parseFloat(b))
-      .map(amount => ({
-        label: formatCurrency(
-          Math.abs(parseFloat(amount)),
-          preferences.currency
-        ),
-        value: amount,
-        count: filtered.filter(t => String(t.amount) === amount).length,
-      }));
-  })();
+  const amountFilterOptions: FilterOption[] = useMemo(() => {
+    if (!filterOptions?.amounts) return [];
+    return filterOptions.amounts.map(a => ({
+      label: formatCurrency(Math.abs(parseFloat(a.value)), preferences.currency),
+      value: a.value,
+      count: a.count,
+    }));
+  }, [filterOptions?.amounts, preferences.currency]);
 
   const handleSort = (field: keyof DisplayTransaction) => {
     if (sortField === field) {
@@ -516,7 +409,6 @@ export function TransactionTable({
         transactionType: 'debit',
       });
       setShowAddModal(false);
-      onRefresh();
     } catch (error) {
       console.error('Error creating transaction:', error);
     }
@@ -586,7 +478,6 @@ export function TransactionTable({
 
       setShowEditModal(false);
       setSelectedTransaction(null);
-      onRefresh();
     } catch (error) {
       console.error('Error updating transaction:', error);
     }
@@ -603,7 +494,6 @@ export function TransactionTable({
       onTransactionsChange(next);
       setShowEditModal(false);
       setSelectedTransaction(null);
-      onRefresh();
     } catch (error) {
       console.error('Error deleting transaction:', error);
     }
@@ -776,6 +666,16 @@ export function TransactionTable({
           <Plus className="h-3.5 w-3.5 mr-1.5" />
           Add Transaction
         </Button>
+        <Button
+          onClick={onRefresh}
+          disabled={loading}
+          variant="outline"
+          size="sm"
+          title="Refresh transactions"
+        >
+          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+          Refresh
+        </Button>
         {onRecategorizeClick && (
           <Button
             onClick={onRecategorizeClick}
@@ -871,7 +771,6 @@ export function TransactionTable({
               setCategorySearch('');
               setAccountSearch('');
               setAmountSearch('');
-              setDisplayedCount(20);
             }}
             className="text-xs h-6 px-2"
           >
@@ -1076,21 +975,25 @@ export function TransactionTable({
       {hasMore && (
         <div className="flex flex-col items-center py-4">
           <div ref={observerTarget} className="h-4" />
-          <p className="text-sm text-muted-foreground">
-            Showing {visibleTransactions.length} of {totalItems} transactions
-          </p>
+          {loadingMore ? (
+            <LoadingSpinner className="h-5 w-5" />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Showing {visibleTransactions.length} of {totalCount ?? transactions.length} transactions
+            </p>
+          )}
         </div>
       )}
 
-      {!hasMore && totalItems > 0 && (
+      {!hasMore && visibleTransactions.length > 0 && (
         <div className="text-center py-4">
           <p className="text-sm text-muted-foreground">
-            Showing all {totalItems} transactions
+            Showing all {totalCount ?? visibleTransactions.length} transactions
           </p>
         </div>
       )}
 
-      {totalItems === 0 && (
+      {visibleTransactions.length === 0 && !loading && (
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardContent className="text-center py-8">
             <p className="text-muted-foreground">No transactions found.</p>

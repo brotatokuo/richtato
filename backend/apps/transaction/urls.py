@@ -10,6 +10,11 @@ urlpatterns = [
         "", views.TransactionListCreateAPIView.as_view(), name="transaction-list-create"
     ),
     path(
+        "filter-options/",
+        views.TransactionFilterOptionsAPIView.as_view(),
+        name="transaction-filter-options",
+    ),
+    path(
         "<int:pk>/", views.TransactionDetailAPIView.as_view(), name="transaction-detail"
     ),
     path(
@@ -21,6 +26,11 @@ urlpatterns = [
         "summary/",
         views.TransactionSummaryAPIView.as_view(),
         name="transaction-summary",
+    ),
+    path(
+        "cashflow-summary/",
+        views.TransactionCashflowSummaryAPIView.as_view(),
+        name="transaction-cashflow-summary",
     ),
     path(
         "uncategorized/",
