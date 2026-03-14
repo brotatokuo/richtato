@@ -16,10 +16,13 @@ from urllib.parse import parse_qsl, urlparse
 
 from dotenv import load_dotenv
 
-load_dotenv()
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load .env from project root (for local dev) or current dir (Docker uses env_file)
+_PROJECT_ROOT = BASE_DIR.parent
+load_dotenv()
+load_dotenv(_PROJECT_ROOT / ".env")
 
 
 # SECURITY WARNING: keep the secret key used in production secret!

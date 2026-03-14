@@ -2,7 +2,6 @@ import { useSyncStatus } from '@/hooks/useSyncStatus';
 import {
   BarChart3,
   CloudUpload,
-  Menu,
   PieChart,
   Settings,
   SlidersHorizontal,
@@ -10,9 +9,9 @@ import {
   TrendingUp,
   Wallet,
 } from 'lucide-react';
-import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
+import { MobileBottomNav } from './MobileBottomNav';
 import { Sidebar } from './Sidebar';
 
 // Route to page title and icon mapping
@@ -33,7 +32,6 @@ const routeConfig: Record<
 
 export function Layout() {
   const location = useLocation();
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   // Global sync status monitoring for toast notifications
   useSyncStatus({
@@ -67,35 +65,12 @@ export function Layout() {
   return (
     <div className="flex h-screen bg-background">
       <Sidebar className="hidden md:flex" />
-      {mobileOpen && (
-        <div className="fixed inset-0 z-50 flex">
-          <div
-            className="fixed inset-0 bg-black/50"
-            onClick={() => setMobileOpen(false)}
-            aria-hidden="true"
-          />
-          <div className="relative z-50">
-            <Sidebar
-              className="w-64 h-screen bg-background"
-              hideCollapseToggle
-            />
-          </div>
-        </div>
-      )}
       <div className="flex-1 flex flex-col isolate">
         {/* Header */}
         <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
           <div className="mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <button
-                  className="md:hidden inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-foreground hover:bg-muted"
-                  onClick={() => setMobileOpen(true)}
-                  aria-label="Open menu"
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
-                {/* Mobile: keep Richtato logo */}
                 <img
                   src="/richtato.png"
                   alt="Richtato"
@@ -114,11 +89,13 @@ export function Layout() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-auto scrollbar-thin min-w-0">
-          <div className="w-full max-w-full p-6 overflow-x-hidden">
+          <div className="w-full max-w-full p-6 pb-24 md:pb-6 overflow-x-hidden">
             <Outlet />
           </div>
         </main>
       </div>
+
+      <MobileBottomNav />
     </div>
   );
 }
