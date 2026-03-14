@@ -2,6 +2,8 @@
  * Dashboard API service for fetching dashboard metrics and data
  */
 
+import { fetchWithAuth } from './fetchClient';
+
 export interface DashboardData {
   networth: string;
   networth_growth: string;
@@ -72,7 +74,7 @@ class DashboardApiService {
    * Get dashboard metrics (net worth, savings rate, etc.)
    */
   async getDashboardMetrics(): Promise<DashboardData> {
-    const response = await fetch(`${this.baseUrl}/metrics/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/metrics/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -85,7 +87,7 @@ class DashboardApiService {
    * Get cash flow data for the last 6 months
    */
   async getCashFlowData(period: string = '6m'): Promise<CashFlowData> {
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${this.baseUrl}/cash-flow/?period=${period}`,
       {
         method: 'GET',
@@ -111,7 +113,7 @@ class DashboardApiService {
     if (params?.startDate)
       url.searchParams.append('start_date', params.startDate);
     if (params?.endDate) url.searchParams.append('end_date', params.endDate);
-    const response = await fetch(url.toString(), {
+    const response = await fetchWithAuth(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -124,7 +126,7 @@ class DashboardApiService {
    * Get savings data for the last 6 months
    */
   async getSavingsData(): Promise<CashFlowData> {
-    const response = await fetch(`${this.baseUrl}/savings/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/savings/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -147,7 +149,7 @@ class DashboardApiService {
     if (year) url.searchParams.append('year', String(year));
     if (month !== undefined && month !== null)
       url.searchParams.append('month', String(month));
-    const response = await fetch(url.toString(), {
+    const response = await fetchWithAuth(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -159,7 +161,7 @@ class DashboardApiService {
    * Get expense years
    */
   async getExpenseYears(): Promise<number[]> {
-    const response = await fetch(`${this.baseUrl}/expense-years/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/expense-years/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -188,7 +190,7 @@ class DashboardApiService {
     if (params?.endDate) url.searchParams.append('end_date', params.endDate);
     if (params?.year) url.searchParams.append('year', String(params.year));
     if (params?.month) url.searchParams.append('month', String(params.month));
-    const response = await fetch(url.toString(), {
+    const response = await fetchWithAuth(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -203,7 +205,7 @@ class DashboardApiService {
    * Get top spending categories
    */
   async getTopCategoriesData(): Promise<unknown> {
-    const response = await fetch(`${this.baseUrl}/top-categories/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/top-categories/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',

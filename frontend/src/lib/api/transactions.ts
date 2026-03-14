@@ -2,6 +2,7 @@
  * Transactions API service for fetching transaction data
  */
 import { csrfService } from './csrf';
+import { fetchWithAuth } from './fetchClient';
 
 export interface Transaction {
   id: number;
@@ -147,7 +148,7 @@ class TransactionsApiService {
       url.searchParams.append('category_id', String(input.categoryId));
     if (input?.search) url.searchParams.append('search', input.search);
 
-    const response = await fetch(url.toString(), {
+    const response = await fetchWithAuth(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -199,7 +200,7 @@ class TransactionsApiService {
     if (input?.categoryId)
       url.searchParams.append('category_id', String(input.categoryId));
 
-    const response = await fetch(url.toString(), {
+    const response = await fetchWithAuth(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -268,7 +269,7 @@ class TransactionsApiService {
     );
     if (input?.days) url.searchParams.append('days', String(input.days));
 
-    const response = await fetch(url.toString(), {
+    const response = await fetchWithAuth(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -281,7 +282,7 @@ class TransactionsApiService {
    * Get all accounts
    */
   async getAccounts(): Promise<Account[]> {
-    const response = await fetch(`${this.baseUrl}/accounts/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/accounts/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -320,7 +321,7 @@ class TransactionsApiService {
     if (input?.page) url.searchParams.append('page', String(input.page));
     if (input?.pageSize)
       url.searchParams.append('page_size', String(input.pageSize));
-    const response = await fetch(url.toString(), {
+    const response = await fetchWithAuth(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -336,7 +337,7 @@ class TransactionsApiService {
     amount: number;
     date: string; // YYYY-MM-DD
   }): Promise<{ id: number; amount: string; date: string }> {
-    const response = await fetch(`${this.baseUrl}/accounts/details/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/accounts/details/`, {
       method: 'POST',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
@@ -353,7 +354,7 @@ class TransactionsApiService {
       date?: string;
     }
   ): Promise<{ id: number; amount: string; date: string }> {
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${this.baseUrl}/accounts/${accountId}/transactions/`,
       {
         method: 'PATCH',
@@ -366,7 +367,7 @@ class TransactionsApiService {
   }
 
   async deleteAccountTransaction(accountId: number, id: number): Promise<void> {
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${this.baseUrl}/accounts/${accountId}/transactions/`,
       {
         method: 'DELETE',
@@ -387,7 +388,7 @@ class TransactionsApiService {
     institution_slug?: string;
     asset_entity_name?: string;
   }): Promise<Account> {
-    let response = await fetch(`${this.baseUrl}/accounts/`, {
+    let response = await fetchWithAuth(`${this.baseUrl}/accounts/`, {
       method: 'POST',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
@@ -401,7 +402,7 @@ class TransactionsApiService {
     // If CSRF token is invalid, refresh it and retry once
     if (response.status === 403) {
       await csrfService.refreshToken();
-      response = await fetch(`${this.baseUrl}/accounts/`, {
+      response = await fetchWithAuth(`${this.baseUrl}/accounts/`, {
         method: 'POST',
         headers: await csrfService.getHeaders(),
         credentials: 'include',
@@ -428,7 +429,7 @@ class TransactionsApiService {
       image_key: string | null;
     }>
   ): Promise<Account> {
-    let response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
+    let response = await fetchWithAuth(`${this.baseUrl}/accounts/${id}/`, {
       method: 'PATCH',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
@@ -438,7 +439,7 @@ class TransactionsApiService {
     // If CSRF token is invalid, refresh it and retry once
     if (response.status === 403) {
       await csrfService.refreshToken();
-      response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
+      response = await fetchWithAuth(`${this.baseUrl}/accounts/${id}/`, {
         method: 'PATCH',
         headers: await csrfService.getHeaders(),
         credentials: 'include',
@@ -453,7 +454,7 @@ class TransactionsApiService {
    * Delete an account
    */
   async deleteAccount(id: number): Promise<void> {
-    let response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
+    let response = await fetchWithAuth(`${this.baseUrl}/accounts/${id}/`, {
       method: 'DELETE',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
@@ -462,7 +463,7 @@ class TransactionsApiService {
     // If CSRF token is invalid, refresh it and retry once
     if (response.status === 403) {
       await csrfService.refreshToken();
-      response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
+      response = await fetchWithAuth(`${this.baseUrl}/accounts/${id}/`, {
         method: 'DELETE',
         headers: await csrfService.getHeaders(),
         credentials: 'include',
@@ -478,7 +479,7 @@ class TransactionsApiService {
    * Get all categories for the current user
    */
   async getCategories(): Promise<Category[]> {
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${this.baseUrl}/transactions/categories/`,
       {
         method: 'GET',
@@ -499,7 +500,7 @@ class TransactionsApiService {
   async createTransaction(
     transaction: CreateTransactionInput
   ): Promise<Transaction> {
-    let response = await fetch(`${this.baseUrl}/transactions/`, {
+    let response = await fetchWithAuth(`${this.baseUrl}/transactions/`, {
       method: 'POST',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
@@ -509,7 +510,7 @@ class TransactionsApiService {
     // If CSRF token is invalid, refresh it and retry once
     if (response.status === 403) {
       await csrfService.refreshToken();
-      response = await fetch(`${this.baseUrl}/transactions/`, {
+      response = await fetchWithAuth(`${this.baseUrl}/transactions/`, {
         method: 'POST',
         headers: await csrfService.getHeaders(),
         credentials: 'include',
@@ -568,7 +569,7 @@ class TransactionsApiService {
     }>
   ): Promise<Transaction> {
     const doPatch = async () =>
-      fetch(`${this.baseUrl}/transactions/${id}/`, {
+      fetchWithAuth(`${this.baseUrl}/transactions/${id}/`, {
         method: 'PATCH',
         headers: await csrfService.getHeaders(),
         credentials: 'include',
@@ -591,7 +592,7 @@ class TransactionsApiService {
    * Delete a transaction
    */
   async deleteTransaction(id: number): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/transactions/${id}/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/transactions/${id}/`, {
       method: 'DELETE',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
@@ -609,7 +610,7 @@ class TransactionsApiService {
     transactionId: number,
     categoryId: number
   ): Promise<Transaction> {
-    let response = await fetch(
+    let response = await fetchWithAuth(
       `${this.baseUrl}/transactions/${transactionId}/categorize/`,
       {
         method: 'POST',
@@ -621,7 +622,7 @@ class TransactionsApiService {
 
     if (response.status === 403) {
       await csrfService.refreshToken();
-      response = await fetch(
+      response = await fetchWithAuth(
         `${this.baseUrl}/transactions/${transactionId}/categorize/`,
         {
           method: 'POST',
@@ -655,7 +656,7 @@ class TransactionsApiService {
     url.searchParams.append('start_date', startDate);
     url.searchParams.append('end_date', endDate);
 
-    const response = await fetch(url.toString(), {
+    const response = await fetchWithAuth(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -683,7 +684,7 @@ class TransactionsApiService {
     url.searchParams.append('start_date', startDate);
     url.searchParams.append('end_date', endDate);
 
-    const response = await fetch(url.toString(), {
+    const response = await fetchWithAuth(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -704,7 +705,7 @@ class TransactionsApiService {
     );
     url.searchParams.append('limit', String(limit));
 
-    const response = await fetch(url.toString(), {
+    const response = await fetchWithAuth(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -720,7 +721,7 @@ class TransactionsApiService {
    * Get all budgets
    */
   async getBudgets(): Promise<Budget[]> {
-    const response = await fetch(`${this.baseUrl}/budgets/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/budgets/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -759,7 +760,7 @@ class TransactionsApiService {
     if (input.startDate) url.searchParams.append('start_date', input.startDate);
     if (input.endDate) url.searchParams.append('end_date', input.endDate);
 
-    const response = await fetch(url.toString(), {
+    const response = await fetchWithAuth(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -775,7 +776,7 @@ class TransactionsApiService {
     type: Array<{ value: string; label: string }>;
     entity: Array<{ value: string; label: string }>;
   }> {
-    const response = await fetch(`${this.baseUrl}/accounts/field-choices/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/accounts/field-choices/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -790,7 +791,7 @@ class TransactionsApiService {
   async startRecategorization(
     keepExistingForUnmatched: boolean
   ): Promise<{ task_id: number }> {
-    let response = await fetch(`${this.baseUrl}/transactions/recategorize/`, {
+    let response = await fetchWithAuth(`${this.baseUrl}/transactions/recategorize/`, {
       method: 'POST',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
@@ -802,7 +803,7 @@ class TransactionsApiService {
     // If CSRF token is invalid, refresh it and retry once
     if (response.status === 403) {
       await csrfService.refreshToken();
-      response = await fetch(`${this.baseUrl}/transactions/recategorize/`, {
+      response = await fetchWithAuth(`${this.baseUrl}/transactions/recategorize/`, {
         method: 'POST',
         headers: await csrfService.getHeaders(),
         credentials: 'include',
@@ -826,7 +827,7 @@ class TransactionsApiService {
     progress_percent: number;
     error: string | null;
   }> {
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${this.baseUrl}/transactions/recategorize/${taskId}/`,
       {
         method: 'GET',

@@ -10,6 +10,7 @@
  */
 
 import { csrfService } from './csrf';
+import { fetchWithAuth } from './fetchClient';
 
 export interface SyncStatus {
   is_syncing: boolean;
@@ -45,7 +46,7 @@ class SyncService {
    * Get the current sync status for the authenticated user.
    */
   async getStatus(): Promise<SyncStatus> {
-    const response = await fetch(`${this.baseUrl}/status/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/status/`, {
       credentials: 'include',
     });
 
@@ -60,7 +61,7 @@ class SyncService {
    * Clear the new transaction count (call after user views transactions).
    */
   async clearNewCount(): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/status/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/status/`, {
       method: 'DELETE',
       credentials: 'include',
       headers: await csrfService.getHeaders(),
@@ -80,7 +81,7 @@ class SyncService {
 
     const headers = await csrfService.getHeaders();
 
-    const response = await fetch(`${this.baseUrl}/status/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/status/`, {
       method: 'POST',
       credentials: 'include',
       headers,
@@ -97,7 +98,7 @@ class SyncService {
    * Get sync job history for the current user.
    */
   async getSyncJobs(): Promise<SyncJob[]> {
-    const response = await fetch(`${this.baseUrl}/jobs/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/jobs/`, {
       credentials: 'include',
     });
 

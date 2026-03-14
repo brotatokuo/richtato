@@ -2,6 +2,8 @@
  * Annual Analysis API service for comprehensive yearly spending analysis
  */
 
+import { fetchWithAuth } from './fetchClient';
+
 export interface MonthlyBreakdown {
   month: string;
   month_num: number;
@@ -69,7 +71,7 @@ class AnnualAnalysisApiService {
     );
     if (year) url.searchParams.append('year', String(year));
 
-    const response = await fetch(url.toString(), {
+    const response = await fetchWithAuth(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -82,7 +84,7 @@ class AnnualAnalysisApiService {
    * Get available years with transaction data
    */
   async getAvailableYears(): Promise<number[]> {
-    const response = await fetch(`${this.baseUrl}/annual-analysis/years/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/annual-analysis/years/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',

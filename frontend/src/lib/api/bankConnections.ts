@@ -2,6 +2,7 @@
  * Bank Connections API service - Plaid provider
  */
 import { csrfService } from './csrf';
+import { fetchWithAuth } from './fetchClient';
 
 export type Provider = 'plaid';
 
@@ -89,7 +90,7 @@ class BankConnectionsApiService {
     url: string,
     options: RequestInit
   ): Promise<Response> {
-    let response = await fetch(url, {
+    let response = await fetchWithAuth(url, {
       ...options,
       headers: await csrfService.getHeaders(),
       credentials: 'include',
@@ -98,7 +99,7 @@ class BankConnectionsApiService {
     // If CSRF token is invalid, refresh it and retry once
     if (response.status === 403) {
       await csrfService.refreshToken();
-      response = await fetch(url, {
+      response = await fetchWithAuth(url, {
         ...options,
         headers: await csrfService.getHeaders(),
         credentials: 'include',
@@ -116,7 +117,7 @@ class BankConnectionsApiService {
    * Get all bank connections for the authenticated user
    */
   async getConnections(): Promise<BankConnection[]> {
-    const response = await fetch(`${this.baseUrl}/sync/connections/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/sync/connections/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -192,7 +193,7 @@ class BankConnectionsApiService {
   async getSyncJobProgress(
     connectionId: number
   ): Promise<SyncJobProgress | null> {
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${this.baseUrl}/sync/connections/${connectionId}/progress/`,
       {
         method: 'GET',
