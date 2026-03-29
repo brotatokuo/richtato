@@ -331,12 +331,24 @@ class TransactionsApiService {
     balance: number;
     date: string; // YYYY-MM-DD
   }): Promise<{ balance: string; date: string }> {
-    const response = await fetch(`${this.baseUrl}/accounts/details/`, {
+    let response = await fetch(`${this.baseUrl}/accounts/details/`, {
       method: 'POST',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
       body: JSON.stringify(input),
     });
+
+    // If CSRF token is invalid, refresh it and retry once
+    if (response.status === 403) {
+      await csrfService.refreshToken();
+      response = await fetch(`${this.baseUrl}/accounts/details/`, {
+        method: 'POST',
+        headers: await csrfService.getHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(input),
+      });
+    }
+
     return this.handleResponse<{ balance: string; date: string }>(response);
   }
 
@@ -369,27 +381,17 @@ class TransactionsApiService {
       date?: string;
     }
   ): Promise<{ id: number; amount: string; date: string }> {
-    const response = await fetch(
+    const response = await csrfService.fetchWithCsrf(
       `${this.baseUrl}/accounts/${accountId}/transactions/`,
-      {
-        method: 'PATCH',
-        headers: await csrfService.getHeaders(),
-        credentials: 'include',
-        body: JSON.stringify(input),
-      }
+      { method: 'PATCH', body: JSON.stringify(input) }
     );
     return this.handleResponse<{ id: number; amount: string; date: string }>(response);
   }
 
   async deleteAccountTransaction(accountId: number, id: number): Promise<void> {
-    const response = await fetch(
+    const response = await csrfService.fetchWithCsrf(
       `${this.baseUrl}/accounts/${accountId}/transactions/`,
-      {
-        method: 'DELETE',
-        headers: await csrfService.getHeaders(),
-        credentials: 'include',
-        body: JSON.stringify({ id }),
-      }
+      { method: 'DELETE', body: JSON.stringify({ id }) }
     );
     if (!response.ok) throw new Error('Failed to delete transaction');
   }
@@ -583,23 +585,10 @@ class TransactionsApiService {
       notes: string | null;
     }>
   ): Promise<Transaction> {
-    const doPatch = async () =>
-      fetch(`${this.baseUrl}/transactions/${id}/`, {
-        method: 'PATCH',
-        headers: await csrfService.getHeaders(),
-        credentials: 'include',
-        body: JSON.stringify(updates),
-      });
-
-    let response = await doPatch();
-
-    // If CSRF token is invalid, clear + refresh and retry once
-    if (response.status === 403) {
-      csrfService.clearToken();
-      await csrfService.refreshToken();
-      response = await doPatch();
-    }
-
+    const response = await csrfService.fetchWithCsrf(
+      `${this.baseUrl}/transactions/${id}/`,
+      { method: 'PATCH', body: JSON.stringify(updates) }
+    );
     return this.handleResponse<Transaction>(response);
   }
 
@@ -607,12 +596,10 @@ class TransactionsApiService {
    * Delete a transaction
    */
   async deleteTransaction(id: number): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/transactions/${id}/`, {
-      method: 'DELETE',
-      headers: await csrfService.getHeaders(),
-      credentials: 'include',
-    });
-
+    const response = await csrfService.fetchWithCsrf(
+      `${this.baseUrl}/transactions/${id}/`,
+      { method: 'DELETE' }
+    );
     if (!response.ok) {
       throw new Error(`Failed to delete transaction: ${response.status}`);
     }

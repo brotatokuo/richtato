@@ -218,13 +218,10 @@ export class CategorySettingsApi {
     categoryId: number,
     keyword: string
   ): Promise<CategoryKeyword> {
-    await csrfService.refreshToken();
-    const res = await fetch(`${this.keywordBase}/${categoryId}/keywords/`, {
-      method: 'POST',
-      headers: await this.getHeaders(),
-      credentials: 'include',
-      body: JSON.stringify({ keyword }),
-    });
+    const res = await csrfService.fetchWithCsrf(
+      `${this.keywordBase}/${categoryId}/keywords/`,
+      { method: 'POST', body: JSON.stringify({ keyword }) }
+    );
     if (!res.ok) throw new Error('Failed to add keyword');
     return res.json();
   }
@@ -233,14 +230,9 @@ export class CategorySettingsApi {
     categoryId: number,
     keywordId: number
   ): Promise<void> {
-    await csrfService.refreshToken();
-    const res = await fetch(
+    const res = await csrfService.fetchWithCsrf(
       `${this.keywordBase}/${categoryId}/keywords/${keywordId}/`,
-      {
-        method: 'DELETE',
-        headers: await this.getHeaders(),
-        credentials: 'include',
-      }
+      { method: 'DELETE' }
     );
     if (!res.ok) throw new Error('Failed to delete keyword');
   }
@@ -249,13 +241,10 @@ export class CategorySettingsApi {
     categoryId: number,
     expensePriority: ExpensePriority
   ): Promise<CategoryCatalogItem> {
-    await csrfService.refreshToken();
-    const res = await fetch(`${this.keywordBase}/${categoryId}/`, {
-      method: 'PATCH',
-      headers: await this.getHeaders(),
-      credentials: 'include',
-      body: JSON.stringify({ expense_priority: expensePriority }),
-    });
+    const res = await csrfService.fetchWithCsrf(
+      `${this.keywordBase}/${categoryId}/`,
+      { method: 'PATCH', body: JSON.stringify({ expense_priority: expensePriority }) }
+    );
     if (!res.ok) throw new Error('Failed to update category');
     return res.json();
   }
@@ -266,24 +255,19 @@ export class CategorySettingsApi {
     icon?: string;
     color?: string;
   }): Promise<CategoryCatalogItem> {
-    await csrfService.refreshToken();
-    const res = await fetch(`${this.keywordBase}/`, {
-      method: 'POST',
-      headers: await this.getHeaders(),
-      credentials: 'include',
-      body: JSON.stringify(data),
-    });
+    const res = await csrfService.fetchWithCsrf(
+      `${this.keywordBase}/`,
+      { method: 'POST', body: JSON.stringify(data) }
+    );
     if (!res.ok) throw new Error('Failed to create category');
     return res.json();
   }
 
   async deleteCategory(categoryId: number): Promise<void> {
-    await csrfService.refreshToken();
-    const res = await fetch(`${this.keywordBase}/${categoryId}/`, {
-      method: 'DELETE',
-      headers: await this.getHeaders(),
-      credentials: 'include',
-    });
+    const res = await csrfService.fetchWithCsrf(
+      `${this.keywordBase}/${categoryId}/`,
+      { method: 'DELETE' }
+    );
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
       throw new Error(errData.error || 'Failed to delete category');
