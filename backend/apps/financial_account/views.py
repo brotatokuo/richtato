@@ -351,7 +351,12 @@ class AccountTransactionsAPIView(APIView):
 
 
 class AccountBalanceUpdateAPIView(APIView):
-    """Create balance updates (transactions) for accounts."""
+    """Set the absolute balance for an account on a given date.
+
+    This writes directly to FinancialAccount.balance and AccountBalanceHistory
+    without creating a Transaction. Use when the user wants to reconcile or
+    snapshot the account balance (e.g. "my balance is $5,200 today").
+    """
 
     authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
@@ -359,19 +364,19 @@ class AccountBalanceUpdateAPIView(APIView):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.account_service = AccountService()
+        self.balance_service = AccountBalanceService()
 
     def post(self, request):
-        """Create a balance update transaction."""
-        from apps.transaction.models import Transaction
+        """Set the account balance to the given amount on the given date."""
         from decimal import Decimal
 
         account_id = request.data.get("account")
-        amount = request.data.get("amount")
-        date = request.data.get("date")
+        balance = request.data.get("balance")
+        balance_date = request.data.get("date")
 
-        if not all([account_id, amount, date]):
+        if not all([account_id, balance is not None, balance_date]):
             return Response(
-                {"error": "account, amount, and date are required"},
+                {"error": "account, balance, and date are required"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -381,28 +386,24 @@ class AccountBalanceUpdateAPIView(APIView):
                 {"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND
             )
 
-        # Determine transaction type based on amount sign
-        amount_decimal = Decimal(str(amount))
-        transaction_type = "credit" if amount_decimal >= 0 else "debit"
-        amount_decimal = abs(amount_decimal)
+        try:
+            balance_decimal = Decimal(str(balance))
+        except Exception:
+            return Response(
+                {"error": "Invalid balance value"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        transaction = Transaction.objects.create(
-            user=request.user,
-            account=account,
-            amount=amount_decimal,
-            date=date,
-            transaction_type=transaction_type,
-            description="Balance update",
-            sync_source="manual",
+        updated_account = self.balance_service.update_balance(
+            account, balance_decimal, balance_date
         )
 
         return Response(
             {
-                "id": transaction.id,
-                "amount": str(transaction.amount),
-                "date": str(transaction.date),
+                "balance": str(updated_account.balance),
+                "date": str(balance_date),
             },
-            status=status.HTTP_201_CREATED,
+            status=status.HTTP_200_OK,
         )
 
 

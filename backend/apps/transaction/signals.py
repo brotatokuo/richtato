@@ -1,10 +1,15 @@
-"""Signals for Transaction model to maintain account balance history."""
+"""Signals for Transaction model to maintain account balance and history.
+
+When a transaction is created, updated, or deleted, these signals:
+1. Adjust FinancialAccount.balance (the anchor) to reflect the change
+2. Recalculate AccountBalanceHistory entries from that anchor
+"""
 
 from datetime import date
 from decimal import Decimal
 
-from django.db.models import Sum
-from django.db.models.signals import post_delete, post_save
+from django.db.models import F, Sum
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 from loguru import logger
 
@@ -30,12 +35,9 @@ def recalculate_balance_for_date(
         The calculated balance at target_date
     """
     if current_balance is None:
-        # Refresh from DB to get latest balance
         account.refresh_from_db(fields=["balance"])
         current_balance = account.balance
 
-    # Calculate net transactions AFTER target_date
-    # These transactions haven't happened yet at target_date, so we subtract them
     credits_after = Transaction.objects.filter(
         account=account, date__gt=target_date, transaction_type="credit"
     ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
@@ -43,7 +45,6 @@ def recalculate_balance_for_date(
         account=account, date__gt=target_date, transaction_type="debit"
     ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
-    # Balance at target_date = current balance - net change since then
     net_change_after = credits_after - debits_after
     balance_at_date = current_balance - net_change_after
 
@@ -70,11 +71,9 @@ def update_balances_from_date(account: FinancialAccount, from_date: date) -> Non
         account: The financial account to update
         from_date: The starting date to update from
     """
-    # Refresh account to get latest balance as our anchor
     account.refresh_from_db(fields=["balance"])
     current_balance = account.balance
 
-    # Get all unique transaction dates >= from_date for this account
     affected_dates = (
         Transaction.objects.filter(account=account, date__gte=from_date)
         .values_list("date", flat=True)
@@ -82,68 +81,104 @@ def update_balances_from_date(account: FinancialAccount, from_date: date) -> Non
         .order_by("date")
     )
 
-    # Also include any existing balance history dates that might need updating
     existing_history_dates = (
         AccountBalanceHistory.objects.filter(account=account, date__gte=from_date)
         .values_list("date", flat=True)
         .distinct()
     )
 
-    # Combine and sort all dates that need recalculation
     all_dates = set(affected_dates) | set(existing_history_dates)
 
     for target_date in sorted(all_dates):
         recalculate_balance_for_date(account, target_date, current_balance)
 
 
+@receiver(pre_save, sender=Transaction)
+def transaction_pre_save(sender, instance: Transaction, **kwargs):
+    """Capture old values before update so post_save can compute the delta."""
+    if instance.pk:
+        try:
+            old = Transaction.objects.get(pk=instance.pk)
+            instance._old_signed_amount = old.signed_amount
+            instance._old_date = old.date
+            instance._old_account_id = old.account_id
+        except Transaction.DoesNotExist:
+            pass
+
+
 @receiver(post_save, sender=Transaction)
 def transaction_post_save(sender, instance: Transaction, created: bool, **kwargs):
     """
-    Handle transaction creation or update.
-
-    Updates balance history for the transaction date and all subsequent dates.
-    Note: Account.balance is NOT updated here - it's the anchor from bank sync
-    or manual entry, and balance history is derived from it.
+    After a transaction is created or updated:
+    1. Adjust the account balance anchor so it stays current.
+    2. Recalculate balance history from the affected date forward.
     """
     account = instance.account
-    transaction_date = instance.date
+
+    if created:
+        FinancialAccount.objects.filter(pk=account.pk).update(
+            balance=F("balance") + instance.signed_amount
+        )
+    else:
+        old_signed = getattr(instance, "_old_signed_amount", Decimal("0"))
+        delta = instance.signed_amount - old_signed
+        if delta:
+            FinancialAccount.objects.filter(pk=account.pk).update(
+                balance=F("balance") + delta
+            )
+
+    account.refresh_from_db(fields=["balance"])
 
     logger.debug(
         f"Transaction {'created' if created else 'updated'}: "
-        f"{instance.id} on {transaction_date} for account {account.name}"
+        f"{instance.id} on {instance.date} for account {account.name} "
+        f"(balance now {account.balance})"
     )
 
-    # Update balance history from this date forward
-    update_balances_from_date(account, transaction_date)
+    old_date = getattr(instance, "_old_date", None)
+    if not created and old_date and old_date != instance.date:
+        update_balances_from_date(account, min(old_date, instance.date))
+
+        # Clean up orphaned history entries on the old date
+        has_remaining = Transaction.objects.filter(
+            account=account, date=old_date
+        ).exists()
+        if not has_remaining:
+            AccountBalanceHistory.objects.filter(
+                account=account, date=old_date
+            ).delete()
+    else:
+        update_balances_from_date(account, instance.date)
 
 
 @receiver(post_delete, sender=Transaction)
 def transaction_post_delete(sender, instance: Transaction, **kwargs):
     """
-    Handle transaction deletion.
-
-    Updates balance history for the deleted transaction's date and all subsequent dates.
-    Note: Account.balance is NOT updated here - it's the anchor from bank sync
-    or manual entry, and balance history is derived from it.
+    After a transaction is deleted:
+    1. Reverse its effect on the account balance anchor.
+    2. Recalculate balance history from the affected date forward.
+    3. Remove orphaned history entries for dates with no remaining transactions.
     """
     account = instance.account
     transaction_date = instance.date
 
+    FinancialAccount.objects.filter(pk=account.pk).update(
+        balance=F("balance") - instance.signed_amount
+    )
+    account.refresh_from_db(fields=["balance"])
+
     logger.debug(
-        f"Transaction deleted: {instance.id} on {transaction_date} for account {account.name}"
+        f"Transaction deleted: {instance.id} on {transaction_date} "
+        f"for account {account.name} (balance now {account.balance})"
     )
 
-    # Update balance history from this date forward
     update_balances_from_date(account, transaction_date)
 
-    # Clean up balance history entries for dates with no transactions
-    # (only if there are no more transactions on that date)
     remaining_transactions = Transaction.objects.filter(
         account=account, date=transaction_date
     ).exists()
 
     if not remaining_transactions:
-        # Remove the balance history entry for this date since there are no transactions
         AccountBalanceHistory.objects.filter(
             account=account, date=transaction_date
         ).delete()

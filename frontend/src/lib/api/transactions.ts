@@ -329,20 +329,21 @@ class TransactionsApiService {
   }
 
   /**
-   * Create a balance update (account transaction)
+   * Set the absolute balance for an account on a given date.
+   * This is a balance snapshot, not a transaction.
    */
-  async createAccountTransaction(input: {
+  async setAccountBalance(input: {
     account: number;
-    amount: number;
+    balance: number;
     date: string; // YYYY-MM-DD
-  }): Promise<{ id: number; amount: string; date: string }> {
+  }): Promise<{ balance: string; date: string }> {
     const response = await fetch(`${this.baseUrl}/accounts/details/`, {
       method: 'POST',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
       body: JSON.stringify(input),
     });
-    return this.handleResponse<{ id: number; amount: string; date: string }>(response);
+    return this.handleResponse<{ balance: string; date: string }>(response);
   }
 
   async updateAccountTransaction(
