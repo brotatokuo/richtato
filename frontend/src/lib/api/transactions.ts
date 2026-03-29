@@ -252,27 +252,21 @@ class TransactionsApiService {
   /**
    * Get balance history for an account
    */
-  async getAccountBalanceHistory(
-    accountId: number,
-    input?: { days?: number }
-  ): Promise<{
+  async getAccountBalanceHistory(accountId: number): Promise<{
     current_balance: number;
     starting_balance: number;
     change: number;
     change_percent: number;
     data_points: Array<{ date: string; balance: number }>;
   }> {
-    const url = new URL(
+    const response = await fetch(
       `${this.baseUrl}/accounts/${accountId}/balance-history/`,
-      window.location.origin
+      {
+        method: 'GET',
+        headers: this.getHeaders(),
+        credentials: 'include',
+      }
     );
-    if (input?.days) url.searchParams.append('days', String(input.days));
-
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: this.getHeaders(),
-      credentials: 'include',
-    });
 
     return this.handleResponse(response);
   }

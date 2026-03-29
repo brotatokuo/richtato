@@ -157,10 +157,8 @@ class AccountBalanceHistoryAPIView(APIView):
                 {"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND
             )
 
-        days = int(request.query_params.get("days", 30))
-
         try:
-            trend_data = self.balance_service.get_balance_trend(account, days=days)
+            trend_data = self.balance_service.get_balance_trend(account)
             return Response(trend_data)
 
         except Exception as e:

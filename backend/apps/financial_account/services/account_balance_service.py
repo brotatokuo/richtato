@@ -1,6 +1,6 @@
 """Service for account balance tracking."""
 
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 from typing import Dict, List
 
@@ -66,23 +66,11 @@ class AccountBalanceService:
             account, start_date, end_date
         )
 
-    def get_balance_trend(
-        self, account: FinancialAccount, days: int = 30
-    ) -> Dict[str, any]:
-        """
-        Get balance trend over specified number of days.
-
-        Args:
-            account: Account to analyze
-            days: Number of days to look back
-
-        Returns:
-            Dict with trend data
-        """
-        end_date = date.today()
-        start_date = end_date - timedelta(days=days)
-
-        history = self.get_balance_history(account, start_date, end_date)
+    def get_balance_trend(self, account: FinancialAccount) -> Dict[str, any]:
+        """Return all balance history for an account."""
+        history = list(
+            AccountBalanceHistory.objects.filter(account=account).order_by("date")
+        )
 
         is_credit = (account.account_type or "").lower() in ["credit", "credit_card"]
 
@@ -96,8 +84,7 @@ class AccountBalanceService:
                 "data_points": [],
             }
 
-        # Apply sign flip before calculations
-        starting_balance_raw = history[-1].balance if history else account.balance
+        starting_balance_raw = history[0].balance
         current_balance_raw = account.balance
 
         starting_balance = -starting_balance_raw if is_credit else starting_balance_raw

@@ -37,7 +37,7 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
     )
     entity = serializers.SerializerMethodField()
     entity_display = serializers.CharField(source="institution.name", read_only=True)
-    date = serializers.DateTimeField(source="updated_at", read_only=True)
+    date = serializers.SerializerMethodField()
 
     # Sync connection fields
     has_connection = serializers.SerializerMethodField()
@@ -111,6 +111,13 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
         if conn and conn.last_sync:
             return conn.last_sync.isoformat()
         return None
+
+    def get_date(self, obj):
+        """Return the most recent balance history date, falling back to updated_at."""
+        latest = obj.balance_history.order_by("-date").values_list("date", flat=True).first()
+        if latest:
+            return latest.isoformat()
+        return obj.updated_at.isoformat() if obj.updated_at else None
 
     def get_entity(self, obj):
         """Return institution slug or name for backward compatibility."""

@@ -27,8 +27,6 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-type RangePreset = '30' | '90' | '180' | '365' | 'custom';
-
 interface BalancePoint {
   date: string;
   balance: number;
@@ -68,21 +66,6 @@ const ACCOUNT_COLORS = [
   '#14b8a6',
 ];
 
-function getPresetDays(preset: RangePreset): number {
-  switch (preset) {
-    case '30':
-      return 30;
-    case '90':
-      return 90;
-    case '180':
-      return 180;
-    case '365':
-      return 365;
-    default:
-      return 180;
-  }
-}
-
 export function AssetTrendsChart({
   selectedAccount,
   selectedGroup,
@@ -92,12 +75,14 @@ export function AssetTrendsChart({
 }: AssetTrendsChartProps) {
   const { preferences } = usePreferences();
   const [histories, setHistories] = useState<AccountHistory[]>([]);
+  type RangePreset = 'all' | '30' | '90' | '180' | '365' | 'custom';
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [rangePreset, setRangePreset] = useState<RangePreset>('180');
+  const [showDataPanel, setShowDataPanel] = useState(false);
+  const [rangePreset, setRangePreset] = useState<RangePreset>('all');
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
-  const [showDataPanel, setShowDataPanel] = useState(false);
+
 
   // Transaction-related state
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
@@ -114,30 +99,13 @@ export function AssetTrendsChart({
     }
   }, [quickBalanceTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const effectiveDays = useMemo(() => {
-    if (rangePreset !== 'custom') {
-      return getPresetDays(rangePreset);
-    }
-    if (customStart && customEnd) {
-      const start = new Date(customStart);
-      const end = new Date(customEnd);
-      const diff = Math.max(
-        1,
-        Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-      );
-      return diff;
-    }
-    return 180;
-  }, [rangePreset, customStart, customEnd]);
-
   const loadAccountsAndHistory = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const accountList = await transactionsApiService.getAccounts();
       const histories = await fetchHistories(
-        accountList as AccountWithBalance[],
-        effectiveDays
+        accountList as AccountWithBalance[]
       );
       setHistories(histories);
     } catch (err) {
@@ -148,23 +116,20 @@ export function AssetTrendsChart({
     } finally {
       setLoading(false);
     }
-  }, [effectiveDays]);
+  }, []);
 
   useEffect(() => {
     loadAccountsAndHistory();
   }, [loadAccountsAndHistory]);
 
   const fetchHistories = async (
-    accountList: AccountWithBalance[],
-    days: number
+    accountList: AccountWithBalance[]
   ): Promise<AccountHistory[]> => {
     const results = await Promise.all(
       accountList.map(async account => {
         try {
-          const data = await transactionsApiService.getAccountBalanceHistory(
-            account.id,
-            { days }
-          );
+          const data =
+            await transactionsApiService.getAccountBalanceHistory(account.id);
           return {
             account,
             history: data?.data_points || [],
@@ -214,8 +179,7 @@ export function AssetTrendsChart({
     if (!selectedAccount) return;
     try {
       const data = await transactionsApiService.getAccountBalanceHistory(
-        selectedAccount.id,
-        { days: effectiveDays }
+        selectedAccount.id
       );
       setHistories(prev =>
         prev.map(h =>
@@ -227,7 +191,7 @@ export function AssetTrendsChart({
     } catch (err) {
       console.error('Error refreshing account history:', err);
     }
-  }, [selectedAccount, effectiveDays]);
+  }, [selectedAccount]);
 
   const handleSetBalance = async (data: { balance: number; date: string }) => {
     if (!selectedAccount) return;
@@ -368,18 +332,57 @@ export function AssetTrendsChart({
       return true;
     });
 
-    const allHistoriesForTotals = histories;
+    const toDateStr = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-    // Collect all unique dates from relevant and totals
-    const allDates = new Set<string>();
-    allHistoriesForTotals.forEach(({ history }) => {
-      history.forEach(h => allDates.add(h.date));
-    });
-    const sortedDates = Array.from(allDates).sort(
-      (a, b) => new Date(a).getTime() - new Date(b).getTime()
-    );
+    // Derive the full data range
+    let minDateStr: string | null = null;
+    let maxDateStr: string | null = null;
+    for (const h of relevantHistories) {
+      for (const pt of h.history) {
+        if (!minDateStr || pt.date < minDateStr) minDateStr = pt.date;
+        if (!maxDateStr || pt.date > maxDateStr) maxDateStr = pt.date;
+      }
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = toDateStr(today);
+
+    // End date: max(latest data point, today)
+    const dataEnd =
+      maxDateStr && maxDateStr > todayStr
+        ? new Date(maxDateStr + 'T00:00:00')
+        : new Date(today);
+
+    // Apply range filter
+    let startDate: Date;
+    let endDate = new Date(dataEnd);
+
+    if (rangePreset === 'custom' && customStart && customEnd) {
+      startDate = new Date(customStart + 'T00:00:00');
+      endDate = new Date(customEnd + 'T00:00:00');
+    } else if (rangePreset !== 'all' && rangePreset !== 'custom') {
+      const days = parseInt(rangePreset, 10);
+      startDate = new Date(endDate);
+      startDate.setDate(startDate.getDate() - days);
+    } else {
+      startDate = minDateStr
+        ? new Date(minDateStr + 'T00:00:00')
+        : new Date(today);
+    }
+
+    const sortedDates: string[] = [];
+    for (
+      const d = new Date(startDate);
+      d <= endDate;
+      d.setDate(d.getDate() + 1)
+    ) {
+      sortedDates.push(toDateStr(d));
+    }
+
     const dateLabels = sortedDates.map(d => {
-      const date = new Date(d);
+      const date = new Date(d + 'T00:00:00');
       return date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -388,11 +391,27 @@ export function AssetTrendsChart({
 
     // Helper to build data points with carry-forward (cached per account)
     const seriesCache = new Map<number, number[]>();
-    const buildSeriesData = (accountId: number, history: BalancePoint[]) => {
+    const buildSeriesData = (
+      accountId: number,
+      history: BalancePoint[],
+      currentBalance = 0
+    ) => {
       if (seriesCache.has(accountId)) return seriesCache.get(accountId)!;
       const balanceMap = new Map<string, number>();
       history.forEach(h => balanceMap.set(h.date, h.balance));
-      let lastKnown = 0;
+
+      // Seed with the most recent balance point at or before the range start,
+      // falling back to the account's current balance if no history exists.
+      const rangeStart = sortedDates[0];
+      let lastKnown = history.length === 0 ? currentBalance : 0;
+      const sortedHistory = [...history].sort((a, b) =>
+        a.date.localeCompare(b.date)
+      );
+      for (const h of sortedHistory) {
+        if (h.date <= rangeStart) lastKnown = h.balance;
+        else break;
+      }
+
       const result = sortedDates.map(date => {
         if (balanceMap.has(date)) lastKnown = balanceMap.get(date)!;
         return lastKnown;
@@ -458,8 +477,12 @@ export function AssetTrendsChart({
             }
           : {}),
       });
+      let prevValue: number | null = null;
       dataPoints.forEach((v, idx) => {
-        rows.push({ date: sortedDates[idx], label: name, value: v });
+        if (v !== prevValue) {
+          rows.push({ date: sortedDates[idx], label: name, value: v });
+          prevValue = v;
+        }
       });
     };
 
@@ -467,18 +490,25 @@ export function AssetTrendsChart({
       const accHistory = relevantHistories[0];
       const accData = buildSeriesData(
         accHistory.account.id,
-        accHistory.history
+        accHistory.history,
+        accHistory.account.balance
       );
       addSeries(accHistory.account.name, '#22c55e', accData, true);
     } else if (selectedGroupType) {
       relevantHistories.forEach((h, idx) => {
-        const dataPoints = buildSeriesData(h.account.id, h.history);
+        const dataPoints = buildSeriesData(
+          h.account.id,
+          h.history,
+          h.account.balance
+        );
         const color = ACCOUNT_COLORS[idx % ACCOUNT_COLORS.length];
         addSeries(h.account.name, color, dataPoints, idx === 0);
       });
       const groupData = sortedDates.map((_, i) =>
         relevantHistories.reduce(
-          (sum, h) => sum + buildSeriesData(h.account.id, h.history)[i],
+          (sum, h) =>
+            sum +
+            buildSeriesData(h.account.id, h.history, h.account.balance)[i],
           0
         )
       );
@@ -499,7 +529,9 @@ export function AssetTrendsChart({
       Array.from(historiesByType.entries()).forEach(([type, items], idx) => {
         const dataPoints = sortedDates.map((_, i) =>
           items.reduce(
-            (sum, h) => sum + buildSeriesData(h.account.id, h.history)[i],
+            (sum, h) =>
+              sum +
+              buildSeriesData(h.account.id, h.history, h.account.balance)[i],
             0
           )
         );
@@ -509,7 +541,9 @@ export function AssetTrendsChart({
 
       const totalData = sortedDates.map((_, i) =>
         histories.reduce(
-          (sum, h) => sum + buildSeriesData(h.account.id, h.history)[i],
+          (sum, h) =>
+            sum +
+            buildSeriesData(h.account.id, h.history, h.account.balance)[i],
           0
         )
       );
@@ -517,7 +551,7 @@ export function AssetTrendsChart({
     }
 
     return { series, dates: dateLabels, rows };
-  }, [histories, selectedAccount, selectedGroup]);
+  }, [histories, selectedAccount, selectedGroup, rangePreset, customStart, customEnd]);
 
   const chartOptions = useMemo(
     () => ({
@@ -555,7 +589,8 @@ export function AssetTrendsChart({
         data: chartData.dates,
         axisLabel: {
           color: '#9ca3af',
-          rotate: chartData.dates.length > 12 ? 45 : 0,
+          rotate: chartData.dates.length > 20 ? 45 : 0,
+          interval: Math.max(0, Math.floor(chartData.dates.length / 12) - 1),
         },
       },
       yAxis: {
@@ -597,8 +632,6 @@ export function AssetTrendsChart({
     URL.revokeObjectURL(url);
   };
 
-  const disableCustomRange = rangePreset !== 'custom';
-
   return (
     <Card className="bg-card/50 backdrop-blur-sm border-border/50 w-full">
       <CardHeader className="pb-2">
@@ -636,17 +669,19 @@ export function AssetTrendsChart({
           {/* Bottom row: range controls */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-              {(['30', '90', '180', '365'] as RangePreset[]).map(preset => (
-                <Button
-                  key={preset}
-                  size="xs"
-                  variant={rangePreset === preset ? 'default' : 'ghost'}
-                  onClick={() => setRangePreset(preset)}
-                  className="transition-all hover:scale-105"
-                >
-                  {preset}d
-                </Button>
-              ))}
+              {(['all', '30', '90', '180', '365'] as RangePreset[]).map(
+                preset => (
+                  <Button
+                    key={preset}
+                    size="xs"
+                    variant={rangePreset === preset ? 'default' : 'ghost'}
+                    onClick={() => setRangePreset(preset)}
+                    className="transition-all hover:scale-105"
+                  >
+                    {preset === 'all' ? 'All' : `${preset}d`}
+                  </Button>
+                )
+              )}
               <Button
                 size="xs"
                 variant={rangePreset === 'custom' ? 'default' : 'ghost'}
@@ -674,7 +709,6 @@ export function AssetTrendsChart({
               type="date"
               value={customStart}
               onChange={e => setCustomStart(e.target.value)}
-              disabled={rangePreset !== 'custom'}
               className="w-full sm:w-36"
             />
             <span className="text-sm text-muted-foreground hidden sm:inline">
@@ -684,7 +718,6 @@ export function AssetTrendsChart({
               type="date"
               value={customEnd}
               onChange={e => setCustomEnd(e.target.value)}
-              disabled={disableCustomRange}
               className="w-full sm:w-36"
             />
           </div>

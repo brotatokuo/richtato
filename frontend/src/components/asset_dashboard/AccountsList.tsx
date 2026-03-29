@@ -364,6 +364,11 @@ export function AccountsList({
                           <p className="font-medium text-foreground truncate">
                             {account.name}
                           </p>
+                          {account.lastUpdated && (
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(account.lastUpdated + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0 ml-2">
