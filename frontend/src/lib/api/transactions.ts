@@ -340,6 +340,27 @@ class TransactionsApiService {
     return this.handleResponse<{ balance: string; date: string }>(response);
   }
 
+  /**
+   * Set absolute account balance on a date (same as setAccountBalance).
+   * Used by asset dashboard history UI; name kept for call-site compatibility.
+   */
+  async createAccountTransaction(input: {
+    account: number;
+    amount: number;
+    date: string;
+  }): Promise<{ id: number; date: string; amount: string }> {
+    const result = await this.setAccountBalance({
+      account: input.account,
+      balance: input.amount,
+      date: input.date,
+    });
+    return {
+      id: -Math.floor(Date.now()),
+      date: result.date,
+      amount: result.balance,
+    };
+  }
+
   async updateAccountTransaction(
     accountId: number,
     input: {
