@@ -10,7 +10,7 @@ import {
   CreditCard,
   Landmark,
   PiggyBank,
-  Plus,
+  Scale,
   TrendingUp,
   Wallet,
 } from 'lucide-react';
@@ -132,7 +132,7 @@ interface AccountsListProps {
   selectedGroupType: string | null;
   onAccountSelect: (account: AccountWithBalance | null) => void;
   onGroupSelect: (group: AccountGroup | null) => void;
-  onQuickAdd?: (account: AccountWithBalance) => void;
+  onSetBalance?: (account: AccountWithBalance) => void;
   reloadKey?: string | number;
 }
 
@@ -141,7 +141,7 @@ export function AccountsList({
   selectedGroupType,
   onAccountSelect,
   onGroupSelect,
-  onQuickAdd,
+  onSetBalance,
   reloadKey,
 }: AccountsListProps) {
   const { preferences } = usePreferences();
@@ -380,16 +380,16 @@ export function AccountsList({
                             true
                           )}
                         </span>
-                        {onQuickAdd && (
+                        {onSetBalance && (
                           <button
                             onClick={e => {
                               e.stopPropagation();
-                              onQuickAdd(account);
+                              onSetBalance(account);
                             }}
                             className="p-1 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-primary/10 hover:text-primary transition-all"
-                            title="Add transaction"
+                            title="Set balance"
                           >
-                            <Plus className="h-4 w-4" />
+                            <Scale className="h-4 w-4" />
                           </button>
                         )}
                         <ChevronRight

@@ -37,7 +37,7 @@ export function AssetDashboard() {
     useState<AccountWithBalance | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<AccountGroup | null>(null);
   const [accountsReloadKey, setAccountsReloadKey] = useState(0);
-  const [quickAddTrigger, setQuickAddTrigger] = useState(0);
+  const [quickBalanceTrigger, setQuickBalanceTrigger] = useState(0);
 
   const loadDashboardData = async () => {
     try {
@@ -94,10 +94,10 @@ export function AssetDashboard() {
     loadDashboardData();
   };
 
-  const handleQuickAdd = (account: AccountWithBalance) => {
+  const handleQuickSetBalance = (account: AccountWithBalance) => {
     setSelectedAccount(account);
     setSelectedGroup(null);
-    setQuickAddTrigger(v => v + 1);
+    setQuickBalanceTrigger(v => v + 1);
   };
 
   if (loading && !dashboardData) {
@@ -280,7 +280,7 @@ export function AssetDashboard() {
         selectedGroup={selectedGroup}
         onResetSelection={handleResetSelection}
         onDataChange={handleDataChange}
-        quickAddTrigger={quickAddTrigger}
+        quickBalanceTrigger={quickBalanceTrigger}
       />
 
       {/* Account Breakdown + Accounts List */}
@@ -297,7 +297,7 @@ export function AssetDashboard() {
             selectedGroupType={selectedGroup?.type ?? null}
             onAccountSelect={handleAccountSelect}
             onGroupSelect={handleGroupSelect}
-            onQuickAdd={handleQuickAdd}
+            onSetBalance={handleQuickSetBalance}
             reloadKey={accountsReloadKey}
           />
         </div>

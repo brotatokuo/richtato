@@ -4,7 +4,6 @@ import {
   AccountWithBalance,
 } from '@/components/asset_dashboard/AccountsList';
 import { BaseChart } from '@/components/asset_dashboard/BaseChart';
-import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ColumnDef, DataTable } from '@/components/ui/DataTable';
@@ -12,19 +11,13 @@ import { Input } from '@/components/ui/input';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Modal } from '@/components/ui/Modal';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import {
-  Account,
-  Category,
-  transactionsApiService,
-} from '@/lib/api/transactions';
+import { transactionsApiService } from '@/lib/api/transactions';
 import { formatCurrency, formatDate } from '@/lib/format';
-import { TransactionFormData } from '@/types/transactions';
 import {
   Calendar,
   ChevronDown,
   ChevronUp,
   Download,
-  Plus,
   RefreshCw,
   Scale,
   TableProperties,
@@ -59,7 +52,7 @@ interface AssetTrendsChartProps {
   selectedGroup: AccountGroup | null;
   onResetSelection: () => void;
   onDataChange?: () => void;
-  quickAddTrigger?: number;
+  quickBalanceTrigger?: number;
 }
 
 const ACCOUNT_COLORS = [
@@ -95,7 +88,7 @@ export function AssetTrendsChart({
   selectedGroup,
   onResetSelection,
   onDataChange,
-  quickAddTrigger,
+  quickBalanceTrigger,
 }: AssetTrendsChartProps) {
   const { preferences } = usePreferences();
   const [histories, setHistories] = useState<AccountHistory[]>([]);
@@ -112,60 +105,14 @@ export function AssetTrendsChart({
   const [transactionsError, setTransactionsError] = useState<string | null>(
     null
   );
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showBalanceModal, setShowBalanceModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<TransactionItem | null>(
-    null
-  );
   const [showTable, setShowTable] = useState(false);
 
-  // Form data for add/edit via TransactionForm
-  const [allAccounts, setAllAccounts] = useState<Account[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-
-  const getLocalDate = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  };
-
-  const makeEmptyForm = (accountId?: number): TransactionFormData => ({
-    description: '',
-    date: getLocalDate(),
-    amount: '',
-    account_name: accountId ? String(accountId) : '',
-    category: '',
-    notes: '',
-    transactionType: 'debit',
-  });
-
-  const [formData, setFormData] = useState<TransactionFormData>(makeEmptyForm());
-  const [editFormData, setEditFormData] = useState<TransactionFormData>(
-    makeEmptyForm()
-  );
-
   useEffect(() => {
-    const loadFormOptions = async () => {
-      try {
-        const [accts, cats] = await Promise.all([
-          transactionsApiService.getAccounts(),
-          transactionsApiService.getCategories(),
-        ]);
-        setAllAccounts(accts);
-        setCategories(cats);
-      } catch {
-        // Non-critical: form will still work without pre-loaded options
-      }
-    };
-    loadFormOptions();
-  }, []);
-
-  useEffect(() => {
-    if (quickAddTrigger && selectedAccount) {
-      setFormData(makeEmptyForm(selectedAccount.id));
-      setShowAddModal(true);
+    if (quickBalanceTrigger && selectedAccount) {
+      setShowBalanceModal(true);
     }
-  }, [quickAddTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [quickBalanceTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const effectiveDays = useMemo(() => {
     if (rangePreset !== 'custom') {
@@ -282,131 +229,6 @@ export function AssetTrendsChart({
     }
   }, [selectedAccount, effectiveDays]);
 
-  const evaluateAmountField = (value: string): string => {
-    const val = String(value || '').trim();
-    if (!val.startsWith('=')) return val;
-    const expr = val.slice(1).trim().replace(/\s+/g, '');
-    if (!/^[0-9+\-*/().]+$/.test(expr)) return value;
-    try {
-      const result = Function('"use strict"; return (' + expr + ')')();
-      if (typeof result !== 'number' || !isFinite(result)) return value;
-      return String(Math.abs(Math.round(result * 100) / 100));
-    } catch {
-      return value;
-    }
-  };
-
-  const handleAddSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.description || !formData.amount || !formData.account_name)
-      return;
-
-    try {
-      const account = allAccounts.find(
-        a => String(a.id) === String(formData.account_name)
-      );
-      if (!account) throw new Error('Account not found');
-
-      let categoryId: number | undefined;
-      if (formData.category) {
-        const cat = categories.find(
-          c => String(c.id) === String(formData.category)
-        );
-        if (cat) categoryId = cat.id;
-      }
-
-      const rawAmount = evaluateAmountField(formData.amount);
-      const amountNum = parseFloat(rawAmount);
-
-      const newTx = await transactionsApiService.createTransaction({
-        account_id: account.id,
-        date: formData.date,
-        amount: amountNum,
-        description: formData.description,
-        transaction_type: formData.transactionType,
-        category_id: categoryId,
-        notes: (formData.notes ?? '').trim(),
-      });
-
-      const newItem: TransactionItem = {
-        id: newTx.id,
-        date: newTx.date,
-        description: newTx.description,
-        amount: String(newTx.amount),
-        transaction_type: newTx.transaction_type,
-      };
-      setTransactions(prev =>
-        [newItem, ...prev].sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-        )
-      );
-
-      setShowAddModal(false);
-      setFormData(makeEmptyForm(selectedAccount?.id));
-      onDataChange?.();
-      refreshSingleAccountHistory();
-    } catch (error) {
-      console.error('Error adding transaction:', error);
-      throw error;
-    }
-  };
-
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedItem) return;
-
-    try {
-      let categoryId: number | undefined;
-      if (editFormData.category) {
-        const cat = categories.find(
-          c => String(c.id) === String(editFormData.category)
-        );
-        if (cat) categoryId = cat.id;
-      }
-
-      const rawAmount = evaluateAmountField(editFormData.amount);
-      const amountNum = parseFloat(rawAmount);
-
-      const updated = await transactionsApiService.updateTransaction(
-        selectedItem.id,
-        {
-          description: editFormData.description,
-          date: editFormData.date,
-          amount: amountNum,
-          transaction_type: editFormData.transactionType,
-          category_id: categoryId ?? null,
-          notes: (editFormData.notes ?? '').trim(),
-        }
-      );
-
-      setTransactions(prev =>
-        prev
-          .map(t =>
-            t.id === selectedItem.id
-              ? {
-                  ...t,
-                  amount: String(updated.amount),
-                  date: updated.date,
-                  description: updated.description,
-                  transaction_type: updated.transaction_type,
-                }
-              : t
-          )
-          .sort(
-            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-          )
-      );
-
-      setShowEditModal(false);
-      setSelectedItem(null);
-      onDataChange?.();
-      refreshSingleAccountHistory();
-    } catch (error) {
-      console.error('Error updating transaction:', error);
-      throw error;
-    }
-  };
-
   const handleSetBalance = async (data: { balance: number; date: string }) => {
     if (!selectedAccount) return;
 
@@ -423,29 +245,6 @@ export function AssetTrendsChart({
     } catch (error) {
       console.error('Error setting balance:', error);
       throw error;
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!selectedAccount || !selectedItem) return;
-
-    const confirmDelete = window.confirm('Delete this transaction?');
-    if (!confirmDelete) return;
-
-    try {
-      await transactionsApiService.deleteAccountTransaction(
-        selectedAccount.id,
-        selectedItem.id
-      );
-
-      setTransactions(prev => prev.filter(t => t.id !== selectedItem.id));
-
-      setShowEditModal(false);
-      setSelectedItem(null);
-      onDataChange?.();
-      refreshSingleAccountHistory();
-    } catch (error) {
-      console.error('Error deleting transaction:', error);
     }
   };
 
@@ -517,20 +316,6 @@ export function AssetTrendsChart({
     ],
     [preferences.currency, preferences.date_format]
   );
-
-  const handleRowClick = (item: TransactionItem) => {
-    setSelectedItem(item);
-    setEditFormData({
-      description: item.description || '',
-      date: item.date,
-      amount: String(Math.abs(parseFloat(item.amount) || 0)),
-      account_name: selectedAccount ? String(selectedAccount.id) : '',
-      category: '',
-      notes: '',
-      transactionType: item.transaction_type,
-    });
-    setShowEditModal(true);
-  };
 
   // Mobile card renderer for DataTable
   const renderMobileCard = ({
@@ -838,29 +623,14 @@ export function AssetTrendsChart({
               )}
             </div>
             {selectedAccount && (
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setFormData(makeEmptyForm(selectedAccount.id));
-                    setShowAddModal(true);
-                  }}
-                  className="gap-1"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline">Add Transaction</span>
-                  <span className="sm:hidden">Add</span>
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowBalanceModal(true)}
-                  className="gap-1"
-                >
-                  <Scale className="h-4 w-4" />
-                  <span className="hidden sm:inline">Set Balance</span>
-                </Button>
-              </div>
+              <Button
+                size="sm"
+                onClick={() => setShowBalanceModal(true)}
+                className="gap-1"
+              >
+                <Scale className="h-4 w-4" />
+                <span className="hidden sm:inline">Set Balance</span>
+              </Button>
             )}
           </div>
           {/* Bottom row: range controls */}
@@ -1048,7 +818,6 @@ export function AssetTrendsChart({
                       searchable
                       searchPlaceholder="Search transactions..."
                       searchFields={['description']}
-                      onRowClick={handleRowClick}
                       defaultSortField="date"
                       defaultSortDirection="desc"
                       pageSize={10}
@@ -1121,45 +890,6 @@ export function AssetTrendsChart({
             </div>
           </div>
         </div>
-      )}
-
-      {/* Add Transaction Modal */}
-      {selectedAccount && (
-        <Modal
-          isOpen={showAddModal}
-          onClose={() => setShowAddModal(false)}
-          title={`Add Transaction - ${selectedAccount.name}`}
-        >
-          <TransactionForm
-            formData={formData}
-            onFormChange={setFormData}
-            onSubmit={handleAddSubmit}
-            accounts={allAccounts}
-            categories={categories}
-          />
-        </Modal>
-      )}
-
-      {/* Edit Transaction Modal */}
-      {selectedAccount && selectedItem && (
-        <Modal
-          isOpen={showEditModal}
-          onClose={() => {
-            setShowEditModal(false);
-            setSelectedItem(null);
-          }}
-          title="Edit Transaction"
-        >
-          <TransactionForm
-            formData={editFormData}
-            onFormChange={setEditFormData}
-            onSubmit={handleEditSubmit}
-            onDelete={handleDelete}
-            accounts={allAccounts}
-            categories={categories}
-            submitLabel="Save"
-          />
-        </Modal>
       )}
 
       {/* Set Balance Modal */}

@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ModalProps {
   isOpen: boolean;
@@ -38,7 +39,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
@@ -70,6 +71,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
         {/* Content */}
         <div className="p-6">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
