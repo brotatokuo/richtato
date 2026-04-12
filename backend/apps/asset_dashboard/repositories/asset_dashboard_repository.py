@@ -115,30 +115,41 @@ class AssetDashboardRepository:
         )
 
     def get_networth(self, user) -> Decimal:
-        """
-        Calculate current networth (sum of asset account balances only).
+        """Calculate current net worth (sum of all active account balances).
 
-        Note: Credit card balances (liabilities) are tracked separately and
-        not included in the net worth calculation.
+        Assets are positive, liabilities are negative, so the sum is net worth.
         """
+        accounts = self.get_user_accounts(user)
+        return sum(account.balance for account in accounts) or Decimal("0")
+
+    def get_total_assets(self, user) -> Decimal:
+        """Get total assets (checking, savings, etc.)."""
         asset_accounts = self.get_user_asset_accounts(user)
         return sum(account.balance for account in asset_accounts) or Decimal("0")
 
     def get_total_liabilities(self, user) -> Decimal:
-        """Get total liabilities (credit card balances, etc.)."""
-        liability_accounts = self.get_user_liability_accounts(user)
-        return sum(account.balance for account in liability_accounts) or Decimal("0")
+        """Get total liabilities as a positive number for display.
 
-    def get_account_balance_before_date(self, account, before_date: date) -> Decimal:
-        """Get account balance before a specific date by summing transactions."""
-        # Sum all transactions before the date
-        credits = Transaction.objects.filter(
-            account=account, date__lt=before_date, transaction_type="credit"
-        ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        debits = Transaction.objects.filter(
-            account=account, date__lt=before_date, transaction_type="debit"
-        ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-        return credits - debits
+        Liability balances are stored negative; this returns abs() for UI display.
+        """
+        liability_accounts = self.get_user_liability_accounts(user)
+        return abs(sum(account.balance for account in liability_accounts) or Decimal("0"))
+
+    def get_balance_at_date(self, account, target_date: date) -> Decimal:
+        """Get account balance at a specific date using balance history.
+
+        Looks up the most recent AccountBalanceHistory entry on or before
+        the target date. Falls back to current account balance if no
+        history exists.
+        """
+        entry = (
+            AccountBalanceHistory.objects.filter(
+                account=account, date__lte=target_date
+            )
+            .order_by("-date")
+            .first()
+        )
+        return entry.balance if entry else account.balance
 
     def get_networth_history(self, user, period: str = "6m") -> list[dict]:
         """
@@ -184,31 +195,16 @@ class AssetDashboardRepository:
         # For each date, calculate total assets and liabilities
         history = []
         for record_date in unique_dates:
-            # Get the most recent balance for each asset account up to this date
             total_assets = Decimal("0")
             for account in asset_accounts:
-                latest_balance = (
-                    AccountBalanceHistory.objects.filter(
-                        account=account, date__lte=record_date
-                    )
-                    .order_by("-date")
-                    .first()
-                )
-                if latest_balance:
-                    total_assets += latest_balance.balance
+                total_assets += self.get_balance_at_date(account, record_date)
 
-            # Get the most recent balance for each liability account up to this date
+            # Liability balances are stored negative; show as positive for display
             total_liabilities = Decimal("0")
             for account in liability_accounts:
-                latest_balance = (
-                    AccountBalanceHistory.objects.filter(
-                        account=account, date__lte=record_date
-                    )
-                    .order_by("-date")
-                    .first()
+                total_liabilities += abs(
+                    self.get_balance_at_date(account, record_date)
                 )
-                if latest_balance:
-                    total_liabilities += abs(latest_balance.balance)
 
             history.append(
                 {
@@ -241,7 +237,7 @@ class AssetDashboardRepository:
                     "count": 0,
                     "is_liability": account.is_liability,
                 }
-            breakdown[acc_type]["total"] += account.balance
+            breakdown[acc_type]["total"] += abs(account.balance) if account.is_liability else account.balance
             breakdown[acc_type]["count"] += 1
 
         # Convert to list and float values

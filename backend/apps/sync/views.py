@@ -209,12 +209,13 @@ class SyncConnectionListCreateAPIView(APIView):
                 initial_balance=initial_balance,
             )
             financial_account.sync_source = "plaid"
-            # Set is_liability for credit card and loan accounts
             if mapped_type in ("credit_card", "loan"):
                 financial_account.is_liability = True
+                # Liabilities stored negative: Plaid reports positive, negate it
+                if initial_balance > 0:
+                    initial_balance = -initial_balance
             financial_account.save()
 
-            # Record initial balance in history
             if initial_balance != Decimal("0"):
                 self.account_repository.update_balance(
                     financial_account, initial_balance
@@ -246,55 +247,6 @@ class SyncConnectionListCreateAPIView(APIView):
                 f"{plaid_account.get('id')}: {str(e)}"
             )
             return None
-
-    def _create_single_connection(
-        self, user, validated_data: dict, provider: str = "plaid"
-    ):
-        """Create a single connection with explicit account ID."""
-        account = None
-        if validated_data.get("account_id"):
-            account = self.account_service.get_account_by_id(
-                validated_data["account_id"], user
-            )
-            if not account:
-                raise ValueError("Account not found")
-        else:
-            # Auto-create account
-            account_name = validated_data.get("account_name")
-            account_type = validated_data.get("account_type", "checking")
-            institution_name = validated_data["institution_name"]
-
-            type_mapping = {
-                "depository": "checking",
-                "credit": "credit_card",
-                "savings": "savings",
-            }
-            mapped_type = type_mapping.get(account_type, "checking")
-
-            account = self.account_service.create_manual_account(
-                user=user,
-                name=account_name or f"{institution_name} Account",
-                account_type=mapped_type,
-                institution_name=institution_name,
-            )
-            account.sync_source = provider
-            # Set is_liability for credit card accounts
-            if mapped_type == "credit_card":
-                account.is_liability = True
-            account.save()
-
-        connection = self.connection_repository.create_connection(
-            user=user,
-            account=account,
-            provider=provider,
-            access_token=validated_data["access_token"],
-            institution_name=validated_data["institution_name"],
-            external_account_id=validated_data["external_account_id"],
-            external_enrollment_id=validated_data.get("external_enrollment_id", ""),
-        )
-
-        return connection
-
 
 class SyncConnectionDetailAPIView(APIView):
     """Retrieve or delete a sync connection."""
@@ -645,6 +597,8 @@ class PlaidExchangeTokenAPIView(APIView):
                 financial_account.sync_source = "plaid"
                 if mapped_type in ("credit_card", "loan"):
                     financial_account.is_liability = True
+                    if initial_balance > 0:
+                        initial_balance = -initial_balance
                 financial_account.save()
 
                 if initial_balance != Decimal("0"):

@@ -36,4 +36,9 @@ urlpatterns = [
         views.AccountBalanceUpdateAPIView.as_view(),
         name="account-balance-update",
     ),
+    path(
+        "import-csv/",
+        views.CSVStatementImportAPIView.as_view(),
+        name="account-csv-import",
+    ),
 ]

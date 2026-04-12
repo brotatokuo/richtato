@@ -16,6 +16,7 @@ from apps.financial_account.services.account_balance_service import (
     AccountBalanceService,
 )
 from apps.financial_account.services.account_service import AccountService
+from apps.financial_account.services.csv_import_service import CSVImportService
 from loguru import logger
 
 
@@ -392,6 +393,7 @@ class AccountBalanceUpdateAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        old_balance = account.balance
         updated_account = self.balance_service.update_balance(
             account, balance_decimal, balance_date
         )
@@ -400,6 +402,8 @@ class AccountBalanceUpdateAPIView(APIView):
             {
                 "balance": str(updated_account.balance),
                 "date": str(balance_date),
+                "previous_balance": str(old_balance),
+                "adjustment": str(updated_account.balance - old_balance),
             },
             status=status.HTTP_200_OK,
         )
@@ -445,3 +449,101 @@ class CardAccountFieldChoicesAPIView(APIView):
         account_choices = [{"value": acc.id, "label": acc.name} for acc in accounts]
 
         return Response({"account": account_choices})
+
+
+class CSVStatementImportAPIView(APIView):
+    """Import transactions from a CSV statement file."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.account_service = AccountService()
+        self.csv_service = CSVImportService()
+
+    def post(self, request):
+        """Import a CSV statement into an account.
+
+        Expects multipart form data:
+        - file: CSV file
+        - account: account ID
+        - ending_balance: optional statement ending balance
+        - ending_date: optional date for ending balance (YYYY-MM-DD)
+        """
+        from datetime import date as date_type
+        from decimal import Decimal
+
+        csv_file = request.FILES.get("file")
+        if not csv_file:
+            return Response(
+                {"error": "CSV file is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        account_id = request.data.get("account")
+        if not account_id:
+            return Response(
+                {"error": "account is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        account = self.account_service.get_account_by_id(int(account_id), request.user)
+        if not account:
+            return Response(
+                {"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        ending_balance = None
+        ending_date = None
+
+        raw_balance = request.data.get("ending_balance")
+        if raw_balance is not None and raw_balance != "":
+            try:
+                ending_balance = Decimal(str(raw_balance))
+            except Exception:
+                return Response(
+                    {"error": "Invalid ending_balance"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        raw_date = request.data.get("ending_date")
+        if raw_date:
+            try:
+                ending_date = date_type.fromisoformat(raw_date)
+            except ValueError:
+                return Response(
+                    {"error": "Invalid ending_date format (use YYYY-MM-DD)"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        try:
+            result = self.csv_service.import_statement(
+                account=account,
+                csv_file=csv_file,
+                ending_balance=ending_balance,
+                ending_date=ending_date,
+            )
+        except Exception as e:
+            logger.error(f"CSV import failed for account {account_id}: {str(e)}")
+            return Response(
+                {"error": f"Import failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        response_data = {
+            "imported": result.imported_count,
+            "skipped_duplicates": result.skipped_duplicates,
+            "errors": result.errors,
+            "balance_after_import": (
+                str(result.balance_after_import)
+                if result.balance_after_import is not None
+                else None
+            ),
+        }
+
+        if result.discrepancy is not None:
+            response_data["discrepancy"] = str(result.discrepancy)
+            response_data["adjustment"] = str(result.adjustment_amount)
+
+        return Response(response_data, status=status.HTTP_200_OK)

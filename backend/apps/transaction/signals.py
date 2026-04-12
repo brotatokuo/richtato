@@ -49,7 +49,9 @@ def recalculate_balance_for_date(
     balance_at_date = current_balance - net_change_after
 
     AccountBalanceHistory.objects.update_or_create(
-        account=account, date=target_date, defaults={"balance": balance_at_date}
+        account=account,
+        date=target_date,
+        defaults={"balance": balance_at_date, "source": "transaction"},
     )
 
     logger.debug(

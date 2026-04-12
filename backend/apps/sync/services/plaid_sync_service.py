@@ -204,7 +204,12 @@ class PlaidSyncService:
                 balance = Decimal(str(ledger_balance))
 
                 account = connection.account
-                self.account_repository.update_balance(account, balance)
+                # Plaid reports liabilities as positive; store negative
+                if account.is_liability and balance > 0:
+                    balance = -balance
+                self.account_repository.update_balance(
+                    account, balance, source="plaid_sync"
+                )
 
                 logger.info(
                     f"Synced balance for account {account.id} ({account.name}): {balance}"

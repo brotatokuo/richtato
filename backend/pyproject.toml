@@ -43,7 +43,7 @@ where = ["."]  # Look in the root directory
 include = ["richtato*"]  # Include richtato and all its subpackages
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "richtato.settings"
+DJANGO_SETTINGS_MODULE = "richtato.test_settings"
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

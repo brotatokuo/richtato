@@ -352,3 +352,129 @@ class TestDateChangeRecalculation:
         # New date should have the history entry
         history = AccountBalanceHistory.objects.get(account=account, date=d2)
         assert history.balance == Decimal("5500.00")
+
+
+class TestSignalEdgeCases:
+    """Edge cases for transaction signals."""
+
+    def test_zero_amount_transaction(self, account):
+        Transaction.objects.create(
+            user=account.user,
+            account=account,
+            date=date.today(),
+            amount=Decimal("0.00"),
+            transaction_type="debit",
+            description="Zero amount",
+        )
+        account.refresh_from_db()
+        assert account.balance == Decimal("5000.00")
+
+    def test_very_large_amount(self, account):
+        Transaction.objects.create(
+            user=account.user,
+            account=account,
+            date=date.today(),
+            amount=Decimal("9999999999.99"),
+            transaction_type="credit",
+            description="Huge deposit",
+        )
+        account.refresh_from_db()
+        assert account.balance == Decimal("10000004999.99")
+
+    def test_rapid_sequential_creates(self, account):
+        today = date.today()
+        for i in range(20):
+            Transaction.objects.create(
+                user=account.user,
+                account=account,
+                date=today,
+                amount=Decimal("10.00"),
+                transaction_type="debit",
+                description=f"Purchase {i}",
+            )
+        account.refresh_from_db()
+        assert account.balance == Decimal("4800.00")
+
+    def test_update_type_and_amount_simultaneously(self, account):
+        tx = Transaction.objects.create(
+            user=account.user,
+            account=account,
+            date=date.today(),
+            amount=Decimal("100.00"),
+            transaction_type="credit",
+            description="Test",
+        )
+        account.refresh_from_db()
+        assert account.balance == Decimal("5100.00")
+
+        tx.transaction_type = "debit"
+        tx.amount = Decimal("200.00")
+        tx.save()
+        account.refresh_from_db()
+        # Was +100, now -200 → delta of -300
+        assert account.balance == Decimal("4800.00")
+
+    def test_delete_all_transactions_restores_original(self, account):
+        today = date.today()
+        txns = []
+        for amount in [Decimal("100.00"), Decimal("200.00"), Decimal("300.00")]:
+            txns.append(
+                Transaction.objects.create(
+                    user=account.user,
+                    account=account,
+                    date=today,
+                    amount=amount,
+                    transaction_type="debit",
+                    description="Test",
+                )
+            )
+        account.refresh_from_db()
+        assert account.balance == Decimal("4400.00")
+
+        for tx in txns:
+            tx.delete()
+        account.refresh_from_db()
+        assert account.balance == Decimal("5000.00")
+
+    def test_history_has_source_field(self, account):
+        today = date.today()
+        Transaction.objects.create(
+            user=account.user,
+            account=account,
+            date=today,
+            amount=Decimal("50.00"),
+            transaction_type="debit",
+            description="Verify source",
+        )
+        history = AccountBalanceHistory.objects.get(account=account, date=today)
+        assert history.source == "transaction"
+
+
+@pytest.fixture
+def second_account(user):
+    return FinancialAccount.objects.create(
+        user=user,
+        name="Second Checking",
+        account_type="checking",
+        balance=Decimal("3000.00"),
+    )
+
+
+class TestCrossAccountSignals:
+    """Signals should only affect the transaction's own account."""
+
+    def test_transaction_on_account_a_does_not_affect_account_b(
+        self, account, second_account
+    ):
+        Transaction.objects.create(
+            user=account.user,
+            account=account,
+            date=date.today(),
+            amount=Decimal("500.00"),
+            transaction_type="debit",
+            description="Only on account A",
+        )
+        account.refresh_from_db()
+        second_account.refresh_from_db()
+        assert account.balance == Decimal("4500.00")
+        assert second_account.balance == Decimal("3000.00")

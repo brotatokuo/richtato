@@ -213,12 +213,9 @@ class AssetDashboardService:
         Returns:
             Dictionary with formatted metrics
         """
-        # Calculate assets and liabilities separately
-        total_assets = self.repo.get_networth(user)  # This returns asset accounts only
+        total_assets = self.repo.get_total_assets(user)
         total_liabilities = self.repo.get_total_liabilities(user)
-
-        # Net worth = Assets - Liabilities
-        networth = total_assets - total_liabilities
+        networth = self.repo.get_networth(user)
 
         # Calculate networth growth
         networth_growth = self._calculate_networth_growth(user)
@@ -337,37 +334,28 @@ class AssetDashboardService:
         return labels, income_data, expense_data, net_cash_flow
 
     def _calculate_networth_growth(self, user) -> str:
-        """
-        Calculate networth growth for the current month.
+        """Calculate net worth growth for the current month.
 
-        Business logic: Compares current networth to previous month.
-        Only includes asset accounts (excludes liabilities like credit cards).
-
-        Returns:
-            Formatted string like "+5.2% this month"
+        Compares current net worth (assets + liabilities) to previous
+        month-end using AccountBalanceHistory, not transaction sums.
         """
         try:
-            current_date = date.today()
-            current_month_start = current_date.replace(day=1)
+            current_month_start = date.today().replace(day=1)
             previous_month_end = current_month_start - timedelta(days=1)
 
-            # Get current networth (excludes liability accounts)
             current_networth = self.repo.get_networth(user)
 
-            # Get previous month's networth (only asset accounts)
+            # Previous net worth: sum each account's historical balance
             previous_networth = Decimal("0")
-            asset_accounts = self.repo.get_user_asset_accounts(user)
-
-            for account in asset_accounts:
-                balance = self.repo.get_account_balance_before_date(
-                    account, current_month_start
+            all_accounts = self.repo.get_user_accounts(user)
+            for account in all_accounts:
+                previous_networth += self.repo.get_balance_at_date(
+                    account, previous_month_end
                 )
-                previous_networth += balance
 
-            # Business rule: Calculate growth percentage
-            if previous_networth > 0:
+            if previous_networth != 0:
                 growth_percentage = (
-                    (current_networth - previous_networth) / previous_networth
+                    (current_networth - previous_networth) / abs(previous_networth)
                 ) * 100
                 growth_percentage = round(growth_percentage, 1)
 

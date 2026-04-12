@@ -57,13 +57,16 @@ class FinancialAccount(models.Model):
         max_length=20, choices=ACCOUNT_TYPE_CHOICES, default="checking"
     )
     balance = models.DecimalField(
-        max_digits=15, decimal_places=2, default=0, help_text="Current balance"
+        max_digits=15,
+        decimal_places=2,
+        default=0,
+        help_text="Current balance. Positive for assets, negative for liabilities (e.g. credit cards).",
     )
     currency = models.CharField(max_length=3, default="USD")
     is_active = models.BooleanField(default=True)
     is_liability = models.BooleanField(
         default=False,
-        help_text="True for credit cards and other liability accounts (excluded from net worth)",
+        help_text="True for credit cards and other liability accounts. Balance stored as negative.",
     )
     sync_source = models.CharField(
         max_length=20, choices=SYNC_SOURCE_CHOICES, default="manual"
@@ -101,11 +104,21 @@ class FinancialAccount(models.Model):
 class AccountBalanceHistory(models.Model):
     """Track account balance over time."""
 
+    SOURCE_CHOICES = [
+        ("transaction", "Transaction"),
+        ("manual", "Manual"),
+        ("csv_import", "CSV Import"),
+        ("plaid_sync", "Plaid Sync"),
+    ]
+
     account = models.ForeignKey(
         FinancialAccount, on_delete=models.CASCADE, related_name="balance_history"
     )
     date = models.DateField()
     balance = models.DecimalField(max_digits=15, decimal_places=2)
+    source = models.CharField(
+        max_length=20, choices=SOURCE_CHOICES, default="transaction"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

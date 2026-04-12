@@ -38,8 +38,6 @@ class TransactionFilterOptionsAPIView(APIView):
 
     def get(self, request):
         """Return distinct values for filterable columns with counts."""
-        from datetime import datetime
-
         from django.db.models import Count
 
         from apps.transaction.models import Transaction

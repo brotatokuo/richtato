@@ -1,5 +1,6 @@
 """Service for account business logic."""
 
+from datetime import date
 from decimal import Decimal
 from typing import Dict, List, Optional
 
@@ -92,15 +93,46 @@ class AccountService:
             sync_source="manual",
             institution=institution,
             account_number_last4=account_number_last4,
-            balance=initial_balance,
+            balance=Decimal("0"),
             currency=currency,
         )
+
+        if account_type == "credit_card":
+            account.is_liability = True
+            account.save(update_fields=["is_liability"])
+
+        if initial_balance != Decimal("0"):
+            self._create_opening_balance_transaction(account, initial_balance)
 
         logger.info(
             f"Created manual account {account.id} for user {user.username}: {name}"
         )
 
         return account
+
+    def _create_opening_balance_transaction(
+        self, account: FinancialAccount, initial_balance: Decimal
+    ) -> None:
+        """Create an Opening Balance transaction so the initial balance appears in history."""
+        from apps.transaction.models import Transaction
+
+        if initial_balance > 0:
+            txn_type = "credit"
+            amount = initial_balance
+        else:
+            txn_type = "debit"
+            amount = abs(initial_balance)
+
+        Transaction.objects.create(
+            user=account.user,
+            account=account,
+            date=date.today(),
+            amount=amount,
+            transaction_type=txn_type,
+            description="Opening Balance",
+            sync_source="manual",
+            status="reconciled",
+        )
 
     def update_account(self, account: FinancialAccount, **kwargs) -> FinancialAccount:
         """Update account fields."""

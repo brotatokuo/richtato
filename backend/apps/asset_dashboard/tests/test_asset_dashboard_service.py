@@ -80,6 +80,8 @@ class TestAssetDashboardService:
         """Test dashboard metrics calculation."""
         # Setup
         mock_repo.get_networth.return_value = Decimal("10000.00")
+        mock_repo.get_total_assets.return_value = Decimal("12000.00")
+        mock_repo.get_total_liabilities.return_value = Decimal("2000.00")
         mock_repo.get_income_sum_by_date_range.return_value = Decimal("2000.00")
         mock_repo.get_expense_sum_by_date_range.return_value = Decimal("1200.00")
         mock_repo.get_user_accounts.return_value = []
@@ -143,7 +145,7 @@ class TestAssetDashboardService:
         mock_repo.get_networth.return_value = Decimal("11000.00")
         mock_account = Mock()
         mock_repo.get_user_accounts.return_value = [mock_account]
-        mock_repo.get_account_balance_before_date.return_value = Decimal("10000.00")
+        mock_repo.get_balance_at_date.return_value = Decimal("10000.00")
 
         # Execute
         result = service._calculate_networth_growth(mock_user)

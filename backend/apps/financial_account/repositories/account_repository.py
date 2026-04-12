@@ -84,18 +84,23 @@ class FinancialAccountRepository:
         return account
 
     def update_balance(
-        self, account: FinancialAccount, balance: Decimal, balance_date: date = None
+        self,
+        account: FinancialAccount,
+        balance: Decimal,
+        balance_date: date = None,
+        source: str = "transaction",
     ) -> FinancialAccount:
         """Update account balance and record history."""
         account.balance = balance
         account.save()
 
-        # Record balance history
         if balance_date is None:
             balance_date = date.today()
 
         AccountBalanceHistory.objects.update_or_create(
-            account=account, date=balance_date, defaults={"balance": balance}
+            account=account,
+            date=balance_date,
+            defaults={"balance": balance, "source": source},
         )
 
         return account

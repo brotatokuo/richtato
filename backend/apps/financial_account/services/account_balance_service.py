@@ -2,7 +2,7 @@
 
 from datetime import date
 from decimal import Decimal
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
 from apps.financial_account.repositories.account_repository import (
@@ -20,27 +20,47 @@ class AccountBalanceService:
     def update_balance(
         self, account: FinancialAccount, new_balance: Decimal, balance_date: date = None
     ) -> FinancialAccount:
-        """
-        Update account balance and record history.
+        """Set an account to a specific balance by creating an adjustment transaction.
 
-        Args:
-            account: Account to update
-            new_balance: New balance amount
-            balance_date: Date of the balance (defaults to today)
+        Computes the difference between current and desired balance, then
+        creates a Balance Adjustment transaction. The transaction signal
+        handles updating the anchor and history.
 
         Returns:
-            Updated account
+            Updated account (refreshed from DB)
         """
+        from apps.transaction.models import Transaction
+
         if balance_date is None:
             balance_date = date.today()
 
-        account = self.account_repository.update_balance(
-            account, new_balance, balance_date
-        )
+        account.refresh_from_db(fields=["balance"])
+        difference = new_balance - account.balance
+
+        if difference != Decimal("0"):
+            if difference > 0:
+                txn_type = "credit"
+                amount = difference
+            else:
+                txn_type = "debit"
+                amount = abs(difference)
+
+            Transaction.objects.create(
+                user=account.user,
+                account=account,
+                date=balance_date,
+                amount=amount,
+                transaction_type=txn_type,
+                description="Balance Adjustment",
+                sync_source="manual",
+                status="reconciled",
+            )
+
+        account.refresh_from_db()
 
         logger.info(
-            f"Updated balance for account {account.id} ({account.name}) "
-            f"to {new_balance} on {balance_date}"
+            f"Adjusted balance for account {account.id} ({account.name}) "
+            f"to {new_balance} on {balance_date} (delta: {difference})"
         )
 
         return account
@@ -67,28 +87,26 @@ class AccountBalanceService:
         )
 
     def get_balance_trend(self, account: FinancialAccount) -> Dict[str, any]:
-        """Return all balance history for an account."""
+        """Return all balance history for an account.
+
+        Balances are stored with correct sign (negative for liabilities),
+        so no sign-flipping is needed here.
+        """
         history = list(
             AccountBalanceHistory.objects.filter(account=account).order_by("date")
         )
 
-        is_credit = (account.account_type or "").lower() in ["credit", "credit_card"]
-
         if not history:
-            current_balance = -account.balance if is_credit else account.balance
             return {
-                "current_balance": current_balance,
-                "starting_balance": current_balance,
+                "current_balance": account.balance,
+                "starting_balance": account.balance,
                 "change": Decimal("0"),
                 "change_percent": Decimal("0"),
                 "data_points": [],
             }
 
-        starting_balance_raw = history[0].balance
-        current_balance_raw = account.balance
-
-        starting_balance = -starting_balance_raw if is_credit else starting_balance_raw
-        current_balance = -current_balance_raw if is_credit else current_balance_raw
+        starting_balance = history[0].balance
+        current_balance = account.balance
 
         change = current_balance - starting_balance
         change_percent = (
@@ -96,11 +114,7 @@ class AccountBalanceService:
         )
 
         data_points = [
-            {
-                "date": str(h.date),
-                "balance": float(-h.balance if is_credit else h.balance),
-            }
-            for h in history
+            {"date": str(h.date), "balance": float(h.balance)} for h in history
         ]
 
         return {
