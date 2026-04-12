@@ -1,6 +1,5 @@
 """Tests for Asset Dashboard Service."""
 
-from datetime import date
 from decimal import Decimal
 from unittest.mock import Mock
 
@@ -97,9 +96,7 @@ class TestAssetDashboardService:
         assert "income_sum" in result
         assert "expense_sum" in result
 
-    def test_calculate_savings_rate_context_below_average(
-        self, service, mock_repo, mock_user
-    ):
+    def test_calculate_savings_rate_context_below_average(self, service, mock_repo, mock_user):
         """Test savings rate context for below average rate."""
         # Execute
         context, css_class = service._calculate_savings_rate_context("5%")
@@ -108,9 +105,7 @@ class TestAssetDashboardService:
         assert context == "Below average"
         assert css_class == "negative"
 
-    def test_calculate_savings_rate_context_average(
-        self, service, mock_repo, mock_user
-    ):
+    def test_calculate_savings_rate_context_average(self, service, mock_repo, mock_user):
         """Test savings rate context for average rate."""
         # Execute
         context, css_class = service._calculate_savings_rate_context("15%")
@@ -128,9 +123,7 @@ class TestAssetDashboardService:
         assert context == "Good"
         assert css_class == "positive"
 
-    def test_calculate_savings_rate_context_above_average(
-        self, service, mock_repo, mock_user
-    ):
+    def test_calculate_savings_rate_context_above_average(self, service, mock_repo, mock_user):
         """Test savings rate context for above average rate."""
         # Execute
         context, css_class = service._calculate_savings_rate_context("35%")

@@ -1,6 +1,5 @@
 """Management command to backfill AccountBalanceHistory from transactions."""
 
-from datetime import date
 from decimal import Decimal
 
 from django.core.management.base import BaseCommand
@@ -11,9 +10,7 @@ from apps.transaction.models import Transaction
 
 
 class Command(BaseCommand):
-    help = (
-        "Backfill AccountBalanceHistory for all accounts based on transaction history"
-    )
+    help = "Backfill AccountBalanceHistory for all accounts based on transaction history"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -60,15 +57,11 @@ class Command(BaseCommand):
 
         for account in accounts:
             accounts_processed += 1
-            records_created = self._process_account(
-                account, dry_run, clear_existing, options["verbosity"]
-            )
+            records_created = self._process_account(account, dry_run, clear_existing, options["verbosity"])
             total_records_created += records_created
 
             if options["verbosity"] >= 1 and accounts_processed % 10 == 0:
-                self.stdout.write(
-                    f"  Processed {accounts_processed}/{total_accounts} accounts..."
-                )
+                self.stdout.write(f"  Processed {accounts_processed}/{total_accounts} accounts...")
 
         self.stdout.write("")
         if dry_run:
@@ -81,8 +74,7 @@ class Command(BaseCommand):
         else:
             self.stdout.write(
                 self.style.SUCCESS(
-                    f"Created {total_records_created} balance history records "
-                    f"for {accounts_processed} accounts"
+                    f"Created {total_records_created} balance history records for {accounts_processed} accounts"
                 )
             )
 
@@ -104,29 +96,20 @@ class Command(BaseCommand):
         # Clear existing history if requested
         if clear_existing:
             if not dry_run:
-                deleted_count = AccountBalanceHistory.objects.filter(
-                    account=account
-                ).delete()[0]
+                deleted_count = AccountBalanceHistory.objects.filter(account=account).delete()[0]
                 if verbosity >= 2:
-                    self.stdout.write(
-                        f"  Cleared {deleted_count} existing history records for {account.name}"
-                    )
+                    self.stdout.write(f"  Cleared {deleted_count} existing history records for {account.name}")
 
         # Get all unique transaction dates for this account, sorted
         transaction_dates = (
-            Transaction.objects.filter(account=account)
-            .values_list("date", flat=True)
-            .distinct()
-            .order_by("date")
+            Transaction.objects.filter(account=account).values_list("date", flat=True).distinct().order_by("date")
         )
 
         transaction_dates = list(transaction_dates)
 
         if not transaction_dates:
             if verbosity >= 2:
-                self.stdout.write(
-                    f"  Skipping {account.name} (ID: {account.id}) - no transactions"
-                )
+                self.stdout.write(f"  Skipping {account.name} (ID: {account.id}) - no transactions")
             return 0
 
         # Use current account balance as the anchor
@@ -156,9 +139,7 @@ class Command(BaseCommand):
 
             if dry_run:
                 if verbosity >= 2:
-                    self.stdout.write(
-                        f"  [DRY RUN] Would create: {account.name} on {target_date}: {balance_at_date}"
-                    )
+                    self.stdout.write(f"  [DRY RUN] Would create: {account.name} on {target_date}: {balance_at_date}")
             else:
                 AccountBalanceHistory.objects.update_or_create(
                     account=account,
@@ -166,17 +147,14 @@ class Command(BaseCommand):
                     defaults={"balance": balance_at_date},
                 )
                 if verbosity >= 3:
-                    self.stdout.write(
-                        f"  Created: {account.name} on {target_date}: {balance_at_date}"
-                    )
+                    self.stdout.write(f"  Created: {account.name} on {target_date}: {balance_at_date}")
 
             records_created += 1
 
         if not dry_run and verbosity >= 2:
             self.stdout.write(
                 self.style.SUCCESS(
-                    f"  Completed {account.name} (ID: {account.id}): "
-                    f"{records_created} balance history records created"
+                    f"  Completed {account.name} (ID: {account.id}): {records_created} balance history records created"
                 )
             )
 

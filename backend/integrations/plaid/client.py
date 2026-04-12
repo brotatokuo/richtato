@@ -2,8 +2,8 @@
 
 import random
 import time
-from datetime import datetime, timedelta
-from typing import Any, Dict, Generator, List, Optional
+from collections.abc import Generator
+from typing import Any
 
 import plaid
 from loguru import logger
@@ -42,7 +42,7 @@ class PlaidClient(BaseBankingClient):
         client_id: str,
         secret: str,
         environment: str = "sandbox",
-        access_token: Optional[str] = None,
+        access_token: str | None = None,
     ):
         """
         Initialize the Plaid API client.
@@ -112,8 +112,7 @@ class PlaidClient(BaseBankingClient):
                     jitter = random.uniform(0, delay * 0.25)
                     delay = delay + jitter
                     logger.warning(
-                        f"Request failed: {e}. Retrying in {delay:.1f}s "
-                        f"(attempt {attempt + 1}/{self.MAX_RETRIES})"
+                        f"Request failed: {e}. Retrying in {delay:.1f}s (attempt {attempt + 1}/{self.MAX_RETRIES})"
                     )
                     time.sleep(delay)
                     continue
@@ -121,9 +120,7 @@ class PlaidClient(BaseBankingClient):
 
         raise Exception(f"Max retries ({self.MAX_RETRIES}) exceeded")
 
-    def create_link_token(
-        self, user_id: str, redirect_uri: Optional[str] = None
-    ) -> str:
+    def create_link_token(self, user_id: str, redirect_uri: str | None = None) -> str:
         """
         Create a Plaid Link token for initializing Link.
 
@@ -155,7 +152,7 @@ class PlaidClient(BaseBankingClient):
         response = self._retry_with_backoff(self.client.link_token_create, request)
         return response["link_token"]
 
-    def exchange_public_token(self, public_token: str) -> Dict[str, str]:
+    def exchange_public_token(self, public_token: str) -> dict[str, str]:
         """
         Exchange a public token for an access token.
 
@@ -166,15 +163,13 @@ class PlaidClient(BaseBankingClient):
             Dict with access_token and item_id
         """
         request = ItemPublicTokenExchangeRequest(public_token=public_token)
-        response = self._retry_with_backoff(
-            self.client.item_public_token_exchange, request
-        )
+        response = self._retry_with_backoff(self.client.item_public_token_exchange, request)
         return {
             "access_token": response["access_token"],
             "item_id": response["item_id"],
         }
 
-    def get_accounts(self) -> List[Dict[str, Any]]:
+    def get_accounts(self) -> list[dict[str, Any]]:
         """
         Fetch all accounts associated with the access token.
 
@@ -229,7 +224,7 @@ class PlaidClient(BaseBankingClient):
         logger.info(f"Fetched {len(accounts)} accounts from Plaid")
         return accounts
 
-    def get_account_balance(self, account_id: str) -> Dict[str, Any]:
+    def get_account_balance(self, account_id: str) -> dict[str, Any]:
         """
         Fetch account balance from Plaid.
 
@@ -259,12 +254,12 @@ class PlaidClient(BaseBankingClient):
     def get_transactions(
         self,
         account_id: str,
-        count: Optional[int] = None,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-        cursor: Optional[str] = None,
+        count: int | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        cursor: str | None = None,
         **kwargs,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Fetch transactions for a specific account using Plaid's sync API.
 
@@ -337,9 +332,9 @@ class PlaidClient(BaseBankingClient):
         self,
         account_id: str,
         batch_size: int = 500,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-    ) -> Generator[List[Dict[str, Any]], None, None]:
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> Generator[list[dict[str, Any]], None, None]:
         """
         Fetch transactions in batches using Plaid's cursor-based sync.
 
@@ -376,8 +371,7 @@ class PlaidClient(BaseBankingClient):
             removed = response.get("removed", [])
 
             logger.info(
-                f"Plaid sync batch {batch_count}: "
-                f"{len(added)} added, {len(modified)} modified, {len(removed)} removed"
+                f"Plaid sync batch {batch_count}: {len(added)} added, {len(modified)} modified, {len(removed)} removed"
             )
 
             # Combine and normalize transactions
@@ -394,9 +388,7 @@ class PlaidClient(BaseBankingClient):
                     "description": txn.get("name", ""),
                     "merchant": {
                         "name": txn.get("merchant_name"),
-                        "category": txn.get("personal_finance_category", {}).get(
-                            "primary"
-                        ),
+                        "category": txn.get("personal_finance_category", {}).get("primary"),
                     }
                     if txn.get("merchant_name")
                     else None,
@@ -413,9 +405,7 @@ class PlaidClient(BaseBankingClient):
 
             # Apply date filtering
             if start_date or end_date:
-                all_transactions = self.filter_transactions(
-                    all_transactions, start_date, end_date
-                )
+                all_transactions = self.filter_transactions(all_transactions, start_date, end_date)
 
             if all_transactions:
                 yield all_transactions
@@ -431,7 +421,7 @@ class PlaidClient(BaseBankingClient):
             jitter = random.uniform(0, self.BATCH_DELAY * 0.3)
             time.sleep(self.BATCH_DELAY + jitter)
 
-    def get_item_info(self) -> Dict[str, Any]:
+    def get_item_info(self) -> dict[str, Any]:
         """
         Get information about the connected Item (institution connection).
 
@@ -461,9 +451,7 @@ class PlaidClient(BaseBankingClient):
                     institution_id=institution_id,
                     country_codes=[CountryCode("US")],
                 )
-                inst_response = self._retry_with_backoff(
-                    self.client.institutions_get_by_id, inst_request
-                )
+                inst_response = self._retry_with_backoff(self.client.institutions_get_by_id, inst_request)
                 institution_name = inst_response["institution"]["name"]
             except Exception as e:
                 logger.warning(f"Could not fetch institution info: {e}")

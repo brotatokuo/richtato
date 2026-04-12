@@ -117,6 +117,7 @@ export const transactionService = new TransactionService();
 ```
 
 **Key patterns:**
+
 - Services are singleton instances exported from each file
 - CSRF tokens fetched via `getCSRFToken()` for mutations
 - `handleResponse()` method for consistent error handling
@@ -125,21 +126,25 @@ export const transactionService = new TransactionService();
 ## State Management
 
 ### Authentication (`AuthContext`)
+
 - Manages user login state
 - Provides `login()`, `logout()`, `checkAuth()` methods
 - Handles demo user creation
 
 ### Preferences (`PreferencesContext`)
+
 - User display preferences (date format, currency)
 - Persisted via backend API
 
 ### Local State
+
 - Component-level `useState` for UI state
 - URL search params for filters (date ranges, categories)
 
 ## Component Conventions
 
 ### Imports
+
 ```typescript
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -148,6 +153,7 @@ import { ChevronRight, DollarSign } from 'lucide-react';
 ```
 
 ### Conditional Classes
+
 ```typescript
 <div className={cn(
   "base-classes",
@@ -157,6 +163,7 @@ import { ChevronRight, DollarSign } from 'lucide-react';
 ```
 
 ### Data Fetching
+
 ```typescript
 useEffect(() => {
   const fetchData = async () => {
@@ -176,33 +183,37 @@ useEffect(() => {
 
 ## Key Pages
 
-| Page | Purpose |
-|------|---------|
-| `AssetDashboard` | Net worth overview, account breakdown, trends |
-| `BudgetDashboard` | Budget progress, spending by category |
-| `Transactions` | Transaction list with filtering, bulk categorization |
-| `Cashflow` | Income vs expense visualization |
-| `Settings` | Accounts, categories, budgets, bank connections |
+| Page              | Purpose                                              |
+| ----------------- | ---------------------------------------------------- |
+| `AssetDashboard`  | Net worth overview, account breakdown, trends        |
+| `BudgetDashboard` | Budget progress, spending by category                |
+| `Transactions`    | Transaction list with filtering, bulk categorization |
+| `Cashflow`        | Income vs expense visualization                      |
+| `Settings`        | Accounts, categories, budgets, bank connections      |
 
 ## Component Features
 
 ### Asset Dashboard (`components/asset_dashboard/`)
+
 - `MetricCard` - Key financial metrics display
 - `NetWorthTrendChart` - Line chart of net worth over time
 - `AccountsList` - Grouped accounts with balances
 - `IncomeExpenseChart` - Income vs expense comparison
 
 ### Budget Dashboard (`components/budget_dashboard/`)
+
 - `BudgetBreakdown` - Budget allocation by category
 - `ExpenseBreakdown` - Spending breakdown pie chart
 - `MonthTimeline` - Month-by-month navigation
 
 ### Transactions (`components/transactions/`)
+
 - `TransactionTable` - Sortable, filterable transaction list
 - `TransactionForm` - Create/edit transaction modal
 - `RecategorizeDialog` - Bulk AI re-categorization
 
 ### Settings (`components/settings/`)
+
 - `CategoriesSection` - Manage transaction categories
 - `BudgetsSection` - Budget allocation management
 - `BankConnectionsSection` - Bank connection management
@@ -211,6 +222,7 @@ useEffect(() => {
 ## UI Components (`components/ui/`)
 
 Based on Shadcn/UI, includes:
+
 - `Button`, `Card`, `Dialog`, `Modal`
 - `Input`, `Select`, `Switch`, `Calendar`
 - `Table`, `DataTable` (with sorting/filtering)
@@ -218,12 +230,12 @@ Based on Shadcn/UI, includes:
 
 ## Configuration
 
-| File | Purpose |
-|------|---------|
-| `vite.config.ts` | Build config, path aliases (`@/` → `src/`) |
-| `tailwind.config.js` | Theme customization |
-| `tsconfig.json` | TypeScript with strict mode |
-| `eslint.config.js` | ESLint flat config |
+| File                 | Purpose                                    |
+| -------------------- | ------------------------------------------ |
+| `vite.config.ts`     | Build config, path aliases (`@/` → `src/`) |
+| `tailwind.config.js` | Theme customization                        |
+| `tsconfig.json`      | TypeScript with strict mode                |
+| `eslint.config.js`   | ESLint flat config                         |
 
 ## Development Notes
 

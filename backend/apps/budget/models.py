@@ -13,9 +13,7 @@ class Budget(models.Model):
         ("custom", "Custom Period"),
     ]
 
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="budgets"
-    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="budgets")
     name = models.CharField(max_length=255)
     period_type = models.CharField(max_length=20, choices=PERIOD_TYPE_CHOICES)
     start_date = models.DateField()
@@ -35,26 +33,20 @@ class Budget(models.Model):
         ]
 
     def __str__(self):
-        return (
-            f"{self.user.username} - {self.name} ({self.start_date} to {self.end_date})"
-        )
+        return f"{self.user.username} - {self.name} ({self.start_date} to {self.end_date})"
 
 
 class BudgetCategory(models.Model):
     """Category-specific budget allocations."""
 
-    budget = models.ForeignKey(
-        Budget, on_delete=models.CASCADE, related_name="budget_categories"
-    )
+    budget = models.ForeignKey(Budget, on_delete=models.CASCADE, related_name="budget_categories")
     category = models.ForeignKey(
         "transaction.TransactionCategory",
         on_delete=models.CASCADE,
         related_name="budget_allocations",
     )
     allocated_amount = models.DecimalField(max_digits=15, decimal_places=2)
-    rollover_enabled = models.BooleanField(
-        default=False, help_text="Roll over unspent amount to next period"
-    )
+    rollover_enabled = models.BooleanField(default=False, help_text="Roll over unspent amount to next period")
     rollover_amount = models.DecimalField(
         max_digits=15,
         decimal_places=2,
@@ -86,9 +78,7 @@ class BudgetCategory(models.Model):
 class BudgetProgress(models.Model):
     """Cached progress calculations for budget categories."""
 
-    budget_category = models.ForeignKey(
-        BudgetCategory, on_delete=models.CASCADE, related_name="progress_records"
-    )
+    budget_category = models.ForeignKey(BudgetCategory, on_delete=models.CASCADE, related_name="progress_records")
     period_start = models.DateField()
     period_end = models.DateField()
     spent_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)

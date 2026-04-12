@@ -4,7 +4,12 @@ import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('@/contexts/PreferencesContext', () => ({
   usePreferences: () => ({
-    preferences: { currency: 'USD', theme: 'system', date_format: 'MM/DD/YYYY', timezone: 'UTC' },
+    preferences: {
+      currency: 'USD',
+      theme: 'system',
+      date_format: 'MM/DD/YYYY',
+      timezone: 'UTC',
+    },
     currencySymbols: {},
     loading: false,
     error: null,
@@ -39,7 +44,12 @@ const mockCatalog = {
       type: 'expense',
       icon: '🛒',
       color: '#green',
-      budget: { id: 1, amount: 500, start_date: '2024-01-01', end_date: '2024-01-31' },
+      budget: {
+        id: 1,
+        amount: 500,
+        start_date: '2024-01-01',
+        end_date: '2024-01-31',
+      },
     },
     {
       name: 'entertainment',
@@ -62,7 +72,13 @@ const mockCatalog = {
 
 const mockProgress = {
   budgets: [
-    { category: 'Groceries', budget: 500, spent: 300, percentage: 60, remaining: 200 },
+    {
+      category: 'Groceries',
+      budget: 500,
+      spent: 300,
+      percentage: 60,
+      remaining: 200,
+    },
   ],
 };
 

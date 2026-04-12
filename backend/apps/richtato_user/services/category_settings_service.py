@@ -3,12 +3,13 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
+from django.utils.text import slugify
+
 from apps.budget.models import Budget, BudgetCategory
 from apps.transaction.models import TransactionCategory
 from apps.transaction.services.category_initialization_service import (
     CategoryInitializationService,
 )
-from django.utils.text import slugify
 
 
 class CategorySettingsService:
@@ -20,26 +21,19 @@ class CategorySettingsService:
     def get_catalog(self, user) -> dict:
         config = self.init_service.load_defaults_config()
 
-        user_cats = {
-            c.slug: c
-            for c in TransactionCategory.objects.filter(
-                user=user
-            ).prefetch_related("keywords")
-        }
+        user_cats = {c.slug: c for c in TransactionCategory.objects.filter(user=user).prefetch_related("keywords")}
 
         cat_to_budget = {}
-        active_budgets = Budget.objects.filter(
-            user=user, is_active=True
-        ).prefetch_related("budget_categories__category")
+        active_budgets = Budget.objects.filter(user=user, is_active=True).prefetch_related(
+            "budget_categories__category"
+        )
         for budget in active_budgets:
             for bc in budget.budget_categories.all():
                 cat_to_budget[bc.category.slug] = {
                     "id": bc.id,
                     "amount": float(bc.allocated_amount),
                     "start_date": budget.start_date.isoformat(),
-                    "end_date": budget.end_date.isoformat()
-                    if budget.end_date
-                    else None,
+                    "end_date": budget.end_date.isoformat() if budget.end_date else None,
                 }
 
         catalog = []
@@ -78,9 +72,7 @@ class CategorySettingsService:
                     "color": cat_config.get("color", ""),
                     "type": cat_type,
                     "expense_priority": existing.expense_priority if existing else None,
-                    "is_essential": existing.expense_priority == "essential"
-                    if existing
-                    else False,
+                    "is_essential": existing.expense_priority == "essential" if existing else False,
                     "enabled": existing is not None,
                     "budget": budget_info,
                     "keywords": keywords,
@@ -128,9 +120,7 @@ class CategorySettingsService:
         budgets = data.get("budgets", {})
         category_types = data.get("category_types", {})
 
-        existing = {
-            c.slug: c for c in TransactionCategory.objects.filter(user=user)
-        }
+        existing = {c.slug: c for c in TransactionCategory.objects.filter(user=user)}
 
         to_create = []
         for slug in enabled:
@@ -154,9 +144,7 @@ class CategorySettingsService:
                     cat.type = cat_type
                     cat.save(update_fields=["type"])
 
-        TransactionCategory.objects.filter(
-            user=user, slug__in=list(disabled)
-        ).delete()
+        TransactionCategory.objects.filter(user=user, slug__in=list(disabled)).delete()
 
         if budgets:
             self._sync_budgets(user, budgets)
@@ -165,13 +153,9 @@ class CategorySettingsService:
         today = date.today()
         start_date = today.replace(day=1)
         if start_date.month == 12:
-            end_date = start_date.replace(
-                year=start_date.year + 1, month=1, day=1
-            ) - timedelta(days=1)
+            end_date = start_date.replace(year=start_date.year + 1, month=1, day=1) - timedelta(days=1)
         else:
-            end_date = start_date.replace(
-                month=start_date.month + 1, day=1
-            ) - timedelta(days=1)
+            end_date = start_date.replace(month=start_date.month + 1, day=1) - timedelta(days=1)
 
         budget, _ = Budget.objects.get_or_create(
             user=user,
@@ -184,17 +168,9 @@ class CategorySettingsService:
             },
         )
 
-        cat_map = {
-            c.slug: c
-            for c in TransactionCategory.objects.filter(
-                user=user, slug__in=budgets.keys()
-            )
-        }
+        cat_map = {c.slug: c for c in TransactionCategory.objects.filter(user=user, slug__in=budgets.keys())}
 
-        existing_bc = {
-            bc.category.slug: bc
-            for bc in BudgetCategory.objects.filter(budget=budget)
-        }
+        existing_bc = {bc.category.slug: bc for bc in BudgetCategory.objects.filter(budget=budget)}
 
         for slug, bdata in budgets.items():
             if bdata is None:

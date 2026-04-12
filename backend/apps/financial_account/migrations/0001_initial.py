@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = []
@@ -45,9 +44,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "name",
-                    models.CharField(
-                        help_text="Account nickname or name", max_length=255
-                    ),
+                    models.CharField(help_text="Account nickname or name", max_length=255),
                 ),
                 (
                     "account_number_last4",

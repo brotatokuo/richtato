@@ -91,9 +91,7 @@ class AssetDashboardService:
             ],
         }
 
-    def get_income_expenses_data(
-        self, user, start_date: date | None = None, end_date: date | None = None
-    ) -> dict:
+    def get_income_expenses_data(self, user, start_date: date | None = None, end_date: date | None = None) -> dict:
         """
         Generate monthly income vs expenses comparison for bar chart.
 
@@ -113,9 +111,7 @@ class AssetDashboardService:
         if not start_date:
             start_date = end_date - relativedelta(months=6)
 
-        labels, income_data, expense_data, _ = self._calculate_monthly_cash_flow(
-            user, start_date, end_date
-        )
+        labels, income_data, expense_data, _ = self._calculate_monthly_cash_flow(user, start_date, end_date)
 
         return {
             "labels": labels,
@@ -163,12 +159,8 @@ class AssetDashboardService:
             month_end = current_date + relativedelta(months=1) - timedelta(days=1)
 
             # Get monthly income and expenses
-            monthly_income = self.repo.get_income_sum_by_date_range(
-                user, current_date, month_end
-            )
-            monthly_expense = self.repo.get_expense_sum_by_date_range(
-                user, current_date, month_end
-            )
+            monthly_income = self.repo.get_income_sum_by_date_range(user, current_date, month_end)
+            monthly_expense = self.repo.get_expense_sum_by_date_range(user, current_date, month_end)
 
             # Business rule: Savings = Income - Expenses
             monthly_saving = float(monthly_income - monthly_expense)
@@ -220,23 +212,15 @@ class AssetDashboardService:
         # Calculate networth growth
         networth_growth = self._calculate_networth_growth(user)
         networth_growth_class = (
-            "positive"
-            if networth_growth.startswith("+")
-            else "negative"
-            if networth_growth.startswith("-")
-            else ""
+            "positive" if networth_growth.startswith("+") else "negative" if networth_growth.startswith("-") else ""
         )
 
         # Calculate cash flow for past 30 days
         thirty_days_ago = date.today() - timedelta(days=30)
         today = date.today()
 
-        income_30_days = self.repo.get_income_sum_by_date_range(
-            user, thirty_days_ago, today
-        )
-        expense_30_days = self.repo.get_expense_sum_by_date_range(
-            user, thirty_days_ago, today
-        )
+        income_30_days = self.repo.get_income_sum_by_date_range(user, thirty_days_ago, today)
+        expense_30_days = self.repo.get_expense_sum_by_date_range(user, thirty_days_ago, today)
 
         cash_flow_30_days = income_30_days - expense_30_days
 
@@ -247,9 +231,7 @@ class AssetDashboardService:
             savings_rate = 0
 
         savings_rate_str = f"{savings_rate}%"
-        savings_rate_context, savings_rate_class = self._calculate_savings_rate_context(
-            savings_rate_str
-        )
+        savings_rate_context, savings_rate_class = self._calculate_savings_rate_context(savings_rate_str)
 
         return {
             "networth": float(networth),
@@ -317,12 +299,8 @@ class AssetDashboardService:
             month_end = month_start + relativedelta(months=1) - timedelta(days=1)
 
             # Get monthly totals via repository
-            monthly_income = self.repo.get_income_sum_by_date_range(
-                user, month_start, month_end
-            )
-            monthly_expense = self.repo.get_expense_sum_by_date_range(
-                user, month_start, month_end
-            )
+            monthly_income = self.repo.get_income_sum_by_date_range(user, month_start, month_end)
+            monthly_expense = self.repo.get_expense_sum_by_date_range(user, month_start, month_end)
 
             income_data.append(float(monthly_income))
             expense_data.append(float(monthly_expense))
@@ -349,14 +327,10 @@ class AssetDashboardService:
             previous_networth = Decimal("0")
             all_accounts = self.repo.get_user_accounts(user)
             for account in all_accounts:
-                previous_networth += self.repo.get_balance_at_date(
-                    account, previous_month_end
-                )
+                previous_networth += self.repo.get_balance_at_date(account, previous_month_end)
 
             if previous_networth != 0:
-                growth_percentage = (
-                    (current_networth - previous_networth) / abs(previous_networth)
-                ) * 100
+                growth_percentage = ((current_networth - previous_networth) / abs(previous_networth)) * 100
                 growth_percentage = round(growth_percentage, 1)
 
                 if growth_percentage >= 0:

@@ -2,13 +2,12 @@
 
 import calendar
 from datetime import date
-from typing import Optional, Tuple
 
 
 def parse_date_range_params(
     request_params: dict,
     infer_month_bounds: bool = False,
-) -> Tuple[Optional[date], Optional[date]]:
+) -> tuple[date | None, date | None]:
     """Parse start_date and end_date from request query params.
 
     Accepts ISO-format strings (YYYY-MM-DD).
@@ -24,8 +23,8 @@ def parse_date_range_params(
     start_date_str = request_params.get("start_date")
     end_date_str = request_params.get("end_date")
 
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
+    start_date: date | None = None
+    end_date: date | None = None
 
     if not start_date_str and not end_date_str:
         return None, None

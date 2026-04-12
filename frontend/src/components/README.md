@@ -29,7 +29,7 @@ The simulation chat system enables the creation of interactive, scripted convers
 ### Basic Implementation
 
 ```tsx
-import { ChatSidebar } from "@/components/ChatSidebar";
+import { ChatSidebar } from '@/components/ChatSidebar';
 
 function App() {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -64,26 +64,26 @@ function App() {
 ```typescript
 // In simulationConfigs.ts
 export const customSimulation: SimulationConfig = {
-  id: "custom-scenario",
-  name: "Custom Scenario",
-  description: "A custom simulation scenario",
-  triggerType: "notification",
+  id: 'custom-scenario',
+  name: 'Custom Scenario',
+  description: 'A custom simulation scenario',
+  triggerType: 'notification',
   autoStart: false,
   messages: [
     {
-      id: "1",
-      content: "Initial message content",
-      sender: "bot",
+      id: '1',
+      content: 'Initial message content',
+      sender: 'bot',
       timestamp: new Date(),
       delay: 0, // Immediate
     },
     {
-      id: "2",
-      content: "Follow-up message",
-      sender: "bot",
+      id: '2',
+      content: 'Follow-up message',
+      sender: 'bot',
       timestamp: new Date(),
       delay: 2000, // 2 seconds delay
-      internal: "Processing system diagnostics...", // Internal processing text
+      internal: 'Processing system diagnostics...', // Internal processing text
       internalDelay: 5000, // 5 seconds of internal processing
     },
     // ... more messages
@@ -169,7 +169,7 @@ interface SimulationConfig {
   id: string; // Unique identifier
   name: string; // Display name
   description: string; // Description for UI
-  triggerType: "notification" | "manual" | "auto";
+  triggerType: 'notification' | 'manual' | 'auto';
   messages: SimulationMessage[]; // Array of messages
   autoStart?: boolean; // Auto-start when opened
   duration?: number; // Total duration in ms
@@ -182,7 +182,7 @@ interface SimulationConfig {
 interface SimulationMessage {
   id: string; // Unique message ID
   content: string; // Message content
-  sender: "user" | "bot"; // Message sender
+  sender: 'user' | 'bot'; // Message sender
   timestamp: Date; // Message timestamp
   delay?: number; // Delay before showing (ms)
   internal?: string; // Internal processing text
@@ -243,7 +243,7 @@ function Dashboard() {
         title="Critical Alert"
         message="HVAC system failure detected"
         severity="critical"
-        onTrigger={(id) => {
+        onTrigger={id => {
           setActiveSimulation(id);
           setChatOpen(true);
         }}
@@ -269,9 +269,9 @@ function SimulationControls() {
 
   return (
     <div>
-      <select onChange={(e) => setSelectedSim(e.target.value)}>
+      <select onChange={e => setSelectedSim(e.target.value)}>
         <option value="">Select Simulation</option>
-        {simulationConfigs.map((sim) => (
+        {simulationConfigs.map(sim => (
           <option key={sim.id} value={sim.id}>
             {sim.name}
           </option>

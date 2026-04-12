@@ -128,11 +128,14 @@ export function AccountDetailModal({
     if (!account) return;
     const amountNumber = Number(String(row.amount).replace(/[^0-9.-]+/g, ''));
 
-    const result = await transactionsApiService.updateAccountTransaction(account.id, {
-      id: row.id,
-      amount: amountNumber,
-      date: row.date,
-    });
+    const result = await transactionsApiService.updateAccountTransaction(
+      account.id,
+      {
+        id: row.id,
+        amount: amountNumber,
+        date: row.date,
+      }
+    );
 
     setHistory(prev =>
       prev
@@ -194,7 +197,10 @@ export function AccountDetailModal({
       <div className="space-y-4">
         {/* Trend chart at top */}
         <div className="pt-2">
-          <TrendFromHistory rows={history} currency={preferences.currency || 'USD'} />
+          <TrendFromHistory
+            rows={history}
+            currency={preferences.currency || 'USD'}
+          />
         </div>
 
         {/* Balance and Date inputs */}

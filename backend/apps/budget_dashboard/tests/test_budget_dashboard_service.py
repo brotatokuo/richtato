@@ -5,6 +5,7 @@ from decimal import Decimal
 from unittest.mock import Mock
 
 import pytest
+
 from apps.budget_dashboard.repositories import BudgetDashboardRepository
 from apps.budget_dashboard.services import BudgetDashboardService
 

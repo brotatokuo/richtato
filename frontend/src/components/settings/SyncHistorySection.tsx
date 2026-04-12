@@ -108,9 +108,7 @@ export function SyncHistorySection() {
               <History className="h-5 w-5" />
               Sync History
             </CardTitle>
-            <CardDescription>
-              View recent bank sync activity
-            </CardDescription>
+            <CardDescription>View recent bank sync activity</CardDescription>
           </div>
           <Button variant="ghost" size="sm" className="ml-2">
             {isExpanded ? (
@@ -132,7 +130,8 @@ export function SyncHistorySection() {
             <div className="text-sm text-red-600 py-4">{error}</div>
           ) : jobs.length === 0 ? (
             <div className="text-sm text-muted-foreground py-4">
-              No sync history yet. Connect a bank account and sync to see activity here.
+              No sync history yet. Connect a bank account and sync to see
+              activity here.
             </div>
           ) : (
             <div className="space-y-3">

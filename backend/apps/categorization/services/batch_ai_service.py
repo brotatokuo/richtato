@@ -2,7 +2,8 @@
 
 import json
 from decimal import Decimal
-from typing import Dict, List, Tuple
+
+from loguru import logger
 
 from apps.categorization.models import CategorizationHistory
 from apps.richtato_user.models import User
@@ -10,7 +11,6 @@ from apps.transaction.models import Transaction, TransactionCategory
 from apps.transaction.repositories.category_repository import CategoryRepository
 from apps.transaction.repositories.transaction_repository import TransactionRepository
 from artificial_intelligence.ai import OpenAI
-from loguru import logger
 
 
 class BatchAICategorizationService:
@@ -22,9 +22,7 @@ class BatchAICategorizationService:
         self.transaction_repository = TransactionRepository()
         self.batch_size = 75  # Medium batch size for optimal performance
 
-    def categorize_transaction_ids(
-        self, transaction_ids: List[int], user: User
-    ) -> Dict:
+    def categorize_transaction_ids(self, transaction_ids: list[int], user: User) -> dict:
         """
         Categorize a list of transaction IDs in batches.
 
@@ -42,20 +40,14 @@ class BatchAICategorizationService:
             "skipped": 0,
         }
 
-        transactions = list(
-            Transaction.objects.filter(
-                id__in=transaction_ids, user=user
-            ).select_related("category")
-        )
+        transactions = list(Transaction.objects.filter(id__in=transaction_ids, user=user).select_related("category"))
 
         if not transactions:
             logger.warning("No valid transactions found for categorization")
             return results
 
         # Get available categories
-        categories = self.category_repository.get_all_for_user(
-            user, include_global=True
-        )
+        categories = self.category_repository.get_all_for_user(user, include_global=True)
 
         if not categories:
             logger.warning("No categories available for AI categorization")
@@ -79,10 +71,10 @@ class BatchAICategorizationService:
 
     def _categorize_batch(
         self,
-        transactions: List[Transaction],
-        categories: List[TransactionCategory],
+        transactions: list[Transaction],
+        categories: list[TransactionCategory],
         user: User,
-    ) -> Dict:
+    ) -> dict:
         """
         Categorize a single batch of transactions.
 
@@ -104,16 +96,12 @@ class BatchAICategorizationService:
             response = self.ai.one_shot_prompt(prompt)
 
             # Parse batch response
-            categorizations = self._parse_batch_response(
-                response, transactions, categories
-            )
+            categorizations = self._parse_batch_response(response, transactions, categories)
 
             # Apply categorizations
             for txn_id, category, confidence in categorizations:
                 try:
-                    transaction = next(
-                        (t for t in transactions if t.id == txn_id), None
-                    )
+                    transaction = next((t for t in transactions if t.id == txn_id), None)
                     if transaction:
                         transaction.category = category
                         transaction.categorization_status = "categorized"
@@ -129,13 +117,10 @@ class BatchAICategorizationService:
 
                         results["categorized"] += 1
                         logger.debug(
-                            f"AI categorized transaction {txn_id}: {category.name} "
-                            f"(confidence: {confidence}%)"
+                            f"AI categorized transaction {txn_id}: {category.name} (confidence: {confidence}%)"
                         )
                 except Exception as e:
-                    logger.error(
-                        f"Error applying categorization for transaction {txn_id}: {str(e)}"
-                    )
+                    logger.error(f"Error applying categorization for transaction {txn_id}: {str(e)}")
                     results["failed"] += 1
 
             # Mark any uncategorized transactions that AI didn't categorize
@@ -156,9 +141,7 @@ class BatchAICategorizationService:
 
         return results
 
-    def _build_batch_prompt(
-        self, transactions: List[Transaction], categories: List[TransactionCategory]
-    ) -> str:
+    def _build_batch_prompt(self, transactions: list[Transaction], categories: list[TransactionCategory]) -> str:
         """
         Build an efficient batch prompt for multiple transactions.
 
@@ -188,7 +171,7 @@ class BatchAICategorizationService:
         prompt = f"""You are a financial transaction categorization assistant. Categorize these {len(transactions)} transactions into the most appropriate categories.
 
 Available Categories:
-{', '.join(category_names)}
+{", ".join(category_names)}
 
 Transactions to Categorize:
 {chr(10).join(transaction_list)}
@@ -210,9 +193,9 @@ Rules:
     def _parse_batch_response(
         self,
         response: str,
-        transactions: List[Transaction],
-        categories: List[TransactionCategory],
-    ) -> List[Tuple[int, TransactionCategory, Decimal]]:
+        transactions: list[Transaction],
+        categories: list[TransactionCategory],
+    ) -> list[tuple[int, TransactionCategory, Decimal]]:
         """
         Parse AI batch response and match to transactions/categories.
 
@@ -260,18 +243,13 @@ Rules:
                     if category and txn_id:
                         categorizations.append((txn_id, category, confidence))
                     else:
-                        logger.warning(
-                            f"Could not match transaction {txn_id} to category '{category_name}'"
-                        )
+                        logger.warning(f"Could not match transaction {txn_id} to category '{category_name}'")
 
                 except Exception as e:
                     logger.error(f"Error parsing categorization item: {str(e)}")
                     continue
 
-            logger.info(
-                f"Successfully parsed {len(categorizations)} categorizations "
-                f"from AI response"
-            )
+            logger.info(f"Successfully parsed {len(categorizations)} categorizations from AI response")
 
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse AI batch response as JSON: {str(e)}")
@@ -280,7 +258,7 @@ Rules:
 
         return categorizations
 
-    def process_pending_transactions(self, user: User, limit: int = 500) -> Dict:
+    def process_pending_transactions(self, user: User, limit: int = 500) -> dict:
         """
         Process all transactions with pending_ai status for a user.
 
@@ -293,24 +271,17 @@ Rules:
         """
         # Get transactions with pending_ai status
         pending_transactions = list(
-            Transaction.objects.filter(
-                user=user, categorization_status="pending_ai"
-            ).select_related("merchant")[:limit]
+            Transaction.objects.filter(user=user, categorization_status="pending_ai").select_related("merchant")[:limit]
         )
 
         if not pending_transactions:
             logger.info(f"No pending transactions for user {user.username}")
             return {"total": 0, "categorized": 0, "failed": 0, "skipped": 0}
 
-        logger.info(
-            f"Processing {len(pending_transactions)} pending transactions "
-            f"for user {user.username}"
-        )
+        logger.info(f"Processing {len(pending_transactions)} pending transactions for user {user.username}")
 
         # Get categories
-        categories = self.category_repository.get_all_for_user(
-            user, include_global=True
-        )
+        categories = self.category_repository.get_all_for_user(user, include_global=True)
 
         results = {
             "total": len(pending_transactions),

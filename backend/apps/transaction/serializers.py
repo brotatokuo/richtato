@@ -21,9 +21,7 @@ class TransactionCategorySerializer(serializers.ModelSerializer):
     full_path = serializers.CharField(read_only=True)
     keywords = CategoryKeywordSerializer(many=True, read_only=True)
     type_display = serializers.CharField(source="get_type_display", read_only=True)
-    expense_priority_display = serializers.CharField(
-        source="get_expense_priority_display", read_only=True
-    )
+    expense_priority_display = serializers.CharField(source="get_expense_priority_display", read_only=True)
     is_essential = serializers.SerializerMethodField()
 
     class Meta:
@@ -58,15 +56,9 @@ class TransactionSerializer(serializers.ModelSerializer):
     account_name = serializers.CharField(source="account.name", read_only=True)
     category_name = serializers.CharField(read_only=True)
     category_type = serializers.SerializerMethodField()
-    signed_amount = serializers.DecimalField(
-        max_digits=15, decimal_places=2, read_only=True
-    )
-    transaction_type_display = serializers.CharField(
-        source="get_transaction_type_display", read_only=True
-    )
-    categorization_status_display = serializers.CharField(
-        source="get_categorization_status_display", read_only=True
-    )
+    signed_amount = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    transaction_type_display = serializers.CharField(source="get_transaction_type_display", read_only=True)
+    categorization_status_display = serializers.CharField(source="get_categorization_status_display", read_only=True)
 
     class Meta:
         model = Transaction
@@ -114,36 +106,22 @@ class TransactionCreateSerializer(serializers.Serializer):
     date = serializers.DateField()
     amount = serializers.DecimalField(max_digits=15, decimal_places=2, min_value=0)
     description = serializers.CharField(max_length=500)
-    transaction_type = serializers.ChoiceField(
-        choices=["debit", "credit"], default="debit"
-    )
+    transaction_type = serializers.ChoiceField(choices=["debit", "credit"], default="debit")
     category_id = serializers.IntegerField(required=False, allow_null=True)
-    status = serializers.ChoiceField(
-        choices=["pending", "posted", "reconciled"], default="posted"
-    )
-    notes = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True, max_length=2000
-    )
+    status = serializers.ChoiceField(choices=["pending", "posted", "reconciled"], default="posted")
+    notes = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=2000)
 
 
 class TransactionUpdateSerializer(serializers.Serializer):
     """Serializer for updating transactions."""
 
     date = serializers.DateField(required=False)
-    amount = serializers.DecimalField(
-        max_digits=15, decimal_places=2, min_value=0, required=False
-    )
+    amount = serializers.DecimalField(max_digits=15, decimal_places=2, min_value=0, required=False)
     description = serializers.CharField(max_length=500, required=False)
-    transaction_type = serializers.ChoiceField(
-        choices=["debit", "credit"], required=False
-    )
+    transaction_type = serializers.ChoiceField(choices=["debit", "credit"], required=False)
     category_id = serializers.IntegerField(required=False, allow_null=True)
-    status = serializers.ChoiceField(
-        choices=["pending", "posted", "reconciled"], required=False
-    )
-    notes = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True, max_length=2000
-    )
+    status = serializers.ChoiceField(choices=["pending", "posted", "reconciled"], required=False)
+    notes = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=2000)
 
 
 class TransactionCategorizeSerializer(serializers.Serializer):

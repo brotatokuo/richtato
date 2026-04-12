@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
+
 from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
 from apps.richtato_user.models import User
 from apps.transaction.models import Transaction
@@ -11,9 +12,7 @@ from apps.transaction.models import Transaction
 
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(
-        username="histtest", email="hist@test.com", password="testpass123"
-    )
+    return User.objects.create_user(username="histtest", email="hist@test.com", password="testpass123")
 
 
 @pytest.fixture
@@ -38,7 +37,7 @@ class TestHistoryBackfill:
                 date=base + timedelta(days=i),
                 amount=Decimal("100.00"),
                 transaction_type="debit",
-                description=f"Day {i+1}",
+                description=f"Day {i + 1}",
             )
 
         account.refresh_from_db()
@@ -48,9 +47,7 @@ class TestHistoryBackfill:
         history_count = AccountBalanceHistory.objects.filter(account=account).count()
         assert history_count == 30
 
-        last_day = AccountBalanceHistory.objects.get(
-            account=account, date=base + timedelta(days=29)
-        )
+        last_day = AccountBalanceHistory.objects.get(account=account, date=base + timedelta(days=29))
         assert last_day.balance == Decimal("7000.00")
 
         first_day = AccountBalanceHistory.objects.get(account=account, date=base)
@@ -151,9 +148,7 @@ class TestDeleteMiddleTransaction:
         assert account.balance == Decimal("9700.00")
 
         # d2 should be removed (no more transactions on that date)
-        assert not AccountBalanceHistory.objects.filter(
-            account=account, date=d2
-        ).exists()
+        assert not AccountBalanceHistory.objects.filter(account=account, date=d2).exists()
 
         h1 = AccountBalanceHistory.objects.get(account=account, date=d1)
         h3 = AccountBalanceHistory.objects.get(account=account, date=d3)

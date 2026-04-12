@@ -310,11 +310,14 @@ export function AccountHistoryPanel({
     if (!selectedItem || !data.id) return;
 
     try {
-      const result = await transactionsApiService.updateAccountTransaction(account.id, {
-        id: data.id,
-        amount: data.balance,
-        date: data.date,
-      });
+      const result = await transactionsApiService.updateAccountTransaction(
+        account.id,
+        {
+          id: data.id,
+          amount: data.balance,
+          date: data.date,
+        }
+      );
 
       setTransactions(prev =>
         prev

@@ -1,10 +1,10 @@
 """Repository for Asset Dashboard data aggregation queries."""
 
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta
-from django.db.models import Q, Sum
+from django.db.models import Sum
 
 from apps.core.constants import get_expense_filter, get_income_filter
 from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
@@ -23,17 +23,10 @@ class AssetDashboardRepository:
     # Income queries (based on category.is_income or credit transactions)
     def get_earliest_income_date(self, user) -> date | None:
         """Get the earliest income date for user."""
-        earliest = (
-            Transaction.objects.filter(user=user)
-            .filter(self._get_income_filter())
-            .order_by("date")
-            .first()
-        )
+        earliest = Transaction.objects.filter(user=user).filter(self._get_income_filter()).order_by("date").first()
         return earliest.date if earliest else None
 
-    def get_income_sum_by_date_range(
-        self, user, start_date: date, end_date: date
-    ) -> Decimal:
+    def get_income_sum_by_date_range(self, user, start_date: date, end_date: date) -> Decimal:
         """Get sum of income for a date range (based on category.type='income')."""
         result = (
             Transaction.objects.filter(
@@ -49,17 +42,10 @@ class AssetDashboardRepository:
     # Expense queries (based on category.is_expense or debit transactions)
     def get_earliest_expense_date(self, user) -> date | None:
         """Get the earliest expense date for user."""
-        earliest = (
-            Transaction.objects.filter(user=user)
-            .filter(self._get_expense_filter())
-            .order_by("date")
-            .first()
-        )
+        earliest = Transaction.objects.filter(user=user).filter(self._get_expense_filter()).order_by("date").first()
         return earliest.date if earliest else None
 
-    def get_expense_sum_by_date_range(
-        self, user, start_date: date, end_date: date
-    ) -> Decimal:
+    def get_expense_sum_by_date_range(self, user, start_date: date, end_date: date) -> Decimal:
         """Get sum of expenses for a date range (based on category.type='expense')."""
         result = (
             Transaction.objects.filter(
@@ -79,15 +65,11 @@ class AssetDashboardRepository:
 
     def get_user_asset_accounts(self, user):
         """Get all asset accounts for user (excluding liabilities like credit cards)."""
-        return FinancialAccount.objects.filter(
-            user=user, is_active=True, is_liability=False
-        )
+        return FinancialAccount.objects.filter(user=user, is_active=True, is_liability=False)
 
     def get_user_liability_accounts(self, user):
         """Get all liability accounts for user (e.g., credit cards)."""
-        return FinancialAccount.objects.filter(
-            user=user, is_active=True, is_liability=True
-        )
+        return FinancialAccount.objects.filter(user=user, is_active=True, is_liability=True)
 
     def get_networth(self, user) -> Decimal:
         """Calculate current net worth (sum of all active account balances).
@@ -117,13 +99,7 @@ class AssetDashboardRepository:
         the target date. Falls back to current account balance if no
         history exists.
         """
-        entry = (
-            AccountBalanceHistory.objects.filter(
-                account=account, date__lte=target_date
-            )
-            .order_by("-date")
-            .first()
-        )
+        entry = AccountBalanceHistory.objects.filter(account=account, date__lte=target_date).order_by("-date").first()
         return entry.balance if entry else account.balance
 
     def get_networth_history(self, user, period: str = "6m") -> list[dict]:
@@ -153,9 +129,7 @@ class AssetDashboardRepository:
         liability_accounts = self.get_user_liability_accounts(user)
 
         # Get all balance history entries
-        balance_query = AccountBalanceHistory.objects.filter(
-            account__user=user
-        ).order_by("date")
+        balance_query = AccountBalanceHistory.objects.filter(account__user=user).order_by("date")
 
         if start_date:
             balance_query = balance_query.filter(date__gte=start_date)
@@ -163,9 +137,7 @@ class AssetDashboardRepository:
         balance_query = balance_query.filter(date__lte=end_date)
 
         # Get unique dates from balance history
-        unique_dates = (
-            balance_query.values_list("date", flat=True).distinct().order_by("date")
-        )
+        unique_dates = balance_query.values_list("date", flat=True).distinct().order_by("date")
 
         # For each date, calculate total assets and liabilities
         history = []
@@ -177,9 +149,7 @@ class AssetDashboardRepository:
             # Liability balances are stored negative; show as positive for display
             total_liabilities = Decimal("0")
             for account in liability_accounts:
-                total_liabilities += abs(
-                    self.get_balance_at_date(account, record_date)
-                )
+                total_liabilities += abs(self.get_balance_at_date(account, record_date))
 
             history.append(
                 {

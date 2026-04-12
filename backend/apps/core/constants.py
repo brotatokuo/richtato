@@ -10,9 +10,7 @@ def get_expense_filter() -> Q:
 
     Expense = category.type == "expense" OR uncategorized debit.
     """
-    expense_filter = Q(category__type="expense") | Q(
-        category__isnull=True, transaction_type="debit"
-    )
+    expense_filter = Q(category__type="expense") | Q(category__isnull=True, transaction_type="debit")
     cc_payment_exclusion = ~Q(category__slug=CC_PAYMENT_CATEGORY_SLUG)
     return expense_filter & cc_payment_exclusion
 
@@ -22,6 +20,4 @@ def get_income_filter() -> Q:
 
     Income = category.type == "income" OR uncategorized credit.
     """
-    return Q(category__type="income") | Q(
-        category__isnull=True, transaction_type="credit"
-    )
+    return Q(category__type="income") | Q(category__isnull=True, transaction_type="credit")

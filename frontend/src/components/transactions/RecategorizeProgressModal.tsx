@@ -41,8 +41,8 @@ export function RecategorizeProgressModal({
   usePolling<ProgressData>(fetchProgress, {
     enabled: !!taskId && open,
     intervalMs: 1000,
-    isTerminal: (data) => data.status === 'completed' || data.status === 'failed',
-    onResult: (data) => {
+    isTerminal: data => data.status === 'completed' || data.status === 'failed',
+    onResult: data => {
       setProgress(data);
       if (data.status === 'completed' || data.status === 'failed') {
         setTimeout(() => onComplete(), 2000);

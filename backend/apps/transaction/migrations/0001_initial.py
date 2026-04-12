@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -32,9 +31,7 @@ class Migration(migrations.Migration):
                 ("icon", models.CharField(blank=True, max_length=50)),
                 (
                     "color",
-                    models.CharField(
-                        blank=True, help_text="Hex color code", max_length=7
-                    ),
+                    models.CharField(blank=True, help_text="Hex color code", max_length=7),
                 ),
                 (
                     "type",
@@ -225,9 +222,7 @@ class Migration(migrations.Migration):
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 (
                     "match_count",
-                    models.IntegerField(
-                        default=0, help_text="Number of times this keyword has matched"
-                    ),
+                    models.IntegerField(default=0, help_text="Number of times this keyword has matched"),
                 ),
                 (
                     "user",
@@ -300,23 +295,17 @@ class Migration(migrations.Migration):
                         fields=["user", "-started_at"],
                         name="recategoriz_user_id_c5b11c_idx",
                     ),
-                    models.Index(
-                        fields=["status"], name="recategoriz_status_b7b825_idx"
-                    ),
+                    models.Index(fields=["status"], name="recategoriz_status_b7b825_idx"),
                 ],
             },
         ),
         migrations.AddIndex(
             model_name="transactioncategory",
-            index=models.Index(
-                fields=["user", "slug"], name="transaction_user_id_686c95_idx"
-            ),
+            index=models.Index(fields=["user", "slug"], name="transaction_user_id_686c95_idx"),
         ),
         migrations.AddIndex(
             model_name="transactioncategory",
-            index=models.Index(
-                fields=["parent"], name="transaction_parent__163bef_idx"
-            ),
+            index=models.Index(fields=["parent"], name="transaction_parent__163bef_idx"),
         ),
         migrations.AddIndex(
             model_name="transactioncategory",
@@ -328,51 +317,35 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="transaction",
-            index=models.Index(
-                fields=["user", "-date"], name="transaction_user_id_0f2f78_idx"
-            ),
+            index=models.Index(fields=["user", "-date"], name="transaction_user_id_0f2f78_idx"),
         ),
         migrations.AddIndex(
             model_name="transaction",
-            index=models.Index(
-                fields=["account", "-date"], name="transaction_account_ead58b_idx"
-            ),
+            index=models.Index(fields=["account", "-date"], name="transaction_account_ead58b_idx"),
         ),
         migrations.AddIndex(
             model_name="transaction",
-            index=models.Index(
-                fields=["category"], name="transaction_categor_c453c0_idx"
-            ),
+            index=models.Index(fields=["category"], name="transaction_categor_c453c0_idx"),
         ),
         migrations.AddIndex(
             model_name="transaction",
-            index=models.Index(
-                fields=["external_id"], name="transaction_externa_407619_idx"
-            ),
+            index=models.Index(fields=["external_id"], name="transaction_externa_407619_idx"),
         ),
         migrations.AddIndex(
             model_name="transaction",
-            index=models.Index(
-                fields=["sync_source"], name="transaction_sync_so_0430f8_idx"
-            ),
+            index=models.Index(fields=["sync_source"], name="transaction_sync_so_0430f8_idx"),
         ),
         migrations.AddIndex(
             model_name="transaction",
-            index=models.Index(
-                fields=["categorization_status"], name="transaction_categor_f95f02_idx"
-            ),
+            index=models.Index(fields=["categorization_status"], name="transaction_categor_f95f02_idx"),
         ),
         migrations.AddIndex(
             model_name="categorykeyword",
-            index=models.Index(
-                fields=["keyword"], name="category_ke_keyword_7b3577_idx"
-            ),
+            index=models.Index(fields=["keyword"], name="category_ke_keyword_7b3577_idx"),
         ),
         migrations.AddIndex(
             model_name="categorykeyword",
-            index=models.Index(
-                fields=["category"], name="category_ke_categor_28ac2c_idx"
-            ),
+            index=models.Index(fields=["category"], name="category_ke_categor_28ac2c_idx"),
         ),
         migrations.AlterUniqueTogether(
             name="categorykeyword",

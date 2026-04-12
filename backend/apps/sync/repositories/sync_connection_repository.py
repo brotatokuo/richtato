@@ -1,7 +1,5 @@
 """Repository for SyncConnection model."""
 
-from typing import List, Optional
-
 from apps.financial_account.models import FinancialAccount
 from apps.richtato_user.models import User
 from apps.sync.models import SyncConnection
@@ -10,43 +8,31 @@ from apps.sync.models import SyncConnection
 class SyncConnectionRepository:
     """Repository for sync connection data access."""
 
-    def get_by_id(self, connection_id: int) -> Optional[SyncConnection]:
+    def get_by_id(self, connection_id: int) -> SyncConnection | None:
         """Get connection by ID."""
         try:
-            return SyncConnection.objects.select_related("user", "account").get(
-                id=connection_id
-            )
+            return SyncConnection.objects.select_related("user", "account").get(id=connection_id)
         except SyncConnection.DoesNotExist:
             return None
 
-    def get_by_user(
-        self, user: User, active_only: bool = False
-    ) -> List[SyncConnection]:
+    def get_by_user(self, user: User, active_only: bool = False) -> list[SyncConnection]:
         """Get all sync connections for a user."""
         queryset = SyncConnection.objects.filter(user=user).select_related("account")
         if active_only:
             queryset = queryset.filter(status="active")
         return list(queryset.all())
 
-    def get_by_provider(
-        self, user: User, provider: str, active_only: bool = True
-    ) -> List[SyncConnection]:
+    def get_by_provider(self, user: User, provider: str, active_only: bool = True) -> list[SyncConnection]:
         """Get connections by provider."""
-        queryset = SyncConnection.objects.filter(
-            user=user, provider=provider
-        ).select_related("account")
+        queryset = SyncConnection.objects.filter(user=user, provider=provider).select_related("account")
         if active_only:
             queryset = queryset.filter(status="active")
         return list(queryset.all())
 
-    def get_by_external_account_id(
-        self, user: User, provider: str, external_account_id: str
-    ) -> Optional[SyncConnection]:
+    def get_by_external_account_id(self, user: User, provider: str, external_account_id: str) -> SyncConnection | None:
         """Get connection by external account ID."""
         try:
-            return SyncConnection.objects.get(
-                user=user, provider=provider, external_account_id=external_account_id
-            )
+            return SyncConnection.objects.get(user=user, provider=provider, external_account_id=external_account_id)
         except SyncConnection.DoesNotExist:
             return None
 

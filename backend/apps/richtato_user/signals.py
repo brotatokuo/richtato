@@ -31,6 +31,4 @@ def initialize_default_categories(sender, instance, created, **kwargs):
                 f"{result['keywords_created']} keywords"
             )
         except Exception as e:
-            logger.error(
-                f"Error initializing categories for user {instance.id}: {str(e)}"
-            )
+            logger.error(f"Error initializing categories for user {instance.id}: {str(e)}")

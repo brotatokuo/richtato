@@ -1,13 +1,13 @@
 """AI-based categorization service using OpenAI."""
 
 from decimal import Decimal
-from typing import List, Optional, Tuple
+
+from loguru import logger
 
 from apps.categorization.models import CategorizationHistory
 from apps.transaction.models import Transaction, TransactionCategory
 from apps.transaction.repositories.category_repository import CategoryRepository
 from artificial_intelligence.ai import OpenAI
-from loguru import logger
 
 
 class AICategorizationService:
@@ -20,8 +20,8 @@ class AICategorizationService:
     def suggest_category(
         self,
         transaction: Transaction,
-        available_categories: List[TransactionCategory] = None,
-    ) -> Optional[Tuple[TransactionCategory, Decimal]]:
+        available_categories: list[TransactionCategory] = None,
+    ) -> tuple[TransactionCategory, Decimal] | None:
         """
         Suggest a category for a transaction using AI.
 
@@ -35,26 +35,20 @@ class AICategorizationService:
         try:
             # Get available categories
             if available_categories is None:
-                available_categories = self.category_repository.get_all_for_user(
-                    transaction.user, include_global=True
-                )
+                available_categories = self.category_repository.get_all_for_user(transaction.user, include_global=True)
 
             if not available_categories:
                 logger.warning("No categories available for AI categorization")
                 return None
 
             # Build prompt for AI
-            prompt = self._build_categorization_prompt(
-                transaction, available_categories
-            )
+            prompt = self._build_categorization_prompt(transaction, available_categories)
 
             # Get AI suggestion
             response = self.ai.one_shot_prompt(prompt)
 
             # Parse response
-            category, confidence = self._parse_ai_response(
-                response, available_categories
-            )
+            category, confidence = self._parse_ai_response(response, available_categories)
 
             if category:
                 logger.info(
@@ -71,7 +65,7 @@ class AICategorizationService:
 
     def categorize_transaction(
         self, transaction: Transaction, auto_apply: bool = False
-    ) -> Optional[Tuple[TransactionCategory, Decimal]]:
+    ) -> tuple[TransactionCategory, Decimal] | None:
         """
         Categorize a transaction using AI and optionally apply it.
 
@@ -101,9 +95,7 @@ class AICategorizationService:
 
         return result
 
-    def _build_categorization_prompt(
-        self, transaction: Transaction, categories: List[TransactionCategory]
-    ) -> str:
+    def _build_categorization_prompt(self, transaction: Transaction, categories: list[TransactionCategory]) -> str:
         """
         Build a prompt for AI categorization.
 
@@ -125,9 +117,7 @@ class AICategorizationService:
         category_str = "\n".join(category_list)
 
         # Build transaction description
-        merchant_info = (
-            f"\nMerchant: {transaction.merchant.name}" if transaction.merchant else ""
-        )
+        merchant_info = f"\nMerchant: {transaction.merchant.name}" if transaction.merchant else ""
 
         prompt = f"""You are a financial transaction categorization assistant.
 Analyze the following transaction and suggest the most appropriate category from the list provided.
@@ -153,8 +143,8 @@ Only return the JSON, no additional text."""
         return prompt
 
     def _parse_ai_response(
-        self, response: str, categories: List[TransactionCategory]
-    ) -> Tuple[Optional[TransactionCategory], Decimal]:
+        self, response: str, categories: list[TransactionCategory]
+    ) -> tuple[TransactionCategory | None, Decimal]:
         """
         Parse AI response and match to a category.
 
@@ -197,8 +187,8 @@ Only return the JSON, no additional text."""
             return (None, Decimal("0"))
 
     def batch_categorize(
-        self, transactions: List[Transaction], auto_apply: bool = False
-    ) -> List[Tuple[Transaction, Optional[TransactionCategory], Decimal]]:
+        self, transactions: list[Transaction], auto_apply: bool = False
+    ) -> list[tuple[Transaction, TransactionCategory | None, Decimal]]:
         """
         Categorize multiple transactions in batch.
 

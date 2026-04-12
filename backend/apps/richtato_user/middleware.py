@@ -26,9 +26,7 @@ class CleanupDemoUsersMiddleware:
             try:
                 close_old_connections()  # Ensure DB connection is usable in this thread
                 now = timezone.now()
-                expired_users = User.objects.filter(
-                    is_demo=True, demo_expires_at__lt=now
-                )
+                expired_users = User.objects.filter(is_demo=True, demo_expires_at__lt=now)
                 count = expired_users.count()
                 if count:
                     expired_users.delete()

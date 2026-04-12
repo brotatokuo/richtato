@@ -37,7 +37,10 @@ describe('budgetDashboardApiService', () => {
       };
       mockFetch.mockResolvedValueOnce(jsonResponse(mockData));
 
-      const result = await budgetDashboardApiService.getBudgetProgressMultiMonth({ months: 6 });
+      const result =
+        await budgetDashboardApiService.getBudgetProgressMultiMonth({
+          months: 6,
+        });
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const url = new URL(mockFetch.mock.calls[0][0]);
@@ -52,7 +55,8 @@ describe('budgetDashboardApiService', () => {
         jsonResponse({ monthly_data: [], months_requested: 12 })
       );
 
-      const result = await budgetDashboardApiService.getBudgetProgressMultiMonth();
+      const result =
+        await budgetDashboardApiService.getBudgetProgressMultiMonth();
       expect(result.monthly_data).toEqual([]);
     });
   });
@@ -93,10 +97,17 @@ describe('budgetDashboardApiService', () => {
   describe('getBudgetProgress', () => {
     it('sends year and month params', async () => {
       mockFetch.mockResolvedValueOnce(
-        jsonResponse({ budgets: [], start_date: '2024-01-01', end_date: '2024-01-31' })
+        jsonResponse({
+          budgets: [],
+          start_date: '2024-01-01',
+          end_date: '2024-01-31',
+        })
       );
 
-      await budgetDashboardApiService.getBudgetProgress({ year: 2024, month: 1 });
+      await budgetDashboardApiService.getBudgetProgress({
+        year: 2024,
+        month: 1,
+      });
 
       const url = new URL(mockFetch.mock.calls[0][0]);
       expect(url.searchParams.get('year')).toBe('2024');

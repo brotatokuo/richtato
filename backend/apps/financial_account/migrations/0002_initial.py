@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -46,9 +45,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="accountbalancehistory",
-            index=models.Index(
-                fields=["account", "-date"], name="account_bal_account_a0b17f_idx"
-            ),
+            index=models.Index(fields=["account", "-date"], name="account_bal_account_a0b17f_idx"),
         ),
         migrations.AlterUniqueTogether(
             name="accountbalancehistory",
@@ -56,14 +53,10 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="financialaccount",
-            index=models.Index(
-                fields=["user", "is_active"], name="financial_a_user_id_9d2cd7_idx"
-            ),
+            index=models.Index(fields=["user", "is_active"], name="financial_a_user_id_9d2cd7_idx"),
         ),
         migrations.AddIndex(
             model_name="financialaccount",
-            index=models.Index(
-                fields=["account_type"], name="financial_a_account_4d6451_idx"
-            ),
+            index=models.Index(fields=["account_type"], name="financial_a_account_4d6451_idx"),
         ),
     ]

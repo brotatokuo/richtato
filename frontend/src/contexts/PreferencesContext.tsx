@@ -1,6 +1,12 @@
 import { useAuth } from '@/hooks/useAuth';
 import { preferencesApi, type UserPreferencesPayload } from '@/lib/api/user';
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
 
 interface PreferencesContextType {
   preferences: UserPreferencesPayload;
@@ -8,11 +14,15 @@ interface PreferencesContextType {
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
-  updatePreferences: (updates: Partial<UserPreferencesPayload>) => Promise<void>;
+  updatePreferences: (
+    updates: Partial<UserPreferencesPayload>
+  ) => Promise<void>;
   getCurrencySymbol: (code: string) => string;
 }
 
-const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined);
+const PreferencesContext = createContext<PreferencesContextType | undefined>(
+  undefined
+);
 
 export function PreferencesProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -22,7 +32,9 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     date_format: 'MM/DD/YYYY',
     timezone: 'UTC',
   });
-  const [currencySymbols, setCurrencySymbols] = useState<Record<string, string>>({});
+  const [currencySymbols, setCurrencySymbols] = useState<
+    Record<string, string>
+  >({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,7 +77,9 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updatePreferences = async (updates: Partial<UserPreferencesPayload>) => {
+  const updatePreferences = async (
+    updates: Partial<UserPreferencesPayload>
+  ) => {
     if (!isAuthenticated) {
       throw new Error('Must be authenticated to update preferences');
     }

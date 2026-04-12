@@ -1,12 +1,12 @@
 """Management command to process categorization queue."""
 
+from django.core.management.base import BaseCommand
+from loguru import logger
+
 from apps.categorization.models import CategorizationQueue
 from apps.categorization.services.batch_ai_service import (
     BatchAICategorizationService,
 )
-from django.core.management.base import BaseCommand
-from django.utils import timezone
-from loguru import logger
 
 
 class Command(BaseCommand):
@@ -42,16 +42,10 @@ class Command(BaseCommand):
         user_filter = options.get("user")
         process_all = options.get("all", False)
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Starting categorization queue processing (batch_size={batch_size})"
-            )
-        )
+        self.stdout.write(self.style.SUCCESS(f"Starting categorization queue processing (batch_size={batch_size})"))
 
         # Get pending queue items
-        queryset = CategorizationQueue.objects.filter(status="pending").select_related(
-            "user"
-        )
+        queryset = CategorizationQueue.objects.filter(status="pending").select_related("user")
 
         if user_filter:
             queryset = queryset.filter(user__username=user_filter)
@@ -65,9 +59,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("No pending queue items found"))
             return
 
-        self.stdout.write(
-            self.style.SUCCESS(f"Found {len(queue_items)} pending queue items")
-        )
+        self.stdout.write(self.style.SUCCESS(f"Found {len(queue_items)} pending queue items"))
 
         # Initialize service
         batch_service = BatchAICategorizationService()
@@ -90,9 +82,7 @@ class Command(BaseCommand):
                 queue_item.mark_processing()
 
                 # Process transactions
-                results = batch_service.categorize_transaction_ids(
-                    queue_item.transaction_ids, queue_item.user
-                )
+                results = batch_service.categorize_transaction_ids(queue_item.transaction_ids, queue_item.user)
 
                 # Update queue item
                 queue_item.mark_completed(

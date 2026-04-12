@@ -2,14 +2,6 @@
 import json
 
 import pytz
-from apps.richtato_user.demo_user_factory import DemoUserFactory
-from apps.richtato_user.models import UserPreference
-from apps.richtato_user.serializers import UserPreferenceSerializer
-from apps.richtato_user.services.category_settings_service import (
-    CategorySettingsService,
-)
-from apps.richtato_user.services.user_service import UserService
-from apps.transaction.models import TransactionCategory
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, JsonResponse
@@ -24,6 +16,15 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from apps.richtato_user.demo_user_factory import DemoUserFactory
+from apps.richtato_user.models import UserPreference
+from apps.richtato_user.serializers import UserPreferenceSerializer
+from apps.richtato_user.services.category_settings_service import (
+    CategorySettingsService,
+)
+from apps.richtato_user.services.user_service import UserService
+from apps.transaction.models import TransactionCategory
 
 pst = pytz.timezone("US/Pacific")
 
@@ -80,9 +81,7 @@ class UserPreferenceAPIView(APIView):
             return Response(serializer.data)
         except UserPreference.DoesNotExist:
             # Return default preferences
-            return Response(
-                {"theme": "system", "currency": "USD", "date_format": "MM/DD/YYYY"}
-            )
+            return Response({"theme": "system", "currency": "USD", "date_format": "MM/DD/YYYY"})
 
     @swagger_auto_schema(
         operation_summary="Update user preferences",
@@ -96,9 +95,7 @@ class UserPreferenceAPIView(APIView):
     def put(self, request):
         try:
             preferences = UserPreference.objects.get(user=request.user)
-            serializer = UserPreferenceSerializer(
-                preferences, data=request.data, partial=True
-            )
+            serializer = UserPreferenceSerializer(preferences, data=request.data, partial=True)
         except UserPreference.DoesNotExist:
             serializer = UserPreferenceSerializer(data=request.data, partial=True)
 
@@ -131,22 +128,10 @@ class UserPreferenceFieldChoicesAPIView(APIView):
     def get(self, request):
         return Response(
             {
-                "theme": [
-                    {"value": val, "label": label}
-                    for val, label in UserPreference.THEME_CHOICES
-                ],
-                "date_format": [
-                    {"value": val, "label": label}
-                    for val, label in UserPreference.DATE_FORMAT_CHOICES
-                ],
-                "currency": [
-                    {"value": val, "label": label}
-                    for val, label in UserPreference.CURRENCY_CHOICES
-                ],
-                "timezone": [
-                    {"value": val, "label": label}
-                    for val, label in UserPreference.TIMEZONE_CHOICES
-                ],
+                "theme": [{"value": val, "label": label} for val, label in UserPreference.THEME_CHOICES],
+                "date_format": [{"value": val, "label": label} for val, label in UserPreference.DATE_FORMAT_CHOICES],
+                "currency": [{"value": val, "label": label} for val, label in UserPreference.CURRENCY_CHOICES],
+                "timezone": [{"value": val, "label": label} for val, label in UserPreference.TIMEZONE_CHOICES],
             }
         )
 
@@ -186,9 +171,7 @@ class LoginView(APIView):
 
         if user:
             login(request, user)
-            return JsonResponse(
-                {"message": "Login successful", "user_id": user.id}, status=200
-            )
+            return JsonResponse({"message": "Login successful", "user_id": user.id}, status=200)
         return JsonResponse({"error": "Invalid credentials"}, status=401)
 
 
@@ -217,9 +200,7 @@ class RegisterView(APIView):
         password = request.data.get("password")
 
         if not username or not password:
-            return JsonResponse(
-                {"error": "Username and password are required"}, status=400
-            )
+            return JsonResponse({"error": "Username and password are required"}, status=400)
 
         user_service = UserService()
 
@@ -229,9 +210,7 @@ class RegisterView(APIView):
         try:
             user = user_service.create_user(username, password)
             login(request, user)
-            return JsonResponse(
-                {"message": "Registration successful", "user_id": user.id}, status=201
-            )
+            return JsonResponse({"message": "Registration successful", "user_id": user.id}, status=201)
         except Exception as e:
             logger.error(f"Registration error: {e}")
             return JsonResponse({"error": str(e)}, status=500)
@@ -299,9 +278,7 @@ def update_username(request):
         user_service = UserService()
         try:
             user_service.update_username(request.user, new_username)
-            return JsonResponse(
-                {"message": "Username updated successfully", "username": new_username}
-            )
+            return JsonResponse({"message": "Username updated successfully", "username": new_username})
         except ValueError as e:
             return JsonResponse({"error": str(e)}, status=400)
 
@@ -323,9 +300,7 @@ def change_password(request):
         new_password = data.get("new_password")
 
         if not current_password or not new_password:
-            return JsonResponse(
-                {"error": "Both current and new password are required"}, status=400
-            )
+            return JsonResponse({"error": "Both current and new password are required"}, status=400)
 
         # Verify current password
         user_service = UserService()

@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -54,21 +53,15 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="budget",
-            index=models.Index(
-                fields=["user", "is_active"], name="budget_user_id_9a79b9_idx"
-            ),
+            index=models.Index(fields=["user", "is_active"], name="budget_user_id_9a79b9_idx"),
         ),
         migrations.AddIndex(
             model_name="budget",
-            index=models.Index(
-                fields=["start_date", "end_date"], name="budget_start_d_b5ffbd_idx"
-            ),
+            index=models.Index(fields=["start_date", "end_date"], name="budget_start_d_b5ffbd_idx"),
         ),
         migrations.AddIndex(
             model_name="budgetcategory",
-            index=models.Index(
-                fields=["budget", "category"], name="budget_cate_budget__388195_idx"
-            ),
+            index=models.Index(fields=["budget", "category"], name="budget_cate_budget__388195_idx"),
         ),
         migrations.AlterUniqueTogether(
             name="budgetcategory",
@@ -83,9 +76,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="budgetprogress",
-            index=models.Index(
-                fields=["-last_calculated"], name="budget_prog_last_ca_f143d9_idx"
-            ),
+            index=models.Index(fields=["-last_calculated"], name="budget_prog_last_ca_f143d9_idx"),
         ),
         migrations.AlterUniqueTogether(
             name="budgetprogress",

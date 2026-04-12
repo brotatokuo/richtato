@@ -2,13 +2,12 @@
 
 from datetime import date
 from decimal import Decimal
-from typing import Dict, List
 
 from django.db.models import Count, Sum
+from loguru import logger
 
 from apps.budget.models import Budget, BudgetCategory, BudgetProgress
 from apps.transaction.repositories.transaction_repository import TransactionRepository
-from loguru import logger
 
 
 class BudgetCalculationService:
@@ -17,7 +16,7 @@ class BudgetCalculationService:
     def __init__(self):
         self.transaction_repository = TransactionRepository()
 
-    def calculate_budget_progress(self, budget: Budget) -> Dict:
+    def calculate_budget_progress(self, budget: Budget) -> dict:
         """
         Calculate complete progress for a budget across all categories.
 
@@ -32,9 +31,7 @@ class BudgetCalculationService:
         total_spent = Decimal("0")
 
         for budget_category in budget.budget_categories.select_related("category"):
-            progress = self.calculate_category_progress(
-                budget_category, budget.start_date, budget.end_date
-            )
+            progress = self.calculate_category_progress(budget_category, budget.start_date, budget.end_date)
             categories_progress.append(progress)
             total_allocated += budget_category.total_available
             total_spent += progress["spent_amount"]
@@ -51,16 +48,12 @@ class BudgetCalculationService:
                 "allocated": total_allocated,
                 "spent": total_spent,
                 "remaining": total_allocated - total_spent,
-                "percentage_used": (
-                    (total_spent / total_allocated * 100) if total_allocated > 0 else 0
-                ),
+                "percentage_used": ((total_spent / total_allocated * 100) if total_allocated > 0 else 0),
             },
             "categories": categories_progress,
         }
 
-    def calculate_category_progress(
-        self, budget_category: BudgetCategory, start_date: date, end_date: date
-    ) -> Dict:
+    def calculate_category_progress(self, budget_category: BudgetCategory, start_date: date, end_date: date) -> dict:
         """
         Calculate progress for a specific budget category.
 
@@ -81,18 +74,14 @@ class BudgetCalculationService:
             transaction_type="debit",  # Only count expenses
         )
 
-        agg = transactions.aggregate(
-            spent=Sum("amount"), transaction_count=Count("id")
-        )
+        agg = transactions.aggregate(spent=Sum("amount"), transaction_count=Count("id"))
         spent_amount = agg["spent"] or Decimal("0")
         transaction_count = agg["transaction_count"]
 
         # Calculate remaining and percentage
         total_available = budget_category.total_available
         remaining_amount = total_available - spent_amount
-        percentage_used = (
-            (spent_amount / total_available * 100) if total_available > 0 else 0
-        )
+        percentage_used = (spent_amount / total_available * 100) if total_available > 0 else 0
 
         return {
             "budget_category_id": budget_category.id,
@@ -137,9 +126,7 @@ class BudgetCalculationService:
         Returns:
             Updated BudgetProgress instance
         """
-        progress_data = self.calculate_category_progress(
-            budget_category, start_date, end_date
-        )
+        progress_data = self.calculate_category_progress(budget_category, start_date, end_date)
 
         progress, created = BudgetProgress.objects.update_or_create(
             budget_category=budget_category,
@@ -160,7 +147,7 @@ class BudgetCalculationService:
 
         return progress
 
-    def update_all_cached_progress(self, budget: Budget) -> List[BudgetProgress]:
+    def update_all_cached_progress(self, budget: Budget) -> list[BudgetProgress]:
         """
         Update cached progress for all categories in a budget.
 
@@ -173,9 +160,7 @@ class BudgetCalculationService:
         progress_list = []
 
         for budget_category in budget.budget_categories.all():
-            progress = self.update_cached_progress(
-                budget_category, budget.start_date, budget.end_date
-            )
+            progress = self.update_cached_progress(budget_category, budget.start_date, budget.end_date)
             progress_list.append(progress)
 
         logger.info(f"Updated cached progress for {len(progress_list)} categories")

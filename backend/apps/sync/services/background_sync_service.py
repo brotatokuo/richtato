@@ -3,7 +3,6 @@
 import threading
 
 from django.db import connection
-from django.utils import timezone
 from loguru import logger
 
 
@@ -60,32 +59,24 @@ class BackgroundSyncService:
             total_new = 0
             connections = SyncConnection.objects.filter(user=user, status="active")
 
-            logger.info(
-                f"Background sync: Found {connections.count()} active connections for user {user_id}"
-            )
+            logger.info(f"Background sync: Found {connections.count()} active connections for user {user_id}")
 
             for conn in connections:
                 if conn.is_stale():
                     try:
-                        logger.info(
-                            f"Syncing stale connection {conn.id} ({conn.institution_name}) via {conn.provider}"
-                        )
+                        logger.info(f"Syncing stale connection {conn.id} ({conn.institution_name}) via {conn.provider}")
                         sync_service = get_sync_service(conn.provider)
                         result = sync_service.sync_connection(conn)
                         synced = result.get("transactions_synced", 0)
                         total_new += synced
-                        logger.info(
-                            f"Connection {conn.id} synced: {synced} new transactions"
-                        )
+                        logger.info(f"Connection {conn.id} synced: {synced} new transactions")
                     except Exception as e:
                         logger.error(f"Error syncing connection {conn.id}: {e}")
                         conn.mark_error(str(e))
 
             # Mark sync as completed
             status.complete_sync(new_transactions=total_new)
-            logger.info(
-                f"Background sync completed for user {user_id}: {total_new} new transactions"
-            )
+            logger.info(f"Background sync completed for user {user_id}: {total_new} new transactions")
 
         except Exception as e:
             logger.error(f"Background sync error for user {user_id}: {e}")
@@ -93,9 +84,7 @@ class BackgroundSyncService:
             try:
                 from apps.sync.models import UserSyncStatus
 
-                UserSyncStatus.objects.filter(user_id=user_id).update(
-                    is_syncing=False, last_error=str(e)
-                )
+                UserSyncStatus.objects.filter(user_id=user_id).update(is_syncing=False, last_error=str(e))
             except Exception:
                 pass
         finally:

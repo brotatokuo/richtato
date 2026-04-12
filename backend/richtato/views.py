@@ -24,9 +24,7 @@ class BaseAPIView(APIView, ABC):
         """
         mapped_account = {}
         for key, value in account.items():
-            mapped_key = self.field_remap.get(
-                key, key
-            )  # Default to the original key if no mapping exists
+            mapped_key = self.field_remap.get(key, key)  # Default to the original key if no mapping exists
             mapped_account[mapped_key] = value
         return mapped_account
 

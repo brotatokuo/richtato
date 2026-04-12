@@ -66,7 +66,8 @@ export function CategoryBreakdown({ categories }: CategoryBreakdownProps) {
                   {category.name}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {formatCurrency(category.spent, preferences.currency)}/{formatCurrency(category.budget, preferences.currency)}
+                  {formatCurrency(category.spent, preferences.currency)}/
+                  {formatCurrency(category.budget, preferences.currency)}
                 </div>
               </div>
             </div>
@@ -82,10 +83,17 @@ export function CategoryBreakdown({ categories }: CategoryBreakdownProps) {
               >
                 {category.remaining < 0 ? (
                   <span>
-                    Over {formatCurrency(Math.abs(category.remaining), preferences.currency)}
+                    Over{' '}
+                    {formatCurrency(
+                      Math.abs(category.remaining),
+                      preferences.currency
+                    )}
                   </span>
                 ) : (
-                  <span>{formatCurrency(category.remaining, preferences.currency)} left</span>
+                  <span>
+                    {formatCurrency(category.remaining, preferences.currency)}{' '}
+                    left
+                  </span>
                 )}
               </div>
             </div>

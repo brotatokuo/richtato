@@ -4,7 +4,12 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from './dropdown-menu';
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  CalendarDays,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 interface MonthYearPickerProps {
@@ -15,8 +20,18 @@ interface MonthYearPickerProps {
 }
 
 const MONTHS = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 export function MonthYearPicker({
@@ -31,7 +46,10 @@ export function MonthYearPicker({
   // Format display string
   const displayText = useMemo(() => {
     const date = new Date(year, month - 1, 1);
-    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      year: 'numeric',
+    });
   }, [year, month]);
 
   const handleMonthSelect = (selectedMonth: number) => {
@@ -118,7 +136,8 @@ export function MonthYearPicker({
                   className={cn(
                     'py-2 px-1 rounded-lg text-sm font-medium transition-all',
                     'hover:bg-primary/10',
-                    isSelected && 'bg-primary text-primary-foreground hover:bg-primary/90',
+                    isSelected &&
+                      'bg-primary text-primary-foreground hover:bg-primary/90',
                     !isSelected && isCurrentMonth && 'ring-1 ring-primary/50'
                   )}
                 >

@@ -2,6 +2,10 @@ import random
 from datetime import date, timedelta
 from decimal import Decimal
 
+from django.db import transaction
+from django.db.models.signals import post_delete, post_save
+from loguru import logger
+
 from apps.budget.models import Budget, BudgetCategory
 from apps.financial_account.models import (
     AccountBalanceHistory,
@@ -11,9 +15,6 @@ from apps.financial_account.models import (
 from apps.richtato_user.models import User
 from apps.transaction.models import Transaction, TransactionCategory
 from apps.transaction.signals import transaction_post_delete, transaction_post_save
-from django.db import transaction
-from django.db.models.signals import post_delete, post_save
-from loguru import logger
 
 
 class DemoUserFactory:
@@ -90,9 +91,7 @@ class DemoUserFactory:
 
             # Delete balance history (FK to accounts)
             if account_ids:
-                AccountBalanceHistory.objects.filter(
-                    account_id__in=account_ids
-                ).delete()
+                AccountBalanceHistory.objects.filter(account_id__in=account_ids).delete()
 
             # Delete accounts
             accounts.delete()
@@ -234,9 +233,7 @@ class DemoUserFactory:
     def _create_expense_transactions(self):
         """Create expense transactions (debit type)."""
         # Get categories for the demo user
-        categories = {
-            c.slug: c for c in TransactionCategory.objects.filter(user=self.user)
-        }
+        categories = {c.slug: c for c in TransactionCategory.objects.filter(user=self.user)}
         travel_category = categories.get("travel")
         shopping_category = categories.get("shopping")
         groceries_category = categories.get("groceries")
@@ -270,9 +267,7 @@ class DemoUserFactory:
                 )
 
             # Gas (every 2 weeks)
-            if (
-                current_date.weekday() == 2 and current_date.day % 14 < 7
-            ):  # Wednesday every 2 weeks
+            if current_date.weekday() == 2 and current_date.day % 14 < 7:  # Wednesday every 2 weeks
                 expense_entries.append(
                     Transaction(
                         user=self.user,
@@ -287,9 +282,7 @@ class DemoUserFactory:
                 )
 
             # Dining out (randomly 2-3 times per week)
-            if (
-                current_date.weekday() in [4, 5, 6] and current_date.day % 7 < 3
-            ):  # Weekend dining
+            if current_date.weekday() in [4, 5, 6] and current_date.day % 7 < 3:  # Weekend dining
                 restaurants = [
                     ("Chipotle", Decimal("15.75")),
                     ("Starbucks", Decimal("8.50")),
@@ -345,9 +338,7 @@ class DemoUserFactory:
                     ("Hertz Car Rental", Decimal("85.50")),
                     ("Expedia Booking", Decimal("320.00")),
                 ]
-                travel_item, amount = travel_expenses[
-                    (current_date.month // 3 - 1) % len(travel_expenses)
-                ]
+                travel_item, amount = travel_expenses[(current_date.month // 3 - 1) % len(travel_expenses)]
                 expense_entries.append(
                     Transaction(
                         user=self.user,
@@ -406,9 +397,7 @@ class DemoUserFactory:
                     ("Eye Exam", Decimal("75.00")),
                     ("Prescription", Decimal("45.00")),
                 ]
-                medical_item, amount = medical_expenses[
-                    (current_date.month // 3 - 1) % len(medical_expenses)
-                ]
+                medical_item, amount = medical_expenses[(current_date.month // 3 - 1) % len(medical_expenses)]
                 expense_entries.append(
                     Transaction(
                         user=self.user,
@@ -430,9 +419,7 @@ class DemoUserFactory:
                     ("Concert Tickets", Decimal("85.00")),
                     ("Bowling", Decimal("35.00")),
                 ]
-                entertainment_item, amount = entertainment_items[
-                    (current_date.month - 1) % len(entertainment_items)
-                ]
+                entertainment_item, amount = entertainment_items[(current_date.month - 1) % len(entertainment_items)]
                 expense_entries.append(
                     Transaction(
                         user=self.user,
@@ -454,9 +441,7 @@ class DemoUserFactory:
                     ("Gym Membership", Decimal("45.00")),
                     ("Dropbox Pro", Decimal("11.99")),
                 ]
-                subscription, amount = subscriptions[
-                    (current_date.month - 1) % len(subscriptions)
-                ]
+                subscription, amount = subscriptions[(current_date.month - 1) % len(subscriptions)]
                 expense_entries.append(
                     Transaction(
                         user=self.user,
@@ -477,21 +462,15 @@ class DemoUserFactory:
 
     def _create_budgets(self):
         """Create some basic budgets for the demo user using budget_v2."""
-        categories = {
-            c.slug: c for c in TransactionCategory.objects.filter(user=self.user)
-        }
+        categories = {c.slug: c for c in TransactionCategory.objects.filter(user=self.user)}
         today = self.today
         start_date = today.replace(day=1)
 
         # Calculate end of month
         if start_date.month == 12:
-            end_date = start_date.replace(
-                year=start_date.year + 1, month=1, day=1
-            ) - timedelta(days=1)
+            end_date = start_date.replace(year=start_date.year + 1, month=1, day=1) - timedelta(days=1)
         else:
-            end_date = start_date.replace(
-                month=start_date.month + 1, day=1
-            ) - timedelta(days=1)
+            end_date = start_date.replace(month=start_date.month + 1, day=1) - timedelta(days=1)
 
         # Create a monthly budget
         budget = Budget.objects.create(

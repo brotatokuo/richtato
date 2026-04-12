@@ -4,7 +4,8 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
-from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
+
+from apps.financial_account.models import AccountBalanceHistory
 from apps.financial_account.services.account_service import AccountService
 from apps.richtato_user.models import User
 from apps.transaction.models import Transaction
@@ -12,9 +13,7 @@ from apps.transaction.models import Transaction
 
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(
-        username="opentest", email="open@test.com", password="testpass123"
-    )
+    return User.objects.create_user(username="opentest", email="open@test.com", password="testpass123")
 
 
 @pytest.fixture
@@ -68,9 +67,7 @@ class TestOpeningBalance:
 
         account.refresh_from_db()
         assert account.balance == Decimal("0")
-        assert not Transaction.objects.filter(
-            account=account, description="Opening Balance"
-        ).exists()
+        assert not Transaction.objects.filter(account=account, description="Opening Balance").exists()
 
     def test_opening_balance_creates_history(self, service, user):
         account = service.create_manual_account(
@@ -80,9 +77,7 @@ class TestOpeningBalance:
             initial_balance=Decimal("2500.00"),
         )
 
-        history = AccountBalanceHistory.objects.filter(
-            account=account, date=date.today()
-        ).first()
+        history = AccountBalanceHistory.objects.filter(account=account, date=date.today()).first()
         assert history is not None
         assert history.balance == Decimal("2500.00")
 

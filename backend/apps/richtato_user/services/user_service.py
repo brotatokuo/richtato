@@ -1,6 +1,7 @@
 """Service layer for User operations."""
 
 from django.contrib.auth import authenticate
+
 from apps.richtato_user.repositories.user_repository import UserRepository
 
 

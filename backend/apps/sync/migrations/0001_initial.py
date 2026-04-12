@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -44,9 +43,7 @@ class Migration(migrations.Migration):
                 ("institution_name", models.CharField(max_length=255)),
                 (
                     "external_account_id",
-                    models.CharField(
-                        help_text="Account ID in the external system", max_length=255
-                    ),
+                    models.CharField(help_text="Account ID in the external system", max_length=255),
                 ),
                 (
                     "external_enrollment_id",
@@ -225,9 +222,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="syncconnection",
-            index=models.Index(
-                fields=["user", "status"], name="sync_connec_user_id_9df8b6_idx"
-            ),
+            index=models.Index(fields=["user", "status"], name="sync_connec_user_id_9df8b6_idx"),
         ),
         migrations.AddIndex(
             model_name="syncconnection",
@@ -238,9 +233,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="syncconnection",
-            index=models.Index(
-                fields=["account"], name="sync_connec_account_63f7d2_idx"
-            ),
+            index=models.Index(fields=["account"], name="sync_connec_account_63f7d2_idx"),
         ),
         migrations.AlterUniqueTogether(
             name="syncconnection",
@@ -248,9 +241,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="syncjob",
-            index=models.Index(
-                fields=["connection", "-started_at"], name="sync_job_connect_5f6d5f_idx"
-            ),
+            index=models.Index(fields=["connection", "-started_at"], name="sync_job_connect_5f6d5f_idx"),
         ),
         migrations.AddIndex(
             model_name="syncjob",

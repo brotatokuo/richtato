@@ -51,11 +51,7 @@ class Command(BaseCommand):
         csv_dir = Path(options["csv_dir"])
 
         if not commit:
-            self.stdout.write(
-                self.style.WARNING(
-                    "DRY RUN MODE - no changes will be made. Use --commit to apply."
-                )
-            )
+            self.stdout.write(self.style.WARNING("DRY RUN MODE - no changes will be made. Use --commit to apply."))
 
         # Get user
         try:
@@ -68,20 +64,18 @@ class Command(BaseCommand):
         # Load cards.csv to build CSV account_id -> card name mapping
         cards_csv_path = csv_dir / "cards.csv"
         if not cards_csv_path.exists():
-            self.stdout.write(
-                self.style.ERROR(f"cards.csv not found at {cards_csv_path}")
-            )
+            self.stdout.write(self.style.ERROR(f"cards.csv not found at {cards_csv_path}"))
             return
 
         csv_id_to_name = {}
-        with open(cards_csv_path, "r") as f:
+        with open(cards_csv_path) as f:
             reader = csv.DictReader(f)
             for row in reader:
                 # Only include cards for user_id=1 (tepolak in CSV)
                 if row["user_id"] == "1":
                     csv_id_to_name[int(row["id"])] = row["name"]
 
-        self.stdout.write(f"\nCSV card mappings from cards.csv (user_id=1):")
+        self.stdout.write("\nCSV card mappings from cards.csv (user_id=1):")
         for csv_id, name in sorted(csv_id_to_name.items()):
             self.stdout.write(f"  CSV id={csv_id} -> '{name}'")
 
@@ -107,15 +101,11 @@ class Command(BaseCommand):
                 missing_mappings.append((csv_id, name))
 
         if missing_mappings:
-            self.stdout.write(
-                self.style.WARNING("\nMissing DB accounts for CSV mappings:")
-            )
+            self.stdout.write(self.style.WARNING("\nMissing DB accounts for CSV mappings:"))
             for csv_id, name in missing_mappings:
-                self.stdout.write(
-                    f"  CSV id={csv_id} '{name}' - no matching DB account"
-                )
+                self.stdout.write(f"  CSV id={csv_id} '{name}' - no matching DB account")
 
-        self.stdout.write(f"\nFinal mapping (CSV account_id -> DB account_id):")
+        self.stdout.write("\nFinal mapping (CSV account_id -> DB account_id):")
         for csv_id, db_id in sorted(csv_id_to_db_id.items()):
             name = csv_id_to_name[csv_id]
             self.stdout.write(f"  CSV {csv_id} -> DB {db_id} ('{name}')")
@@ -146,9 +136,7 @@ class Command(BaseCommand):
                 is_expense=True,
             )
         else:
-            self.stdout.write(
-                self.style.WARNING(f"expense.csv not found at {expense_csv_path}")
-            )
+            self.stdout.write(self.style.WARNING(f"expense.csv not found at {expense_csv_path}"))
 
         # Process income
         if income_csv_path.exists():
@@ -162,9 +150,7 @@ class Command(BaseCommand):
                 is_expense=False,
             )
         else:
-            self.stdout.write(
-                self.style.WARNING(f"income.csv not found at {income_csv_path}")
-            )
+            self.stdout.write(self.style.WARNING(f"income.csv not found at {income_csv_path}"))
 
         # Print summary
         self.stdout.write("\n" + "=" * 50)
@@ -174,22 +160,12 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"Updated: {stats['updated']}"))
         self.stdout.write(f"Skipped (already correct): {stats['skipped_same']}")
         self.stdout.write(f"Skipped (wrong user in CSV): {stats['skipped_wrong_user']}")
-        self.stdout.write(
-            f"Skipped (no account mapping): {stats['skipped_no_mapping']}"
-        )
-        self.stdout.write(
-            f"Skipped (transaction not in DB): {stats['skipped_not_found']}"
-        )
-        self.stdout.write(
-            f"Skipped (multiple matches): {stats['skipped_multiple_matches']}"
-        )
+        self.stdout.write(f"Skipped (no account mapping): {stats['skipped_no_mapping']}")
+        self.stdout.write(f"Skipped (transaction not in DB): {stats['skipped_not_found']}")
+        self.stdout.write(f"Skipped (multiple matches): {stats['skipped_multiple_matches']}")
 
         if not commit:
-            self.stdout.write(
-                self.style.WARNING(
-                    "\nDRY RUN - no changes were made. Use --commit to apply."
-                )
-            )
+            self.stdout.write(self.style.WARNING("\nDRY RUN - no changes were made. Use --commit to apply."))
 
     def _process_csv(
         self,
@@ -203,7 +179,7 @@ class Command(BaseCommand):
         """Process a CSV file and update transactions by matching on description and date."""
         account_field = "account_name_id"
 
-        with open(csv_path, "r") as f:
+        with open(csv_path) as f:
             reader = csv.DictReader(f)
             for row in reader:
                 stats["total"] += 1
@@ -236,8 +212,7 @@ class Command(BaseCommand):
                     if stats["skipped_no_mapping"] <= 5:
                         self.stdout.write(
                             self.style.WARNING(
-                                f"  No mapping for CSV account_id={csv_account_id} "
-                                f"(desc={description[:30]})"
+                                f"  No mapping for CSV account_id={csv_account_id} (desc={description[:30]})"
                             )
                         )
                     continue
@@ -250,10 +225,7 @@ class Command(BaseCommand):
                     user=user,
                     date=txn_date,
                     amount=amount,
-                ).filter(
-                    Q(description__iexact=description)
-                    | Q(description__icontains=description[:20])
-                )
+                ).filter(Q(description__iexact=description) | Q(description__icontains=description[:20]))
 
                 if txns.count() == 0:
                     stats["skipped_not_found"] += 1
@@ -282,7 +254,6 @@ class Command(BaseCommand):
                     continue
 
                 # Update transaction
-                old_account_id = txn.account_id
                 old_account_name = txn.account.name if txn.account else "None"
 
                 if commit:
@@ -294,9 +265,6 @@ class Command(BaseCommand):
                 # Log change (limit output)
                 if stats["updated"] <= 20:
                     new_account = FinancialAccount.objects.get(id=target_db_account_id)
-                    self.stdout.write(
-                        f"  {description[:30]:30} ({txn_date}): "
-                        f"{old_account_name} -> {new_account.name}"
-                    )
+                    self.stdout.write(f"  {description[:30]:30} ({txn_date}): {old_account_name} -> {new_account.name}")
                 elif stats["updated"] == 21:
                     self.stdout.write("  ... (more changes not shown)")

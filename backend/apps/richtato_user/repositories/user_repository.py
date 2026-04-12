@@ -1,6 +1,7 @@
 """Repository for User data access."""
 
 from django.db.models import QuerySet
+
 from apps.richtato_user.models import User
 
 
@@ -34,9 +35,7 @@ class UserRepository:
 
     def create_user(self, username: str, password: str, **extra_fields) -> User:
         """Create a new user."""
-        user = User.objects.create_user(
-            username=username, password=password, **extra_fields
-        )
+        user = User.objects.create_user(username=username, password=password, **extra_fields)
         return user
 
     def update_user(self, user: User, **data) -> User:

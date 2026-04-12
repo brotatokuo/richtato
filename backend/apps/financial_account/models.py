@@ -53,9 +53,7 @@ class FinancialAccount(models.Model):
     account_number_last4 = models.CharField(
         max_length=4, blank=True, null=True, help_text="Last 4 digits of account number"
     )
-    account_type = models.CharField(
-        max_length=20, choices=ACCOUNT_TYPE_CHOICES, default="checking"
-    )
+    account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPE_CHOICES, default="checking")
     balance = models.DecimalField(
         max_digits=15,
         decimal_places=2,
@@ -68,9 +66,7 @@ class FinancialAccount(models.Model):
         default=False,
         help_text="True for credit cards and other liability accounts. Balance stored as negative.",
     )
-    sync_source = models.CharField(
-        max_length=20, choices=SYNC_SOURCE_CHOICES, default="manual"
-    )
+    sync_source = models.CharField(max_length=20, choices=SYNC_SOURCE_CHOICES, default="manual")
 
     # Card customization
     image_key = models.CharField(
@@ -111,14 +107,10 @@ class AccountBalanceHistory(models.Model):
         ("plaid_sync", "Plaid Sync"),
     ]
 
-    account = models.ForeignKey(
-        FinancialAccount, on_delete=models.CASCADE, related_name="balance_history"
-    )
+    account = models.ForeignKey(FinancialAccount, on_delete=models.CASCADE, related_name="balance_history")
     date = models.DateField()
     balance = models.DecimalField(max_digits=15, decimal_places=2)
-    source = models.CharField(
-        max_length=20, choices=SOURCE_CHOICES, default="transaction"
-    )
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default="transaction")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

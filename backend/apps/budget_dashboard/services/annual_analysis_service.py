@@ -34,20 +34,14 @@ class AnnualAnalysisService:
         # Get totals
         total_income = self.repo.get_income_sum(user, start_date, end_date)
         total_expenses = self.repo.get_expense_sum(user, start_date, end_date)
-        essential_total = self.repo.get_essential_expense_sum(
-            user, start_date, end_date
-        )
-        non_essential_total = self.repo.get_non_essential_expense_sum(
-            user, start_date, end_date
-        )
+        essential_total = self.repo.get_essential_expense_sum(user, start_date, end_date)
+        non_essential_total = self.repo.get_non_essential_expense_sum(user, start_date, end_date)
 
         # Get monthly breakdown
         monthly_breakdown = self._get_monthly_breakdown(user, year)
 
         # Get category breakdown
-        category_breakdown = self.repo.get_expenses_by_category_with_priority(
-            user, start_date, end_date
-        )
+        category_breakdown = self.repo.get_expenses_by_category_with_priority(user, start_date, end_date)
 
         # Get income sources
         income_sources = self.repo.get_income_by_category(user, start_date, end_date)
@@ -82,9 +76,7 @@ class AnnualAnalysisService:
             end_date = date(year, month, last_day)
 
             essential = self.repo.get_essential_expense_sum(user, start_date, end_date)
-            non_essential = self.repo.get_non_essential_expense_sum(
-                user, start_date, end_date
-            )
+            non_essential = self.repo.get_non_essential_expense_sum(user, start_date, end_date)
 
             monthly_data.append(
                 {

@@ -309,13 +309,13 @@ export function TransactionTable({
       'other',
       'uncategorized',
     ];
-    return [...filterOptions.category_types].sort(
-      (a, b) => typeOrder.indexOf(a.value) - typeOrder.indexOf(b.value)
-    ).map(ct => ({
-      label: CATEGORY_TYPE_LABELS[ct.value] || ct.label,
-      value: ct.value,
-      count: ct.count,
-    }));
+    return [...filterOptions.category_types]
+      .sort((a, b) => typeOrder.indexOf(a.value) - typeOrder.indexOf(b.value))
+      .map(ct => ({
+        label: CATEGORY_TYPE_LABELS[ct.value] || ct.label,
+        value: ct.value,
+        count: ct.count,
+      }));
   }, [filterOptions?.category_types]);
 
   const categoryFilterOptions: FilterOption[] = useMemo(() => {
@@ -339,7 +339,10 @@ export function TransactionTable({
   const amountFilterOptions: FilterOption[] = useMemo(() => {
     if (!filterOptions?.amounts) return [];
     return filterOptions.amounts.map(a => ({
-      label: formatCurrency(Math.abs(parseFloat(a.value)), preferences.currency),
+      label: formatCurrency(
+        Math.abs(parseFloat(a.value)),
+        preferences.currency
+      ),
       value: a.value,
       count: a.count,
     }));
@@ -979,7 +982,8 @@ export function TransactionTable({
             <LoadingSpinner className="h-5 w-5" />
           ) : (
             <p className="text-sm text-muted-foreground">
-              Showing {visibleTransactions.length} of {totalCount ?? transactions.length} transactions
+              Showing {visibleTransactions.length} of{' '}
+              {totalCount ?? transactions.length} transactions
             </p>
           )}
         </div>

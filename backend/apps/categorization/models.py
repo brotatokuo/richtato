@@ -63,9 +63,7 @@ class CategorizationQueue(models.Model):
         on_delete=models.CASCADE,
         related_name="categorization_queues",
     )
-    transaction_ids = models.JSONField(
-        help_text="List of transaction IDs to categorize"
-    )
+    transaction_ids = models.JSONField(help_text="List of transaction IDs to categorize")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     batch_size = models.IntegerField(default=75)
     transactions_processed = models.IntegerField(default=0)

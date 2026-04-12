@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
+
 from apps.budget.models import Budget, BudgetCategory
 from apps.budget.services.budget_service import BudgetService
 from apps.transaction.models import TransactionCategory
@@ -86,17 +87,13 @@ class TestCreateBudget:
 
 class TestCreateMonthlyBudget:
     def test_sets_correct_date_range(self, service, user):
-        budget = service.create_monthly_budget(
-            user=user, name="Feb 2024", year=2024, month=2, categories_data=[]
-        )
+        budget = service.create_monthly_budget(user=user, name="Feb 2024", year=2024, month=2, categories_data=[])
         assert budget.start_date == date(2024, 2, 1)
         assert budget.end_date == date(2024, 2, 29)  # 2024 is a leap year
         assert budget.period_type == "monthly"
 
     def test_handles_december(self, service, user):
-        budget = service.create_monthly_budget(
-            user=user, name="Dec 2024", year=2024, month=12, categories_data=[]
-        )
+        budget = service.create_monthly_budget(user=user, name="Dec 2024", year=2024, month=12, categories_data=[])
         assert budget.start_date == date(2024, 12, 1)
         assert budget.end_date == date(2024, 12, 31)
 
@@ -104,12 +101,20 @@ class TestCreateMonthlyBudget:
 class TestGetUserBudgets:
     def test_returns_only_active_budgets(self, service, user):
         Budget.objects.create(
-            user=user, name="Active", period_type="monthly",
-            start_date=date(2024, 1, 1), end_date=date(2024, 1, 31), is_active=True,
+            user=user,
+            name="Active",
+            period_type="monthly",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 31),
+            is_active=True,
         )
         Budget.objects.create(
-            user=user, name="Inactive", period_type="monthly",
-            start_date=date(2024, 2, 1), end_date=date(2024, 2, 29), is_active=False,
+            user=user,
+            name="Inactive",
+            period_type="monthly",
+            start_date=date(2024, 2, 1),
+            end_date=date(2024, 2, 29),
+            is_active=False,
         )
         result = service.get_user_budgets(user, active_only=True)
         assert len(result) == 1
@@ -117,24 +122,38 @@ class TestGetUserBudgets:
 
     def test_returns_all_when_active_only_false(self, service, user):
         Budget.objects.create(
-            user=user, name="Active", period_type="monthly",
-            start_date=date(2024, 1, 1), end_date=date(2024, 1, 31), is_active=True,
+            user=user,
+            name="Active",
+            period_type="monthly",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 31),
+            is_active=True,
         )
         Budget.objects.create(
-            user=user, name="Inactive", period_type="monthly",
-            start_date=date(2024, 2, 1), end_date=date(2024, 2, 29), is_active=False,
+            user=user,
+            name="Inactive",
+            period_type="monthly",
+            start_date=date(2024, 2, 1),
+            end_date=date(2024, 2, 29),
+            is_active=False,
         )
         result = service.get_user_budgets(user, active_only=False)
         assert len(result) == 2
 
     def test_returns_only_own_budgets(self, service, user, other_user):
         Budget.objects.create(
-            user=user, name="Mine", period_type="monthly",
-            start_date=date(2024, 1, 1), end_date=date(2024, 1, 31),
+            user=user,
+            name="Mine",
+            period_type="monthly",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 31),
         )
         Budget.objects.create(
-            user=other_user, name="Theirs", period_type="monthly",
-            start_date=date(2024, 1, 1), end_date=date(2024, 1, 31),
+            user=other_user,
+            name="Theirs",
+            period_type="monthly",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 31),
         )
         result = service.get_user_budgets(user)
         assert len(result) == 1
@@ -160,7 +179,9 @@ class TestGetCurrentBudget:
     def test_returns_budget_covering_today(self, service, user):
         today = date.today()
         Budget.objects.create(
-            user=user, name="Current", period_type="monthly",
+            user=user,
+            name="Current",
+            period_type="monthly",
             start_date=today - timedelta(days=15),
             end_date=today + timedelta(days=15),
         )
@@ -170,8 +191,11 @@ class TestGetCurrentBudget:
 
     def test_returns_none_when_no_budget_covers_today(self, service, user):
         Budget.objects.create(
-            user=user, name="Past", period_type="monthly",
-            start_date=date(2020, 1, 1), end_date=date(2020, 1, 31),
+            user=user,
+            name="Past",
+            period_type="monthly",
+            start_date=date(2020, 1, 1),
+            end_date=date(2020, 1, 31),
         )
         result = service.get_current_budget(user)
         assert result is None
@@ -179,7 +203,9 @@ class TestGetCurrentBudget:
     def test_returns_none_when_inactive(self, service, user):
         today = date.today()
         Budget.objects.create(
-            user=user, name="Inactive Current", period_type="monthly",
+            user=user,
+            name="Inactive Current",
+            period_type="monthly",
             start_date=today - timedelta(days=15),
             end_date=today + timedelta(days=15),
             is_active=False,
@@ -219,12 +245,16 @@ class TestDuplicateBudget:
 
     def test_copies_rollover_enabled_but_not_rollover_amount(self, service, budget, expense_category):
         BudgetCategory.objects.create(
-            budget=budget, category=expense_category,
+            budget=budget,
+            category=expense_category,
             allocated_amount=Decimal("200.00"),
-            rollover_enabled=True, rollover_amount=Decimal("50.00"),
+            rollover_enabled=True,
+            rollover_amount=Decimal("50.00"),
         )
         new_budget = service.duplicate_budget(
-            budget, new_start_date=date(2024, 2, 1), new_end_date=date(2024, 2, 29),
+            budget,
+            new_start_date=date(2024, 2, 1),
+            new_end_date=date(2024, 2, 29),
         )
         new_bc = new_budget.budget_categories.first()
         assert new_bc.rollover_enabled is True
@@ -232,13 +262,17 @@ class TestDuplicateBudget:
 
     def test_uses_copy_suffix_when_no_name(self, service, budget):
         new_budget = service.duplicate_budget(
-            budget, new_start_date=date(2024, 2, 1), new_end_date=date(2024, 2, 29),
+            budget,
+            new_start_date=date(2024, 2, 1),
+            new_end_date=date(2024, 2, 29),
         )
         assert new_budget.name == "January 2024 (Copy)"
 
     def test_uses_provided_name(self, service, budget):
         new_budget = service.duplicate_budget(
-            budget, new_start_date=date(2024, 2, 1), new_end_date=date(2024, 2, 29),
+            budget,
+            new_start_date=date(2024, 2, 1),
+            new_end_date=date(2024, 2, 29),
             new_name="February 2024",
         )
         assert new_budget.name == "February 2024"
@@ -247,7 +281,9 @@ class TestDuplicateBudget:
 class TestAddBudgetCategory:
     def test_adds_category_to_budget(self, service, budget, expense_category):
         bc = service.add_budget_category(
-            budget=budget, category=expense_category, allocated_amount=Decimal("250.00"),
+            budget=budget,
+            category=expense_category,
+            allocated_amount=Decimal("250.00"),
         )
         assert bc.id is not None
         assert bc.budget == budget
@@ -259,14 +295,16 @@ class TestAddBudgetCategory:
 class TestUpdateBudgetCategory:
     def test_updates_allocated_amount(self, service, budget_category):
         updated = service.update_budget_category(
-            budget_category, allocated_amount=Decimal("750.00"),
+            budget_category,
+            allocated_amount=Decimal("750.00"),
         )
         updated.refresh_from_db()
         assert updated.allocated_amount == Decimal("750.00")
 
     def test_updates_rollover_enabled(self, service, budget_category):
         updated = service.update_budget_category(
-            budget_category, rollover_enabled=True,
+            budget_category,
+            rollover_enabled=True,
         )
         updated.refresh_from_db()
         assert updated.rollover_enabled is True

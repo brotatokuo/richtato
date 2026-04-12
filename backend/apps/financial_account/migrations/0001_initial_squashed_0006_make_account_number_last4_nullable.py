@@ -14,17 +14,13 @@ from django.db import migrations, models
 def set_credit_cards_as_liability(apps, schema_editor):
     """Set is_liability=True for existing credit card accounts."""
     FinancialAccount = apps.get_model("financial_account", "FinancialAccount")
-    FinancialAccount.objects.filter(account_type="credit_card").update(
-        is_liability=True
-    )
+    FinancialAccount.objects.filter(account_type="credit_card").update(is_liability=True)
 
 
 def reverse_credit_cards_liability(apps, schema_editor):
     """Reverse: set is_liability=False for all accounts."""
     FinancialAccount = apps.get_model("financial_account", "FinancialAccount")
-    FinancialAccount.objects.filter(account_type="credit_card").update(
-        is_liability=False
-    )
+    FinancialAccount.objects.filter(account_type="credit_card").update(is_liability=False)
 
 
 COMMON_INSTITUTIONS = [
@@ -61,9 +57,7 @@ def seed_institutions(apps, schema_editor):
     FinancialInstitution = apps.get_model("financial_account", "FinancialInstitution")
 
     for inst_data in COMMON_INSTITUTIONS:
-        FinancialInstitution.objects.get_or_create(
-            slug=inst_data["slug"], defaults={"name": inst_data["name"]}
-        )
+        FinancialInstitution.objects.get_or_create(slug=inst_data["slug"], defaults={"name": inst_data["name"]})
 
 
 def reverse_seed(apps, schema_editor):
@@ -72,13 +66,10 @@ def reverse_seed(apps, schema_editor):
 
     slugs_to_remove = [inst["slug"] for inst in COMMON_INSTITUTIONS]
     # Only delete institutions that have no linked accounts
-    FinancialInstitution.objects.filter(
-        slug__in=slugs_to_remove, accounts__isnull=True
-    ).delete()
+    FinancialInstitution.objects.filter(slug__in=slugs_to_remove, accounts__isnull=True).delete()
 
 
 class Migration(migrations.Migration):
-
     replaces = [
         ("financial_account", "0001_initial"),
         ("financial_account", "0002_initial"),
@@ -131,9 +122,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "name",
-                    models.CharField(
-                        help_text="Account nickname or name", max_length=255
-                    ),
+                    models.CharField(help_text="Account nickname or name", max_length=255),
                 ),
                 (
                     "account_number_last4",
@@ -242,15 +231,11 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="financialaccount",
-            index=models.Index(
-                fields=["user", "is_active"], name="financial_a_user_id_9d2cd7_idx"
-            ),
+            index=models.Index(fields=["user", "is_active"], name="financial_a_user_id_9d2cd7_idx"),
         ),
         migrations.AddIndex(
             model_name="financialaccount",
-            index=models.Index(
-                fields=["account_type"], name="financial_a_account_4d6451_idx"
-            ),
+            index=models.Index(fields=["account_type"], name="financial_a_account_4d6451_idx"),
         ),
         migrations.AddField(
             model_name="financialaccount",

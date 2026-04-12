@@ -6,17 +6,13 @@ from . import views
 
 urlpatterns = [
     # Transactions
-    path(
-        "", views.TransactionListCreateAPIView.as_view(), name="transaction-list-create"
-    ),
+    path("", views.TransactionListCreateAPIView.as_view(), name="transaction-list-create"),
     path(
         "filter-options/",
         views.TransactionFilterOptionsAPIView.as_view(),
         name="transaction-filter-options",
     ),
-    path(
-        "<int:pk>/", views.TransactionDetailAPIView.as_view(), name="transaction-detail"
-    ),
+    path("<int:pk>/", views.TransactionDetailAPIView.as_view(), name="transaction-detail"),
     path(
         "<int:pk>/categorize/",
         views.TransactionCategorizeAPIView.as_view(),

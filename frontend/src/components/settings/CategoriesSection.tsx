@@ -71,7 +71,8 @@ export function CategoriesSection() {
   // Add category modal state
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryType, setNewCategoryType] = useState<CategoryType>('expense');
+  const [newCategoryType, setNewCategoryType] =
+    useState<CategoryType>('expense');
   const [newCategoryIcon, setNewCategoryIcon] = useState('📁');
   const [addingCategory, setAddingCategory] = useState(false);
 
@@ -144,20 +145,34 @@ export function CategoriesSection() {
     return (cat.type as CategoryType) || 'expense';
   };
 
-  const toggleEssential = async (categoryId: number, isCurrentlyEssential: boolean) => {
-    const newPriority: ExpensePriority = isCurrentlyEssential ? 'non_essential' : 'essential';
+  const toggleEssential = async (
+    categoryId: number,
+    isCurrentlyEssential: boolean
+  ) => {
+    const newPriority: ExpensePriority = isCurrentlyEssential
+      ? 'non_essential'
+      : 'essential';
     try {
-      await categorySettingsApi.updateCategoryExpensePriority(categoryId, newPriority);
+      await categorySettingsApi.updateCategoryExpensePriority(
+        categoryId,
+        newPriority
+      );
       // Update local state
       setCatalog(prev =>
         prev.map(c =>
           c.id === categoryId
-            ? { ...c, expense_priority: newPriority, is_essential: newPriority === 'essential' }
+            ? {
+                ...c,
+                expense_priority: newPriority,
+                is_essential: newPriority === 'essential',
+              }
             : c
         )
       );
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to update essential status');
+      setError(
+        e instanceof Error ? e.message : 'Failed to update essential status'
+      );
     }
   };
 
@@ -478,7 +493,11 @@ export function CategoriesSection() {
             </div>
           )}
 
-          {loading && <div className="py-4 flex justify-center"><LoadingSpinner /></div>}
+          {loading && (
+            <div className="py-4 flex justify-center">
+              <LoadingSpinner />
+            </div>
+          )}
           {!loading && catalog.length === 0 && (
             <div className="text-sm text-muted-foreground py-8 text-center">
               No categories found
@@ -646,11 +665,15 @@ export function CategoriesSection() {
                                   Essential
                                 </span>
                                 <Switch
-                                  checked={item.expense_priority === 'essential' || item.is_essential === true}
+                                  checked={
+                                    item.expense_priority === 'essential' ||
+                                    item.is_essential === true
+                                  }
                                   onCheckedChange={() =>
                                     toggleEssential(
                                       item.id,
-                                      item.expense_priority === 'essential' || item.is_essential === true
+                                      item.expense_priority === 'essential' ||
+                                        item.is_essential === true
                                     )
                                   }
                                   className="data-[state=checked]:bg-green-500"

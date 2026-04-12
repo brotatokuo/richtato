@@ -161,9 +161,11 @@ export function ReportPage() {
         axisPointer: { type: 'shadow' },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         formatter: (params: any) => {
-          const lines = params.map((p: { color: string; seriesName: string; value: number }) => {
-            return `<span style="color:${p.color}">●</span> ${p.seriesName}: ${formatCurrency(p.value, preferences.currency)}`;
-          });
+          const lines = params.map(
+            (p: { color: string; seriesName: string; value: number }) => {
+              return `<span style="color:${p.color}">●</span> ${p.seriesName}: ${formatCurrency(p.value, preferences.currency)}`;
+            }
+          );
           return `${params[0].name}<br/>${lines.join('<br/>')}`;
         },
       },

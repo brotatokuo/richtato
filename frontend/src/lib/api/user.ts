@@ -120,7 +120,10 @@ export class CategorySettingsApi {
   ): Promise<CategoryCatalogItem> {
     const res = await csrfService.fetchWithCsrf(
       `${this.keywordBase}/${categoryId}/`,
-      { method: 'PATCH', body: JSON.stringify({ expense_priority: expensePriority }) }
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ expense_priority: expensePriority }),
+      }
     );
     if (!res.ok) throw new Error('Failed to update category');
     return res.json();
@@ -132,10 +135,10 @@ export class CategorySettingsApi {
     icon?: string;
     color?: string;
   }): Promise<CategoryCatalogItem> {
-    const res = await csrfService.fetchWithCsrf(
-      `${this.keywordBase}/`,
-      { method: 'POST', body: JSON.stringify(data) }
-    );
+    const res = await csrfService.fetchWithCsrf(`${this.keywordBase}/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
     if (!res.ok) throw new Error('Failed to create category');
     return res.json();
   }

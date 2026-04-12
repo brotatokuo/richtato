@@ -85,7 +85,8 @@ export function UnifiedAccountsSection() {
       setAccounts(data);
       setError(null);
     } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to load accounts';
+      const errorMessage =
+        e instanceof Error ? e.message : 'Failed to load accounts';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -128,7 +129,8 @@ export function UnifiedAccountsSection() {
   // Polling for sync progress
   const pollSyncProgress = useCallback(async (connectionId: number) => {
     try {
-      const progress = await bankConnectionsApiService.getSyncJobProgress(connectionId);
+      const progress =
+        await bankConnectionsApiService.getSyncJobProgress(connectionId);
       if (progress) {
         if (progress.status !== 'running') {
           if (pollIntervalRef.current) {
@@ -173,7 +175,8 @@ export function UnifiedAccountsSection() {
       await refresh();
       setShowCreate(false);
     } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to create account';
+      const errorMessage =
+        e instanceof Error ? e.message : 'Failed to create account';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -197,7 +200,8 @@ export function UnifiedAccountsSection() {
       setShowDetail(false);
       setSelectedAccount(null);
     } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to update account';
+      const errorMessage =
+        e instanceof Error ? e.message : 'Failed to update account';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -213,7 +217,8 @@ export function UnifiedAccountsSection() {
       setShowDetail(false);
       setSelectedAccount(null);
     } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to delete account';
+      const errorMessage =
+        e instanceof Error ? e.message : 'Failed to delete account';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -265,7 +270,8 @@ export function UnifiedAccountsSection() {
       setShowDisconnect(false);
       setSelectedAccount(null);
     } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to disconnect';
+      const errorMessage =
+        e instanceof Error ? e.message : 'Failed to disconnect';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -293,7 +299,8 @@ export function UnifiedAccountsSection() {
         });
       }
     } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to start sync';
+      const errorMessage =
+        e instanceof Error ? e.message : 'Failed to start sync';
       toast.error('Sync failed', {
         description: errorMessage,
       });
@@ -538,7 +545,9 @@ export function UnifiedAccountsSection() {
         {error && <div className="text-sm text-red-600 mb-3">{error}</div>}
 
         {loading && !accounts.length ? (
-          <div className="py-4 flex justify-center"><LoadingSpinner /></div>
+          <div className="py-4 flex justify-center">
+            <LoadingSpinner />
+          </div>
         ) : accounts.length === 0 ? (
           <div className="text-sm text-muted-foreground">
             No accounts yet. Connect a bank or add an account manually.

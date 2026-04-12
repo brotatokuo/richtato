@@ -2,10 +2,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Modal } from '@/components/ui/Modal';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { formatCurrency, formatDate } from '@/lib/format';
-import {
-  Transaction,
-  transactionsApiService,
-} from '@/lib/api/transactions';
+import { Transaction, transactionsApiService } from '@/lib/api/transactions';
 import type { MonthlyBudgetData } from '@/lib/api/budget-dashboard';
 import { AlertTriangle, TrendingDown, TrendingUp } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
@@ -109,10 +106,7 @@ export function ExpenseDetailModal({
               ) : (
                 <>
                   <TrendingDown className="inline h-4 w-4 mr-1" />
-                  {formatCurrency(
-                    monthData.total_remaining,
-                    currency
-                  )}
+                  {formatCurrency(monthData.total_remaining, currency)}
                 </>
               )}
             </div>
@@ -213,7 +207,9 @@ function CategorySummary({ categories, currency }: CategorySummaryProps) {
             className="p-3 bg-muted/30 rounded-lg border border-border/50"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="font-medium text-foreground">{cat.category}</span>
+              <span className="font-medium text-foreground">
+                {cat.category}
+              </span>
               <span
                 className={`text-sm font-semibold ${isOver ? 'text-red-500' : 'text-muted-foreground'}`}
               >
@@ -292,7 +288,7 @@ function TransactionList({
 
   return (
     <div className="space-y-2">
-      {transactions.map((txn) => (
+      {transactions.map(txn => (
         <div
           key={txn.id}
           className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors"

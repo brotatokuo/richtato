@@ -1,18 +1,13 @@
 """Repository for TransactionCategory model."""
 
-from typing import List, Optional
-
 from apps.richtato_user.models import User
 from apps.transaction.models import TransactionCategory
-from django.db.models import Q
 
 
 class CategoryRepository:
     """Repository for transaction category data access."""
 
-    def get_by_id(
-        self, category_id: int, user: Optional[User] = None
-    ) -> Optional[TransactionCategory]:
+    def get_by_id(self, category_id: int, user: User | None = None) -> TransactionCategory | None:
         """Get category by ID, optionally scoped to a specific user."""
         try:
             filters = {"id": category_id}
@@ -22,40 +17,30 @@ class CategoryRepository:
         except TransactionCategory.DoesNotExist:
             return None
 
-    def get_by_slug(
-        self, slug: str, user: User = None
-    ) -> Optional[TransactionCategory]:
+    def get_by_slug(self, slug: str, user: User = None) -> TransactionCategory | None:
         """Get category by slug."""
         try:
             return TransactionCategory.objects.get(slug=slug, user=user)
         except TransactionCategory.DoesNotExist:
             return None
 
-    def get_all_for_user(
-        self, user: User, include_deleted: bool = False
-    ) -> List[TransactionCategory]:
+    def get_all_for_user(self, user: User, include_deleted: bool = False) -> list[TransactionCategory]:
         """Get all categories for a user, excluding soft-deleted by default."""
         queryset = TransactionCategory.objects.filter(user=user)
         if not include_deleted:
             queryset = queryset.filter(is_deleted=False)
         return list(queryset.order_by("name"))
 
-    def get_root_categories(
-        self, user: User, include_deleted: bool = False
-    ) -> List[TransactionCategory]:
+    def get_root_categories(self, user: User, include_deleted: bool = False) -> list[TransactionCategory]:
         """Get top-level categories (no parent) for a user."""
         queryset = TransactionCategory.objects.filter(parent__isnull=True, user=user)
         if not include_deleted:
             queryset = queryset.filter(is_deleted=False)
         return list(queryset.order_by("name"))
 
-    def get_subcategories(
-        self, parent_category: TransactionCategory
-    ) -> List[TransactionCategory]:
+    def get_subcategories(self, parent_category: TransactionCategory) -> list[TransactionCategory]:
         """Get subcategories of a parent category."""
-        return list(
-            TransactionCategory.objects.filter(parent=parent_category).order_by("name")
-        )
+        return list(TransactionCategory.objects.filter(parent=parent_category).order_by("name"))
 
     def create_category(
         self,
@@ -78,9 +63,7 @@ class CategoryRepository:
             type=category_type,
         )
 
-    def update_category(
-        self, category: TransactionCategory, **kwargs
-    ) -> TransactionCategory:
+    def update_category(self, category: TransactionCategory, **kwargs) -> TransactionCategory:
         """Update category fields."""
         for key, value in kwargs.items():
             if hasattr(category, key):

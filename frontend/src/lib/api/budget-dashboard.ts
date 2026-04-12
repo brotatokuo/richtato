@@ -116,7 +116,13 @@ class BudgetDashboardApiService extends BaseApiClient {
     year?: number;
     month?: string;
     count?: number;
-  }): Promise<{ category_rankings: Array<{ category: string; amount: number; rank: number }> }> {
+  }): Promise<{
+    category_rankings: Array<{
+      category: string;
+      amount: number;
+      rank: number;
+    }>;
+  }> {
     const url = new URL(`${this.baseUrl}/rankings/`, window.location.origin);
     if (params?.year) url.searchParams.append('year', String(params.year));
     if (params?.month) url.searchParams.append('month', params.month);
@@ -126,7 +132,13 @@ class BudgetDashboardApiService extends BaseApiClient {
       headers: this.getHeaders(),
       credentials: 'include',
     });
-    return this.handleResponse<{ category_rankings: Array<{ category: string; amount: number; rank: number }> }>(response);
+    return this.handleResponse<{
+      category_rankings: Array<{
+        category: string;
+        amount: number;
+        rank: number;
+      }>;
+    }>(response);
   }
 
   /**
@@ -152,7 +164,8 @@ class BudgetDashboardApiService extends BaseApiClient {
       `${this.baseUrl}/progress/multi-month/`,
       window.location.origin
     );
-    if (params?.months) url.searchParams.append('months', String(params.months));
+    if (params?.months)
+      url.searchParams.append('months', String(params.months));
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),

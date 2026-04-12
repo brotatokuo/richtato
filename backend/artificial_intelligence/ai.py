@@ -4,13 +4,14 @@ from abc import ABC, abstractmethod
 
 import httpx
 import pandas as pd
-from apps.richtato_user.models import User
-from apps.transaction.models import TransactionCategory
 from dotenv import load_dotenv
 from loguru import logger
 
 # Optional imports
 from openai import OpenAI as OpenAIClient
+
+from apps.richtato_user.models import User
+from apps.transaction.models import TransactionCategory
 
 load_dotenv()
 
@@ -53,9 +54,7 @@ class OpenAI(BaseAI):
     def get_user_categories(self, user: User) -> list[str]:
         """Get all category names for a user."""
         # Get user's expense categories
-        user_categories = TransactionCategory.objects.filter(
-            user=user, type="expense"
-        ).values_list("name", flat=True)
+        user_categories = TransactionCategory.objects.filter(user=user, type="expense").values_list("name", flat=True)
         return list(user_categories)
 
     def categorize_transaction(self, user: User, input: str) -> str:
@@ -92,9 +91,7 @@ class OpenAI(BaseAI):
         # Parse LLM response
         predicted = self._parse_batch_response(response, descriptions)
         df["Category"] = predicted
-        logger.info(
-            f"Categorization Completed: {len(predicted)} transactions categorized."
-        )
+        logger.info(f"Categorization Completed: {len(predicted)} transactions categorized.")
         logger.debug(df)
         return df
 

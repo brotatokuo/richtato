@@ -1,14 +1,12 @@
 """Service for bulk recategorization of transactions."""
 
-from datetime import datetime
-from typing import Callable, Dict, Optional
+from collections.abc import Callable
 
-from apps.richtato_user.models import User
-from apps.transaction.models import RecategorizationTask, Transaction
-from apps.transaction.services.transaction_service import TransactionService
-from django.db import transaction as db_transaction
 from django.utils import timezone
 from loguru import logger
+
+from apps.transaction.models import RecategorizationTask, Transaction
+from apps.transaction.services.transaction_service import TransactionService
 
 
 class RecategorizationService:
@@ -20,8 +18,8 @@ class RecategorizationService:
     def recategorize_all_transactions(
         self,
         task: RecategorizationTask,
-        progress_callback: Optional[Callable[[int, int], None]] = None,
-    ) -> Dict[str, int]:
+        progress_callback: Callable[[int, int], None] | None = None,
+    ) -> dict[str, int]:
         """
         Recategorize all transactions for a user based on their current keywords.
 
@@ -58,9 +56,7 @@ class RecategorizationService:
             task.total_count = total_count
             task.save(update_fields=["total_count"])
 
-            logger.info(
-                f"Starting recategorization for user {user.id}: {total_count} transactions"
-            )
+            logger.info(f"Starting recategorization for user {user.id}: {total_count} transactions")
 
             # Statistics
             stats = {
@@ -81,11 +77,7 @@ class RecategorizationService:
                     old_category_id = old_category.id if old_category else None
 
                     # Try to match category via keywords
-                    new_category = (
-                        self.transaction_service._match_category_via_keywords(
-                            user, txn.description
-                        )
-                    )
+                    new_category = self.transaction_service._match_category_via_keywords(user, txn.description)
 
                     if new_category:
                         # Found a keyword match
@@ -93,9 +85,7 @@ class RecategorizationService:
                         if old_category_id != new_category_id:
                             txn.category = new_category
                             txn.categorization_status = "categorized"
-                            txn.save(
-                                update_fields=["category", "categorization_status"]
-                            )
+                            txn.save(update_fields=["category", "categorization_status"])
                             stats["updated"] += 1
                         else:
                             stats["unchanged"] += 1
@@ -107,9 +97,7 @@ class RecategorizationService:
                             if old_category_id is not None:
                                 txn.category = None
                                 txn.categorization_status = "uncategorized"
-                                txn.save(
-                                    update_fields=["category", "categorization_status"]
-                                )
+                                txn.save(update_fields=["category", "categorization_status"])
                                 stats["updated"] += 1
                             else:
                                 stats["unchanged"] += 1

@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
+
 from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
 from apps.richtato_user.models import User
 from apps.transaction.models import Transaction
@@ -11,9 +12,7 @@ from apps.transaction.models import Transaction
 
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(
-        username="signaltest", email="signal@test.com", password="testpass123"
-    )
+    return User.objects.create_user(username="signaltest", email="signal@test.com", password="testpass123")
 
 
 @pytest.fixture
@@ -193,9 +192,7 @@ class TestBalanceHistoryOnCreate:
         assert account.balance == Decimal("5200.00")
 
         today_hist = AccountBalanceHistory.objects.get(account=account, date=today)
-        yesterday_hist = AccountBalanceHistory.objects.get(
-            account=account, date=yesterday
-        )
+        yesterday_hist = AccountBalanceHistory.objects.get(account=account, date=yesterday)
 
         # Today: anchor 5200 - 0 transactions after today = 5200
         assert today_hist.balance == Decimal("5200.00")
@@ -285,14 +282,10 @@ class TestBalanceHistoryOnDelete:
             transaction_type="debit",
             description="Only tx",
         )
-        assert AccountBalanceHistory.objects.filter(
-            account=account, date=today
-        ).exists()
+        assert AccountBalanceHistory.objects.filter(account=account, date=today).exists()
 
         tx.delete()
-        assert not AccountBalanceHistory.objects.filter(
-            account=account, date=today
-        ).exists()
+        assert not AccountBalanceHistory.objects.filter(account=account, date=today).exists()
 
     def test_delete_one_of_two_same_date_keeps_history(self, account):
         today = date.today()
@@ -338,17 +331,13 @@ class TestDateChangeRecalculation:
             transaction_type="credit",
             description="Moveable",
         )
-        assert AccountBalanceHistory.objects.filter(
-            account=account, date=d1
-        ).exists()
+        assert AccountBalanceHistory.objects.filter(account=account, date=d1).exists()
 
         tx.date = d2
         tx.save()
 
         # Old date should be cleaned up (no transactions left on d1)
-        assert not AccountBalanceHistory.objects.filter(
-            account=account, date=d1
-        ).exists()
+        assert not AccountBalanceHistory.objects.filter(account=account, date=d1).exists()
         # New date should have the history entry
         history = AccountBalanceHistory.objects.get(account=account, date=d2)
         assert history.balance == Decimal("5500.00")
@@ -463,9 +452,7 @@ def second_account(user):
 class TestCrossAccountSignals:
     """Signals should only affect the transaction's own account."""
 
-    def test_transaction_on_account_a_does_not_affect_account_b(
-        self, account, second_account
-    ):
+    def test_transaction_on_account_a_does_not_affect_account_b(self, account, second_account):
         Transaction.objects.create(
             user=account.user,
             account=account,

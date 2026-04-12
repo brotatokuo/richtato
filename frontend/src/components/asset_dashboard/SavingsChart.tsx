@@ -101,8 +101,14 @@ export function SavingsChart() {
     () => ({
       tooltip: {
         trigger: 'axis',
-        formatter: function (params: Array<{ name?: string; seriesName?: string; value?: number | number[] }>) {
-          const lines = (params || []).map((p) => {
+        formatter: function (
+          params: Array<{
+            name?: string;
+            seriesName?: string;
+            value?: number | number[];
+          }>
+        ) {
+          const lines = (params || []).map(p => {
             const value = Array.isArray(p.value) ? p.value[1] : p.value;
             return `${p.seriesName}: $${Number(value ?? 0).toLocaleString()}`;
           });

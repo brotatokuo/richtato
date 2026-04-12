@@ -1,14 +1,14 @@
 """Shared logic for creating FinancialAccount + SyncConnection from Plaid account data."""
 
 from decimal import Decimal
-from typing import Optional
+
+from loguru import logger
 
 from apps.financial_account.repositories.account_repository import (
     FinancialAccountRepository,
 )
 from apps.financial_account.services.account_service import AccountService
 from apps.sync.repositories.sync_connection_repository import SyncConnectionRepository
-from loguru import logger
 
 PLAID_TYPE_MAPPING = {
     "depository": "checking",
@@ -45,9 +45,9 @@ def create_plaid_financial_account(
     access_token: str,
     institution_name: str,
     item_id: str,
-    connection_repository: Optional[SyncConnectionRepository] = None,
-    account_service: Optional[AccountService] = None,
-    account_repository: Optional[FinancialAccountRepository] = None,
+    connection_repository: SyncConnectionRepository | None = None,
+    account_service: AccountService | None = None,
+    account_repository: FinancialAccountRepository | None = None,
 ):
     """Create a FinancialAccount and SyncConnection for a single Plaid account.
 
@@ -63,9 +63,7 @@ def create_plaid_financial_account(
     account_subtype = plaid_account.get("subtype", "")
     last_four = plaid_account.get("last_four", "")
 
-    existing = connection_repository.get_by_external_account_id(
-        user, "plaid", plaid_account_id
-    )
+    existing = connection_repository.get_by_external_account_id(user, "plaid", plaid_account_id)
     if existing:
         logger.info(f"Connection already exists for Plaid account {plaid_account_id}")
         return existing

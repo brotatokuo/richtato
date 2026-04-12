@@ -14,7 +14,6 @@ from django.http import JsonResponse
 from loguru import logger
 
 from apps.transaction.models import Transaction
-from apps.financial_account.models import FinancialAccount
 
 from .repositories import AssetDashboardRepository
 from .services import AssetDashboardService
@@ -165,9 +164,7 @@ def top_categories_data(request):
             start_date = end_date - timedelta(days=30)
 
         # Build queryset with filters - use Transaction with debit type for expenses
-        transactions = Transaction.objects.filter(
-            user=request.user, transaction_type="debit"
-        )
+        transactions = Transaction.objects.filter(user=request.user, transaction_type="debit")
 
         if start_date is not None:
             transactions = transactions.filter(date__gte=start_date, date__lte=end_date)
@@ -203,8 +200,6 @@ def sankey_data(request):
     Get Sankey diagram data - uses Transaction model for cash flow visualization.
     """
     try:
-        from apps.transaction.models import TransactionCategory
-
         sankey_fig = sankey_cash_flow_overview(request.user)
 
         # Convert the figure to a dictionary for JSON serialization
@@ -256,11 +251,6 @@ def sankey_cash_flow_overview(user):
         .values("amount", "category__name")
     )
 
-    # Get user's account balances
-    accounts = FinancialAccount.objects.filter(user=user, is_active=True).values(
-        "account_type", "balance", "name"
-    )
-
     # Build the Sankey diagram data
     labels = []
     source = []
@@ -271,11 +261,7 @@ def sankey_cash_flow_overview(user):
     income_df = pd.DataFrame(income_data)
     if not income_df.empty:
         # Merge by both description and account type
-        merged_income = (
-            income_df.groupby(["description", "account__account_type"])
-            .agg({"amount": "sum"})
-            .reset_index()
-        )
+        merged_income = income_df.groupby(["description", "account__account_type"]).agg({"amount": "sum"}).reset_index()
 
         # Add income source labels
         income_sources = merged_income["description"].unique().tolist()
@@ -291,9 +277,7 @@ def sankey_cash_flow_overview(user):
             elif acc_type == "credit_card":
                 account_type_labels.append("💳 Credit Card")
             else:
-                account_type_labels.append(
-                    f"💳 {str(acc_type).replace('_', ' ').title()}"
-                )
+                account_type_labels.append(f"💳 {str(acc_type).replace('_', ' ').title()}")
 
         labels.extend(account_type_labels)
 
@@ -307,9 +291,7 @@ def sankey_cash_flow_overview(user):
             elif row["account__account_type"] == "credit_card":
                 target_label = "💳 Credit Card"
             else:
-                target_label = (
-                    f"💳 {str(row['account__account_type']).replace('_', ' ').title()}"
-                )
+                target_label = f"💳 {str(row['account__account_type']).replace('_', ' ').title()}"
 
             target_idx = labels.index(target_label)
 
@@ -382,9 +364,7 @@ def sankey_cash_flow_overview(user):
     )
 
     fig.update_layout(
-        title_font=dict(
-            size=20, color="#ffffff", family="Open Sans, sans-serif", weight="bold"
-        ),
+        title_font=dict(size=20, color="#ffffff", family="Open Sans, sans-serif", weight="bold"),
         font=dict(size=14, color="#ffffff", family="Open Sans, sans-serif"),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",

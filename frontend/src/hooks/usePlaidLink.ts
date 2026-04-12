@@ -124,7 +124,9 @@ export function usePlaidLink() {
           setLoading(false);
 
           if (err) {
-            setError(err.display_message || err.error_message || 'Connection failed');
+            setError(
+              err.display_message || err.error_message || 'Connection failed'
+            );
           }
         },
         onLoad: () => {

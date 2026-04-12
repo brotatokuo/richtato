@@ -37,24 +37,25 @@ export function DataTable() {
       setLoading(true);
       setError(null);
 
-      const [transactionsRes, categoriesData, accountsData] =
-        await Promise.all([
+      const [transactionsRes, categoriesData, accountsData] = await Promise.all(
+        [
           transactionsApiService.getTransactions({
             page: 1,
             pageSize: PAGE_SIZE,
           }),
           transactionsApiService.getCategories(),
           transactionsApiService.getAccounts(),
-        ]);
-
-      setTransactions(
-        transactionsRes.transactions.map(transformTransaction)
+        ]
       );
+
+      setTransactions(transactionsRes.transactions.map(transformTransaction));
       setAccounts(accountsData);
       setCategories(categoriesData);
       setPage(1);
       setHasNext(transactionsRes.has_next ?? false);
-      setTotalCount(transactionsRes.total_count ?? transactionsRes.transactions.length);
+      setTotalCount(
+        transactionsRes.total_count ?? transactionsRes.transactions.length
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
       console.error('Error loading data:', err);
