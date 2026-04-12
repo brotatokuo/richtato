@@ -68,7 +68,7 @@ run_backend() {
       done
     fi
 
-    if python -m pytest apps/ -v --tb=short; then
+    if DJANGO_SETTINGS_MODULE=richtato.test_pg_settings python -m pytest apps/ -v --tb=short; then
       BACKEND_OK="pass"
     else
       BACKEND_OK="fail"
