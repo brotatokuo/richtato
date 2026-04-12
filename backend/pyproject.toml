@@ -35,6 +35,9 @@ dependencies = [
     "ipykernel",
     "plaid-python==22.0.0",
     "urllib3<2.0.0",  # Add this line - needed for plaid-python compatibility
+    "langgraph>=0.4",
+    "langchain-google-genai>=4.0",
+    "langgraph-checkpoint-postgres>=2.0",
 ]
 
 

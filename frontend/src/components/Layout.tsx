@@ -1,6 +1,7 @@
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import {
   BarChart3,
+  BotMessageSquare,
   CloudUpload,
   Menu,
   PieChart,
@@ -13,6 +14,7 @@ import {
 import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
+import { ChatPanel } from './assistant/ChatPanel';
 import { Sidebar } from './Sidebar';
 
 // Route to page title and icon mapping
@@ -34,6 +36,7 @@ const routeConfig: Record<
 export function Layout() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   // Global sync status monitoring for toast notifications
   useSyncStatus({
@@ -108,6 +111,13 @@ export function Layout() {
                   </h1>
                 </div>
               </div>
+              <button
+                onClick={() => setChatOpen(prev => !prev)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
+                aria-label="Toggle AI assistant"
+              >
+                <BotMessageSquare className="h-5 w-5" />
+              </button>
             </div>
           </div>
         </header>
@@ -119,6 +129,7 @@ export function Layout() {
           </div>
         </main>
       </div>
+      <ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
     </div>
   );
 }

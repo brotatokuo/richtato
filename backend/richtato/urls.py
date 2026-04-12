@@ -76,6 +76,8 @@ urlpatterns = [
     path("api/cron/sync/", sync_views.CronSyncAPIView.as_view(), name="cron-sync"),
     # Add sync status endpoint at both /api/sync/ and /api/v1/sync/
     path("api/v1/sync/", include("apps.sync.urls")),
+    # AI Assistant
+    path("api/v1/assistant/", include("apps.assistant.urls")),
 ]
 
 # Serve static files during development
