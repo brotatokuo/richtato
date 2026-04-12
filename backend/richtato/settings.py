@@ -28,6 +28,10 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # Plaid API Configuration
 PLAID_CLIENT_ID = os.getenv("PLAID_CLIENT_ID")
 
+# Google AI / Gemini Configuration
+GOOGLE_AI_API_KEY = os.getenv("GOOGLE_AI_API_KEY", "")
+ASSISTANT_MODEL = os.getenv("ASSISTANT_MODEL", "gemini-2.5-flash")
+
 # Cron Job Security
 CRON_SECRET_KEY = os.getenv("CRON_SECRET_KEY")
 PLAID_SECRET = os.getenv("PLAID_SECRET")
@@ -59,6 +63,7 @@ INSTALLED_APPS = [
     "apps.categorization",
     "apps.sync",
     "apps.budget",
+    "apps.assistant",
     "django.contrib.humanize",
     "django.contrib.admin",
     "django.contrib.auth",
