@@ -1,4 +1,4 @@
-import * as echarts from 'echarts';
+import echarts, { type ECharts } from '@/lib/echarts';
 import { useEffect, useRef } from 'react';
 
 interface ChartData {
@@ -29,7 +29,7 @@ export function BaseChart({
   width = '100%',
 }: BaseChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
-  const chartInstanceRef = useRef<echarts.ECharts | null>(null);
+  const chartInstanceRef = useRef<ECharts | null>(null);
 
   useEffect(() => {
     if (chartRef.current) {

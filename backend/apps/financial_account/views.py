@@ -237,11 +237,12 @@ class AccountTransactionsAPIView(APIView):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.account_service = AccountService()
+        from apps.transaction.services.transaction_service import TransactionService
+
+        self.transaction_service = TransactionService()
 
     def get(self, request, pk):
         """Get paginated transactions for an account."""
-        from apps.transaction.models import Transaction
-
         account = self.account_service.get_account_by_id(pk, request.user)
 
         if not account:
@@ -252,12 +253,14 @@ class AccountTransactionsAPIView(APIView):
         page = int(request.query_params.get("page", 1))
         page_size = int(request.query_params.get("page_size", 10))
 
-        transactions = Transaction.objects.filter(account=account).order_by("-date")
-        total = transactions.count()
+        queryset = self.transaction_service.get_user_transactions(
+            user=request.user, account=account
+        )
+        total = queryset.count()
 
         start = (page - 1) * page_size
         end = start + page_size
-        transactions = transactions[start:end]
+        transactions = queryset[start:end]
 
         columns = [
             {"field": "id", "title": "ID"},
@@ -290,8 +293,6 @@ class AccountTransactionsAPIView(APIView):
 
     def patch(self, request, pk):
         """Update a transaction."""
-        from apps.transaction.models import Transaction
-
         account = self.account_service.get_account_by_id(pk, request.user)
         if not account:
             return Response(
@@ -304,29 +305,32 @@ class AccountTransactionsAPIView(APIView):
                 {"error": "Transaction ID required"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            transaction = Transaction.objects.get(id=transaction_id, account=account)
-            if "amount" in request.data:
-                transaction.amount = request.data["amount"]
-            if "date" in request.data:
-                transaction.date = request.data["date"]
-            transaction.save()
-            return Response(
-                {
-                    "id": transaction.id,
-                    "amount": str(transaction.amount),
-                    "date": str(transaction.date),
-                }
-            )
-        except Transaction.DoesNotExist:
+        transaction = self.transaction_service.get_transaction_by_id(
+            transaction_id, request.user
+        )
+        if not transaction or transaction.account_id != account.id:
             return Response(
                 {"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND
             )
+
+        update_kwargs = {}
+        if "amount" in request.data:
+            update_kwargs["amount"] = request.data["amount"]
+        if "date" in request.data:
+            update_kwargs["date"] = request.data["date"]
+        transaction = self.transaction_service.update_transaction(
+            transaction, **update_kwargs
+        )
+        return Response(
+            {
+                "id": transaction.id,
+                "amount": str(transaction.amount),
+                "date": str(transaction.date),
+            }
+        )
 
     def delete(self, request, pk):
         """Delete a transaction."""
-        from apps.transaction.models import Transaction
-
         account = self.account_service.get_account_by_id(pk, request.user)
         if not account:
             return Response(
@@ -339,14 +343,16 @@ class AccountTransactionsAPIView(APIView):
                 {"error": "Transaction ID required"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            transaction = Transaction.objects.get(id=transaction_id, account=account)
-            transaction.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except Transaction.DoesNotExist:
+        transaction = self.transaction_service.get_transaction_by_id(
+            transaction_id, request.user
+        )
+        if not transaction or transaction.account_id != account.id:
             return Response(
                 {"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND
             )
+
+        self.transaction_service.delete_transaction(transaction)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AccountBalanceUpdateAPIView(APIView):

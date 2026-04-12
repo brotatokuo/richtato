@@ -1,6 +1,7 @@
 /**
  * Budget Dashboard API service for budget-related analytics
  */
+import { BaseApiClient } from './base-client';
 
 export interface ExpenseCategoriesData {
   labels: string[];
@@ -52,28 +53,9 @@ export interface MultiMonthBudgetProgressData {
   months_requested: number;
 }
 
-class BudgetDashboardApiService {
-  private baseUrl: string;
-
+class BudgetDashboardApiService extends BaseApiClient {
   constructor() {
-    const root = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-    this.baseUrl = `${root}/budget-dashboard`;
-  }
-
-  private getHeaders(): HeadersInit {
-    return {
-      'Content-Type': 'application/json',
-    };
-  }
-
-  private async handleResponse<T>(response: Response): Promise<T> {
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.error || `HTTP error! status: ${response.status}`
-      );
-    }
-    return response.json();
+    super('/budget-dashboard');
   }
 
   /**

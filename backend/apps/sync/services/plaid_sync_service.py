@@ -17,8 +17,7 @@ from django.db.models import Q
 from integrations.plaid.client import PlaidClient
 from loguru import logger
 
-# Canonical slug for Credit Card Payment category
-CC_PAYMENT_CATEGORY_SLUG = "credit-card-payment"
+from apps.core.constants import CC_PAYMENT_CATEGORY_SLUG
 
 # Patterns for detecting income transactions based on description
 INCOME_PATTERNS = [

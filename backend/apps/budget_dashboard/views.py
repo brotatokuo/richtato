@@ -8,6 +8,7 @@ Business logic is in services, database access is in repositories.
 import calendar
 from datetime import date
 
+from apps.core.utils.date_params import parse_date_range_params
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from loguru import logger
@@ -22,46 +23,24 @@ from .services.annual_analysis_service import AnnualAnalysisService
 def expense_categories_data(request):
     """Get expense breakdown by category - delegates to service layer."""
     try:
-        # Extract parameters
-        start_date_param = request.GET.get("start_date")
-        end_date_param = request.GET.get("end_date")
         year = request.GET.get("year")
         month = request.GET.get("month")
 
-        # Parse dates if provided
-        start_date = None
-        end_date = None
-        if start_date_param or end_date_param:
-            try:
-                if start_date_param:
-                    y, m, d = map(int, start_date_param.split("-"))
-                    start_date = date(y, m, d)
-                if end_date_param:
-                    y2, m2, d2 = map(int, end_date_param.split("-"))
-                    end_date = date(y2, m2, d2)
-            except Exception:
-                return JsonResponse(
-                    {"error": "Invalid start_date or end_date"}, status=400
-                )
+        try:
+            start_date, end_date = parse_date_range_params(
+                request.GET, infer_month_bounds=True
+            )
+        except (ValueError, Exception):
+            return JsonResponse(
+                {"error": "Invalid start_date or end_date"}, status=400
+            )
 
-            if start_date and not end_date:
-                end_date = date(
-                    start_date.year,
-                    start_date.month,
-                    calendar.monthrange(start_date.year, start_date.month)[1],
-                )
-            if end_date and not start_date:
-                start_date = date(end_date.year, end_date.month, 1)
-
-        # Parse year/month if provided
         year_int = int(year) if year else None
         month_int = int(month) if month else None
 
-        # Inject dependencies and delegate to service
         repo = BudgetDashboardRepository()
         service = BudgetDashboardService(repo)
 
-        # Delegate to service
         data = service.get_expense_categories_data(
             request.user, start_date, end_date, year_int, month_int
         )
@@ -78,38 +57,20 @@ def budget_progress(request):
     today = date.today()
     year_param = request.GET.get("year")
     month_param = request.GET.get("month")
-    start_date_param = request.GET.get("start_date")
-    end_date_param = request.GET.get("end_date")
 
-    start_date = None
-    end_date = None
     year = today.year
     month = today.month
 
-    # Parse date parameters
-    if start_date_param or end_date_param:
-        try:
-            if start_date_param:
-                y, m, d = map(int, start_date_param.split("-"))
-                start_date = date(y, m, d)
-            if end_date_param:
-                y2, m2, d2 = map(int, end_date_param.split("-"))
-                end_date = date(y2, m2, d2)
-        except Exception:
-            return JsonResponse({"error": "Invalid start_date or end_date"}, status=400)
+    try:
+        start_date, end_date = parse_date_range_params(
+            request.GET, infer_month_bounds=True
+        )
+    except (ValueError, Exception):
+        return JsonResponse({"error": "Invalid start_date or end_date"}, status=400)
 
-        if start_date and not end_date:
-            end_date = date(
-                start_date.year,
-                start_date.month,
-                calendar.monthrange(start_date.year, start_date.month)[1],
-            )
-        if end_date and not start_date:
-            start_date = date(end_date.year, end_date.month, 1)
-
-        if start_date:
-            year = start_date.year
-            month = start_date.month
+    if start_date:
+        year = start_date.year
+        month = start_date.month
     else:
         try:
             year = int(year_param) if year_param else today.year

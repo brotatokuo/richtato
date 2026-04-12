@@ -1,6 +1,7 @@
 /**
  * Annual Analysis API service for comprehensive yearly spending analysis
  */
+import { BaseApiClient } from './base-client';
 
 export interface MonthlyBreakdown {
   month: string;
@@ -35,28 +36,9 @@ export interface AnnualAnalysisData {
   income_sources: IncomeSource[];
 }
 
-class AnnualAnalysisApiService {
-  private baseUrl: string;
-
+class AnnualAnalysisApiService extends BaseApiClient {
   constructor() {
-    const root = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-    this.baseUrl = `${root}/budget-dashboard`;
-  }
-
-  private getHeaders(): HeadersInit {
-    return {
-      'Content-Type': 'application/json',
-    };
-  }
-
-  private async handleResponse<T>(response: Response): Promise<T> {
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.error || `HTTP error! status: ${response.status}`
-      );
-    }
-    return response.json();
+    super('/budget-dashboard');
   }
 
   /**

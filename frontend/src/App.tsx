@@ -1,21 +1,23 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 import { PreferencesProvider } from './contexts/PreferencesContext';
-import { AssetDashboard } from './pages/AssetDashboard';
-import { Dashboard } from './pages/BudgetDashboard';
-import { Cashflow } from './pages/Cashflow';
-import { DataTable } from './pages/DataTable';
 import { Login } from './pages/Login';
-import { Preferences } from './pages/Preferences';
-import { Profile } from './pages/Profile';
 import { Register } from './pages/Register';
-import { ReportPage } from './pages/ReportPage';
-import { Setup } from './pages/Setup';
-import { Upload } from './pages/Upload';
 import { Welcome } from './pages/Welcome';
+
+const AssetDashboard = lazy(() => import('./pages/AssetDashboard').then(m => ({ default: m.AssetDashboard })));
+const Dashboard = lazy(() => import('./pages/BudgetDashboard').then(m => ({ default: m.Dashboard })));
+const Cashflow = lazy(() => import('./pages/Cashflow').then(m => ({ default: m.Cashflow })));
+const DataTable = lazy(() => import('./pages/DataTable').then(m => ({ default: m.DataTable })));
+const ReportPage = lazy(() => import('./pages/ReportPage').then(m => ({ default: m.ReportPage })));
+const Upload = lazy(() => import('./pages/Upload').then(m => ({ default: m.Upload })));
+const Profile = lazy(() => import('./pages/Profile').then(m => ({ default: m.Profile })));
+const Preferences = lazy(() => import('./pages/Preferences').then(m => ({ default: m.Preferences })));
+const Setup = lazy(() => import('./pages/Setup').then(m => ({ default: m.Setup })));
 
 function App() {
   return (
@@ -36,15 +38,15 @@ function App() {
               }
             >
               <Route index element={<Navigate to="/report" replace />} />
-              <Route path="budget" element={<Dashboard />} />
-              <Route path="assets" element={<AssetDashboard />} />
-              <Route path="data" element={<DataTable />} />
-              <Route path="cashflow" element={<Cashflow />} />
-              <Route path="report" element={<ReportPage />} />
-              <Route path="upload" element={<Upload />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="preferences" element={<Preferences />} />
-              <Route path="setup" element={<Setup />} />
+              <Route path="budget" element={<Suspense fallback={null}><Dashboard /></Suspense>} />
+              <Route path="assets" element={<Suspense fallback={null}><AssetDashboard /></Suspense>} />
+              <Route path="data" element={<Suspense fallback={null}><DataTable /></Suspense>} />
+              <Route path="cashflow" element={<Suspense fallback={null}><Cashflow /></Suspense>} />
+              <Route path="report" element={<Suspense fallback={null}><ReportPage /></Suspense>} />
+              <Route path="upload" element={<Suspense fallback={null}><Upload /></Suspense>} />
+              <Route path="profile" element={<Suspense fallback={null}><Profile /></Suspense>} />
+              <Route path="preferences" element={<Suspense fallback={null}><Preferences /></Suspense>} />
+              <Route path="setup" element={<Suspense fallback={null}><Setup /></Suspense>} />
               <Route
                 path="settings"
                 element={<Navigate to="/preferences" replace />}

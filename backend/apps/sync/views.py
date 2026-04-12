@@ -1,13 +1,13 @@
 """Views for sync API."""
 
 import threading
-from decimal import Decimal
 
 from apps.financial_account.repositories.account_repository import (
     FinancialAccountRepository,
 )
 from apps.financial_account.services.account_service import AccountService
 from apps.sync.repositories.sync_connection_repository import SyncConnectionRepository
+from apps.sync.services.plaid_account_service import create_plaid_financial_account
 from apps.sync.repositories.sync_job_repository import SyncJobRepository
 from apps.sync.serializers import (
     SyncConnectionCreateSerializer,
@@ -153,94 +153,16 @@ class SyncConnectionListCreateAPIView(APIView):
     ):
         """Create a FinancialAccount and SyncConnection for a Plaid account."""
         try:
-            plaid_account_id = plaid_account.get("id") or ""
-            account_name = plaid_account.get("name", "Account")
-            account_type = plaid_account.get("type", "depository")
-            account_subtype = plaid_account.get("subtype", "")
-            last_four = plaid_account.get("last_four", "")
-
-            # Check if connection already exists for this account
-            existing = self.connection_repository.get_by_external_account_id(
-                user, "plaid", plaid_account_id
-            )
-            if existing:
-                logger.info(
-                    f"Connection already exists for Plaid account {plaid_account_id}"
-                )
-                return existing
-
-            # Map Plaid account types to our types
-            type_mapping = {
-                "depository": "checking",
-                "credit": "credit_card",
-                "loan": "loan",
-                "investment": "investment",
-            }
-            # Use subtype for more specific mapping
-            if account_subtype in ("savings", "cd", "money market"):
-                mapped_type = "savings"
-            elif account_subtype == "checking":
-                mapped_type = "checking"
-            elif account_subtype == "credit card":
-                mapped_type = "credit_card"
-            else:
-                mapped_type = type_mapping.get(account_type, "checking")
-
-            # Use balance from the accounts response
-            initial_balance = Decimal("0")
-            try:
-                balances = plaid_account.get("balances", {})
-                current_balance = balances.get("current") or balances.get("ledger")
-                if current_balance is not None:
-                    initial_balance = Decimal(str(current_balance))
-                    logger.info(
-                        f"Got initial balance for {account_name}: {initial_balance}"
-                    )
-            except Exception as e:
-                logger.warning(f"Could not parse balance for {plaid_account_id}: {e}")
-
-            # Create FinancialAccount with initial balance
-            financial_account = self.account_service.create_manual_account(
+            return create_plaid_financial_account(
                 user=user,
-                name=f"{institution_name} {account_name}",
-                account_type=mapped_type,
-                institution_name=institution_name,
-                account_number_last4=last_four,
-                initial_balance=initial_balance,
-            )
-            financial_account.sync_source = "plaid"
-            if mapped_type in ("credit_card", "loan"):
-                financial_account.is_liability = True
-                # Liabilities stored negative: Plaid reports positive, negate it
-                if initial_balance > 0:
-                    initial_balance = -initial_balance
-            financial_account.save()
-
-            if initial_balance != Decimal("0"):
-                self.account_repository.update_balance(
-                    financial_account, initial_balance
-                )
-                logger.info(
-                    f"Recorded initial balance history for account {financial_account.id}"
-                )
-
-            # Create SyncConnection
-            connection = self.connection_repository.create_connection(
-                user=user,
-                account=financial_account,
-                provider="plaid",
+                plaid_account=plaid_account,
                 access_token=access_token,
                 institution_name=institution_name,
-                external_account_id=plaid_account_id,
-                external_enrollment_id=item_id,  # Plaid uses item_id
+                item_id=item_id,
+                connection_repository=self.connection_repository,
+                account_service=self.account_service,
+                account_repository=self.account_repository,
             )
-
-            logger.info(
-                f"Created connection {connection.id} for Plaid account "
-                f"{plaid_account_id} ({account_name}) with balance {initial_balance}"
-            )
-            return connection
-
         except Exception as e:
             logger.error(
                 f"Error creating connection for Plaid account "
@@ -522,12 +444,10 @@ class PlaidExchangeTokenAPIView(APIView):
             access_token = result["access_token"]
             item_id = result["item_id"]
 
-            # Now create connections for all accounts
             connection_repository = SyncConnectionRepository()
             account_service = AccountService()
             account_repository = FinancialAccountRepository()
 
-            # Create a temporary client with access token to fetch accounts
             client_with_token = PlaidClient(
                 client_id=client_id,
                 secret=secret,
@@ -545,78 +465,18 @@ class PlaidExchangeTokenAPIView(APIView):
 
             created_connections = []
             for plaid_account in plaid_accounts:
-                plaid_account_id = plaid_account.get("id")
-                account_name = plaid_account.get("name", "Account")
-                account_type = plaid_account.get("type", "depository")
-                account_subtype = plaid_account.get("subtype", "")
-                last_four = plaid_account.get("last_four", "")
-
-                # Check if connection already exists
-                existing = connection_repository.get_by_external_account_id(
-                    request.user, "plaid", plaid_account_id
-                )
-                if existing:
-                    created_connections.append(existing)
-                    continue
-
-                # Map account types
-                type_mapping = {
-                    "depository": "checking",
-                    "credit": "credit_card",
-                    "loan": "loan",
-                    "investment": "investment",
-                }
-                if account_subtype in ("savings", "cd", "money market"):
-                    mapped_type = "savings"
-                elif account_subtype == "checking":
-                    mapped_type = "checking"
-                elif account_subtype == "credit card":
-                    mapped_type = "credit_card"
-                else:
-                    mapped_type = type_mapping.get(account_type, "checking")
-
-                # Get initial balance
-                initial_balance = Decimal("0")
-                try:
-                    balances = plaid_account.get("balances", {})
-                    current = balances.get("current") or balances.get("ledger")
-                    if current is not None:
-                        initial_balance = Decimal(str(current))
-                except Exception:
-                    pass
-
-                # Create FinancialAccount
-                financial_account = account_service.create_manual_account(
+                connection = create_plaid_financial_account(
                     user=request.user,
-                    name=f"{institution_name} {account_name}",
-                    account_type=mapped_type,
-                    institution_name=institution_name,
-                    account_number_last4=last_four,
-                    initial_balance=initial_balance,
-                )
-                financial_account.sync_source = "plaid"
-                if mapped_type in ("credit_card", "loan"):
-                    financial_account.is_liability = True
-                    if initial_balance > 0:
-                        initial_balance = -initial_balance
-                financial_account.save()
-
-                if initial_balance != Decimal("0"):
-                    account_repository.update_balance(
-                        financial_account, initial_balance
-                    )
-
-                # Create SyncConnection
-                connection = connection_repository.create_connection(
-                    user=request.user,
-                    account=financial_account,
-                    provider="plaid",
+                    plaid_account=plaid_account,
                     access_token=access_token,
                     institution_name=institution_name,
-                    external_account_id=plaid_account_id,
-                    external_enrollment_id=item_id,
+                    item_id=item_id,
+                    connection_repository=connection_repository,
+                    account_service=account_service,
+                    account_repository=account_repository,
                 )
-                created_connections.append(connection)
+                if connection:
+                    created_connections.append(connection)
 
             serializer = SyncConnectionSerializer(created_connections, many=True)
             return Response(

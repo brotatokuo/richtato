@@ -6,44 +6,19 @@ from decimal import Decimal
 from dateutil.relativedelta import relativedelta
 from django.db.models import Q, Sum
 
+from apps.core.constants import get_expense_filter, get_income_filter
 from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
 from apps.transaction.models import Transaction
-
-# Canonical slug for Credit Card Payment category (excluded from expenses)
-CC_PAYMENT_CATEGORY_SLUG = "credit-card-payment"
 
 
 class AssetDashboardRepository:
     """Repository for Asset Dashboard aggregation queries - ORM layer only."""
 
     def _get_income_filter(self):
-        """
-        Get Q filter for income transactions.
-
-        Income is determined by:
-        1. Transactions with category type="income", OR
-        2. Uncategorized credit transactions (fallback for backward compatibility)
-        """
-        return Q(category__type="income") | Q(
-            category__isnull=True, transaction_type="credit"
-        )
+        return get_income_filter()
 
     def _get_expense_filter(self):
-        """
-        Get Q filter for expense transactions.
-
-        Expense is determined by:
-        1. Transactions with category type="expense", OR
-        2. Uncategorized debit transactions (fallback for backward compatibility)
-
-        Explicitly excludes Credit Card Payment category for safety.
-        """
-        expense_filter = Q(category__type="expense") | Q(
-            category__isnull=True, transaction_type="debit"
-        )
-        # Explicitly exclude Credit Card Payment category
-        cc_payment_exclusion = ~Q(category__slug=CC_PAYMENT_CATEGORY_SLUG)
-        return expense_filter & cc_payment_exclusion
+        return get_expense_filter()
 
     # Income queries (based on category.is_income or credit transactions)
     def get_earliest_income_date(self, user) -> date | None:

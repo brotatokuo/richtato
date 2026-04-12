@@ -6,9 +6,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
+import { usePolling } from '@/hooks/usePolling';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { AlertCircle, CheckCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 interface RecategorizeProgressModalProps {
   open: boolean;
@@ -32,34 +33,22 @@ export function RecategorizeProgressModal({
 }: RecategorizeProgressModalProps) {
   const [progress, setProgress] = useState<ProgressData | null>(null);
 
-  useEffect(() => {
-    if (!taskId || !open) return;
+  const fetchProgress = useCallback(
+    () => transactionsApiService.getRecategorizeProgress(taskId!),
+    [taskId]
+  );
 
-    const pollProgress = async () => {
-      try {
-        const data =
-          await transactionsApiService.getRecategorizeProgress(taskId);
-        setProgress(data);
-
-        if (data.status === 'completed' || data.status === 'failed') {
-          // Wait 2 seconds to show the final state, then complete
-          setTimeout(() => {
-            onComplete();
-          }, 2000);
-        }
-      } catch (error) {
-        console.error('Error polling progress:', error);
+  usePolling<ProgressData>(fetchProgress, {
+    enabled: !!taskId && open,
+    intervalMs: 1000,
+    isTerminal: (data) => data.status === 'completed' || data.status === 'failed',
+    onResult: (data) => {
+      setProgress(data);
+      if (data.status === 'completed' || data.status === 'failed') {
+        setTimeout(() => onComplete(), 2000);
       }
-    };
-
-    // Poll immediately
-    pollProgress();
-
-    // Then poll every second
-    const pollInterval = setInterval(pollProgress, 1000);
-
-    return () => clearInterval(pollInterval);
-  }, [taskId, open, onComplete]);
+    },
+  });
 
   return (
     <Dialog open={open}>

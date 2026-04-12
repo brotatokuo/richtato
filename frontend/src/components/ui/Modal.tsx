@@ -31,12 +31,6 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
     };
   }, [isOpen, onClose]);
 
-  useEffect(() => {
-    // Intentionally do not attach a global outside-click handler.
-    // We close via the backdrop's onMouseDown to avoid closing when
-    // interacting with portal-based components (e.g., Radix Select).
-  }, [isOpen, onClose]);
-
   if (!isOpen) return null;
 
   return createPortal(

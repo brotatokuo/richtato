@@ -6,31 +6,15 @@ from decimal import Decimal
 from django.db.models import Q, Sum
 
 from apps.budget.models import Budget
+from apps.core.constants import get_expense_filter
 from apps.transaction.models import Transaction
-
-# Canonical slug for Credit Card Payment category (excluded from expenses)
-CC_PAYMENT_CATEGORY_SLUG = "credit-card-payment"
 
 
 class BudgetDashboardRepository:
     """Repository for Budget Dashboard aggregation queries - ORM layer only."""
 
     def _get_expense_filter(self):
-        """
-        Get Q filter for expense transactions.
-
-        Expense is determined by:
-        1. Transactions with category type="expense", OR
-        2. Uncategorized debit transactions (fallback for backward compatibility)
-
-        Explicitly excludes Credit Card Payment category for safety.
-        """
-        expense_filter = Q(category__type="expense") | Q(
-            category__isnull=True, transaction_type="debit"
-        )
-        # Explicitly exclude Credit Card Payment category
-        cc_payment_exclusion = ~Q(category__slug=CC_PAYMENT_CATEGORY_SLUG)
-        return expense_filter & cc_payment_exclusion
+        return get_expense_filter()
 
     # Expense queries (based on category.type='expense' or debit transactions)
     def get_expense_sum_by_date_range(

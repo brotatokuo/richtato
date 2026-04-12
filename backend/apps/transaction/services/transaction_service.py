@@ -187,8 +187,10 @@ class TransactionService:
         Returns:
             Dict with summary data
         """
-        transactions = self.get_user_transactions(
-            user, start_date=start_date, end_date=end_date
+        transactions = list(
+            self.get_user_transactions(
+                user, start_date=start_date, end_date=end_date
+            )
         )
 
         total_income = Decimal("0")
@@ -201,7 +203,6 @@ class TransactionService:
             else:
                 total_expenses += txn.amount
 
-            # Group by category
             category_name = txn.category_name
             if category_name not in by_category:
                 by_category[category_name] = {

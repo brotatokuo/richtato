@@ -1,6 +1,7 @@
 /**
  * Bank Connections API service - Plaid provider
  */
+import { BaseApiClient } from './base-client';
 import { csrfService } from './csrf';
 
 export type Provider = 'plaid';
@@ -62,27 +63,9 @@ export interface SyncJobProgress {
   errors: string[] | null;
 }
 
-class BankConnectionsApiService {
-  private baseUrl: string;
-
+class BankConnectionsApiService extends BaseApiClient {
   constructor() {
-    this.baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-  }
-
-  private getHeaders(): HeadersInit {
-    return {
-      'Content-Type': 'application/json',
-    };
-  }
-
-  private async handleResponse<T>(response: Response): Promise<T> {
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.error || `HTTP error! status: ${response.status}`
-      );
-    }
-    return response.json();
+    super('');
   }
 
   private async fetchWithCsrf(

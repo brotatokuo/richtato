@@ -2,6 +2,7 @@
 
 from datetime import datetime
 
+from apps.core.utils.date_params import parse_date_range_params
 from apps.financial_account.services.account_service import AccountService
 from apps.transaction.models import CategoryKeyword
 from apps.transaction.repositories.category_repository import CategoryRepository
@@ -42,19 +43,10 @@ class TransactionFilterOptionsAPIView(APIView):
 
         from apps.transaction.models import Transaction
 
-        # Parse same filters as transaction list
-        start_date_str = request.query_params.get("start_date")
-        end_date_str = request.query_params.get("end_date")
         account_id = request.query_params.get("account_id")
         category_id = request.query_params.get("category_id")
         transaction_type = request.query_params.get("type")
-
-        start_date = None
-        end_date = None
-        if start_date_str:
-            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
-        if end_date_str:
-            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        start_date, end_date = parse_date_range_params(request.query_params)
 
         account = None
         if account_id:
@@ -197,9 +189,6 @@ class TransactionListCreateAPIView(APIView):
 
     def get(self, request):
         """List transactions with optional filters and pagination."""
-        # Parse filters
-        start_date_str = request.query_params.get("start_date")
-        end_date_str = request.query_params.get("end_date")
         account_id = request.query_params.get("account_id")
         category_id = request.query_params.get("category_id")
         transaction_type = request.query_params.get("type")
@@ -209,14 +198,7 @@ class TransactionListCreateAPIView(APIView):
             int(request.query_params.get("page_size", 50)),
             100,
         )
-
-        # Convert dates
-        start_date = None
-        end_date = None
-        if start_date_str:
-            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
-        if end_date_str:
-            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        start_date, end_date = parse_date_range_params(request.query_params)
 
         # Get account and category if specified
         account = None

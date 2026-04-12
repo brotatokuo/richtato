@@ -42,12 +42,11 @@ class BatchAICategorizationService:
             "skipped": 0,
         }
 
-        # Get all transactions
-        transactions = []
-        for txn_id in transaction_ids:
-            txn = self.transaction_repository.get_by_id(txn_id)
-            if txn and txn.user == user:
-                transactions.append(txn)
+        transactions = list(
+            Transaction.objects.filter(
+                id__in=transaction_ids, user=user
+            ).select_related("category")
+        )
 
         if not transactions:
             logger.warning("No valid transactions found for categorization")
