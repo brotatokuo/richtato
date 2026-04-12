@@ -10,10 +10,15 @@ from django.db.models import Q
 class CategoryRepository:
     """Repository for transaction category data access."""
 
-    def get_by_id(self, category_id: int) -> Optional[TransactionCategory]:
-        """Get category by ID."""
+    def get_by_id(
+        self, category_id: int, user: Optional[User] = None
+    ) -> Optional[TransactionCategory]:
+        """Get category by ID, optionally scoped to a specific user."""
         try:
-            return TransactionCategory.objects.get(id=category_id)
+            filters = {"id": category_id}
+            if user is not None:
+                filters["user"] = user
+            return TransactionCategory.objects.get(**filters)
         except TransactionCategory.DoesNotExist:
             return None
 

@@ -56,7 +56,7 @@ class TransactionFilterOptionsAPIView(APIView):
         category = None
         if category_id:
             category_repo = CategoryRepository()
-            category = category_repo.get_by_id(int(category_id))
+            category = category_repo.get_by_id(int(category_id), user=request.user)
 
         base_qs = Transaction.objects.filter(user=request.user).select_related(
             "account", "category"
@@ -210,7 +210,7 @@ class TransactionListCreateAPIView(APIView):
         category = None
         if category_id:
             category_repo = CategoryRepository()
-            category = category_repo.get_by_id(int(category_id))
+            category = category_repo.get_by_id(int(category_id), user=request.user)
 
         # Handle search (no pagination for search; returns limited results)
         if search:
