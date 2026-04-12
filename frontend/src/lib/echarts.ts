@@ -28,4 +28,4 @@ echarts.use([
 ]);
 
 export default echarts;
-export type { EChartsOption, ECharts } from 'echarts/core';
+export type { EChartsCoreOption as EChartsOption, ECharts } from 'echarts/core';
