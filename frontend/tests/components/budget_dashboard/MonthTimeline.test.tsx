@@ -4,7 +4,12 @@ import { render, screen, fireEvent } from '@testing-library/react';
 
 vi.mock('@/contexts/PreferencesContext', () => ({
   usePreferences: () => ({
-    preferences: { currency: 'USD', theme: 'system', date_format: 'MM/DD/YYYY', timezone: 'UTC' },
+    preferences: {
+      currency: 'USD',
+      theme: 'system',
+      date_format: 'MM/DD/YYYY',
+      timezone: 'UTC',
+    },
     currencySymbols: {},
     loading: false,
     error: null,
@@ -14,7 +19,9 @@ vi.mock('@/contexts/PreferencesContext', () => ({
   }),
 }));
 
-function makeMonth(overrides: Partial<MonthlyBudgetData> = {}): MonthlyBudgetData {
+function makeMonth(
+  overrides: Partial<MonthlyBudgetData> = {}
+): MonthlyBudgetData {
   return {
     year: 2024,
     month: 1,
@@ -47,7 +54,9 @@ describe('MonthTimeline', () => {
   });
 
   it('shows over-budget percentage with red styling', () => {
-    const data = [makeMonth({ percentage: 120, total_spent: 1200, total_remaining: -200 })];
+    const data = [
+      makeMonth({ percentage: 120, total_spent: 1200, total_remaining: -200 }),
+    ];
 
     render(<MonthTimeline monthlyData={data} onMonthClick={vi.fn()} />);
 

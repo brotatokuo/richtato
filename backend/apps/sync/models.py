@@ -41,13 +41,9 @@ class SyncConnection(models.Model):
         help_text="The financial account this connection syncs to",
     )
     provider = models.CharField(max_length=50, choices=PROVIDER_CHOICES)
-    access_token = models.CharField(
-        max_length=500, help_text="Encrypted access token for the provider"
-    )
+    access_token = models.CharField(max_length=500, help_text="Encrypted access token for the provider")
     institution_name = models.CharField(max_length=255)
-    external_account_id = models.CharField(
-        max_length=255, help_text="Account ID in the external system"
-    )
+    external_account_id = models.CharField(max_length=255, help_text="Account ID in the external system")
     external_enrollment_id = models.CharField(
         max_length=255,
         blank=True,
@@ -55,9 +51,7 @@ class SyncConnection(models.Model):
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active")
     last_sync = models.DateTimeField(null=True, blank=True)
-    sync_frequency = models.CharField(
-        max_length=20, choices=SYNC_FREQUENCY_CHOICES, default="manual"
-    )
+    sync_frequency = models.CharField(max_length=20, choices=SYNC_FREQUENCY_CHOICES, default="manual")
     initial_backfill_complete = models.BooleanField(
         default=False,
         help_text="Whether the initial historical transaction backfill has been completed",
@@ -91,9 +85,7 @@ class SyncConnection(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.provider} - {self.institution_name}"
 
-    def mark_synced(
-        self, backfill_complete: bool = False, oldest_date=None, newest_date=None
-    ):
+    def mark_synced(self, backfill_complete: bool = False, oldest_date=None, newest_date=None):
         """Mark connection as successfully synced."""
         self.last_sync = timezone.now()
         self.status = "active"
@@ -107,10 +99,7 @@ class SyncConnection(models.Model):
 
         if newest_date:
             # Only update if newer than current value
-            if (
-                self.newest_transaction_date is None
-                or newest_date > self.newest_transaction_date
-            ):
+            if self.newest_transaction_date is None or newest_date > self.newest_transaction_date:
                 self.newest_transaction_date = newest_date
 
         self.save()
@@ -138,21 +127,15 @@ class SyncJob(models.Model):
         ("cancelled", "Cancelled"),
     ]
 
-    connection = models.ForeignKey(
-        SyncConnection, on_delete=models.CASCADE, related_name="sync_jobs"
-    )
+    connection = models.ForeignKey(SyncConnection, on_delete=models.CASCADE, related_name="sync_jobs")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="running")
     started_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     transactions_synced = models.IntegerField(default=0)
     transactions_skipped = models.IntegerField(default=0)
     batches_processed = models.IntegerField(default=0)
-    is_full_sync = models.BooleanField(
-        default=False, help_text="Whether this was a full historical sync"
-    )
-    errors = models.JSONField(
-        null=True, blank=True, help_text="List of errors encountered during sync"
-    )
+    is_full_sync = models.BooleanField(default=False, help_text="Whether this was a full historical sync")
+    errors = models.JSONField(null=True, blank=True, help_text="List of errors encountered during sync")
 
     class Meta:
         db_table = "sync_job"
@@ -165,9 +148,7 @@ class SyncJob(models.Model):
     def __str__(self):
         return f"{self.connection} - {self.status} ({self.started_at})"
 
-    def mark_completed(
-        self, transactions_synced: int = 0, transactions_skipped: int = 0
-    ):
+    def mark_completed(self, transactions_synced: int = 0, transactions_skipped: int = 0):
         """Mark job as completed."""
         self.status = "completed"
         self.completed_at = timezone.now()

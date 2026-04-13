@@ -3,7 +3,10 @@
 import re
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
+
+from django.conf import settings
+from loguru import logger
 
 from apps.financial_account.repositories.account_repository import (
     FinancialAccountRepository,
@@ -12,13 +15,7 @@ from apps.sync.models import SyncConnection
 from apps.sync.repositories.sync_job_repository import SyncJobRepository
 from apps.transaction.models import CategoryKeyword, TransactionCategory
 from apps.transaction.repositories.transaction_repository import TransactionRepository
-from django.conf import settings
-from django.db.models import Q
 from integrations.plaid.client import PlaidClient
-from loguru import logger
-
-# Canonical slug for Credit Card Payment category
-CC_PAYMENT_CATEGORY_SLUG = "credit-card-payment"
 
 # Patterns for detecting income transactions based on description
 INCOME_PATTERNS = [
@@ -106,8 +103,8 @@ class PlaidSyncService:
         description: str,
         amount_raw: Decimal,
         account_type: str,
-        plaid_category: Optional[str] = None,
-    ) -> Tuple[str, Optional[str]]:
+        plaid_category: str | None = None,
+    ) -> tuple[str, str | None]:
         """
         Detect the nature of a transaction based on multiple signals.
 
@@ -183,9 +180,7 @@ class PlaidSyncService:
             access_token=connection.access_token,
         )
 
-    def _sync_account_balance(
-        self, connection: SyncConnection, client: PlaidClient
-    ) -> Optional[Decimal]:
+    def _sync_account_balance(self, connection: SyncConnection, client: PlaidClient) -> Decimal | None:
         """
         Sync account balance from Plaid API.
 
@@ -207,24 +202,18 @@ class PlaidSyncService:
                 # Plaid reports liabilities as positive; store negative
                 if account.is_liability and balance > 0:
                     balance = -balance
-                self.account_repository.update_balance(
-                    account, balance, source="plaid_sync"
-                )
+                self.account_repository.update_balance(account, balance, source="plaid_sync")
 
-                logger.info(
-                    f"Synced balance for account {account.id} ({account.name}): {balance}"
-                )
+                logger.info(f"Synced balance for account {account.id} ({account.name}): {balance}")
                 return balance
 
             return None
 
         except Exception as e:
-            logger.error(
-                f"Error syncing balance for connection {connection.id}: {str(e)}"
-            )
+            logger.error(f"Error syncing balance for connection {connection.id}: {str(e)}")
             return None
 
-    def _categorize_by_keywords(self, transaction) -> Optional[TransactionCategory]:
+    def _categorize_by_keywords(self, transaction) -> TransactionCategory | None:
         """
         Attempt to categorize a transaction using keyword matching.
 
@@ -262,9 +251,7 @@ class PlaidSyncService:
             logger.error(f"Error in keyword categorization: {str(e)}")
             return None
 
-    def sync_connection(
-        self, connection: SyncConnection, force_full_sync: bool = False
-    ) -> Dict:
+    def sync_connection(self, connection: SyncConnection, force_full_sync: bool = False) -> dict:
         """
         Sync transactions from Plaid for a specific connection.
 
@@ -278,17 +265,13 @@ class PlaidSyncService:
         is_full_sync = not connection.initial_backfill_complete or force_full_sync
 
         if is_full_sync:
-            logger.info(
-                f"Triggering full historical sync for Plaid connection {connection.id}"
-            )
+            logger.info(f"Triggering full historical sync for Plaid connection {connection.id}")
             return self.sync_historical_transactions(connection)
         else:
-            logger.info(
-                f"Triggering incremental sync for Plaid connection {connection.id}"
-            )
+            logger.info(f"Triggering incremental sync for Plaid connection {connection.id}")
             return self.sync_recent_transactions(connection)
 
-    def sync_historical_transactions(self, connection: SyncConnection) -> Dict:
+    def sync_historical_transactions(self, connection: SyncConnection) -> dict:
         """
         Sync all available transactions from Plaid using cursor-based sync.
 
@@ -334,10 +317,7 @@ class PlaidSyncService:
                 batch_synced = 0
                 batch_skipped = 0
 
-                logger.info(
-                    f"Processing batch {results['batches_processed']} "
-                    f"with {len(batch)} transactions"
-                )
+                logger.info(f"Processing batch {results['batches_processed']} with {len(batch)} transactions")
 
                 for txn in batch:
                     try:
@@ -355,11 +335,7 @@ class PlaidSyncService:
 
                         # Extract Plaid-specific category
                         plaid_details = txn.get("details", {})
-                        plaid_category = (
-                            plaid_details.get("category", {}).get("primary", "")
-                            if plaid_details
-                            else ""
-                        )
+                        plaid_category = plaid_details.get("category", {}).get("primary", "") if plaid_details else ""
 
                         # Track oldest and newest dates
                         if oldest_date is None or txn_date < oldest_date:
@@ -368,9 +344,7 @@ class PlaidSyncService:
                             newest_date = txn_date
 
                         # Check if already exists
-                        existing = self.transaction_repository.get_by_external_id(
-                            user, txn_id, "plaid"
-                        )
+                        existing = self.transaction_repository.get_by_external_id(user, txn_id, "plaid")
                         if existing:
                             batch_skipped += 1
                             continue
@@ -401,9 +375,7 @@ class PlaidSyncService:
                             raw_data=self._serialize_plaid_data(txn),
                         )
 
-                        categorized = self._auto_categorize_transaction(
-                            transaction, nature_hint
-                        )
+                        categorized = self._auto_categorize_transaction(transaction, nature_hint)
                         if categorized:
                             transactions_categorized += 1
 
@@ -421,18 +393,13 @@ class PlaidSyncService:
                             )
 
                     except Exception as e:
-                        logger.error(
-                            f"Error syncing transaction {txn.get('id')}: {str(e)}"
-                        )
+                        logger.error(f"Error syncing transaction {txn.get('id')}: {str(e)}")
                         results["errors"].append(str(e))
                         continue
 
                 total_skipped += batch_skipped
 
-                logger.info(
-                    f"Batch {results['batches_processed']}: "
-                    f"synced {batch_synced}, skipped {batch_skipped}"
-                )
+                logger.info(f"Batch {results['batches_processed']}: synced {batch_synced}, skipped {batch_skipped}")
 
                 job.transactions_synced = total_synced
                 job.transactions_skipped = total_skipped
@@ -447,9 +414,7 @@ class PlaidSyncService:
             if synced_balance is not None:
                 results["balance_synced"] = float(synced_balance)
 
-            connection.mark_synced(
-                backfill_complete=True, oldest_date=oldest_date, newest_date=newest_date
-            )
+            connection.mark_synced(backfill_complete=True, oldest_date=oldest_date, newest_date=newest_date)
             job.mark_completed(total_synced, total_skipped)
 
             results["success"] = True
@@ -474,9 +439,7 @@ class PlaidSyncService:
 
         return results
 
-    def sync_recent_transactions(
-        self, connection: SyncConnection, days: int = 30
-    ) -> Dict:
+    def sync_recent_transactions(self, connection: SyncConnection, days: int = 30) -> dict:
         """
         Sync recent transactions for incremental updates.
 
@@ -510,17 +473,10 @@ class PlaidSyncService:
                     f"{last_synced_date} for Plaid connection {connection.id}"
                 )
 
-            transaction_limit = min(
-                getattr(settings, "PLAID_TRANSACTION_LIMIT", 500), 100
-            )
-            transactions = client.get_transactions(
-                connection.external_account_id, count=transaction_limit
-            )
+            transaction_limit = min(getattr(settings, "PLAID_TRANSACTION_LIMIT", 500), 100)
+            transactions = client.get_transactions(connection.external_account_id, count=transaction_limit)
 
-            logger.info(
-                f"Fetched {len(transactions)} transactions for "
-                f"Plaid connection {connection.id}"
-            )
+            logger.info(f"Fetched {len(transactions)} transactions for Plaid connection {connection.id}")
 
             synced_count = 0
             skipped_count = 0
@@ -551,15 +507,9 @@ class PlaidSyncService:
                         continue
 
                     plaid_details = txn.get("details", {})
-                    plaid_category = (
-                        plaid_details.get("category", {}).get("primary", "")
-                        if plaid_details
-                        else ""
-                    )
+                    plaid_category = plaid_details.get("category", {}).get("primary", "") if plaid_details else ""
 
-                    existing = self.transaction_repository.get_by_external_id(
-                        user, txn_id, "plaid"
-                    )
+                    existing = self.transaction_repository.get_by_external_id(user, txn_id, "plaid")
                     if existing:
                         skipped_count += 1
                         continue
@@ -588,9 +538,7 @@ class PlaidSyncService:
                         raw_data=self._serialize_plaid_data(txn),
                     )
 
-                    categorized = self._auto_categorize_transaction(
-                        transaction, nature_hint
-                    )
+                    categorized = self._auto_categorize_transaction(transaction, nature_hint)
                     if categorized:
                         categorized_count += 1
 
@@ -667,9 +615,7 @@ class PlaidSyncService:
         else:  # transfer
             return "debit"  # Default to debit for transfers
 
-    def _auto_categorize_transaction(
-        self, transaction, nature_hint: Optional[str] = None
-    ) -> bool:
+    def _auto_categorize_transaction(self, transaction, nature_hint: str | None = None) -> bool:
         """
         Attempt to categorize transaction during sync using keyword matching.
 
@@ -686,14 +632,10 @@ class PlaidSyncService:
             if category:
                 transaction.category = category
                 # Category type determines transaction type
-                transaction.transaction_type = self._transaction_type_from_category(
-                    category
-                )
+                transaction.transaction_type = self._transaction_type_from_category(category)
                 transaction.categorization_status = "categorized"
                 transaction.save()
-                logger.debug(
-                    f"Categorized transaction {transaction.id}: {category.name} ({category.type})"
-                )
+                logger.debug(f"Categorized transaction {transaction.id}: {category.name} ({category.type})")
                 return True
 
             # No match found - leave as uncategorized

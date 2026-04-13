@@ -3,6 +3,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { Account, transactionsApiService } from '@/lib/api/transactions';
 import { formatSignedCurrency } from '@/lib/format';
+import { getEntityLogo } from '@/lib/imageMapping';
 import {
   AlertCircle,
   Building2,
@@ -13,8 +14,22 @@ import {
   Scale,
   TrendingUp,
   Wallet,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+
+function timeAgo(isoString: string | null | undefined): string {
+  if (!isoString) return '';
+  const diff = Date.now() - new Date(isoString).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
 
 export interface AccountWithBalance extends Account {
   balance: number;
@@ -355,23 +370,49 @@ export function AccountsList({
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div
-                          className={`p-2 rounded-lg ${getAccountTypeColor(account.type)} text-white shrink-0`}
-                        >
-                          {getAccountIcon(account.type)}
-                        </div>
+                        {/* Institution logo or icon */}
+                        {(() => {
+                          const logo = getEntityLogo(account.entity || '');
+                          return logo ? (
+                            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                              <img
+                                src={logo}
+                                alt={account.institution_name || ''}
+                                className="w-5 h-5 object-contain"
+                              />
+                            </div>
+                          ) : (
+                            <div
+                              className={`p-2 rounded-lg ${getAccountTypeColor(account.type)} text-white shrink-0`}
+                            >
+                              {getAccountIcon(account.type)}
+                            </div>
+                          );
+                        })()}
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium text-foreground truncate">
-                            {account.name}
-                          </p>
-                          {account.lastUpdated && (
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(account.lastUpdated + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-medium text-foreground truncate">
+                              {account.name}
                             </p>
-                          )}
+                            {account.connection_status === 'error' && (
+                              <AlertCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            {account.account_number_last4 && (
+                              <p className="text-xs text-muted-foreground/70 font-mono">
+                                ····{account.account_number_last4}
+                              </p>
+                            )}
+                            {account.has_connection && account.last_sync && (
+                              <p className="text-xs text-muted-foreground/60">
+                                {timeAgo(account.last_sync)}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0 ml-2">
+                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
                         <span
                           className={`font-semibold ${
                             account.balance >= 0
@@ -385,6 +426,21 @@ export function AccountsList({
                             true
                           )}
                         </span>
+                        {account.has_connection && (
+                          <span
+                            title={
+                              account.connection_status === 'error'
+                                ? 'Sync error'
+                                : 'Connected'
+                            }
+                          >
+                            {account.connection_status === 'error' ? (
+                              <WifiOff className="h-3 w-3 text-red-500" />
+                            ) : (
+                              <Wifi className="h-3 w-3 text-green-500 opacity-70" />
+                            )}
+                          </span>
+                        )}
                         {onSetBalance && (
                           <button
                             onClick={e => {

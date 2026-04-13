@@ -2,6 +2,7 @@ import { useSyncStatus } from '@/hooks/useSyncStatus';
 import {
   BarChart3,
   CloudUpload,
+  Landmark,
   Menu,
   PieChart,
   Settings,
@@ -20,6 +21,7 @@ const routeConfig: Record<
   string,
   { title: string; icon: React.ComponentType<{ className?: string }> }
 > = {
+  '/accounts': { title: 'Accounts', icon: Landmark },
   '/budget': { title: 'Budget', icon: Wallet },
   '/assets': { title: 'Assets', icon: PieChart },
   '/data': { title: 'Data', icon: Table },

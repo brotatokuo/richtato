@@ -72,10 +72,7 @@ class AutoSyncMiddleware:
                 stale_threshold = now - timedelta(hours=self.STALE_THRESHOLD_HOURS)
                 has_stale = (
                     SyncConnection.objects.filter(user=user, status="active")
-                    .filter(
-                        models.Q(last_sync__isnull=True)
-                        | models.Q(last_sync__lt=stale_threshold)
-                    )
+                    .filter(models.Q(last_sync__isnull=True) | models.Q(last_sync__lt=stale_threshold))
                     .exists()
                 )
 

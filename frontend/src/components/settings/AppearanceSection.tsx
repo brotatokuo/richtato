@@ -98,7 +98,9 @@ export function AppearanceSection() {
             <Label htmlFor="theme">Theme</Label>
             <Select
               value={settings.theme}
-              onValueChange={value => savePrefs({ theme: value as 'light' | 'dark' | 'system' })}
+              onValueChange={value =>
+                savePrefs({ theme: value as 'light' | 'dark' | 'system' })
+              }
               disabled={loading || !fieldChoices}
             >
               <SelectTrigger id="theme">

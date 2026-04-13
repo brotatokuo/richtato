@@ -4,6 +4,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+
 from apps.budget.models import Budget, BudgetCategory
 from apps.financial_account.models import FinancialAccount
 from apps.richtato_user.models import User
@@ -12,16 +13,12 @@ from apps.transaction.models import Transaction, TransactionCategory
 
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(
-        username="budgettest", email="budget@test.com", password="testpass123"
-    )
+    return User.objects.create_user(username="budgettest", email="budget@test.com", password="testpass123")
 
 
 @pytest.fixture
 def other_user(db):
-    return User.objects.create_user(
-        username="otheruser", email="other@test.com", password="testpass123"
-    )
+    return User.objects.create_user(username="otheruser", email="other@test.com", password="testpass123")
 
 
 @pytest.fixture
@@ -50,9 +47,7 @@ def expense_category_2(user):
 
 @pytest.fixture
 def income_category(user):
-    return TransactionCategory.objects.create(
-        user=user, name="Test Salary", slug="test-salary-budget", type="income"
-    )
+    return TransactionCategory.objects.create(user=user, name="Test Salary", slug="test-salary-budget", type="income")
 
 
 @pytest.fixture

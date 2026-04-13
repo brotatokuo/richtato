@@ -4,17 +4,16 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+
 from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
 from apps.richtato_user.models import User
-from apps.transaction.models import Transaction, TransactionCategory
+from apps.transaction.models import TransactionCategory
 from apps.transaction.services.transaction_service import TransactionService
 
 
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(
-        username="svctest", email="svc@test.com", password="testpass123"
-    )
+    return User.objects.create_user(username="svctest", email="svc@test.com", password="testpass123")
 
 
 @pytest.fixture
@@ -92,9 +91,7 @@ class TestCreateManualTransaction:
             description="Test",
             transaction_type="debit",
         )
-        assert AccountBalanceHistory.objects.filter(
-            account=account, date=today
-        ).exists()
+        assert AccountBalanceHistory.objects.filter(account=account, date=today).exists()
 
 
 class TestUpdateTransaction:
@@ -158,11 +155,7 @@ class TestDeleteTransaction:
             description="Solo tx",
             transaction_type="debit",
         )
-        assert AccountBalanceHistory.objects.filter(
-            account=account, date=today
-        ).exists()
+        assert AccountBalanceHistory.objects.filter(account=account, date=today).exists()
 
         service.delete_transaction(tx)
-        assert not AccountBalanceHistory.objects.filter(
-            account=account, date=today
-        ).exists()
+        assert not AccountBalanceHistory.objects.filter(account=account, date=today).exists()

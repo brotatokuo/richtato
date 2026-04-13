@@ -13,7 +13,7 @@ from django.db import transaction
 from django.db.models.signals import post_delete, post_save
 
 from apps.budget.models import Budget
-from apps.financial_account.models import FinancialAccount, AccountBalanceHistory
+from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
 from apps.richtato_user.models import User
 from apps.transaction.models import Transaction, TransactionCategory
 from apps.transaction.signals import transaction_post_delete, transaction_post_save
@@ -75,11 +75,9 @@ class Command(BaseCommand):
         self.stdout.write(f"  - Budget Allocations: {counts['budget_allocations']}")
 
         if not keep_user:
-            self.stdout.write(
-                self.style.WARNING(f"\n⚠️  The user account will also be deleted!")
-            )
+            self.stdout.write(self.style.WARNING("\n⚠️  The user account will also be deleted!"))
         else:
-            self.stdout.write(f"\n  User account will be kept.")
+            self.stdout.write("\n  User account will be kept.")
 
         total = sum(counts.values())
         if total == 0 and keep_user:
@@ -115,15 +113,11 @@ class Command(BaseCommand):
 
         return {
             "transactions": Transaction.objects.filter(user=user).count(),
-            "balance_history": AccountBalanceHistory.objects.filter(
-                account_id__in=account_ids
-            ).count(),
+            "balance_history": AccountBalanceHistory.objects.filter(account_id__in=account_ids).count(),
             "accounts": accounts.count(),
             "categories": TransactionCategory.objects.filter(user=user).count(),
             "budgets": Budget.objects.filter(user=user).count(),
-            "budget_allocations": sum(
-                b.budget_categories.count() for b in Budget.objects.filter(user=user)
-            ),
+            "budget_allocations": sum(b.budget_categories.count() for b in Budget.objects.filter(user=user)),
         }
 
     def _delete_user_data(self, user, keep_user=False):
@@ -144,17 +138,13 @@ class Command(BaseCommand):
             account_ids = list(accounts.values_list("id", flat=True))
 
             # Delete balance history (FK to accounts)
-            deleted["balance_history"] = AccountBalanceHistory.objects.filter(
-                account_id__in=account_ids
-            ).delete()[0]
+            deleted["balance_history"] = AccountBalanceHistory.objects.filter(account_id__in=account_ids).delete()[0]
 
             # Delete accounts
             deleted["accounts"] = accounts.delete()[0]
 
             # Delete categories
-            deleted["categories"] = TransactionCategory.objects.filter(
-                user=user
-            ).delete()[0]
+            deleted["categories"] = TransactionCategory.objects.filter(user=user).delete()[0]
 
             # Delete budgets (cascade deletes budget allocations)
             deleted["budgets"] = Budget.objects.filter(user=user).delete()[0]

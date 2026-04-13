@@ -5,14 +5,14 @@ import hashlib
 import io
 from datetime import date
 from decimal import Decimal, InvalidOperation
-from typing import List, Optional
+
+from loguru import logger
 
 from apps.financial_account.models import FinancialAccount
 from apps.financial_account.repositories.account_repository import (
     FinancialAccountRepository,
 )
 from apps.transaction.models import Transaction
-from loguru import logger
 
 
 class CSVImportResult:
@@ -21,10 +21,10 @@ class CSVImportResult:
     def __init__(self):
         self.imported_count = 0
         self.skipped_duplicates = 0
-        self.errors: List[str] = []
-        self.adjustment_amount: Optional[Decimal] = None
-        self.balance_after_import: Optional[Decimal] = None
-        self.discrepancy: Optional[Decimal] = None
+        self.errors: list[str] = []
+        self.adjustment_amount: Decimal | None = None
+        self.balance_after_import: Decimal | None = None
+        self.discrepancy: Decimal | None = None
 
 
 class CSVImportService:
@@ -39,8 +39,8 @@ class CSVImportService:
         self,
         account: FinancialAccount,
         csv_file,
-        ending_balance: Optional[Decimal] = None,
-        ending_date: Optional[date] = None,
+        ending_balance: Decimal | None = None,
+        ending_date: date | None = None,
     ) -> CSVImportResult:
         """Import transactions from a CSV file and optionally reconcile.
 
@@ -112,16 +112,14 @@ class CSVImportService:
         if ending_balance is not None:
             result.discrepancy = ending_balance - account.balance
             if result.discrepancy != Decimal("0"):
-                self._create_reconciliation_adjustment(
-                    account, ending_balance, ending_date or date.today()
-                )
+                self._create_reconciliation_adjustment(account, ending_balance, ending_date or date.today())
                 account.refresh_from_db()
                 result.adjustment_amount = result.discrepancy
                 result.balance_after_import = account.balance
 
         return result
 
-    def _parse_csv(self, csv_file, result: CSVImportResult) -> List[dict]:
+    def _parse_csv(self, csv_file, result: CSVImportResult) -> list[dict]:
         """Parse CSV file into a list of transaction dicts."""
         if hasattr(csv_file, "read"):
             content = csv_file.read()
@@ -147,9 +145,7 @@ class CSVImportService:
         rows = []
         for line_num, raw_row in enumerate(reader, start=2):
             try:
-                txn_date = date.fromisoformat(
-                    raw_row[field_map["date"]].strip()
-                )
+                txn_date = date.fromisoformat(raw_row[field_map["date"]].strip())
             except (ValueError, KeyError):
                 result.errors.append(f"Row {line_num}: invalid date")
                 continue
@@ -179,9 +175,9 @@ class CSVImportService:
 
     def _get_existing_hashes(self, account: FinancialAccount) -> set:
         """Build a set of hashes from existing transactions for dedup."""
-        existing = Transaction.objects.filter(
-            account=account, sync_source="csv"
-        ).values_list("date", "amount", "description")
+        existing = Transaction.objects.filter(account=account, sync_source="csv").values_list(
+            "date", "amount", "description"
+        )
 
         hashes = set()
         for txn_date, amount, description in existing:
@@ -216,7 +212,4 @@ class CSVImportService:
             status="reconciled",
         )
 
-        logger.info(
-            f"Created CSV reconciliation adjustment for account {account.id}: "
-            f"{difference} on {balance_date}"
-        )
+        logger.info(f"Created CSV reconciliation adjustment for account {account.id}: {difference} on {balance_date}")

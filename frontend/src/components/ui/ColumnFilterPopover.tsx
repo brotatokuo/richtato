@@ -160,7 +160,9 @@ export function ColumnFilterPopover({
                 onCheckedChange={() => handleToggle(option.value)}
                 onSelect={e => e.preventDefault()}
               >
-                <span className="flex-1 break-words whitespace-normal">{option.label}</span>
+                <span className="flex-1 break-words whitespace-normal">
+                  {option.label}
+                </span>
                 {option.count !== undefined && (
                   <span className="ml-2 text-xs text-muted-foreground">
                     {option.count}

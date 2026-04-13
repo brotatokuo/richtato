@@ -1,14 +1,13 @@
 """Tests for sync services."""
 
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
+
+from django.test import TestCase
 
 from apps.financial_account.models import FinancialAccount
 from apps.richtato_user.models import User
-from apps.sync.models import SyncConnection
 from apps.sync.services.plaid_sync_service import PlaidSyncService
 from apps.transaction.models import Transaction, TransactionCategory
-from django.test import TestCase
 
 
 class PlaidSyncServiceCategorizationTest(TestCase):
@@ -43,11 +42,7 @@ class PlaidSyncServiceCategorizationTest(TestCase):
         print(f"Created {cat_count} categories for user")
 
         # Check that key categories exist
-        category_names = list(
-            TransactionCategory.objects.filter(user=self.user).values_list(
-                "name", flat=True
-            )
-        )
+        category_names = list(TransactionCategory.objects.filter(user=self.user).values_list("name", flat=True))
         self.assertIn("Salary", category_names)
         self.assertIn("Groceries", category_names)
         self.assertIn("Dining", category_names)
@@ -106,9 +101,7 @@ class PlaidSyncServiceCategorizationTest(TestCase):
         )
 
         # Try to categorize
-        category = self.sync_service._categorize_by_keywords(
-            transaction, transaction.description, self.user
-        )
+        category = self.sync_service._categorize_by_keywords(transaction, transaction.description, self.user)
 
         self.assertIsNotNone(category)
         self.assertEqual(category.name, "Salary")
@@ -128,9 +121,7 @@ class PlaidSyncServiceCategorizationTest(TestCase):
             transaction_type="debit",
         )
 
-        category = self.sync_service._categorize_by_keywords(
-            transaction, transaction.description, self.user
-        )
+        category = self.sync_service._categorize_by_keywords(transaction, transaction.description, self.user)
 
         self.assertIsNotNone(category)
         self.assertEqual(category.name, "Dining")
@@ -150,9 +141,7 @@ class PlaidSyncServiceCategorizationTest(TestCase):
             transaction_type="debit",
         )
 
-        category = self.sync_service._categorize_by_keywords(
-            transaction, transaction.description, self.user
-        )
+        category = self.sync_service._categorize_by_keywords(transaction, transaction.description, self.user)
 
         self.assertIsNotNone(category)
         self.assertEqual(category.name, "Groceries")
@@ -171,9 +160,7 @@ class PlaidSyncServiceCategorizationTest(TestCase):
             transaction_type="debit",
         )
 
-        category = self.sync_service._categorize_by_keywords(
-            transaction, transaction.description, self.user
-        )
+        category = self.sync_service._categorize_by_keywords(transaction, transaction.description, self.user)
 
         self.assertIsNone(category)
         print(f"No match for '{transaction.description}' (expected)")
@@ -200,9 +187,7 @@ class PlaidSyncServiceCategorizationTest(TestCase):
             transaction_type="credit",
         )
 
-        result = self.sync_service._auto_categorize_transaction(
-            transaction, nature_hint="cc_payment"
-        )
+        result = self.sync_service._auto_categorize_transaction(transaction, nature_hint="cc_payment")
 
         self.assertTrue(result)
         transaction.refresh_from_db()

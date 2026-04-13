@@ -2,17 +2,16 @@
 
 from datetime import date
 from decimal import Decimal
-from typing import Dict, List, Optional
 
 from django.db.models import QuerySet, Sum
 from django.db.models.functions import Coalesce
+from loguru import logger
 
 from apps.financial_account.models import FinancialAccount
 from apps.richtato_user.models import User
 from apps.transaction.models import CategoryKeyword, Transaction, TransactionCategory
 from apps.transaction.repositories.category_repository import CategoryRepository
 from apps.transaction.repositories.transaction_repository import TransactionRepository
-from loguru import logger
 
 
 class TransactionService:
@@ -25,11 +24,11 @@ class TransactionService:
     def get_user_transactions(
         self,
         user: User,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None,
-        account: Optional[FinancialAccount] = None,
-        category: Optional[TransactionCategory] = None,
-        transaction_type: Optional[str] = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        account: FinancialAccount | None = None,
+        category: TransactionCategory | None = None,
+        transaction_type: str | None = None,
     ) -> QuerySet[Transaction]:
         """Get transactions for a user with optional filters. Returns lazy queryset."""
         return self.transaction_repository.get_by_user(
@@ -41,9 +40,7 @@ class TransactionService:
             transaction_type=transaction_type,
         )
 
-    def get_transaction_by_id(
-        self, transaction_id: int, user: User
-    ) -> Optional[Transaction]:
+    def get_transaction_by_id(self, transaction_id: int, user: User) -> Transaction | None:
         """Get transaction by ID, ensuring it belongs to the user."""
         transaction = self.transaction_repository.get_by_id(transaction_id)
         if transaction and transaction.user == user:
@@ -58,9 +55,9 @@ class TransactionService:
         amount: Decimal,
         description: str,
         transaction_type: str = "debit",
-        category_id: Optional[int] = None,
+        category_id: int | None = None,
         status: str = "posted",
-        notes: Optional[str] = "",
+        notes: str | None = "",
     ) -> Transaction:
         """
         Create a manually entered transaction.
@@ -100,10 +97,7 @@ class TransactionService:
             notes=notes,
         )
 
-        logger.info(
-            f"Created manual transaction {transaction.id} for user {user.username}: "
-            f"{description} ({amount})"
-        )
+        logger.info(f"Created manual transaction {transaction.id} for user {user.username}: {description} ({amount})")
 
         return transaction
 
@@ -132,29 +126,21 @@ class TransactionService:
         """
         try:
             self.transaction_repository.delete_transaction(transaction)
-            logger.info(
-                f"Deleted transaction {transaction.id}: {transaction.description}"
-            )
+            logger.info(f"Deleted transaction {transaction.id}: {transaction.description}")
             return True
         except Exception as e:
             logger.error(f"Error deleting transaction {transaction.id}: {str(e)}")
             return False
 
-    def search_transactions(
-        self, user: User, search_term: str, limit: int = 50
-    ) -> List[Transaction]:
+    def search_transactions(self, user: User, search_term: str, limit: int = 50) -> list[Transaction]:
         """Search transactions by description."""
         return self.transaction_repository.search_transactions(user, search_term, limit)
 
-    def get_uncategorized_transactions(
-        self, user: User, limit: int = 100
-    ) -> List[Transaction]:
+    def get_uncategorized_transactions(self, user: User, limit: int = 100) -> list[Transaction]:
         """Get transactions without a category."""
         return self.transaction_repository.get_uncategorized_transactions(user, limit)
 
-    def categorize_transaction(
-        self, transaction: Transaction, category_id: int
-    ) -> Transaction:
+    def categorize_transaction(self, transaction: Transaction, category_id: int) -> Transaction:
         """
         Categorize a transaction.
 
@@ -169,13 +155,9 @@ class TransactionService:
         if not category:
             raise ValueError(f"Category {category_id} not found")
 
-        return self.transaction_repository.update_transaction(
-            transaction, category=category
-        )
+        return self.transaction_repository.update_transaction(transaction, category=category)
 
-    def get_transaction_summary(
-        self, user: User, start_date: date, end_date: date
-    ) -> Dict:
+    def get_transaction_summary(self, user: User, start_date: date, end_date: date) -> dict:
         """
         Get transaction summary for a date range.
 
@@ -187,9 +169,7 @@ class TransactionService:
         Returns:
             Dict with summary data
         """
-        transactions = self.get_user_transactions(
-            user, start_date=start_date, end_date=end_date
-        )
+        transactions = list(self.get_user_transactions(user, start_date=start_date, end_date=end_date))
 
         total_income = Decimal("0")
         total_expenses = Decimal("0")
@@ -201,7 +181,6 @@ class TransactionService:
             else:
                 total_expenses += txn.amount
 
-            # Group by category
             category_name = txn.category_name
             if category_name not in by_category:
                 by_category[category_name] = {
@@ -219,16 +198,12 @@ class TransactionService:
             "by_category": by_category,
         }
 
-    def get_cashflow_summary(
-        self, user: User, start_date: date, end_date: date
-    ) -> Dict:
+    def get_cashflow_summary(self, user: User, start_date: date, end_date: date) -> dict:
         """
         Get cashflow summary for a date range using DB aggregation.
         Returns income/expense/investment totals by category without loading all transactions.
         """
-        base = Transaction.objects.filter(
-            user=user, date__gte=start_date, date__lte=end_date
-        )
+        base = Transaction.objects.filter(user=user, date__gte=start_date, date__lte=end_date)
 
         # Income by category (credits only)
         income_agg = (
@@ -259,19 +234,13 @@ class TransactionService:
             name = row["category__name"] or "Uncategorized"
             cat_type = row["category__type"] or ""
             amt = row["total"]
-            is_investment = cat_type == "investment" or (
-                name and "investment" in name.lower()
-            )
+            is_investment = cat_type == "investment" or (name and "investment" in name.lower())
             if is_investment:
                 total_investments += amt
-                investments_by_category[name] = investments_by_category.get(
-                    name, 0
-                ) + float(amt)
+                investments_by_category[name] = investments_by_category.get(name, 0) + float(amt)
             else:
                 total_expenses += amt
-                expenses_by_category[name] = expenses_by_category.get(name, 0) + float(
-                    amt
-                )
+                expenses_by_category[name] = expenses_by_category.get(name, 0) + float(amt)
 
         return {
             "total_income": float(total_income),
@@ -283,19 +252,13 @@ class TransactionService:
             "investments_by_category": investments_by_category,
         }
 
-    def _match_category_via_keywords(
-        self, user: User, description: str
-    ) -> Optional[TransactionCategory]:
+    def _match_category_via_keywords(self, user: User, description: str) -> TransactionCategory | None:
         """Try to match a category using user keyword rules."""
         text_parts = [description or ""]
         haystack = " ".join(text_parts).lower()
 
         # Query keywords for user's categories
-        keywords = (
-            CategoryKeyword.objects.filter(user=user)
-            .select_related("category")
-            .order_by("-match_count")
-        )
+        keywords = CategoryKeyword.objects.filter(user=user).select_related("category").order_by("-match_count")
 
         for keyword_obj in keywords:
             kw = keyword_obj.keyword.strip().lower()

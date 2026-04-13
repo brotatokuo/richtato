@@ -1,14 +1,14 @@
 """Service for initializing default categories for new users."""
 
 from pathlib import Path
-from typing import Dict, List
 
 import yaml
-from apps.transaction.models import CategoryKeyword, TransactionCategory
 from django.conf import settings
 from django.db import transaction
 from django.utils.text import slugify
 from loguru import logger
+
+from apps.transaction.models import CategoryKeyword, TransactionCategory
 
 
 class CategoryInitializationService:
@@ -16,25 +16,23 @@ class CategoryInitializationService:
 
     def __init__(self):
         """Initialize the service."""
-        self.config_path = (
-            Path(settings.BASE_DIR) / "config" / "categories_defaults.yaml"
-        )
+        self.config_path = Path(settings.BASE_DIR) / "config" / "categories_defaults.yaml"
 
-    def load_defaults_config(self) -> Dict:
+    def load_defaults_config(self) -> dict:
         """Load default categories from YAML config."""
         try:
             if not self.config_path.exists():
                 logger.error(f"Categories config not found at {self.config_path}")
                 return {"categories": []}
 
-            with open(self.config_path, "r") as f:
+            with open(self.config_path) as f:
                 config = yaml.safe_load(f)
                 return config or {"categories": []}
         except Exception as e:
             logger.error(f"Error loading categories config: {str(e)}")
             return {"categories": []}
 
-    def initialize_for_user(self, user) -> Dict[str, int]:
+    def initialize_for_user(self, user) -> dict[str, int]:
         """
         Initialize default categories and keywords for a new user.
 
@@ -51,9 +49,7 @@ class CategoryInitializationService:
         # Check if user already has categories
         existing_count = TransactionCategory.objects.filter(user=user).count()
         if existing_count > 0:
-            logger.debug(
-                f"User {user.id} already has {existing_count} categories, skipping initialization"
-            )
+            logger.debug(f"User {user.id} already has {existing_count} categories, skipping initialization")
             return {
                 "categories_created": 0,
                 "keywords_created": 0,
@@ -104,14 +100,11 @@ class CategoryInitializationService:
                                 keywords_created += 1
                         except Exception as e:
                             # Skip duplicate keywords
-                            logger.debug(
-                                f"Skipping duplicate keyword '{keyword}' for category '{name}': {str(e)}"
-                            )
+                            logger.debug(f"Skipping duplicate keyword '{keyword}' for category '{name}': {str(e)}")
                             continue
 
                 logger.info(
-                    f"Initialized {categories_created} categories and "
-                    f"{keywords_created} keywords for user {user.id}"
+                    f"Initialized {categories_created} categories and {keywords_created} keywords for user {user.id}"
                 )
 
         except Exception as e:
@@ -123,9 +116,7 @@ class CategoryInitializationService:
             "keywords_created": keywords_created,
         }
 
-    def get_category_names(self) -> List[str]:
+    def get_category_names(self) -> list[str]:
         """Get list of all default category names."""
         config = self.load_defaults_config()
-        return [
-            cat.get("name") for cat in config.get("categories", []) if cat.get("name")
-        ]
+        return [cat.get("name") for cat in config.get("categories", []) if cat.get("name")]

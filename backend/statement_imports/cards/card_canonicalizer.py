@@ -3,11 +3,12 @@ from abc import ABC, abstractmethod
 from decimal import Decimal
 
 import pandas as pd
+from loguru import logger
+
 from apps.financial_account.models import FinancialAccount
 from apps.transaction.models import Transaction, TransactionCategory
 from apps.transaction.services.transaction_service import TransactionService
 from artificial_intelligence.ai import OpenAI
-from loguru import logger
 
 
 class CardCanonicalizer(ABC):
@@ -79,14 +80,10 @@ class CardCanonicalizer(ABC):
         ]
 
         # Join the keywords into a regex pattern
-        pattern = "|".join(
-            map(re.escape, keywords_to_filter)
-        )  # escape handles special characters
+        pattern = "|".join(map(re.escape, keywords_to_filter))  # escape handles special characters
 
         # Filter the DataFrame
-        self.df = self.df[
-            ~self.df["Description"].str.contains(pattern, case=False, na=False)
-        ]
+        self.df = self.df[~self.df["Description"].str.contains(pattern, case=False, na=False)]
 
     def check_input_format(self):
         """
@@ -94,17 +91,13 @@ class CardCanonicalizer(ABC):
         """
         if self.df.columns.tolist() != self.input_columns:
             logger.error("\n" + self.df.head().to_string())
-            raise ValueError(
-                f"Input DataFrame is not the expected format. Expected columns: {self.input_columns}"
-            )
+            raise ValueError(f"Input DataFrame is not the expected format. Expected columns: {self.input_columns}")
 
     def _convert_date(self) -> None:
         """
         Formats the date in the DataFrame to YYYY-MM-DD.
         """
-        self.formatted_df["Date"] = pd.to_datetime(
-            self.formatted_df["Date"]
-        ).dt.strftime("%Y-%m-%d")
+        self.formatted_df["Date"] = pd.to_datetime(self.formatted_df["Date"]).dt.strftime("%Y-%m-%d")
 
     def _convert_amount(self) -> None:
         """
@@ -121,24 +114,16 @@ class CardCanonicalizer(ABC):
 
         def match_category(description: str) -> str:
             """Match category via keywords and return category name or None."""
-            category = transaction_service._match_category_via_keywords(
-                self.user, description
-            )
+            category = transaction_service._match_category_via_keywords(self.user, description)
             return category.name if category else None
 
-        self.formatted_df["Category"] = self.formatted_df["Description"].apply(
-            match_category
-        )
+        self.formatted_df["Category"] = self.formatted_df["Description"].apply(match_category)
         uncategorized_mask = self.formatted_df["Category"].isna()
-        logger.debug(
-            f"Uncategorized transactions: {self.formatted_df[uncategorized_mask].to_string()}"
-        )
+        logger.debug(f"Uncategorized transactions: {self.formatted_df[uncategorized_mask].to_string()}")
 
         uncategorized_df = self.formatted_df[uncategorized_mask]
         categorized_df = OpenAI().categorize_dataframe(self.user, uncategorized_df)
-        self.formatted_df.loc[uncategorized_mask, "Category"] = categorized_df[
-            "Category"
-        ].values
+        self.formatted_df.loc[uncategorized_mask, "Category"] = categorized_df["Category"].values
 
     def process(self) -> None:
         """
@@ -153,9 +138,7 @@ class CardCanonicalizer(ABC):
             amount = row["Amount"]
 
             # Get or create the financial account
-            account = FinancialAccount.objects.filter(
-                name=card_name, user=self.user
-            ).first()
+            account = FinancialAccount.objects.filter(name=card_name, user=self.user).first()
 
             if not account:
                 # Create the account if it doesn't exist
@@ -172,9 +155,7 @@ class CardCanonicalizer(ABC):
                     name=category_name,
                     user=self.user,
                     defaults={
-                        "slug": category_name.lower()
-                        .replace(" ", "-")
-                        .replace("/", "-"),
+                        "slug": category_name.lower().replace(" ", "-").replace("/", "-"),
                         "type": "expense",
                     },
                 )
@@ -192,9 +173,7 @@ class CardCanonicalizer(ABC):
                 )
                 transaction.save()
             except TransactionCategory.DoesNotExist:
-                available_categories = TransactionCategory.objects.filter(
-                    user=self.user
-                ).values_list("name", flat=True)
+                available_categories = TransactionCategory.objects.filter(user=self.user).values_list("name", flat=True)
                 logger.error(
                     f"Category '{category_name}' does not exist. Available categories: {list(available_categories)}"
                 )

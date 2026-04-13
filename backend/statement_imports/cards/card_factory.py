@@ -3,7 +3,6 @@ from statement_imports.cards.american_express import AmericanExpressCards
 from statement_imports.cards.bank_of_america import BankOfAmericaCards
 from statement_imports.cards.chase import ChaseCards
 from statement_imports.cards.citi import CitiCards
-from loguru import logger
 
 
 class CardStatement:
@@ -28,9 +27,7 @@ class CardStatement:
         cls._canonicalizers[card_type.lower()] = canonicalizer_class
 
     @classmethod
-    def create_from_file(
-        cls, user: User, card_bank: str, card_name: str, file_path: str
-    ):
+    def create_from_file(cls, user: User, card_bank: str, card_name: str, file_path: str):
         """
         Create an instance of the appropriate card canonicalizer using its from_file method.
 
@@ -50,8 +47,7 @@ class CardStatement:
         if card_bank_lower not in cls._canonicalizers:
             available_types = ", ".join(cls._canonicalizers.keys())
             raise ValueError(
-                f"No canonicalizer registered for card type '{card_bank}'. "
-                f"Available types: {available_types}"
+                f"No canonicalizer registered for card type '{card_bank}'. Available types: {available_types}"
             )
 
         # Use the from_file class method instead of constructor

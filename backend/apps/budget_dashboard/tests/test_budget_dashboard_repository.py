@@ -4,6 +4,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+
 from apps.budget.models import Budget, BudgetCategory
 from apps.budget_dashboard.repositories.budget_dashboard_repository import (
     BudgetDashboardRepository,
@@ -15,15 +16,15 @@ from apps.transaction.models import Transaction, TransactionCategory
 
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(
-        username="repotest", email="repo@test.com", password="testpass123"
-    )
+    return User.objects.create_user(username="repotest", email="repo@test.com", password="testpass123")
 
 
 @pytest.fixture
 def account(user):
     return FinancialAccount.objects.create(
-        user=user, name="Repo Checking", account_type="checking",
+        user=user,
+        name="Repo Checking",
+        account_type="checking",
         balance=Decimal("10000.00"),
     )
 
@@ -31,21 +32,30 @@ def account(user):
 @pytest.fixture
 def expense_cat(user):
     return TransactionCategory.objects.create(
-        user=user, name="Repo Food", slug="repo-food-dash", type="expense",
+        user=user,
+        name="Repo Food",
+        slug="repo-food-dash",
+        type="expense",
     )
 
 
 @pytest.fixture
 def expense_cat_2(user):
     return TransactionCategory.objects.create(
-        user=user, name="Repo Clothing", slug="repo-clothing-dash", type="expense",
+        user=user,
+        name="Repo Clothing",
+        slug="repo-clothing-dash",
+        type="expense",
     )
 
 
 @pytest.fixture
 def income_cat(user):
     return TransactionCategory.objects.create(
-        user=user, name="Repo Salary", slug="repo-salary-dash", type="income",
+        user=user,
+        name="Repo Salary",
+        slug="repo-salary-dash",
+        type="income",
     )
 
 
@@ -62,9 +72,14 @@ def repo():
 
 def _txn(user, account, category, amount, txn_date, transaction_type="debit"):
     return Transaction.objects.create(
-        user=user, account=account, category=category, amount=amount,
-        date=txn_date, description=f"Test {amount}",
-        transaction_type=transaction_type, sync_source="manual",
+        user=user,
+        account=account,
+        category=category,
+        amount=amount,
+        date=txn_date,
+        description=f"Test {amount}",
+        transaction_type=transaction_type,
+        sync_source="manual",
     )
 
 
@@ -140,11 +155,16 @@ class TestGetNonessentialExpenseSum:
 class TestGetActiveBudgetsForDateRange:
     def test_returns_overlapping_budgets(self, repo, user, expense_cat):
         budget = Budget.objects.create(
-            user=user, name="Jan", period_type="monthly",
-            start_date=date(2024, 1, 1), end_date=date(2024, 1, 31),
+            user=user,
+            name="Jan",
+            period_type="monthly",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 31),
         )
         BudgetCategory.objects.create(
-            budget=budget, category=expense_cat, allocated_amount=Decimal("500.00"),
+            budget=budget,
+            category=expense_cat,
+            allocated_amount=Decimal("500.00"),
         )
         result = list(repo.get_active_budgets_for_date_range(user, date(2024, 1, 15), date(2024, 1, 20)))
         assert len(result) == 1
@@ -152,32 +172,45 @@ class TestGetActiveBudgetsForDateRange:
 
     def test_excludes_inactive_budgets(self, repo, user):
         Budget.objects.create(
-            user=user, name="Inactive", period_type="monthly",
-            start_date=date(2024, 1, 1), end_date=date(2024, 1, 31), is_active=False,
+            user=user,
+            name="Inactive",
+            period_type="monthly",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 31),
+            is_active=False,
         )
         result = list(repo.get_active_budgets_for_date_range(user, date(2024, 1, 1), date(2024, 1, 31)))
         assert len(result) == 0
 
     def test_budget_starts_before_range(self, repo, user):
         Budget.objects.create(
-            user=user, name="Early Start", period_type="monthly",
-            start_date=date(2023, 12, 15), end_date=date(2024, 1, 15),
+            user=user,
+            name="Early Start",
+            period_type="monthly",
+            start_date=date(2023, 12, 15),
+            end_date=date(2024, 1, 15),
         )
         result = list(repo.get_active_budgets_for_date_range(user, date(2024, 1, 1), date(2024, 1, 31)))
         assert len(result) == 1
 
     def test_budget_ends_after_range(self, repo, user):
         Budget.objects.create(
-            user=user, name="Late End", period_type="monthly",
-            start_date=date(2024, 1, 15), end_date=date(2024, 2, 15),
+            user=user,
+            name="Late End",
+            period_type="monthly",
+            start_date=date(2024, 1, 15),
+            end_date=date(2024, 2, 15),
         )
         result = list(repo.get_active_budgets_for_date_range(user, date(2024, 1, 1), date(2024, 1, 31)))
         assert len(result) == 1
 
     def test_budget_fully_outside_range(self, repo, user):
         Budget.objects.create(
-            user=user, name="Outside", period_type="monthly",
-            start_date=date(2024, 3, 1), end_date=date(2024, 3, 31),
+            user=user,
+            name="Outside",
+            period_type="monthly",
+            start_date=date(2024, 3, 1),
+            end_date=date(2024, 3, 31),
         )
         result = list(repo.get_active_budgets_for_date_range(user, date(2024, 1, 1), date(2024, 1, 31)))
         assert len(result) == 0

@@ -1,7 +1,14 @@
 """Views for sync API."""
 
 import threading
-from decimal import Decimal
+
+from django.conf import settings
+from loguru import logger
+from rest_framework import status
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.financial_account.repositories.account_repository import (
     FinancialAccountRepository,
@@ -15,14 +22,8 @@ from apps.sync.serializers import (
     SyncJobSerializer,
 )
 from apps.sync.services import get_sync_service
-from django.conf import settings
+from apps.sync.services.plaid_account_service import create_plaid_financial_account
 from integrations.plaid.client import PlaidClient
-from loguru import logger
-from rest_framework import status
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
 
 
 class SyncConnectionListCreateAPIView(APIView):
@@ -53,9 +54,7 @@ class SyncConnectionListCreateAPIView(APIView):
         try:
             access_token = serializer.validated_data["access_token"]
             institution_name = serializer.validated_data["institution_name"]
-            external_enrollment_id = serializer.validated_data.get(
-                "external_enrollment_id", ""
-            )
+            external_enrollment_id = serializer.validated_data.get("external_enrollment_id", "")
 
             return self._create_plaid_connections(
                 request.user,
@@ -66,9 +65,7 @@ class SyncConnectionListCreateAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error creating sync connection: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def _create_plaid_connections(
         self,
@@ -105,9 +102,7 @@ class SyncConnectionListCreateAPIView(APIView):
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 
-            response_serializer = SyncConnectionSerializer(
-                created_connections, many=True
-            )
+            response_serializer = SyncConnectionSerializer(created_connections, many=True)
             return Response(
                 {"connections": response_serializer.data},
                 status=status.HTTP_201_CREATED,
@@ -115,9 +110,7 @@ class SyncConnectionListCreateAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error creating Plaid connections: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def _fetch_plaid_accounts(self, access_token: str):
         """Fetch accounts from Plaid API using the access token."""
@@ -153,100 +146,20 @@ class SyncConnectionListCreateAPIView(APIView):
     ):
         """Create a FinancialAccount and SyncConnection for a Plaid account."""
         try:
-            plaid_account_id = plaid_account.get("id") or ""
-            account_name = plaid_account.get("name", "Account")
-            account_type = plaid_account.get("type", "depository")
-            account_subtype = plaid_account.get("subtype", "")
-            last_four = plaid_account.get("last_four", "")
-
-            # Check if connection already exists for this account
-            existing = self.connection_repository.get_by_external_account_id(
-                user, "plaid", plaid_account_id
-            )
-            if existing:
-                logger.info(
-                    f"Connection already exists for Plaid account {plaid_account_id}"
-                )
-                return existing
-
-            # Map Plaid account types to our types
-            type_mapping = {
-                "depository": "checking",
-                "credit": "credit_card",
-                "loan": "loan",
-                "investment": "investment",
-            }
-            # Use subtype for more specific mapping
-            if account_subtype in ("savings", "cd", "money market"):
-                mapped_type = "savings"
-            elif account_subtype == "checking":
-                mapped_type = "checking"
-            elif account_subtype == "credit card":
-                mapped_type = "credit_card"
-            else:
-                mapped_type = type_mapping.get(account_type, "checking")
-
-            # Use balance from the accounts response
-            initial_balance = Decimal("0")
-            try:
-                balances = plaid_account.get("balances", {})
-                current_balance = balances.get("current") or balances.get("ledger")
-                if current_balance is not None:
-                    initial_balance = Decimal(str(current_balance))
-                    logger.info(
-                        f"Got initial balance for {account_name}: {initial_balance}"
-                    )
-            except Exception as e:
-                logger.warning(f"Could not parse balance for {plaid_account_id}: {e}")
-
-            # Create FinancialAccount with initial balance
-            financial_account = self.account_service.create_manual_account(
+            return create_plaid_financial_account(
                 user=user,
-                name=f"{institution_name} {account_name}",
-                account_type=mapped_type,
-                institution_name=institution_name,
-                account_number_last4=last_four,
-                initial_balance=initial_balance,
-            )
-            financial_account.sync_source = "plaid"
-            if mapped_type in ("credit_card", "loan"):
-                financial_account.is_liability = True
-                # Liabilities stored negative: Plaid reports positive, negate it
-                if initial_balance > 0:
-                    initial_balance = -initial_balance
-            financial_account.save()
-
-            if initial_balance != Decimal("0"):
-                self.account_repository.update_balance(
-                    financial_account, initial_balance
-                )
-                logger.info(
-                    f"Recorded initial balance history for account {financial_account.id}"
-                )
-
-            # Create SyncConnection
-            connection = self.connection_repository.create_connection(
-                user=user,
-                account=financial_account,
-                provider="plaid",
+                plaid_account=plaid_account,
                 access_token=access_token,
                 institution_name=institution_name,
-                external_account_id=plaid_account_id,
-                external_enrollment_id=item_id,  # Plaid uses item_id
+                item_id=item_id,
+                connection_repository=self.connection_repository,
+                account_service=self.account_service,
+                account_repository=self.account_repository,
             )
-
-            logger.info(
-                f"Created connection {connection.id} for Plaid account "
-                f"{plaid_account_id} ({account_name}) with balance {initial_balance}"
-            )
-            return connection
-
         except Exception as e:
-            logger.error(
-                f"Error creating connection for Plaid account "
-                f"{plaid_account.get('id')}: {str(e)}"
-            )
+            logger.error(f"Error creating connection for Plaid account {plaid_account.get('id')}: {str(e)}")
             return None
+
 
 class SyncConnectionDetailAPIView(APIView):
     """Retrieve or delete a sync connection."""
@@ -263,9 +176,7 @@ class SyncConnectionDetailAPIView(APIView):
         connection = self.connection_repository.get_by_id(pk)
 
         if not connection or connection.user != request.user:
-            return Response(
-                {"error": "Connection not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Connection not found"}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = SyncConnectionSerializer(connection)
         return Response(serializer.data)
@@ -281,9 +192,7 @@ class SyncConnectionDetailAPIView(APIView):
         connection = self.connection_repository.get_by_id(pk)
 
         if not connection or connection.user != request.user:
-            return Response(
-                {"error": "Connection not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Connection not found"}, status=status.HTTP_404_NOT_FOUND)
 
         # Check if we should also delete the account and its data
         delete_data = request.query_params.get("delete_data", "false").lower() == "true"
@@ -303,17 +212,13 @@ class SyncConnectionDetailAPIView(APIView):
                 # Delete the account itself (hard delete, not soft delete)
                 account.delete()
 
-                logger.info(
-                    f"Deleted connection {pk}, account {account.id}, and all associated data"
-                )
+                logger.info(f"Deleted connection {pk}, account {account.id}, and all associated data")
             else:
                 # Just mark the account as manual if it was synced
                 if account and account.sync_source != "manual":
                     account.sync_source = "manual"
                     account.save()
-                    logger.info(
-                        f"Deleted connection {pk}, converted account {account.id} to manual"
-                    )
+                    logger.info(f"Deleted connection {pk}, converted account {account.id} to manual")
                 else:
                     logger.info(f"Deleted connection {pk}")
 
@@ -321,9 +226,7 @@ class SyncConnectionDetailAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error deleting connection {pk}: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class SyncTriggerAPIView(APIView):
@@ -341,9 +244,7 @@ class SyncTriggerAPIView(APIView):
         connection = self.connection_repository.get_by_id(pk)
 
         if not connection or connection.user != request.user:
-            return Response(
-                {"error": "Connection not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Connection not found"}, status=status.HTTP_404_NOT_FOUND)
 
         force_full_sync = request.data.get("full_sync", False)
         if isinstance(force_full_sync, str):
@@ -358,9 +259,7 @@ class SyncTriggerAPIView(APIView):
         # Create job and start sync in background thread
         def run_sync():
             try:
-                sync_service.sync_connection(
-                    connection, force_full_sync=force_full_sync
-                )
+                sync_service.sync_connection(connection, force_full_sync=force_full_sync)
             except Exception as e:
                 logger.error(f"Background sync error for connection {pk}: {str(e)}")
 
@@ -396,9 +295,7 @@ class SyncJobListAPIView(APIView):
         connection = self.connection_repository.get_by_id(pk)
 
         if not connection or connection.user != request.user:
-            return Response(
-                {"error": "Connection not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Connection not found"}, status=status.HTTP_404_NOT_FOUND)
 
         jobs = self.job_repository.get_by_connection(connection)
         serializer = SyncJobSerializer(jobs, many=True)
@@ -421,9 +318,7 @@ class SyncJobProgressAPIView(APIView):
         connection = self.connection_repository.get_by_id(pk)
 
         if not connection or connection.user != request.user:
-            return Response(
-                {"error": "Connection not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Connection not found"}, status=status.HTTP_404_NOT_FOUND)
 
         # Get the most recent job for this connection
         jobs = self.job_repository.get_by_connection(connection)
@@ -478,9 +373,7 @@ class PlaidLinkTokenAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error creating Plaid link token: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class PlaidExchangeTokenAPIView(APIView):
@@ -522,12 +415,10 @@ class PlaidExchangeTokenAPIView(APIView):
             access_token = result["access_token"]
             item_id = result["item_id"]
 
-            # Now create connections for all accounts
             connection_repository = SyncConnectionRepository()
             account_service = AccountService()
             account_repository = FinancialAccountRepository()
 
-            # Create a temporary client with access token to fetch accounts
             client_with_token = PlaidClient(
                 client_id=client_id,
                 secret=secret,
@@ -545,78 +436,18 @@ class PlaidExchangeTokenAPIView(APIView):
 
             created_connections = []
             for plaid_account in plaid_accounts:
-                plaid_account_id = plaid_account.get("id")
-                account_name = plaid_account.get("name", "Account")
-                account_type = plaid_account.get("type", "depository")
-                account_subtype = plaid_account.get("subtype", "")
-                last_four = plaid_account.get("last_four", "")
-
-                # Check if connection already exists
-                existing = connection_repository.get_by_external_account_id(
-                    request.user, "plaid", plaid_account_id
-                )
-                if existing:
-                    created_connections.append(existing)
-                    continue
-
-                # Map account types
-                type_mapping = {
-                    "depository": "checking",
-                    "credit": "credit_card",
-                    "loan": "loan",
-                    "investment": "investment",
-                }
-                if account_subtype in ("savings", "cd", "money market"):
-                    mapped_type = "savings"
-                elif account_subtype == "checking":
-                    mapped_type = "checking"
-                elif account_subtype == "credit card":
-                    mapped_type = "credit_card"
-                else:
-                    mapped_type = type_mapping.get(account_type, "checking")
-
-                # Get initial balance
-                initial_balance = Decimal("0")
-                try:
-                    balances = plaid_account.get("balances", {})
-                    current = balances.get("current") or balances.get("ledger")
-                    if current is not None:
-                        initial_balance = Decimal(str(current))
-                except Exception:
-                    pass
-
-                # Create FinancialAccount
-                financial_account = account_service.create_manual_account(
+                connection = create_plaid_financial_account(
                     user=request.user,
-                    name=f"{institution_name} {account_name}",
-                    account_type=mapped_type,
-                    institution_name=institution_name,
-                    account_number_last4=last_four,
-                    initial_balance=initial_balance,
-                )
-                financial_account.sync_source = "plaid"
-                if mapped_type in ("credit_card", "loan"):
-                    financial_account.is_liability = True
-                    if initial_balance > 0:
-                        initial_balance = -initial_balance
-                financial_account.save()
-
-                if initial_balance != Decimal("0"):
-                    account_repository.update_balance(
-                        financial_account, initial_balance
-                    )
-
-                # Create SyncConnection
-                connection = connection_repository.create_connection(
-                    user=request.user,
-                    account=financial_account,
-                    provider="plaid",
+                    plaid_account=plaid_account,
                     access_token=access_token,
                     institution_name=institution_name,
-                    external_account_id=plaid_account_id,
-                    external_enrollment_id=item_id,
+                    item_id=item_id,
+                    connection_repository=connection_repository,
+                    account_service=account_service,
+                    account_repository=account_repository,
                 )
-                created_connections.append(connection)
+                if connection:
+                    created_connections.append(connection)
 
             serializer = SyncConnectionSerializer(created_connections, many=True)
             return Response(
@@ -626,9 +457,7 @@ class PlaidExchangeTokenAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error exchanging Plaid token: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ============================================================================
@@ -669,9 +498,7 @@ class SyncStatusAPIView(APIView):
             )
         except Exception as e:
             logger.error(f"SyncStatusAPIView.get error: {e}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def post(self, request):
         """Trigger background sync for all user connections."""
@@ -682,9 +509,7 @@ class SyncStatusAPIView(APIView):
             logger.info(f"SyncStatusAPIView.post called for user {request.user.id}")
 
             # Check if user has any active connections
-            has_connections = SyncConnection.objects.filter(
-                user=request.user, status="active"
-            ).exists()
+            has_connections = SyncConnection.objects.filter(user=request.user, status="active").exists()
 
             if not has_connections:
                 logger.info(f"No active connections for user {request.user.id}")
@@ -708,24 +533,18 @@ class SyncStatusAPIView(APIView):
             )
         except Exception as e:
             logger.error(f"SyncStatusAPIView.post error: {e}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete(self, request):
         """Clear new transaction count (user has seen them)."""
         try:
             from apps.sync.models import UserSyncStatus
 
-            UserSyncStatus.objects.filter(user=request.user).update(
-                new_transaction_count=0
-            )
+            UserSyncStatus.objects.filter(user=request.user).update(new_transaction_count=0)
             return Response({"status": "cleared"})
         except Exception as e:
             logger.error(f"SyncStatusAPIView.delete error: {e}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class UserSyncJobsAPIView(APIView):
@@ -755,19 +574,13 @@ class UserSyncJobsAPIView(APIView):
                     "institution_name": job.connection.institution_name,
                     "provider": job.connection.provider,
                     "status": job.status,
-                    "started_at": job.started_at.isoformat()
-                    if job.started_at
-                    else None,
-                    "completed_at": (
-                        job.completed_at.isoformat() if job.completed_at else None
-                    ),
+                    "started_at": job.started_at.isoformat() if job.started_at else None,
+                    "completed_at": (job.completed_at.isoformat() if job.completed_at else None),
                     "transactions_synced": job.transactions_synced,
                     "transactions_skipped": job.transactions_skipped,
                     "is_full_sync": job.is_full_sync,
                     "errors": job.errors or [],
-                    "duration_seconds": (
-                        job.duration.total_seconds() if job.completed_at else None
-                    ),
+                    "duration_seconds": (job.duration.total_seconds() if job.completed_at else None),
                 }
             )
 

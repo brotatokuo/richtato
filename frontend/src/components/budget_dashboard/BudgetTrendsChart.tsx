@@ -21,18 +21,22 @@ export function BudgetTrendsChart({
   const { preferences } = usePreferences();
   const [activeView, setActiveView] = useState<ChartView>('bar');
 
-  const labels = useMemo(
-    () => monthlyData.map((m) => m.label),
-    [monthlyData]
-  );
+  const labels = useMemo(() => monthlyData.map(m => m.label), [monthlyData]);
 
   const lineChartOptions = useMemo(() => {
     const currency = preferences.currency;
     return {
       tooltip: {
         trigger: 'axis',
-        formatter: function (params: Array<{ name?: string; color?: string; seriesName?: string; value?: number | number[] }>) {
-          const lines = (params || []).map((p) => {
+        formatter: function (
+          params: Array<{
+            name?: string;
+            color?: string;
+            seriesName?: string;
+            value?: number | number[];
+          }>
+        ) {
+          const lines = (params || []).map(p => {
             const value = Array.isArray(p.value) ? p.value[1] : p.value;
             return `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${p.color};"></span>${p.seriesName}: ${formatCurrency(value as number, currency)}`;
           });
@@ -78,7 +82,7 @@ export function BudgetTrendsChart({
         {
           name: 'Spent',
           type: 'line',
-          data: monthlyData.map((m) => m.total_spent),
+          data: monthlyData.map(m => m.total_spent),
           smooth: true,
           lineStyle: { color: '#ef4444', width: 2 },
           itemStyle: { color: '#ef4444' },
@@ -99,7 +103,7 @@ export function BudgetTrendsChart({
         {
           name: 'Budget',
           type: 'line',
-          data: monthlyData.map((m) => m.total_budget),
+          data: monthlyData.map(m => m.total_budget),
           smooth: true,
           lineStyle: { color: '#3b82f6', width: 2, type: 'dashed' },
           itemStyle: { color: '#3b82f6' },
@@ -114,8 +118,15 @@ export function BudgetTrendsChart({
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
-        formatter: function (params: Array<{ name?: string; color?: string; seriesName?: string; value?: number | number[] }>) {
-          const lines = (params || []).map((p) => {
+        formatter: function (
+          params: Array<{
+            name?: string;
+            color?: string;
+            seriesName?: string;
+            value?: number | number[];
+          }>
+        ) {
+          const lines = (params || []).map(p => {
             const value = Array.isArray(p.value) ? p.value[1] : p.value;
             return `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${p.color};"></span>${p.seriesName}: ${formatCurrency(value as number, currency)}`;
           });
@@ -161,7 +172,7 @@ export function BudgetTrendsChart({
         {
           name: 'Budget',
           type: 'bar',
-          data: monthlyData.map((m) => m.total_budget),
+          data: monthlyData.map(m => m.total_budget),
           barMaxWidth: 24,
           itemStyle: {
             color: '#3b82f6',
@@ -171,7 +182,7 @@ export function BudgetTrendsChart({
         {
           name: 'Spent',
           type: 'bar',
-          data: monthlyData.map((m) => m.total_spent),
+          data: monthlyData.map(m => m.total_spent),
           barMaxWidth: 24,
           itemStyle: {
             color: function (params: { dataIndex: number }) {
@@ -192,7 +203,13 @@ export function BudgetTrendsChart({
     return {
       tooltip: {
         trigger: 'axis',
-        formatter: function (params: Array<{ name?: string; color?: string; value?: number | number[] }>) {
+        formatter: function (
+          params: Array<{
+            name?: string;
+            color?: string;
+            value?: number | number[];
+          }>
+        ) {
           const p = params?.[0];
           if (!p) return '';
           const value = Array.isArray(p.value) ? p.value[1] : p.value;
@@ -252,7 +269,7 @@ export function BudgetTrendsChart({
         {
           name: 'Usage',
           type: 'line',
-          data: monthlyData.map((m) => m.percentage),
+          data: monthlyData.map(m => m.percentage),
           smooth: true,
           lineStyle: { width: 3 },
           areaStyle: {

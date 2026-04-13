@@ -2,7 +2,8 @@
 
 from datetime import date
 from decimal import Decimal
-from typing import Dict, List, Optional
+
+from loguru import logger
 
 from apps.financial_account.models import FinancialAccount
 from apps.financial_account.repositories.account_repository import (
@@ -12,7 +13,6 @@ from apps.financial_account.repositories.institution_repository import (
     FinancialInstitutionRepository,
 )
 from apps.richtato_user.models import User
-from loguru import logger
 
 
 class AccountService:
@@ -22,26 +22,18 @@ class AccountService:
         self.account_repository = FinancialAccountRepository()
         self.institution_repository = FinancialInstitutionRepository()
 
-    def get_user_accounts(
-        self, user: User, active_only: bool = True
-    ) -> List[FinancialAccount]:
+    def get_user_accounts(self, user: User, active_only: bool = True) -> list[FinancialAccount]:
         """Get all accounts for a user."""
-        return self.account_repository.get_by_user(
-            user, is_active=active_only if active_only else None
-        )
+        return self.account_repository.get_by_user(user, is_active=active_only if active_only else None)
 
-    def get_account_by_id(
-        self, account_id: int, user: User
-    ) -> Optional[FinancialAccount]:
+    def get_account_by_id(self, account_id: int, user: User) -> FinancialAccount | None:
         """Get account by ID, ensuring it belongs to the user."""
         account = self.account_repository.get_by_id(account_id)
         if account and account.user == user:
             return account
         return None
 
-    def get_accounts_by_type(
-        self, user: User, account_type: str
-    ) -> List[FinancialAccount]:
+    def get_accounts_by_type(self, user: User, account_type: str) -> list[FinancialAccount]:
         """Get accounts of a specific type."""
         return self.account_repository.get_by_type(user, account_type)
 
@@ -82,9 +74,7 @@ class AccountService:
         # If no slug match, try by name (for synced accounts or custom entries)
         if not institution and institution_name:
             slug = institution_name.lower().replace(" ", "_").replace("-", "_")
-            institution = self.institution_repository.get_or_create_institution(
-                name=institution_name, slug=slug
-            )
+            institution = self.institution_repository.get_or_create_institution(name=institution_name, slug=slug)
 
         account = self.account_repository.create_account(
             user=user,
@@ -104,15 +94,11 @@ class AccountService:
         if initial_balance != Decimal("0"):
             self._create_opening_balance_transaction(account, initial_balance)
 
-        logger.info(
-            f"Created manual account {account.id} for user {user.username}: {name}"
-        )
+        logger.info(f"Created manual account {account.id} for user {user.username}: {name}")
 
         return account
 
-    def _create_opening_balance_transaction(
-        self, account: FinancialAccount, initial_balance: Decimal
-    ) -> None:
+    def _create_opening_balance_transaction(self, account: FinancialAccount, initial_balance: Decimal) -> None:
         """Create an Opening Balance transaction so the initial balance appears in history."""
         from apps.transaction.models import Transaction
 
@@ -141,9 +127,7 @@ class AccountService:
             institution_name = kwargs.pop("institution_name")
             if institution_name:
                 slug = institution_name.lower().replace(" ", "_").replace("-", "_")
-                institution = self.institution_repository.get_or_create_institution(
-                    name=institution_name, slug=slug
-                )
+                institution = self.institution_repository.get_or_create_institution(name=institution_name, slug=slug)
                 kwargs["institution"] = institution
             else:
                 kwargs["institution"] = None
@@ -168,7 +152,7 @@ class AccountService:
             logger.error(f"Error deleting account {account.id}: {str(e)}")
             return False
 
-    def get_account_summary(self, user: User) -> Dict:
+    def get_account_summary(self, user: User) -> dict:
         """
         Get summary of all user accounts.
 

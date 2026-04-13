@@ -141,7 +141,7 @@ export function useSyncStatus(
 
   const clearNewCount = useCallback(async () => {
     await syncService.clearNewCount();
-    setStatus((prev) => (prev ? { ...prev, new_transaction_count: 0 } : null));
+    setStatus(prev => (prev ? { ...prev, new_transaction_count: 0 } : null));
   }, []);
 
   const refresh = useCallback(async () => {

@@ -1,7 +1,8 @@
 """Abstract base class for banking provider clients."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generator, List, Optional
+from collections.abc import Generator
+from typing import Any
 
 
 class BaseBankingClient(ABC):
@@ -13,7 +14,7 @@ class BaseBankingClient(ABC):
     """
 
     @abstractmethod
-    def get_accounts(self) -> List[Dict[str, Any]]:
+    def get_accounts(self) -> list[dict[str, Any]]:
         """
         Fetch all accounts associated with the access token.
 
@@ -29,7 +30,7 @@ class BaseBankingClient(ABC):
         pass
 
     @abstractmethod
-    def get_account_balance(self, account_id: str) -> Dict[str, Any]:
+    def get_account_balance(self, account_id: str) -> dict[str, Any]:
         """
         Fetch account balance.
 
@@ -48,11 +49,11 @@ class BaseBankingClient(ABC):
     def get_transactions(
         self,
         account_id: str,
-        count: Optional[int] = None,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
+        count: int | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
         **kwargs,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Fetch transactions for a specific account.
 
@@ -80,9 +81,9 @@ class BaseBankingClient(ABC):
         self,
         account_id: str,
         batch_size: int = 500,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-    ) -> Generator[List[Dict[str, Any]], None, None]:
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> Generator[list[dict[str, Any]], None, None]:
         """
         Fetch transactions in batches using pagination.
 
@@ -102,10 +103,10 @@ class BaseBankingClient(ABC):
 
     def filter_transactions(
         self,
-        transactions: List[Dict[str, Any]],
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        transactions: list[dict[str, Any]],
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Filter a list of transactions by date range.
 
@@ -126,9 +127,7 @@ class BaseBankingClient(ABC):
 
         filtered = []
 
-        start_dt = (
-            datetime.strptime(start_date, "%Y-%m-%d").date() if start_date else None
-        )
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d").date() if start_date else None
         end_dt = datetime.strptime(end_date, "%Y-%m-%d").date() if end_date else None
 
         for txn in transactions:

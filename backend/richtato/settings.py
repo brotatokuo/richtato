@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-only-change-me-in-production")
 
 # Plaid API Configuration
 PLAID_CLIENT_ID = os.getenv("PLAID_CLIENT_ID")
@@ -34,8 +34,7 @@ PLAID_SECRET = os.getenv("PLAID_SECRET")
 PLAID_ENV = os.getenv("PLAID_ENV", "sandbox")  # sandbox, development, production
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True  # Force DEBUG to True for local development
-# DEBUG = False
+DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 
 ALLOWED_HOSTS = [
     "localhost",
@@ -117,7 +116,7 @@ if os.getenv("DATABASE_URL"):
             "USER": tmpPostgres.username,
             "PASSWORD": tmpPostgres.password,
             "HOST": tmpPostgres.hostname,
-            "PORT": 5432,
+            "PORT": tmpPostgres.port or 5432,
             "OPTIONS": dict(parse_qsl(tmpPostgres.query)),
         }
     }
@@ -129,7 +128,7 @@ else:
             "USER": os.getenv("POSTGRES_USER", "postgres"),
             "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
             "HOST": os.getenv("POSTGRES_HOST", "db"),
-            "PORT": os.getenv("POSTGRES_PORT", 5433),
+            "PORT": os.getenv("POSTGRES_PORT", "5432"),
         }
     }
 
@@ -236,9 +235,7 @@ REST_FRAMEWORK = {
 
 # Swagger Documentation Settings
 SWAGGER_SETTINGS = {
-    "SECURITY_DEFINITIONS": {
-        "Session": {"type": "apiKey", "in": "cookie", "name": "sessionid"}
-    },
+    "SECURITY_DEFINITIONS": {"Session": {"type": "apiKey", "in": "cookie", "name": "sessionid"}},
     "USE_SESSION_AUTH": True,
     "JSON_EDITOR": True,
     "SUPPORTED_SUBMIT_METHODS": ["get", "post", "put", "patch", "delete"],
@@ -265,9 +262,7 @@ try:
             "STATIC_URL": STATIC_URL,
             "DEBUG": DEBUG,
             "STATIC_ROOT_EXISTS": os.path.exists(STATIC_ROOT),
-            "STATIC_ROOT_LIST": os.listdir(STATIC_ROOT)
-            if os.path.exists(STATIC_ROOT)
-            else [],
+            "STATIC_ROOT_LIST": os.listdir(STATIC_ROOT) if os.path.exists(STATIC_ROOT) else [],
         },
         "sessionId": "debug-session",
         "runId": "run1",
@@ -276,6 +271,6 @@ try:
     if os.path.exists(os.path.dirname(log_path)):
         with open(log_path, "a") as f:
             f.write(json.dumps(log_entry) + "\n")
-except Exception as e:
+except Exception:
     pass
 # #endregion

@@ -1,5 +1,6 @@
 """Views for budget API."""
 
+from loguru import logger
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -12,7 +13,6 @@ from apps.budget.serializers import (
 )
 from apps.budget.services.budget_calculation_service import BudgetCalculationService
 from apps.budget.services.budget_service import BudgetService
-from loguru import logger
 
 
 class BudgetListCreateAPIView(APIView):
@@ -40,18 +40,14 @@ class BudgetListCreateAPIView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            budget = self.budget_service.create_budget(
-                user=request.user, **serializer.validated_data
-            )
+            budget = self.budget_service.create_budget(user=request.user, **serializer.validated_data)
 
             response_serializer = BudgetSerializer(budget)
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
         except Exception as e:
             logger.error(f"Error creating budget: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class BudgetDetailAPIView(APIView):
@@ -69,9 +65,7 @@ class BudgetDetailAPIView(APIView):
         budget = self.budget_service.get_budget_by_id(pk, request.user)
 
         if not budget:
-            return Response(
-                {"error": "Budget not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Budget not found"}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = BudgetSerializer(budget)
         return Response(serializer.data)
@@ -81,9 +75,7 @@ class BudgetDetailAPIView(APIView):
         budget = self.budget_service.get_budget_by_id(pk, request.user)
 
         if not budget:
-            return Response(
-                {"error": "Budget not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Budget not found"}, status=status.HTTP_404_NOT_FOUND)
 
         try:
             self.budget_service.delete_budget(budget)
@@ -91,9 +83,7 @@ class BudgetDetailAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error deleting budget {pk}: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class BudgetProgressAPIView(APIView):
@@ -112,9 +102,7 @@ class BudgetProgressAPIView(APIView):
         budget = self.budget_service.get_budget_by_id(pk, request.user)
 
         if not budget:
-            return Response(
-                {"error": "Budget not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Budget not found"}, status=status.HTTP_404_NOT_FOUND)
 
         try:
             progress = self.calculation_service.calculate_budget_progress(budget)
@@ -122,9 +110,7 @@ class BudgetProgressAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error calculating budget progress for {pk}: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CurrentBudgetAPIView(APIView):
@@ -143,9 +129,7 @@ class CurrentBudgetAPIView(APIView):
         budget = self.budget_service.get_current_budget(request.user)
 
         if not budget:
-            return Response(
-                {"error": "No active budget found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "No active budget found"}, status=status.HTTP_404_NOT_FOUND)
 
         try:
             # Get budget data
@@ -159,6 +143,4 @@ class CurrentBudgetAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error getting current budget: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -26,9 +25,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="categorizationhistory",
-            index=models.Index(
-                fields=["transaction"], name="categorizat_transac_324314_idx"
-            ),
+            index=models.Index(fields=["transaction"], name="categorizat_transac_324314_idx"),
         ),
         migrations.AddIndex(
             model_name="categorizationhistory",
@@ -36,20 +33,14 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="categorizationhistory",
-            index=models.Index(
-                fields=["-created_at"], name="categorizat_created_bb47e3_idx"
-            ),
+            index=models.Index(fields=["-created_at"], name="categorizat_created_bb47e3_idx"),
         ),
         migrations.AddIndex(
             model_name="categorizationqueue",
-            index=models.Index(
-                fields=["user", "status"], name="categorizat_user_id_65364b_idx"
-            ),
+            index=models.Index(fields=["user", "status"], name="categorizat_user_id_65364b_idx"),
         ),
         migrations.AddIndex(
             model_name="categorizationqueue",
-            index=models.Index(
-                fields=["status", "-created_at"], name="categorizat_status_9f1405_idx"
-            ),
+            index=models.Index(fields=["status", "-created_at"], name="categorizat_status_9f1405_idx"),
         ),
     ]

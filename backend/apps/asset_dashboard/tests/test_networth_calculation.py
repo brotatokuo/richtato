@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
+
 from apps.asset_dashboard.repositories.asset_dashboard_repository import (
     AssetDashboardRepository,
 )
@@ -12,14 +13,11 @@ from apps.asset_dashboard.services.asset_dashboard_service import (
 )
 from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
 from apps.richtato_user.models import User
-from apps.transaction.models import Transaction
 
 
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(
-        username="nwtest", email="nw@test.com", password="testpass123"
-    )
+    return User.objects.create_user(username="nwtest", email="nw@test.com", password="testpass123")
 
 
 @pytest.fixture
@@ -79,9 +77,7 @@ class TestNetWorthCalculation:
         assets = repo.get_total_assets(user)
         assert assets == Decimal("35000.00")
 
-    def test_total_liabilities_positive_display(
-        self, repo, user, checking, savings, credit_card
-    ):
+    def test_total_liabilities_positive_display(self, repo, user, checking, savings, credit_card):
         liabilities = repo.get_total_liabilities(user)
         # Displayed as positive even though stored negative
         assert liabilities == Decimal("3000.00")
@@ -107,19 +103,13 @@ class TestGetBalanceAtDate:
 
     def test_returns_history_balance(self, repo, checking):
         target = date(2025, 6, 1)
-        AccountBalanceHistory.objects.create(
-            account=checking, date=target, balance=Decimal("8000.00")
-        )
+        AccountBalanceHistory.objects.create(account=checking, date=target, balance=Decimal("8000.00"))
         result = repo.get_balance_at_date(checking, target)
         assert result == Decimal("8000.00")
 
     def test_returns_most_recent_before_date(self, repo, checking):
-        AccountBalanceHistory.objects.create(
-            account=checking, date=date(2025, 5, 1), balance=Decimal("7000.00")
-        )
-        AccountBalanceHistory.objects.create(
-            account=checking, date=date(2025, 5, 15), balance=Decimal("7500.00")
-        )
+        AccountBalanceHistory.objects.create(account=checking, date=date(2025, 5, 1), balance=Decimal("7000.00"))
+        AccountBalanceHistory.objects.create(account=checking, date=date(2025, 5, 15), balance=Decimal("7500.00"))
         result = repo.get_balance_at_date(checking, date(2025, 5, 20))
         assert result == Decimal("7500.00")
 
@@ -128,9 +118,7 @@ class TestGetBalanceAtDate:
         assert result == Decimal("10000.00")
 
     def test_date_before_all_history_falls_back(self, repo, checking):
-        AccountBalanceHistory.objects.create(
-            account=checking, date=date(2025, 6, 1), balance=Decimal("9000.00")
-        )
+        AccountBalanceHistory.objects.create(account=checking, date=date(2025, 6, 1), balance=Decimal("9000.00"))
         result = repo.get_balance_at_date(checking, date(2025, 5, 1))
         assert result == Decimal("10000.00")
 
@@ -138,9 +126,7 @@ class TestGetBalanceAtDate:
 class TestDashboardMetrics:
     """Integration tests for dashboard metrics endpoint."""
 
-    def test_metrics_include_liabilities_in_networth(
-        self, service, user, checking, credit_card
-    ):
+    def test_metrics_include_liabilities_in_networth(self, service, user, checking, credit_card):
         metrics = service.get_dashboard_metrics(user)
         # 10000 + (-3000) = 7000
         assert metrics["networth"] == 7000.0
@@ -159,12 +145,8 @@ class TestNetWorthGrowth:
 
     def test_growth_with_history(self, service, repo, user, checking, credit_card):
         prev_month_end = date.today().replace(day=1) - timedelta(days=1)
-        AccountBalanceHistory.objects.create(
-            account=checking, date=prev_month_end, balance=Decimal("9000.00")
-        )
-        AccountBalanceHistory.objects.create(
-            account=credit_card, date=prev_month_end, balance=Decimal("-2000.00")
-        )
+        AccountBalanceHistory.objects.create(account=checking, date=prev_month_end, balance=Decimal("9000.00"))
+        AccountBalanceHistory.objects.create(account=credit_card, date=prev_month_end, balance=Decimal("-2000.00"))
         # Previous NW: 9000 + (-2000) = 7000
         # Current NW: 10000 + (-3000) = 7000
         result = service._calculate_networth_growth(user)
@@ -172,18 +154,14 @@ class TestNetWorthGrowth:
 
     def test_growth_positive(self, service, repo, user, checking):
         prev_month_end = date.today().replace(day=1) - timedelta(days=1)
-        AccountBalanceHistory.objects.create(
-            account=checking, date=prev_month_end, balance=Decimal("8000.00")
-        )
+        AccountBalanceHistory.objects.create(account=checking, date=prev_month_end, balance=Decimal("8000.00"))
         result = service._calculate_networth_growth(user)
         assert result.startswith("+")
         assert "this month" in result
 
     def test_growth_negative(self, service, repo, user, checking):
         prev_month_end = date.today().replace(day=1) - timedelta(days=1)
-        AccountBalanceHistory.objects.create(
-            account=checking, date=prev_month_end, balance=Decimal("15000.00")
-        )
+        AccountBalanceHistory.objects.create(account=checking, date=prev_month_end, balance=Decimal("15000.00"))
         result = service._calculate_networth_growth(user)
         assert result.startswith("-")
 

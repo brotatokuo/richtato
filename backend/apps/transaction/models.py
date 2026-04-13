@@ -126,14 +126,10 @@ class CategoryKeyword(models.Model):
         on_delete=models.CASCADE,
         related_name="keywords",
     )
-    keyword = models.CharField(
-        max_length=200, help_text="Case-insensitive keyword for matching"
-    )
+    keyword = models.CharField(max_length=200, help_text="Case-insensitive keyword for matching")
     created_at = models.DateTimeField(auto_now_add=True)
 
-    match_count = models.IntegerField(
-        default=0, help_text="Number of times this keyword has matched"
-    )
+    match_count = models.IntegerField(default=0, help_text="Number of times this keyword has matched")
 
     class Meta:
         db_table = "category_keyword"
@@ -196,9 +192,7 @@ class Transaction(models.Model):
         help_text="Transaction amount (always positive)",
     )
     description = models.CharField(max_length=500)
-    transaction_type = models.CharField(
-        max_length=10, choices=TRANSACTION_TYPE_CHOICES, default="debit"
-    )
+    transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPE_CHOICES, default="debit")
     category = models.ForeignKey(
         TransactionCategory,
         on_delete=models.SET_NULL,
@@ -208,26 +202,20 @@ class Transaction(models.Model):
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="posted")
     is_recurring = models.BooleanField(default=False)
-    sync_source = models.CharField(
-        max_length=20, choices=SYNC_SOURCE_CHOICES, default="manual"
-    )
+    sync_source = models.CharField(max_length=20, choices=SYNC_SOURCE_CHOICES, default="manual")
     external_id = models.CharField(
         max_length=255,
         blank=True,
         help_text="External ID from sync source (e.g., Plaid transaction ID)",
     )
-    raw_data = models.JSONField(
-        null=True, blank=True, help_text="Raw transaction data from external source"
-    )
+    raw_data = models.JSONField(null=True, blank=True, help_text="Raw transaction data from external source")
     categorization_status = models.CharField(
         max_length=20,
         choices=CATEGORIZATION_STATUS_CHOICES,
         default="uncategorized",
         help_text="Status of categorization for this transaction",
     )
-    notes = models.TextField(
-        blank=True, null=True, default="", help_text="Notes for this transaction"
-    )
+    notes = models.TextField(blank=True, null=True, default="", help_text="Notes for this transaction")
 
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
@@ -260,10 +248,7 @@ class Transaction(models.Model):
         """Override save to set default uncategorized category if none provided."""
         if not self.category and self.user:
             self.category = TransactionCategory.get_uncategorized_for_user(self.user)
-            if (
-                not self.categorization_status
-                or self.categorization_status == "pending_ai"
-            ):
+            if not self.categorization_status or self.categorization_status == "pending_ai":
                 self.categorization_status = "uncategorized"
         super().save(*args, **kwargs)
 

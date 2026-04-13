@@ -7,7 +7,7 @@ import {
   type AnnualAnalysisData,
 } from '@/lib/api/annual-analysis';
 import { formatCurrency } from '@/lib/format';
-import * as echarts from 'echarts';
+import echarts, { type ECharts, type EChartsOption } from '@/lib/echarts';
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -38,9 +38,9 @@ export function ReportPage() {
   const sankeyChartRef = useRef<HTMLDivElement>(null);
 
   // Chart instances
-  const donutChartInstance = useRef<echarts.ECharts | null>(null);
-  const barChartInstance = useRef<echarts.ECharts | null>(null);
-  const sankeyChartInstance = useRef<echarts.ECharts | null>(null);
+  const donutChartInstance = useRef<ECharts | null>(null);
+  const barChartInstance = useRef<ECharts | null>(null);
+  const sankeyChartInstance = useRef<ECharts | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -75,7 +75,7 @@ export function ReportPage() {
 
     donutChartInstance.current = echarts.init(donutChartRef.current);
 
-    const option: echarts.EChartsOption = {
+    const option: EChartsOption = {
       tooltip: {
         trigger: 'item',
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -155,15 +155,17 @@ export function ReportPage() {
 
     barChartInstance.current = echarts.init(barChartRef.current);
 
-    const option: echarts.EChartsOption = {
+    const option: EChartsOption = {
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         formatter: (params: any) => {
-          const lines = params.map((p: { color: string; seriesName: string; value: number }) => {
-            return `<span style="color:${p.color}">●</span> ${p.seriesName}: ${formatCurrency(p.value, preferences.currency)}`;
-          });
+          const lines = params.map(
+            (p: { color: string; seriesName: string; value: number }) => {
+              return `<span style="color:${p.color}">●</span> ${p.seriesName}: ${formatCurrency(p.value, preferences.currency)}`;
+            }
+          );
           return `${params[0].name}<br/>${lines.join('<br/>')}`;
         },
       },
@@ -306,7 +308,7 @@ export function ReportPage() {
       });
     });
 
-    const option: echarts.EChartsOption = {
+    const option: EChartsOption = {
       tooltip: {
         trigger: 'item',
         triggerOn: 'mousemove',

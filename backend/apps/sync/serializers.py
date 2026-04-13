@@ -9,9 +9,7 @@ class SyncConnectionSerializer(serializers.ModelSerializer):
     """Serializer for sync connections."""
 
     account_name = serializers.CharField(source="account.name", read_only=True)
-    provider_display = serializers.CharField(
-        source="get_provider_display", read_only=True
-    )
+    provider_display = serializers.CharField(source="get_provider_display", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
 
     class Meta:
@@ -85,9 +83,7 @@ class SyncConnectionCreateSerializer(serializers.Serializer):
     """
 
     # Provider: 'plaid'
-    provider = serializers.ChoiceField(
-        choices=["plaid"], required=False, default="plaid"
-    )
+    provider = serializers.ChoiceField(choices=["plaid"], required=False, default="plaid")
     # Either provide account_id OR account_name + account_type to auto-create
     account_id = serializers.IntegerField(required=False)
     account_name = serializers.CharField(required=False, allow_blank=True)
@@ -105,11 +101,7 @@ class SyncConnectionCreateSerializer(serializers.Serializer):
 
         # If external_account_id is provided and NOT an enrollment ID,
         # we need account info for direct creation
-        is_enrollment_mode = (
-            not external_account_id
-            or external_account_id.startswith("enr_")
-            or external_enrollment_id
-        )
+        is_enrollment_mode = not external_account_id or external_account_id.startswith("enr_") or external_enrollment_id
 
         if not is_enrollment_mode:
             # Direct mode - need account info

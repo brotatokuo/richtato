@@ -7,6 +7,7 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
+  Landmark,
   Loader2,
   LogOut,
   PieChart,
@@ -29,6 +30,11 @@ const navigationItems = [
     name: 'Report',
     href: '/report',
     icon: BarChart3,
+  },
+  {
+    name: 'Accounts',
+    href: '/accounts',
+    icon: Landmark,
   },
   {
     name: 'Budget',

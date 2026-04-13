@@ -2,6 +2,14 @@
 
 from datetime import datetime
 
+from loguru import logger
+from rest_framework import status
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from apps.core.utils.date_params import parse_date_range_params
 from apps.financial_account.services.account_service import AccountService
 from apps.transaction.models import CategoryKeyword
 from apps.transaction.repositories.category_repository import CategoryRepository
@@ -17,12 +25,6 @@ from apps.transaction.serializers import (
     TransactionUpdateSerializer,
 )
 from apps.transaction.services.transaction_service import TransactionService
-from loguru import logger
-from rest_framework import status
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
 
 
 class TransactionFilterOptionsAPIView(APIView):
@@ -42,33 +44,20 @@ class TransactionFilterOptionsAPIView(APIView):
 
         from apps.transaction.models import Transaction
 
-        # Parse same filters as transaction list
-        start_date_str = request.query_params.get("start_date")
-        end_date_str = request.query_params.get("end_date")
         account_id = request.query_params.get("account_id")
         category_id = request.query_params.get("category_id")
         transaction_type = request.query_params.get("type")
-
-        start_date = None
-        end_date = None
-        if start_date_str:
-            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
-        if end_date_str:
-            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        start_date, end_date = parse_date_range_params(request.query_params)
 
         account = None
         if account_id:
-            account = self.account_service.get_account_by_id(
-                int(account_id), request.user
-            )
+            account = self.account_service.get_account_by_id(int(account_id), request.user)
         category = None
         if category_id:
             category_repo = CategoryRepository()
-            category = category_repo.get_by_id(int(category_id))
+            category = category_repo.get_by_id(int(category_id), user=request.user)
 
-        base_qs = Transaction.objects.filter(user=request.user).select_related(
-            "account", "category"
-        )
+        base_qs = Transaction.objects.filter(user=request.user).select_related("account", "category")
         if start_date:
             base_qs = base_qs.filter(date__gte=start_date)
         if end_date:
@@ -82,15 +71,9 @@ class TransactionFilterOptionsAPIView(APIView):
 
         # Distinct dates with count
         date_options = list(
-            base_qs.values("date")
-            .annotate(count=Count("id"))
-            .order_by("-date")
-            .values_list("date", "count")
+            base_qs.values("date").annotate(count=Count("id")).order_by("-date").values_list("date", "count")
         )
-        dates = [
-            {"label": d.isoformat(), "value": d.isoformat(), "count": c}
-            for d, c in date_options
-        ]
+        dates = [{"label": d.isoformat(), "value": d.isoformat(), "count": c} for d, c in date_options]
 
         # Distinct category types (from category.type or 'uncategorized')
         from django.db.models import Case, F, Value, When
@@ -115,11 +98,7 @@ class TransactionFilterOptionsAPIView(APIView):
         ]
 
         # Distinct category names
-        cat_agg = (
-            base_qs.values("category__name")
-            .annotate(count=Count("id"))
-            .order_by("category__name")
-        )
+        cat_agg = base_qs.values("category__name").annotate(count=Count("id")).order_by("category__name")
         categories = [
             {
                 "label": c["category__name"] or "Uncategorized",
@@ -130,11 +109,7 @@ class TransactionFilterOptionsAPIView(APIView):
         ]
 
         # Distinct account names
-        acc_agg = (
-            base_qs.values("account__name")
-            .annotate(count=Count("id"))
-            .order_by("account__name")
-        )
+        acc_agg = base_qs.values("account__name").annotate(count=Count("id")).order_by("account__name")
         accounts = [
             {
                 "label": a["account__name"] or "Unknown",
@@ -145,11 +120,7 @@ class TransactionFilterOptionsAPIView(APIView):
         ]
 
         # Distinct amounts (as string for display)
-        amount_agg = (
-            base_qs.values("amount", "transaction_type")
-            .annotate(count=Count("id"))
-            .order_by("amount")
-        )
+        amount_agg = base_qs.values("amount", "transaction_type").annotate(count=Count("id")).order_by("amount")
         amounts = []
         for a in amount_agg:
             amt = a["amount"]
@@ -158,11 +129,7 @@ class TransactionFilterOptionsAPIView(APIView):
             amounts.append({"label": val, "value": val, "count": a["count"]})
 
         # Distinct descriptions (limit to avoid huge response)
-        desc_agg = (
-            base_qs.values("description")
-            .annotate(count=Count("id"))
-            .order_by("-count")[:500]
-        )
+        desc_agg = base_qs.values("description").annotate(count=Count("id")).order_by("-count")[:500]
         descriptions = [
             {
                 "label": d["description"] or "",
@@ -197,9 +164,6 @@ class TransactionListCreateAPIView(APIView):
 
     def get(self, request):
         """List transactions with optional filters and pagination."""
-        # Parse filters
-        start_date_str = request.query_params.get("start_date")
-        end_date_str = request.query_params.get("end_date")
         account_id = request.query_params.get("account_id")
         category_id = request.query_params.get("category_id")
         transaction_type = request.query_params.get("type")
@@ -209,32 +173,21 @@ class TransactionListCreateAPIView(APIView):
             int(request.query_params.get("page_size", 50)),
             100,
         )
-
-        # Convert dates
-        start_date = None
-        end_date = None
-        if start_date_str:
-            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
-        if end_date_str:
-            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        start_date, end_date = parse_date_range_params(request.query_params)
 
         # Get account and category if specified
         account = None
         if account_id:
-            account = self.account_service.get_account_by_id(
-                int(account_id), request.user
-            )
+            account = self.account_service.get_account_by_id(int(account_id), request.user)
 
         category = None
         if category_id:
             category_repo = CategoryRepository()
-            category = category_repo.get_by_id(int(category_id))
+            category = category_repo.get_by_id(int(category_id), user=request.user)
 
         # Handle search (no pagination for search; returns limited results)
         if search:
-            transactions = self.transaction_service.search_transactions(
-                request.user, search
-            )
+            transactions = self.transaction_service.search_transactions(request.user, search)
             serializer = TransactionSerializer(transactions, many=True)
             return Response({"transactions": serializer.data})
 
@@ -272,13 +225,9 @@ class TransactionListCreateAPIView(APIView):
 
         try:
             # Get account
-            account = self.account_service.get_account_by_id(
-                serializer.validated_data["account_id"], request.user
-            )
+            account = self.account_service.get_account_by_id(serializer.validated_data["account_id"], request.user)
             if not account:
-                return Response(
-                    {"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND
-                )
+                return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
 
             # Create transaction
             transaction = self.transaction_service.create_manual_transaction(
@@ -287,9 +236,7 @@ class TransactionListCreateAPIView(APIView):
                 date=serializer.validated_data["date"],
                 amount=serializer.validated_data["amount"],
                 description=serializer.validated_data["description"],
-                transaction_type=serializer.validated_data.get(
-                    "transaction_type", "debit"
-                ),
+                transaction_type=serializer.validated_data.get("transaction_type", "debit"),
                 category_id=serializer.validated_data.get("category_id"),
                 status=serializer.validated_data.get("status", "posted"),
                 notes=serializer.validated_data.get("notes", ""),
@@ -300,9 +247,7 @@ class TransactionListCreateAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error creating manual transaction: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class TransactionDetailAPIView(APIView):
@@ -320,9 +265,7 @@ class TransactionDetailAPIView(APIView):
         transaction = self.transaction_service.get_transaction_by_id(pk, request.user)
 
         if not transaction:
-            return Response(
-                {"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = TransactionSerializer(transaction)
         return Response(serializer.data)
@@ -332,35 +275,27 @@ class TransactionDetailAPIView(APIView):
         transaction = self.transaction_service.get_transaction_by_id(pk, request.user)
 
         if not transaction:
-            return Response(
-                {"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = TransactionUpdateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            updated_transaction = self.transaction_service.update_transaction(
-                transaction, **serializer.validated_data
-            )
+            updated_transaction = self.transaction_service.update_transaction(transaction, **serializer.validated_data)
             response_serializer = TransactionSerializer(updated_transaction)
             return Response(response_serializer.data)
 
         except Exception as e:
             logger.error(f"Error updating transaction {pk}: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete(self, request, pk):
         """Delete transaction."""
         transaction = self.transaction_service.get_transaction_by_id(pk, request.user)
 
         if not transaction:
-            return Response(
-                {"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND)
 
         try:
             self.transaction_service.delete_transaction(transaction)
@@ -368,9 +303,7 @@ class TransactionDetailAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error deleting transaction {pk}: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class TransactionCategorizeAPIView(APIView):
@@ -388,9 +321,7 @@ class TransactionCategorizeAPIView(APIView):
         transaction = self.transaction_service.get_transaction_by_id(pk, request.user)
 
         if not transaction:
-            return Response(
-                {"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = TransactionCategorizeSerializer(data=request.data)
         if not serializer.is_valid():
@@ -407,9 +338,7 @@ class TransactionCategorizeAPIView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error(f"Error categorizing transaction {pk}: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class TransactionSummaryAPIView(APIView):
@@ -437,21 +366,17 @@ class TransactionSummaryAPIView(APIView):
             start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
             end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
 
-            summary = self.transaction_service.get_transaction_summary(
-                request.user, start_date, end_date
-            )
+            summary = self.transaction_service.get_transaction_summary(request.user, start_date, end_date)
             return Response(summary)
 
-        except ValueError as e:
+        except ValueError:
             return Response(
                 {"error": "Invalid date format. Use YYYY-MM-DD"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         except Exception as e:
             logger.error(f"Error getting transaction summary: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class TransactionCashflowSummaryAPIView(APIView):
@@ -479,21 +404,17 @@ class TransactionCashflowSummaryAPIView(APIView):
             start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
             end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
 
-            summary = self.transaction_service.get_cashflow_summary(
-                request.user, start_date, end_date
-            )
+            summary = self.transaction_service.get_cashflow_summary(request.user, start_date, end_date)
             return Response(summary)
 
-        except ValueError as e:
+        except ValueError:
             return Response(
                 {"error": "Invalid date format. Use YYYY-MM-DD"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         except Exception as e:
             logger.error(f"Error getting cashflow summary: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CategoryListCreateAPIView(APIView):
@@ -522,9 +443,7 @@ class CategoryListCreateAPIView(APIView):
         try:
             parent = None
             if serializer.validated_data.get("parent_id"):
-                parent = self.category_repository.get_by_id(
-                    serializer.validated_data["parent_id"]
-                )
+                parent = self.category_repository.get_by_id(serializer.validated_data["parent_id"])
 
             # Auto-generate slug from name if not provided
             name = serializer.validated_data["name"]
@@ -558,9 +477,7 @@ class CategoryListCreateAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error creating category: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CategoryDetailAPIView(APIView):
@@ -578,9 +495,7 @@ class CategoryDetailAPIView(APIView):
         category = self.category_repository.get_by_id(pk)
 
         if not category or category.user != request.user:
-            return Response(
-                {"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = TransactionCategorySerializer(category)
         return Response(serializer.data)
@@ -590,9 +505,7 @@ class CategoryDetailAPIView(APIView):
         category = self.category_repository.get_by_id(pk)
 
         if not category or category.user != request.user:
-            return Response(
-                {"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = CategoryUpdateSerializer(data=request.data)
         if not serializer.is_valid():
@@ -609,18 +522,14 @@ class CategoryDetailAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error updating category {pk}: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete(self, request, pk):
         """Soft-delete a category (hides from UI but preserves transaction assignments)."""
         category = self.category_repository.get_by_id(pk)
 
         if not category or category.user != request.user:
-            return Response(
-                {"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
 
         # Don't allow deleting uncategorized
         if category.slug == "uncategorized":
@@ -635,9 +544,7 @@ class CategoryDetailAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error deleting category {pk}: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CategoryKeywordAPIView(APIView):
@@ -660,18 +567,16 @@ class CategoryKeywordAPIView(APIView):
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
-            keywords = CategoryKeyword.objects.filter(
-                user=request.user, category=category
-            ).order_by("-match_count", "keyword")
+            keywords = CategoryKeyword.objects.filter(user=request.user, category=category).order_by(
+                "-match_count", "keyword"
+            )
 
             serializer = CategoryKeywordSerializer(keywords, many=True)
             return Response({"keywords": serializer.data})
 
         except Exception as e:
             logger.error(f"Error getting keywords: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def post(self, request, category_id):
         """Add a keyword to a category."""
@@ -684,9 +589,7 @@ class CategoryKeywordAPIView(APIView):
             # Get category and verify ownership
             category = self.category_repository.get_by_id(category_id)
             if not category or (category.user and category.user != request.user):
-                return Response(
-                    {"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND
-                )
+                return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
 
             # Create keyword
             keyword_obj = CategoryKeyword.objects.create(
@@ -700,9 +603,7 @@ class CategoryKeywordAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error adding keyword: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete(self, request, category_id, keyword_id):
         """Remove a keyword from a category."""
@@ -710,28 +611,20 @@ class CategoryKeywordAPIView(APIView):
             # Get category and verify ownership
             category = self.category_repository.get_by_id(category_id)
             if not category or (category.user and category.user != request.user):
-                return Response(
-                    {"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND
-                )
+                return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
 
             # Delete keyword
-            keyword_obj = CategoryKeyword.objects.filter(
-                id=keyword_id, category=category
-            ).first()
+            keyword_obj = CategoryKeyword.objects.filter(id=keyword_id, category=category).first()
 
             if not keyword_obj:
-                return Response(
-                    {"error": "Keyword not found"}, status=status.HTTP_404_NOT_FOUND
-                )
+                return Response({"error": "Keyword not found"}, status=status.HTTP_404_NOT_FOUND)
 
             keyword_obj.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         except Exception as e:
             logger.error(f"Error removing keyword: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class UncategorizedTransactionsAPIView(APIView):
@@ -749,17 +642,13 @@ class UncategorizedTransactionsAPIView(APIView):
         limit = int(request.query_params.get("limit", 100))
 
         try:
-            transactions = self.transaction_service.get_uncategorized_transactions(
-                request.user, limit=limit
-            )
+            transactions = self.transaction_service.get_uncategorized_transactions(request.user, limit=limit)
             serializer = TransactionSerializer(transactions, many=True)
             return Response({"transactions": serializer.data})
 
         except Exception as e:
             logger.error(f"Error getting uncategorized transactions: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class RecategorizeTransactionsAPIView(APIView):
@@ -795,9 +684,7 @@ class RecategorizeTransactionsAPIView(APIView):
                 )
 
             # Create new task
-            task = RecategorizationTask.objects.create(
-                user=request.user, keep_existing_for_unmatched=keep_existing
-            )
+            task = RecategorizationTask.objects.create(user=request.user, keep_existing_for_unmatched=keep_existing)
 
             # Start async processing in a background thread
             def process_recategorization():
@@ -815,9 +702,7 @@ class RecategorizeTransactionsAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error starting recategorization: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def get(self, request, task_id):
         """Get progress of a recategorization task."""
@@ -842,11 +727,7 @@ class RecategorizeTransactionsAPIView(APIView):
             )
 
         except RecategorizationTask.DoesNotExist:
-            return Response(
-                {"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             logger.error(f"Error getting recategorization progress: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

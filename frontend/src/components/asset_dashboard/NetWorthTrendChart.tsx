@@ -56,7 +56,10 @@ export function NetWorthTrendChart() {
 
     const dateLabels = sortedData.map(d => {
       const date = new Date(d.date);
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
     });
 
     return {
@@ -133,9 +136,16 @@ export function NetWorthTrendChart() {
         textStyle: {
           color: '#f3f4f6',
         },
-        formatter: function (params: Array<{ name?: string; value?: number; color?: string; seriesName?: string }>) {
+        formatter: function (
+          params: Array<{
+            name?: string;
+            value?: number;
+            color?: string;
+            seriesName?: string;
+          }>
+        ) {
           const date = params?.[0]?.name ?? '';
-          const lines = (params || []).map((p) => {
+          const lines = (params || []).map(p => {
             const value = p.value ?? 0;
             const color = p.color;
             return `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${color};"></span>${p.seriesName}: ${formatCurrency(value, preferences.currency)}`;

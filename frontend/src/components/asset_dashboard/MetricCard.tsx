@@ -66,7 +66,9 @@ export function MetricCard({
         {icon}
       </CardHeader>
       <CardContent>
-        <div className={`text-2xl font-bold ${valueClassName || 'text-foreground'}`}>
+        <div
+          className={`text-2xl font-bold ${valueClassName || 'text-foreground'}`}
+        >
           {value}
         </div>
         {subtitle && (

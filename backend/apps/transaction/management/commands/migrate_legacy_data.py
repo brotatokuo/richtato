@@ -9,7 +9,11 @@ Usage:
 import csv
 from decimal import Decimal
 from pathlib import Path
-from typing import Dict, Optional
+
+from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction as db_transaction
+from django.db.models.signals import post_save
+from django.utils.text import slugify
 
 from apps.budget.models import Budget, BudgetCategory
 from apps.financial_account.models import (
@@ -20,10 +24,6 @@ from apps.financial_account.models import (
 from apps.richtato_user.models import User
 from apps.transaction.models import Transaction, TransactionCategory
 from apps.transaction.signals import transaction_post_save
-from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction as db_transaction
-from django.db.models.signals import post_save
-from django.utils.text import slugify
 
 
 class Command(BaseCommand):
@@ -32,11 +32,11 @@ class Command(BaseCommand):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # ID mapping dictionaries
-        self.account_id_map: Dict[int, int] = {}
-        self.card_to_account_map: Dict[int, int] = {}
-        self.category_id_map: Dict[int, int] = {}
-        self.institution_map: Dict[str, FinancialInstitution] = {}
-        self.new_user: Optional[User] = None
+        self.account_id_map: dict[int, int] = {}
+        self.card_to_account_map: dict[int, int] = {}
+        self.category_id_map: dict[int, int] = {}
+        self.institution_map: dict[str, FinancialInstitution] = {}
+        self.new_user: User | None = None
         self.dry_run = False
         self.verbose = False
 
@@ -98,9 +98,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.NOTICE(f"Starting migration from {source_dir}"))
         self.stdout.write(self.style.NOTICE(f"Legacy user ID: {legacy_user_id}"))
         if self.dry_run:
-            self.stdout.write(
-                self.style.WARNING("DRY RUN MODE - No changes will be saved")
-            )
+            self.stdout.write(self.style.WARNING("DRY RUN MODE - No changes will be saved"))
 
         try:
             with db_transaction.atomic():
@@ -147,9 +145,7 @@ class Command(BaseCommand):
                 self.import_budgets(source_dir, legacy_user_id)
 
                 if self.dry_run:
-                    self.stdout.write(
-                        self.style.WARNING("\nDRY RUN - Rolling back all changes")
-                    )
+                    self.stdout.write(self.style.WARNING("\nDRY RUN - Rolling back all changes"))
                     raise DryRunRollback()
 
         except DryRunRollback:
@@ -163,9 +159,7 @@ class Command(BaseCommand):
         self.stdout.write("\n" + "=" * 50)
         self.stdout.write("MIGRATION SUMMARY")
         self.stdout.write("=" * 50)
-        self.stdout.write(
-            f"Accounts migrated: {len(self.account_id_map) + len(self.card_to_account_map)}"
-        )
+        self.stdout.write(f"Accounts migrated: {len(self.account_id_map) + len(self.card_to_account_map)}")
         self.stdout.write(f"  - Bank accounts: {len(self.account_id_map)}")
         self.stdout.write(f"  - Credit cards: {len(self.card_to_account_map)}")
         self.stdout.write(f"Categories migrated: {len(self.category_id_map)}")
@@ -173,7 +167,7 @@ class Command(BaseCommand):
 
     def _read_csv(self, filepath: Path) -> list:
         """Read CSV file and return list of dictionaries."""
-        with open(filepath, "r", encoding="utf-8") as f:
+        with open(filepath, encoding="utf-8") as f:
             reader = csv.DictReader(f)
             return list(reader)
 
@@ -185,9 +179,7 @@ class Command(BaseCommand):
     # =========================================================================
     # Step 1: Import User
     # =========================================================================
-    def import_user(
-        self, source_dir: Path, legacy_user_id: int, target_username: Optional[str]
-    ):
+    def import_user(self, source_dir: Path, legacy_user_id: int, target_username: str | None):
         """Create a new user based on legacy user data."""
         users = self._read_csv(source_dir / "user.csv")
         legacy_user = None
@@ -205,11 +197,7 @@ class Command(BaseCommand):
         # Check if user already exists
         if User.objects.filter(username=username).exists():
             self.new_user = User.objects.get(username=username)
-            self.stdout.write(
-                self.style.WARNING(
-                    f"User '{username}' already exists, using existing user"
-                )
-            )
+            self.stdout.write(self.style.WARNING(f"User '{username}' already exists, using existing user"))
         else:
             self.new_user = User.objects.create_user(
                 username=username,
@@ -283,11 +271,7 @@ class Command(BaseCommand):
                 created_count += 1
                 self._log_verbose(f"Created institution: {normalized_name}")
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Institutions: {created_count} created, {len(bank_names)} total"
-            )
-        )
+        self.stdout.write(self.style.SUCCESS(f"Institutions: {created_count} created, {len(bank_names)} total"))
 
     # =========================================================================
     # Step 3: Import Financial Accounts
@@ -333,13 +317,9 @@ class Command(BaseCommand):
 
             self.account_id_map[old_id] = new_account.id
             account_count += 1
-            self._log_verbose(
-                f"Account: {account['name']} (type: {account_type} -> {new_type})"
-            )
+            self._log_verbose(f"Account: {account['name']} (type: {account_type} -> {new_type})")
 
-        self.stdout.write(
-            self.style.SUCCESS(f"Bank accounts imported: {account_count}")
-        )
+        self.stdout.write(self.style.SUCCESS(f"Bank accounts imported: {account_count}"))
 
         # Import credit cards from cards.csv
         cards = self._read_csv(source_dir / "cards.csv")
@@ -385,7 +365,6 @@ class Command(BaseCommand):
             old_id = int(category["id"])
             name = category["name"]
             old_type = category.get("type", "essential")  # essential or nonessential
-            enabled = category.get("enabled", "true").lower() == "true"
 
             # Use get_or_create to avoid duplicating categories that were
             # already initialized by the user signal
@@ -409,9 +388,7 @@ class Command(BaseCommand):
             self.category_id_map[old_id] = new_category.id
             if created:
                 count += 1
-            self._log_verbose(
-                f"Category: {name} (slug: {base_slug}, type: {old_type}, created: {created})"
-            )
+            self._log_verbose(f"Category: {name} (slug: {base_slug}, type: {old_type}, created: {created})")
 
         # Create an "Income" category for income transactions
         income_category, _ = TransactionCategory.objects.get_or_create(
@@ -451,9 +428,7 @@ class Command(BaseCommand):
                 new_account_id = self.account_id_map.get(old_account_id)
 
                 if not new_account_id:
-                    self._log_verbose(
-                        f"Skipping income: account {old_account_id} not found"
-                    )
+                    self._log_verbose(f"Skipping income: account {old_account_id} not found")
                     continue
 
                 amount = Decimal(record["amount"])
@@ -479,13 +454,9 @@ class Command(BaseCommand):
 
             # Bulk create income transactions
             if income_transactions:
-                self.stdout.write(
-                    f"  Creating {len(income_transactions)} income transactions..."
-                )
+                self.stdout.write(f"  Creating {len(income_transactions)} income transactions...")
                 Transaction.objects.bulk_create(income_transactions, batch_size=500)
-            self.stdout.write(
-                self.style.SUCCESS(f"Income transactions imported: {income_count}")
-            )
+            self.stdout.write(self.style.SUCCESS(f"Income transactions imported: {income_count}"))
 
             # Import expense transactions
             expense_records = self._read_csv(source_dir / "expense.csv")
@@ -505,9 +476,7 @@ class Command(BaseCommand):
                     new_account_id = self.card_to_account_map.get(old_account_id)
 
                 if not new_account_id:
-                    self._log_verbose(
-                        f"Skipping expense: account {old_account_id} not found"
-                    )
+                    self._log_verbose(f"Skipping expense: account {old_account_id} not found")
                     continue
 
                 new_category_id = self.category_id_map.get(old_category_id)
@@ -540,12 +509,8 @@ class Command(BaseCommand):
                         category_id=new_category_id,
                         status="posted",
                         sync_source="csv",
-                        categorization_status="categorized"
-                        if new_category_id
-                        else "uncategorized",
-                        notes=record.get("details", "")
-                        if record.get("details") != "{}"
-                        else "",
+                        categorization_status="categorized" if new_category_id else "uncategorized",
+                        notes=record.get("details", "") if record.get("details") != "{}" else "",
                     )
                 )
                 expense_count += 1
@@ -553,13 +518,9 @@ class Command(BaseCommand):
 
             # Bulk create expense transactions
             if expense_transactions:
-                self.stdout.write(
-                    f"  Creating {len(expense_transactions)} expense transactions..."
-                )
+                self.stdout.write(f"  Creating {len(expense_transactions)} expense transactions...")
                 Transaction.objects.bulk_create(expense_transactions, batch_size=500)
-            self.stdout.write(
-                self.style.SUCCESS(f"Expense transactions imported: {expense_count}")
-            )
+            self.stdout.write(self.style.SUCCESS(f"Expense transactions imported: {expense_count}"))
 
         finally:
             # Re-enable signals
@@ -591,12 +552,8 @@ class Command(BaseCommand):
             date = record["date"]
 
             # Check for duplicate (same account, same date)
-            if AccountBalanceHistory.objects.filter(
-                account_id=new_account_id, date=date
-            ).exists():
-                self._log_verbose(
-                    f"Skipping duplicate balance history: account {new_account_id} on {date}"
-                )
+            if AccountBalanceHistory.objects.filter(account_id=new_account_id, date=date).exists():
+                self._log_verbose(f"Skipping duplicate balance history: account {new_account_id} on {date}")
                 skipped += 1
                 continue
 
@@ -607,15 +564,9 @@ class Command(BaseCommand):
             )
 
             count += 1
-            self._log_verbose(
-                f"Balance history: account {old_account_id} on {date} = ${amount}"
-            )
+            self._log_verbose(f"Balance history: account {old_account_id} on {date} = ${amount}")
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Balance history imported: {count} (skipped: {skipped})"
-            )
-        )
+        self.stdout.write(self.style.SUCCESS(f"Balance history imported: {count} (skipped: {skipped})"))
 
     # =========================================================================
     # Step 7: Import Budgets
@@ -627,7 +578,7 @@ class Command(BaseCommand):
         allocation_count = 0
 
         # Group budget records by start_date to create budget periods
-        budgets_by_date: Dict[str, list] = {}
+        budgets_by_date: dict[str, list] = {}
 
         for record in records:
             if int(record["user_id"]) != legacy_user_id:
@@ -644,7 +595,7 @@ class Command(BaseCommand):
             if not end_date:
                 # Default to end of month
                 from calendar import monthrange
-                from datetime import datetime, timedelta
+                from datetime import datetime
 
                 dt = datetime.strptime(start_date, "%Y-%m-%d")
                 last_day = monthrange(dt.year, dt.month)[1]
@@ -669,9 +620,7 @@ class Command(BaseCommand):
                 new_category_id = self.category_id_map.get(old_category_id)
 
                 if not new_category_id:
-                    self._log_verbose(
-                        f"Skipping budget allocation: category {old_category_id} not found"
-                    )
+                    self._log_verbose(f"Skipping budget allocation: category {old_category_id} not found")
                     continue
 
                 amount = Decimal(alloc["amount"])
@@ -684,9 +633,7 @@ class Command(BaseCommand):
                 allocation_count += 1
 
         self.stdout.write(
-            self.style.SUCCESS(
-                f"Budgets imported: {budget_count} budgets with {allocation_count} allocations"
-            )
+            self.style.SUCCESS(f"Budgets imported: {budget_count} budgets with {allocation_count} allocations")
         )
 
 

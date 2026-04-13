@@ -1,5 +1,6 @@
 """Views for financial accounts API."""
 
+from loguru import logger
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -7,7 +8,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.financial_account.serializers import (
-    AccountBalanceHistorySerializer,
     FinancialAccountCreateSerializer,
     FinancialAccountSerializer,
     FinancialAccountUpdateSerializer,
@@ -17,7 +17,6 @@ from apps.financial_account.services.account_balance_service import (
 )
 from apps.financial_account.services.account_service import AccountService
 from apps.financial_account.services.csv_import_service import CSVImportService
-from loguru import logger
 
 
 class FinancialAccountListCreateAPIView(APIView):
@@ -36,13 +35,9 @@ class FinancialAccountListCreateAPIView(APIView):
         account_type = request.query_params.get("type")
 
         if account_type:
-            accounts = self.account_service.get_accounts_by_type(
-                request.user, account_type
-            )
+            accounts = self.account_service.get_accounts_by_type(request.user, account_type)
         else:
-            accounts = self.account_service.get_user_accounts(
-                request.user, active_only=active_only
-            )
+            accounts = self.account_service.get_user_accounts(request.user, active_only=active_only)
 
         serializer = FinancialAccountSerializer(accounts, many=True)
         # Return both formats for compatibility
@@ -56,18 +51,14 @@ class FinancialAccountListCreateAPIView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            account = self.account_service.create_manual_account(
-                user=request.user, **serializer.validated_data
-            )
+            account = self.account_service.create_manual_account(user=request.user, **serializer.validated_data)
 
             response_serializer = FinancialAccountSerializer(account)
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
         except Exception as e:
             logger.error(f"Error creating manual account: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class FinancialAccountDetailAPIView(APIView):
@@ -85,9 +76,7 @@ class FinancialAccountDetailAPIView(APIView):
         account = self.account_service.get_account_by_id(pk, request.user)
 
         if not account:
-            return Response(
-                {"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = FinancialAccountSerializer(account)
         return Response(serializer.data)
@@ -97,35 +86,27 @@ class FinancialAccountDetailAPIView(APIView):
         account = self.account_service.get_account_by_id(pk, request.user)
 
         if not account:
-            return Response(
-                {"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = FinancialAccountUpdateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            updated_account = self.account_service.update_account(
-                account, **serializer.validated_data
-            )
+            updated_account = self.account_service.update_account(account, **serializer.validated_data)
             response_serializer = FinancialAccountSerializer(updated_account)
             return Response(response_serializer.data)
 
         except Exception as e:
             logger.error(f"Error updating account {pk}: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete(self, request, pk):
         """Delete (deactivate) account."""
         account = self.account_service.get_account_by_id(pk, request.user)
 
         if not account:
-            return Response(
-                {"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
 
         try:
             self.account_service.delete_account(account)
@@ -133,9 +114,7 @@ class FinancialAccountDetailAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error deleting account {pk}: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class AccountBalanceHistoryAPIView(APIView):
@@ -154,9 +133,7 @@ class AccountBalanceHistoryAPIView(APIView):
         account = self.account_service.get_account_by_id(pk, request.user)
 
         if not account:
-            return Response(
-                {"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
 
         try:
             trend_data = self.balance_service.get_balance_trend(account)
@@ -164,9 +141,7 @@ class AccountBalanceHistoryAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error getting balance history for account {pk}: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class AccountSummaryAPIView(APIView):
@@ -187,9 +162,7 @@ class AccountSummaryAPIView(APIView):
 
         except Exception as e:
             logger.error(f"Error getting account summary: {str(e)}")
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class AccountFieldChoicesAPIView(APIView):
@@ -203,10 +176,7 @@ class AccountFieldChoicesAPIView(APIView):
         from apps.financial_account.models import FinancialAccount, FinancialInstitution
 
         # Account type choices
-        type_choices = [
-            {"value": choice[0], "label": choice[1]}
-            for choice in FinancialAccount.ACCOUNT_TYPE_CHOICES
-        ]
+        type_choices = [{"value": choice[0], "label": choice[1]} for choice in FinancialAccount.ACCOUNT_TYPE_CHOICES]
 
         # Entity/institution choices - use slug as value for consistency with frontend
         # Sort alphabetically but keep "Other" at the end
@@ -237,27 +207,26 @@ class AccountTransactionsAPIView(APIView):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.account_service = AccountService()
+        from apps.transaction.services.transaction_service import TransactionService
+
+        self.transaction_service = TransactionService()
 
     def get(self, request, pk):
         """Get paginated transactions for an account."""
-        from apps.transaction.models import Transaction
-
         account = self.account_service.get_account_by_id(pk, request.user)
 
         if not account:
-            return Response(
-                {"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
 
         page = int(request.query_params.get("page", 1))
         page_size = int(request.query_params.get("page_size", 10))
 
-        transactions = Transaction.objects.filter(account=account).order_by("-date")
-        total = transactions.count()
+        queryset = self.transaction_service.get_user_transactions(user=request.user, account=account)
+        total = queryset.count()
 
         start = (page - 1) * page_size
         end = start + page_size
-        transactions = transactions[start:end]
+        transactions = queryset[start:end]
 
         columns = [
             {"field": "id", "title": "ID"},
@@ -290,63 +259,48 @@ class AccountTransactionsAPIView(APIView):
 
     def patch(self, request, pk):
         """Update a transaction."""
-        from apps.transaction.models import Transaction
-
         account = self.account_service.get_account_by_id(pk, request.user)
         if not account:
-            return Response(
-                {"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
 
         transaction_id = request.data.get("id")
         if not transaction_id:
-            return Response(
-                {"error": "Transaction ID required"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Transaction ID required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            transaction = Transaction.objects.get(id=transaction_id, account=account)
-            if "amount" in request.data:
-                transaction.amount = request.data["amount"]
-            if "date" in request.data:
-                transaction.date = request.data["date"]
-            transaction.save()
-            return Response(
-                {
-                    "id": transaction.id,
-                    "amount": str(transaction.amount),
-                    "date": str(transaction.date),
-                }
-            )
-        except Transaction.DoesNotExist:
-            return Response(
-                {"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+        transaction = self.transaction_service.get_transaction_by_id(transaction_id, request.user)
+        if not transaction or transaction.account_id != account.id:
+            return Response({"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        update_kwargs = {}
+        if "amount" in request.data:
+            update_kwargs["amount"] = request.data["amount"]
+        if "date" in request.data:
+            update_kwargs["date"] = request.data["date"]
+        transaction = self.transaction_service.update_transaction(transaction, **update_kwargs)
+        return Response(
+            {
+                "id": transaction.id,
+                "amount": str(transaction.amount),
+                "date": str(transaction.date),
+            }
+        )
 
     def delete(self, request, pk):
         """Delete a transaction."""
-        from apps.transaction.models import Transaction
-
         account = self.account_service.get_account_by_id(pk, request.user)
         if not account:
-            return Response(
-                {"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
 
         transaction_id = request.data.get("id")
         if not transaction_id:
-            return Response(
-                {"error": "Transaction ID required"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Transaction ID required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            transaction = Transaction.objects.get(id=transaction_id, account=account)
-            transaction.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except Transaction.DoesNotExist:
-            return Response(
-                {"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+        transaction = self.transaction_service.get_transaction_by_id(transaction_id, request.user)
+        if not transaction or transaction.account_id != account.id:
+            return Response({"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        self.transaction_service.delete_transaction(transaction)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AccountBalanceUpdateAPIView(APIView):
@@ -367,6 +321,7 @@ class AccountBalanceUpdateAPIView(APIView):
 
     def post(self, request):
         """Set the account balance to the given amount on the given date."""
+        from datetime import date as date_type
         from decimal import Decimal
 
         account_id = request.data.get("account")
@@ -381,9 +336,7 @@ class AccountBalanceUpdateAPIView(APIView):
 
         account = self.account_service.get_account_by_id(account_id, request.user)
         if not account:
-            return Response(
-                {"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
 
         try:
             balance_decimal = Decimal(str(balance))
@@ -393,15 +346,25 @@ class AccountBalanceUpdateAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        try:
+            parsed_balance_date = date_type.fromisoformat(str(balance_date))
+        except ValueError:
+            return Response(
+                {"error": "Invalid date format (use YYYY-MM-DD)"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         old_balance = account.balance
-        updated_account = self.balance_service.update_balance(
-            account, balance_decimal, balance_date
+        updated_account = self.balance_service.set_balance_snapshot(
+            account=account,
+            new_balance=balance_decimal,
+            balance_date=parsed_balance_date,
         )
 
         return Response(
             {
                 "balance": str(updated_account.balance),
-                "date": str(balance_date),
+                "date": str(parsed_balance_date),
                 "previous_balance": str(old_balance),
                 "adjustment": str(updated_account.balance - old_balance),
             },
@@ -421,9 +384,7 @@ class CardAccountListAPIView(APIView):
 
     def get(self, request):
         """List all credit card accounts for the user."""
-        accounts = self.account_service.get_accounts_by_type(
-            request.user, "credit_card"
-        )
+        accounts = self.account_service.get_accounts_by_type(request.user, "credit_card")
         serializer = FinancialAccountSerializer(accounts, many=True)
         # Return in rows format for backward compatibility
         return Response({"rows": serializer.data})
@@ -490,9 +451,7 @@ class CSVStatementImportAPIView(APIView):
 
         account = self.account_service.get_account_by_id(int(account_id), request.user)
         if not account:
-            return Response(
-                {"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
 
         ending_balance = None
         ending_date = None
@@ -536,9 +495,7 @@ class CSVStatementImportAPIView(APIView):
             "skipped_duplicates": result.skipped_duplicates,
             "errors": result.errors,
             "balance_after_import": (
-                str(result.balance_after_import)
-                if result.balance_after_import is not None
-                else None
+                str(result.balance_after_import) if result.balance_after_import is not None else None
             ),
         }
 

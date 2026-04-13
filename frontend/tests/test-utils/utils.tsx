@@ -1,11 +1,19 @@
+/* eslint-disable react-refresh/only-export-components -- test helpers export render wrapper */
 import { render, type RenderOptions } from '@testing-library/react';
 import { type ReactElement, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { BudgetDateRangeProvider } from '@/contexts/BudgetDateRangeContext';
-import { AuthContext, type AuthContextType } from '@/contexts/AuthContextInstance';
+import {
+  AuthContext,
+  type AuthContextType,
+} from '@/contexts/AuthContextInstance';
 
 const mockAuthContext: AuthContextType = {
-  user: { id: 1, username: 'testuser', email: 'test@test.com' } as AuthContextType['user'],
+  user: {
+    id: 1,
+    username: 'testuser',
+    email: 'test@test.com',
+  } as AuthContextType['user'],
   organization: null,
   isAuthenticated: true,
   isLoading: false,

@@ -9,7 +9,11 @@ interface AccountBalanceFormProps {
   accountId: number;
   accountName: string;
   initialData?: { balance: string | number; date: string; id?: number };
-  onSubmit: (data: { balance: number; date: string; id?: number }) => Promise<void>;
+  onSubmit: (data: {
+    balance: number;
+    date: string;
+    id?: number;
+  }) => Promise<void>;
   onDelete?: () => Promise<void>;
   onCancel: () => void;
 }

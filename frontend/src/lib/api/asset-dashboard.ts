@@ -1,6 +1,7 @@
 /**
  * Asset Dashboard API service for asset/networth-related analytics
  */
+import { BaseApiClient } from './base-client';
 
 export interface AssetDashboardData {
   networth: number;
@@ -53,28 +54,9 @@ export interface AccountBreakdownData {
   breakdown: AccountBreakdownItem[];
 }
 
-class AssetDashboardApiService {
-  private baseUrl: string;
-
+class AssetDashboardApiService extends BaseApiClient {
   constructor() {
-    const root = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-    this.baseUrl = `${root}/asset-dashboard`;
-  }
-
-  private getHeaders(): HeadersInit {
-    return {
-      'Content-Type': 'application/json',
-    };
-  }
-
-  private async handleResponse<T>(response: Response): Promise<T> {
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.error || `HTTP error! status: ${response.status}`
-      );
-    }
-    return response.json();
+    super('/asset-dashboard');
   }
 
   /**

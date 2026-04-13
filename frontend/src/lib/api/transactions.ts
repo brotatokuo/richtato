@@ -385,7 +385,9 @@ class TransactionsApiService {
       `${this.baseUrl}/accounts/${accountId}/transactions/`,
       { method: 'PATCH', body: JSON.stringify(input) }
     );
-    return this.handleResponse<{ id: number; amount: string; date: string }>(response);
+    return this.handleResponse<{ id: number; amount: string; date: string }>(
+      response
+    );
   }
 
   async deleteAccountTransaction(accountId: number, id: number): Promise<void> {
@@ -496,14 +498,11 @@ class TransactionsApiService {
    * Get all categories for the current user
    */
   async getCategories(): Promise<Category[]> {
-    const response = await fetch(
-      `${this.baseUrl}/transactions/categories/`,
-      {
-        method: 'GET',
-        headers: this.getHeaders(),
-        credentials: 'include',
-      }
-    );
+    const response = await fetch(`${this.baseUrl}/transactions/categories/`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
 
     const data = await this.handleResponse<{ categories: Category[] }>(
       response
@@ -642,7 +641,10 @@ class TransactionsApiService {
    * Get cashflow summary (income/expense/investment by category) for a date range.
    * Uses server-side aggregation - no raw transactions fetched.
    */
-  async getCashflowSummary(startDate: string, endDate: string): Promise<{
+  async getCashflowSummary(
+    startDate: string,
+    endDate: string
+  ): Promise<{
     total_income: number;
     total_expenses: number;
     total_investments: number;

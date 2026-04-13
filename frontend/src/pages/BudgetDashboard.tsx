@@ -19,10 +19,12 @@ import {
   AlertTriangle,
   CalendarDays,
   Gauge,
+  Pencil,
   Percent,
   TrendingUp,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 export function Dashboard() {
   return (
@@ -189,8 +191,21 @@ function DashboardContent() {
 
   return (
     <div className="space-y-6 w-full max-w-full overflow-hidden">
-      {/* Month/Year Picker */}
-      <MonthYearPicker year={year} month={month} onChange={handleDateChange} />
+      {/* Month/Year Picker + Edit Budgets shortcut */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <MonthYearPicker
+          year={year}
+          month={month}
+          onChange={handleDateChange}
+        />
+        <Link
+          to="/setup?tab=budgets"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+          Edit Budgets
+        </Link>
+      </div>
 
       {/* Selected Month Budget Breakdown - At the Top */}
       <div className="w-full min-w-0">

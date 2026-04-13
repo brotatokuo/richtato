@@ -1,22 +1,19 @@
 """Tests for AccountBalanceUpdateAPIView (set absolute balance)."""
 
-from datetime import date
 from decimal import Decimal
 
-import pytest
-from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
-from apps.richtato_user.models import User
 from django.test import TestCase
 from rest_framework.test import APIClient
+
+from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
+from apps.richtato_user.models import User
 
 
 class TestAccountBalanceUpdateAPI(TestCase):
     """Test the balance-setting endpoint POST /accounts/details/."""
 
     def setUp(self):
-        self.user = User.objects.create_user(
-            username="apitest", email="api@test.com", password="testpass123"
-        )
+        self.user = User.objects.create_user(username="apitest", email="api@test.com", password="testpass123")
         self.account = FinancialAccount.objects.create(
             user=self.user,
             name="API Test Checking",
@@ -43,9 +40,7 @@ class TestAccountBalanceUpdateAPI(TestCase):
             {"account": self.account.id, "balance": "4500.00", "date": "2025-06-15"},
             format="json",
         )
-        history = AccountBalanceHistory.objects.get(
-            account=self.account, date="2025-06-15"
-        )
+        history = AccountBalanceHistory.objects.get(account=self.account, date="2025-06-15")
         self.assertEqual(history.balance, Decimal("4500.00"))
 
     def test_set_balance_response_format(self):
@@ -103,9 +98,7 @@ class TestAccountBalanceUpdateAPI(TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_other_users_account_returns_404(self):
-        other_user = User.objects.create_user(
-            username="other", email="other@test.com", password="testpass123"
-        )
+        other_user = User.objects.create_user(username="other", email="other@test.com", password="testpass123")
         other_account = FinancialAccount.objects.create(
             user=other_user,
             name="Other Account",
@@ -140,8 +133,6 @@ class TestAccountBalanceUpdateAPI(TestCase):
             {"account": self.account.id, "balance": "2000.00", "date": "2025-06-15"},
             format="json",
         )
-        entries = AccountBalanceHistory.objects.filter(
-            account=self.account, date="2025-06-15"
-        )
+        entries = AccountBalanceHistory.objects.filter(account=self.account, date="2025-06-15")
         self.assertEqual(entries.count(), 1)
         self.assertEqual(entries.first().balance, Decimal("2000.00"))

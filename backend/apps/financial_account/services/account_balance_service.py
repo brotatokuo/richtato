@@ -2,13 +2,13 @@
 
 from datetime import date
 from decimal import Decimal
-from typing import Dict, List, Optional
+
+from loguru import logger
 
 from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
 from apps.financial_account.repositories.account_repository import (
     FinancialAccountRepository,
 )
-from loguru import logger
 
 
 class AccountBalanceService:
@@ -65,12 +65,35 @@ class AccountBalanceService:
 
         return account
 
+    def set_balance_snapshot(
+        self, account: FinancialAccount, new_balance: Decimal, balance_date: date = None
+    ) -> FinancialAccount:
+        """Set absolute balance and overwrite/create history for the date.
+
+        This is used by manual reconciliation/snapshot flows where users provide
+        the true account balance for a specific date. Unlike adjustment-transaction
+        mode, this writes the account anchor and dated history directly.
+        """
+        updated_account = self.account_repository.update_balance(
+            account=account,
+            balance=new_balance,
+            balance_date=balance_date,
+            source="manual",
+        )
+
+        logger.info(
+            f"Set balance snapshot for account {updated_account.id} ({updated_account.name}) "
+            f"to {new_balance} on {balance_date or date.today()}"
+        )
+
+        return updated_account
+
     def get_balance_history(
         self,
         account: FinancialAccount,
         start_date: date = None,
         end_date: date = None,
-    ) -> List[AccountBalanceHistory]:
+    ) -> list[AccountBalanceHistory]:
         """
         Get balance history for an account.
 
@@ -82,19 +105,15 @@ class AccountBalanceService:
         Returns:
             List of balance history records
         """
-        return self.account_repository.get_balance_history(
-            account, start_date, end_date
-        )
+        return self.account_repository.get_balance_history(account, start_date, end_date)
 
-    def get_balance_trend(self, account: FinancialAccount) -> Dict[str, any]:
+    def get_balance_trend(self, account: FinancialAccount) -> dict[str, any]:
         """Return all balance history for an account.
 
         Balances are stored with correct sign (negative for liabilities),
         so no sign-flipping is needed here.
         """
-        history = list(
-            AccountBalanceHistory.objects.filter(account=account).order_by("date")
-        )
+        history = list(AccountBalanceHistory.objects.filter(account=account).order_by("date"))
 
         if not history:
             return {
@@ -109,13 +128,9 @@ class AccountBalanceService:
         current_balance = account.balance
 
         change = current_balance - starting_balance
-        change_percent = (
-            (change / starting_balance * 100) if starting_balance != 0 else Decimal("0")
-        )
+        change_percent = (change / starting_balance * 100) if starting_balance != 0 else Decimal("0")
 
-        data_points = [
-            {"date": str(h.date), "balance": float(h.balance)} for h in history
-        ]
+        data_points = [{"date": str(h.date), "balance": float(h.balance)} for h in history]
 
         return {
             "current_balance": current_balance,

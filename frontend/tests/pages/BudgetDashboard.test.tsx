@@ -11,7 +11,8 @@ const mockGetMultiMonth = vi.fn();
 
 vi.mock('@/lib/api/budget-dashboard', () => ({
   budgetDashboardApiService: {
-    getBudgetProgressMultiMonth: (...args: unknown[]) => mockGetMultiMonth(...args),
+    getBudgetProgressMultiMonth: (...args: unknown[]) =>
+      mockGetMultiMonth(...args),
     getExpenseCategoriesData: vi.fn().mockResolvedValue({
       labels: [],
       datasets: [{ data: [], backgroundColor: [] }],
@@ -21,7 +22,12 @@ vi.mock('@/lib/api/budget-dashboard', () => ({
 
 vi.mock('@/contexts/PreferencesContext', () => ({
   usePreferences: () => ({
-    preferences: { currency: 'USD', theme: 'system', date_format: 'MM/DD/YYYY', timezone: 'UTC' },
+    preferences: {
+      currency: 'USD',
+      theme: 'system',
+      date_format: 'MM/DD/YYYY',
+      timezone: 'UTC',
+    },
     currencySymbols: {},
     loading: false,
     error: null,
@@ -50,8 +56,20 @@ const mockMultiMonthData: MultiMonthBudgetProgressData = {
       total_remaining: 500,
       percentage: 75,
       categories: [
-        { category: 'Food', budget: 1000, spent: 800, percentage: 80, remaining: 200 },
-        { category: 'Transport', budget: 1000, spent: 700, percentage: 70, remaining: 300 },
+        {
+          category: 'Food',
+          budget: 1000,
+          spent: 800,
+          percentage: 80,
+          remaining: 200,
+        },
+        {
+          category: 'Transport',
+          budget: 1000,
+          spent: 700,
+          percentage: 70,
+          remaining: 300,
+        },
       ],
       start_date: '2024-01-01',
       end_date: '2024-01-31',

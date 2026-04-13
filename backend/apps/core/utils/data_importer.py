@@ -32,12 +32,8 @@ class DataImporter:
 
     def generate_csv_templates(self):
         """Generate blank CSV template files for all import types."""
-        self._generate_csv_template(
-            "Account.csv", ["name", "account_type", "institution", "last4"]
-        )
-        self._generate_csv_template(
-            "Category.csv", ["name", "slug", "type", "icon", "color"]
-        )
+        self._generate_csv_template("Account.csv", ["name", "account_type", "institution", "last4"])
+        self._generate_csv_template("Category.csv", ["name", "slug", "type", "icon", "color"])
         self._generate_csv_template(
             "Transaction.csv",
             [
@@ -71,12 +67,7 @@ class DataImporter:
             if pd.notna(row.get("institution")) and row["institution"]:
                 institution, _ = FinancialInstitution.objects.get_or_create(
                     name=row["institution"],
-                    defaults={
-                        "slug": row["institution"]
-                        .lower()
-                        .replace(" ", "_")
-                        .replace("-", "_")
-                    },
+                    defaults={"slug": row["institution"].lower().replace(" ", "_").replace("-", "_")},
                 )
 
             FinancialAccount.objects.create(
@@ -108,17 +99,13 @@ class DataImporter:
         for index, row in transactions_df.iterrows():
             try:
                 # Get the account
-                account = FinancialAccount.objects.get(
-                    user=self.user, name=row["account_name"]
-                )
+                account = FinancialAccount.objects.get(user=self.user, name=row["account_name"])
 
                 # Get the category if provided
                 category = None
                 if pd.notna(row.get("category_slug")) and row["category_slug"]:
                     try:
-                        category = TransactionCategory.objects.get(
-                            user=self.user, slug=row["category_slug"]
-                        )
+                        category = TransactionCategory.objects.get(user=self.user, slug=row["category_slug"])
                     except TransactionCategory.DoesNotExist:
                         pass  # Category not found, will remain None
 

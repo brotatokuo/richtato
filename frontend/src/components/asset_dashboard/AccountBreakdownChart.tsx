@@ -129,7 +129,11 @@ export function AccountBreakdownChart() {
         textStyle: {
           color: '#f3f4f6',
         },
-        formatter: function (params: { name: string; value?: number; percent?: number }) {
+        formatter: function (params: {
+          name: string;
+          value?: number;
+          percent?: number;
+        }) {
           const value = params.value ?? 0;
           const percent = params.percent ?? 0;
           return `${params.name}<br/>${formatCurrency(value, preferences.currency)} (${percent.toFixed(1)}%)`;

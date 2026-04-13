@@ -3,7 +3,12 @@ import { render, screen } from '@testing-library/react';
 
 vi.mock('@/contexts/PreferencesContext', () => ({
   usePreferences: () => ({
-    preferences: { currency: 'USD', theme: 'system', date_format: 'MM/DD/YYYY', timezone: 'UTC' },
+    preferences: {
+      currency: 'USD',
+      theme: 'system',
+      date_format: 'MM/DD/YYYY',
+      timezone: 'UTC',
+    },
     currencySymbols: {},
     loading: false,
     error: null,
@@ -14,9 +19,30 @@ vi.mock('@/contexts/PreferencesContext', () => ({
 }));
 
 const categories = [
-  { name: 'Groceries', budget: 500, spent: 300, percentage: 60, color: '#3b82f6', remaining: 200 },
-  { name: 'Transport', budget: 200, spent: 250, percentage: 125, color: '#ef4444', remaining: -50 },
-  { name: 'Entertainment', budget: 100, spent: 90, percentage: 90, color: '#f59e0b', remaining: 10 },
+  {
+    name: 'Groceries',
+    budget: 500,
+    spent: 300,
+    percentage: 60,
+    color: '#3b82f6',
+    remaining: 200,
+  },
+  {
+    name: 'Transport',
+    budget: 200,
+    spent: 250,
+    percentage: 125,
+    color: '#ef4444',
+    remaining: -50,
+  },
+  {
+    name: 'Entertainment',
+    budget: 100,
+    spent: 90,
+    percentage: 90,
+    color: '#f59e0b',
+    remaining: 10,
+  },
 ];
 
 describe('CategoryBreakdown', () => {

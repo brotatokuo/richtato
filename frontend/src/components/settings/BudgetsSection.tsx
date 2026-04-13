@@ -5,13 +5,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { CategoryCatalogItem, categorySettingsApi } from '@/lib/api/user';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { PiggyBank } from 'lucide-react';
+import { PiggyBank, Search } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { BudgetModal } from './BudgetModal';
 
@@ -31,6 +32,9 @@ export function BudgetsSection() {
   const [progress, setProgress] = useState<BudgetProgress[]>([]);
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
+
+  // Search state
+  const [search, setSearch] = useState('');
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -70,7 +74,7 @@ export function BudgetsSection() {
   const expenseCategories = catalog.filter(c => c.type === 'expense');
 
   // Merge budget data with progress
-  const categoriesWithProgress = expenseCategories.map(cat => {
+  const allCategoriesWithProgress = expenseCategories.map(cat => {
     const prog = progress.find(
       p =>
         p.category.toLowerCase().replace(/\s+/g, '-') === cat.name ||
@@ -83,6 +87,22 @@ export function BudgetsSection() {
       remaining: prog?.remaining ?? cat.budget?.amount ?? 0,
     };
   });
+
+  // Search filter
+  const categoriesWithProgress = allCategoriesWithProgress.filter(
+    cat =>
+      search.trim() === '' ||
+      cat.display.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Total monthly budget summary
+  const budgetedCategories = allCategoriesWithProgress.filter(
+    c => c.budget != null && c.budget.amount > 0
+  );
+  const totalBudget = budgetedCategories.reduce(
+    (sum, c) => sum + (c.budget?.amount ?? 0),
+    0
+  );
 
   const openModal = (cat: CategoryCatalogItem) => {
     setSelectedCategory(cat);
@@ -137,8 +157,24 @@ export function BudgetsSection() {
                 <PiggyBank className="h-5 w-5" />
                 Monthly Budgets
               </CardTitle>
-              <CardDescription>
-                Set spending limits per category
+              <CardDescription className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                <span>Set spending limits per category</span>
+                {budgetedCategories.length > 0 && (
+                  <>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span>
+                      {budgetedCategories.length}{' '}
+                      {budgetedCategories.length === 1
+                        ? 'category'
+                        : 'categories'}{' '}
+                      &middot;{' '}
+                      <span className="font-medium text-foreground">
+                        {formatCurrency(totalBudget, preferences.currency)}/mo
+                      </span>{' '}
+                      budgeted
+                    </span>
+                  </>
+                )}
               </CardDescription>
             </div>
             <MonthYearPicker
@@ -149,11 +185,27 @@ export function BudgetsSection() {
             />
           </div>
         </CardHeader>
-        <CardContent className="space-y-1">
+        <CardContent className="space-y-4">
           {error && <div className="text-sm text-red-600 mb-3">{error}</div>}
           {expenseCategories.length === 0 && !loading && (
             <div className="text-sm text-muted-foreground py-4 text-center">
-              No expense categories found. Add categories in the section above.
+              No expense categories found. Add categories in the Categories tab.
+            </div>
+          )}
+          {expenseCategories.length > 0 && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Search categories…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          )}
+          {categoriesWithProgress.length === 0 && search.trim() !== '' && (
+            <div className="text-sm text-muted-foreground py-2 text-center">
+              No categories match &ldquo;{search}&rdquo;
             </div>
           )}
           <div

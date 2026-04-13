@@ -55,8 +55,7 @@ def recalculate_balance_for_date(
     )
 
     logger.debug(
-        f"Updated balance history for account {account.id} ({account.name}) "
-        f"on {target_date}: {balance_at_date}"
+        f"Updated balance history for account {account.id} ({account.name}) on {target_date}: {balance_at_date}"
     )
 
     return balance_at_date
@@ -118,16 +117,12 @@ def transaction_post_save(sender, instance: Transaction, created: bool, **kwargs
     account = instance.account
 
     if created:
-        FinancialAccount.objects.filter(pk=account.pk).update(
-            balance=F("balance") + instance.signed_amount
-        )
+        FinancialAccount.objects.filter(pk=account.pk).update(balance=F("balance") + instance.signed_amount)
     else:
         old_signed = getattr(instance, "_old_signed_amount", Decimal("0"))
         delta = instance.signed_amount - old_signed
         if delta:
-            FinancialAccount.objects.filter(pk=account.pk).update(
-                balance=F("balance") + delta
-            )
+            FinancialAccount.objects.filter(pk=account.pk).update(balance=F("balance") + delta)
 
     account.refresh_from_db(fields=["balance"])
 
@@ -142,13 +137,9 @@ def transaction_post_save(sender, instance: Transaction, created: bool, **kwargs
         update_balances_from_date(account, min(old_date, instance.date))
 
         # Clean up orphaned history entries on the old date
-        has_remaining = Transaction.objects.filter(
-            account=account, date=old_date
-        ).exists()
+        has_remaining = Transaction.objects.filter(account=account, date=old_date).exists()
         if not has_remaining:
-            AccountBalanceHistory.objects.filter(
-                account=account, date=old_date
-            ).delete()
+            AccountBalanceHistory.objects.filter(account=account, date=old_date).delete()
     else:
         update_balances_from_date(account, instance.date)
 
@@ -164,9 +155,7 @@ def transaction_post_delete(sender, instance: Transaction, **kwargs):
     account = instance.account
     transaction_date = instance.date
 
-    FinancialAccount.objects.filter(pk=account.pk).update(
-        balance=F("balance") - instance.signed_amount
-    )
+    FinancialAccount.objects.filter(pk=account.pk).update(balance=F("balance") - instance.signed_amount)
     account.refresh_from_db(fields=["balance"])
 
     logger.debug(
@@ -176,15 +165,10 @@ def transaction_post_delete(sender, instance: Transaction, **kwargs):
 
     update_balances_from_date(account, transaction_date)
 
-    remaining_transactions = Transaction.objects.filter(
-        account=account, date=transaction_date
-    ).exists()
+    remaining_transactions = Transaction.objects.filter(account=account, date=transaction_date).exists()
 
     if not remaining_transactions:
-        AccountBalanceHistory.objects.filter(
-            account=account, date=transaction_date
-        ).delete()
+        AccountBalanceHistory.objects.filter(account=account, date=transaction_date).delete()
         logger.debug(
-            f"Removed balance history entry for account {account.id} on {transaction_date} "
-            "(no remaining transactions)"
+            f"Removed balance history entry for account {account.id} on {transaction_date} (no remaining transactions)"
         )

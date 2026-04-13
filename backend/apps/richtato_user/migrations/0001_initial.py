@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -20,16 +19,12 @@ class Migration(migrations.Migration):
                 ("password", models.CharField(max_length=128, verbose_name="password")),
                 (
                     "last_login",
-                    models.DateTimeField(
-                        blank=True, null=True, verbose_name="last login"
-                    ),
+                    models.DateTimeField(blank=True, null=True, verbose_name="last login"),
                 ),
                 ("id", models.AutoField(primary_key=True, serialize=False)),
                 (
                     "email",
-                    models.EmailField(
-                        blank=True, max_length=255, null=True, unique=True
-                    ),
+                    models.EmailField(blank=True, max_length=255, null=True, unique=True),
                 ),
                 ("username", models.CharField(max_length=150, unique=True)),
                 ("date_joined", models.DateTimeField(auto_now_add=True)),
@@ -144,9 +139,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "notifications_enabled",
-                    models.BooleanField(
-                        default=True, help_text="Whether to receive notifications"
-                    ),
+                    models.BooleanField(default=True, help_text="Whether to receive notifications"),
                 ),
                 (
                     "user",

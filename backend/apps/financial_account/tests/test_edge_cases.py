@@ -4,6 +4,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+
 from apps.asset_dashboard.repositories.asset_dashboard_repository import (
     AssetDashboardRepository,
 )
@@ -14,16 +15,12 @@ from apps.transaction.models import Transaction
 
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(
-        username="edgetest", email="edge@test.com", password="testpass123"
-    )
+    return User.objects.create_user(username="edgetest", email="edge@test.com", password="testpass123")
 
 
 @pytest.fixture
 def other_user(db):
-    return User.objects.create_user(
-        username="otheruser", email="other@test.com", password="testpass123"
-    )
+    return User.objects.create_user(username="otheruser", email="other@test.com", password="testpass123")
 
 
 @pytest.fixture
@@ -81,7 +78,7 @@ class TestInactiveAccountExclusion:
         assert nw_after == Decimal("0")
 
     def test_deactivated_account_excluded_from_liabilities(self, repo, user):
-        cc = FinancialAccount.objects.create(
+        FinancialAccount.objects.create(
             user=user,
             name="Inactive CC",
             account_type="credit_card",
@@ -129,9 +126,7 @@ class TestCascadingDeletes:
             account_type="checking",
             balance=Decimal("500.00"),
         )
-        AccountBalanceHistory.objects.create(
-            account=acct, date=date.today(), balance=Decimal("500.00")
-        )
+        AccountBalanceHistory.objects.create(account=acct, date=date.today(), balance=Decimal("500.00"))
         assert AccountBalanceHistory.objects.filter(account=acct).count() == 1
 
         acct_id = acct.id

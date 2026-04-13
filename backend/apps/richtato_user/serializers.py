@@ -1,5 +1,6 @@
-from apps.transaction.models import TransactionCategory
 from rest_framework import serializers
+
+from apps.transaction.models import TransactionCategory
 
 from .models import UserPreference
 

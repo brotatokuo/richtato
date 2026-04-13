@@ -187,7 +187,12 @@ export function GroupHistoryPanel({ group, onClose }: GroupHistoryPanelProps) {
           color: '#f3f4f6',
         },
         formatter: function (
-          params: Array<{ name?: string; value?: number; color?: string; seriesName?: string }>
+          params: Array<{
+            name?: string;
+            value?: number;
+            color?: string;
+            seriesName?: string;
+          }>
         ) {
           const date = params?.[0]?.name ?? '';
           const lines = (params || []).map(p => {

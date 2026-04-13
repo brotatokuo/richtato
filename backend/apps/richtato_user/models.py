@@ -52,12 +52,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
 
     # Demo user fields - for temporary trial accounts
-    is_demo = models.BooleanField(
-        default=False, help_text="Whether this is a temporary demo account"
-    )
-    demo_expires_at = models.DateTimeField(
-        null=True, blank=True, help_text="Expiration timestamp for demo accounts"
-    )
+    is_demo = models.BooleanField(default=False, help_text="Whether this is a temporary demo account")
+    demo_expires_at = models.DateTimeField(null=True, blank=True, help_text="Expiration timestamp for demo accounts")
 
     objects = UserManager()
 
@@ -110,9 +106,7 @@ class UserPreference(models.Model):
         ("Australia/Sydney", "Sydney"),
     ]
 
-    user = models.OneToOneField(
-        User, on_delete=models.CASCADE, related_name="preferences"
-    )
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="preferences")
 
     # Display preferences
     theme = models.CharField(
@@ -141,9 +135,7 @@ class UserPreference(models.Model):
     )
 
     # Notification preferences
-    notifications_enabled = models.BooleanField(
-        default=True, help_text="Whether to receive notifications"
-    )
+    notifications_enabled = models.BooleanField(default=True, help_text="Whether to receive notifications")
 
     class Meta:
         verbose_name_plural = "User Preferences"

@@ -1,37 +1,35 @@
 """Service for budget management business logic."""
 
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
-from typing import Dict, List, Optional
+
+from loguru import logger
 
 from apps.budget.models import Budget, BudgetCategory
 from apps.richtato_user.models import User
 from apps.transaction.models import TransactionCategory
-from loguru import logger
 
 
 class BudgetService:
     """Service for budget management."""
 
-    def get_user_budgets(self, user: User, active_only: bool = True) -> List[Budget]:
+    def get_user_budgets(self, user: User, active_only: bool = True) -> list[Budget]:
         """Get all budgets for a user."""
-        queryset = Budget.objects.filter(user=user).prefetch_related(
-            "budget_categories", "budget_categories__category"
-        )
+        queryset = Budget.objects.filter(user=user).prefetch_related("budget_categories", "budget_categories__category")
         if active_only:
             queryset = queryset.filter(is_active=True)
         return list(queryset.all())
 
-    def get_budget_by_id(self, budget_id: int, user: User) -> Optional[Budget]:
+    def get_budget_by_id(self, budget_id: int, user: User) -> Budget | None:
         """Get budget by ID, ensuring it belongs to the user."""
         try:
-            return Budget.objects.prefetch_related(
-                "budget_categories", "budget_categories__category"
-            ).get(id=budget_id, user=user)
+            return Budget.objects.prefetch_related("budget_categories", "budget_categories__category").get(
+                id=budget_id, user=user
+            )
         except Budget.DoesNotExist:
             return None
 
-    def get_current_budget(self, user: User) -> Optional[Budget]:
+    def get_current_budget(self, user: User) -> Budget | None:
         """Get the currently active budget for the user."""
         today = date.today()
         try:
@@ -51,7 +49,7 @@ class BudgetService:
         period_type: str,
         start_date: date,
         end_date: date,
-        categories_data: List[Dict] = None,
+        categories_data: list[dict] = None,
     ) -> Budget:
         """
         Create a new budget.
@@ -91,7 +89,7 @@ class BudgetService:
         return budget
 
     def create_monthly_budget(
-        self, user: User, name: str, year: int, month: int, categories_data: List[Dict]
+        self, user: User, name: str, year: int, month: int, categories_data: list[dict]
     ) -> Budget:
         """
         Create a monthly budget.
@@ -112,9 +110,7 @@ class BudgetService:
         last_day = monthrange(year, month)[1]
         end_date = date(year, month, last_day)
 
-        return self.create_budget(
-            user, name, "monthly", start_date, end_date, categories_data
-        )
+        return self.create_budget(user, name, "monthly", start_date, end_date, categories_data)
 
     def add_budget_category(
         self,
@@ -131,15 +127,11 @@ class BudgetService:
             rollover_enabled=rollover_enabled,
         )
 
-        logger.info(
-            f"Added category {category.name} to budget {budget.id}: ${allocated_amount}"
-        )
+        logger.info(f"Added category {category.name} to budget {budget.id}: ${allocated_amount}")
 
         return budget_category
 
-    def update_budget_category(
-        self, budget_category: BudgetCategory, **kwargs
-    ) -> BudgetCategory:
+    def update_budget_category(self, budget_category: BudgetCategory, **kwargs) -> BudgetCategory:
         """Update a budget category allocation."""
         for key, value in kwargs.items():
             if hasattr(budget_category, key):

@@ -2,9 +2,6 @@
 
 from datetime import date
 from decimal import Decimal
-from typing import List, Optional
-
-from django.db.models import Prefetch
 
 from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
 from apps.richtato_user.models import User
@@ -13,7 +10,7 @@ from apps.richtato_user.models import User
 class FinancialAccountRepository:
     """Repository for financial account data access."""
 
-    def get_by_id(self, account_id: int) -> Optional[FinancialAccount]:
+    def get_by_id(self, account_id: int) -> FinancialAccount | None:
         """Get account by ID."""
         try:
             return (
@@ -24,9 +21,7 @@ class FinancialAccountRepository:
         except FinancialAccount.DoesNotExist:
             return None
 
-    def get_by_user(
-        self, user: User, is_active: Optional[bool] = None
-    ) -> List[FinancialAccount]:
+    def get_by_user(self, user: User, is_active: bool | None = None) -> list[FinancialAccount]:
         """Get all accounts for a user."""
         queryset = (
             FinancialAccount.objects.filter(user=user)
@@ -37,14 +32,10 @@ class FinancialAccountRepository:
             queryset = queryset.filter(is_active=is_active)
         return list(queryset.all())
 
-    def get_by_type(
-        self, user: User, account_type: str, is_active: bool = True
-    ) -> List[FinancialAccount]:
+    def get_by_type(self, user: User, account_type: str, is_active: bool = True) -> list[FinancialAccount]:
         """Get accounts by type for a user."""
         return list(
-            FinancialAccount.objects.filter(
-                user=user, account_type=account_type, is_active=is_active
-            )
+            FinancialAccount.objects.filter(user=user, account_type=account_type, is_active=is_active)
             .select_related("institution")
             .prefetch_related("sync_connections")
             .all()
@@ -116,7 +107,7 @@ class FinancialAccountRepository:
 
     def get_balance_history(
         self, account: FinancialAccount, start_date: date = None, end_date: date = None
-    ) -> List[AccountBalanceHistory]:
+    ) -> list[AccountBalanceHistory]:
         """Get balance history for an account."""
         queryset = AccountBalanceHistory.objects.filter(account=account)
         if start_date:

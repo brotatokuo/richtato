@@ -83,7 +83,6 @@ export function AssetTrendsChart({
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
 
-
   // Transaction-related state
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
@@ -128,8 +127,9 @@ export function AssetTrendsChart({
     const results = await Promise.all(
       accountList.map(async account => {
         try {
-          const data =
-            await transactionsApiService.getAccountBalanceHistory(account.id);
+          const data = await transactionsApiService.getAccountBalanceHistory(
+            account.id
+          );
           return {
             account,
             history: data?.data_points || [],
@@ -551,7 +551,14 @@ export function AssetTrendsChart({
     }
 
     return { series, dates: dateLabels, rows };
-  }, [histories, selectedAccount, selectedGroup, rangePreset, customStart, customEnd]);
+  }, [
+    histories,
+    selectedAccount,
+    selectedGroup,
+    rangePreset,
+    customStart,
+    customEnd,
+  ]);
 
   const chartOptions = useMemo(
     () => ({

@@ -47,7 +47,8 @@ export function DisconnectConfirmModal({
             Disconnect Bank Connection
           </DialogTitle>
           <DialogDescription>
-            Choose how to disconnect {accountName ? `"${accountName}"` : 'this account'} from bank sync.
+            Choose how to disconnect{' '}
+            {accountName ? `"${accountName}"` : 'this account'} from bank sync.
           </DialogDescription>
         </DialogHeader>
 
@@ -65,8 +66,8 @@ export function DisconnectConfirmModal({
             <div>
               <div className="font-medium">Remove connection only</div>
               <div className="text-sm text-muted-foreground">
-                Keep the account and all synced transactions. The account will become
-                a manual account that you can update yourself.
+                Keep the account and all synced transactions. The account will
+                become a manual account that you can update yourself.
               </div>
             </div>
           </label>

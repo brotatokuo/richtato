@@ -4,7 +4,12 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from './dropdown-menu';
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  CalendarDays,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { useState } from 'react';
 
 interface YearPickerProps {
@@ -112,9 +117,11 @@ export function YearPicker({
                   className={cn(
                     'py-2 px-1 rounded-lg text-sm font-medium transition-all',
                     'hover:bg-primary/10',
-                    isSelected && 'bg-primary text-primary-foreground hover:bg-primary/90',
+                    isSelected &&
+                      'bg-primary text-primary-foreground hover:bg-primary/90',
                     !isSelected && isCurrentYear && 'ring-1 ring-primary/50',
-                    !isAvailable && 'opacity-40 cursor-not-allowed hover:bg-transparent'
+                    !isAvailable &&
+                      'opacity-40 cursor-not-allowed hover:bg-transparent'
                   )}
                 >
                   {y}

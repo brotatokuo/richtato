@@ -52,8 +52,13 @@ export function BudgetDashboard({
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>(
     []
   );
-  const [chartData, setChartData] = useState<{ series: unknown[]; [key: string]: unknown } | null>(null);
-  const [chartOptions, setChartOptions] = useState<{ [key: string]: unknown } | null>(null);
+  const [chartData, setChartData] = useState<{
+    series: unknown[];
+    [key: string]: unknown;
+  } | null>(null);
+  const [chartOptions, setChartOptions] = useState<{
+    [key: string]: unknown;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
