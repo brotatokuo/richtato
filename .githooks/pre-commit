@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+FAILED=0
+
+echo "Running pre-commit linting..."
+
+# Auto-format staged frontend files with Prettier (then re-stage)
+echo ""
+echo "→ Frontend (Prettier — write staged files)..."
+if command -v yarn &>/dev/null; then
+  PRETTIER_REL=()
+  while IFS= read -r line; do
+    [[ "$line" == frontend/* ]] || continue
+    rel="${line#frontend/}"
+    # Prettier-supported extensions in this project
+    if [[ "$rel" =~ \.(ts|tsx|js|jsx|json|css|scss|html|md|yaml|yml|mjs|cjs)$ ]]; then
+      PRETTIER_REL+=("$rel")
+    fi
+  done < <(git diff --cached --name-only --diff-filter=ACM)
+
+  if [ ${#PRETTIER_REL[@]} -gt 0 ]; then
+    (cd "$REPO_ROOT/frontend" && yarn prettier --write "${PRETTIER_REL[@]}")
+    for rel in "${PRETTIER_REL[@]}"; do
+      git add "$REPO_ROOT/frontend/$rel"
+    done
+  else
+    echo "  (no matching staged files — skip)"
+  fi
+else
+  echo "  yarn not found — skipping Prettier write"
+fi
+
+echo ""
+echo "→ Frontend (ESLint)..."
+if command -v yarn &>/dev/null; then
+  (cd "$REPO_ROOT/frontend" && yarn lint) || FAILED=1
+elif command -v npx &>/dev/null; then
+  (cd "$REPO_ROOT/frontend" && npx eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0) || FAILED=1
+else
+  echo "  yarn/npx not found — skipping frontend lint"
+fi
+
+echo ""
+echo "→ Frontend (Prettier — check)..."
+if command -v yarn &>/dev/null; then
+  (cd "$REPO_ROOT/frontend" && yarn prettier --check .) || FAILED=1
+elif command -v npx &>/dev/null; then
+  (cd "$REPO_ROOT/frontend" && npx prettier --check .) || FAILED=1
+else
+  echo "  yarn/npx not found — skipping prettier check"
+fi
+
+# Backend lint
+echo ""
+echo "→ Backend (ruff)..."
+if command -v ruff &>/dev/null; then
+  (cd "$REPO_ROOT/backend" && ruff check .) || FAILED=1
+elif command -v docker &>/dev/null && docker compose -f "$REPO_ROOT/docker-compose.yml" ps --services --filter status=running 2>/dev/null | grep -q backend; then
+  docker compose -f "$REPO_ROOT/docker-compose.yml" exec -T backend ruff check . || FAILED=1
+else
+  echo "  ruff not found — skipping backend lint"
+fi
+
+echo ""
+if [ "$FAILED" -ne 0 ]; then
+  echo "✖ Linting failed. Fix the errors above before committing."
+  exit 1
+fi
+
+echo "✔ All lint checks passed."
