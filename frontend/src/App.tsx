@@ -36,6 +36,9 @@ const Setup = lazy(() =>
 const Accounts = lazy(() =>
   import('./pages/Accounts').then(m => ({ default: m.Accounts }))
 );
+const More = lazy(() =>
+  import('./pages/More').then(m => ({ default: m.More }))
+);
 
 function App() {
   return (
@@ -131,6 +134,14 @@ function App() {
               <Route
                 path="settings"
                 element={<Navigate to="/preferences" replace />}
+              />
+              <Route
+                path="more"
+                element={
+                  <Suspense fallback={null}>
+                    <More />
+                  </Suspense>
+                }
               />
             </Route>
           </Routes>

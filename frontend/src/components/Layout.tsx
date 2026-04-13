@@ -3,16 +3,16 @@ import {
   BarChart3,
   CloudUpload,
   Landmark,
-  Menu,
+  MoreHorizontal,
   Settings,
   SlidersHorizontal,
   Table,
   TrendingUp,
   Wallet,
 } from 'lucide-react';
-import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
+import { BottomTabBar } from './BottomTabBar';
 import { Sidebar } from './Sidebar';
 
 // Route to page title and icon mapping
@@ -29,11 +29,11 @@ const routeConfig: Record<
   '/preferences': { title: 'Preferences', icon: Settings },
   '/setup': { title: 'Setup', icon: SlidersHorizontal },
   '/settings': { title: 'Settings', icon: Settings },
+  '/more': { title: 'More', icon: MoreHorizontal },
 };
 
 export function Layout() {
   const location = useLocation();
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   // Global sync status monitoring for toast notifications
   useSyncStatus({
@@ -67,58 +67,36 @@ export function Layout() {
   return (
     <div className="flex h-screen bg-background">
       <Sidebar className="hidden md:flex" />
-      {mobileOpen && (
-        <div className="fixed inset-0 z-50 flex">
-          <div
-            className="fixed inset-0 bg-black/50"
-            onClick={() => setMobileOpen(false)}
-            aria-hidden="true"
-          />
-          <div className="relative z-50">
-            <Sidebar
-              className="w-64 h-screen bg-background"
-              hideCollapseToggle
-            />
-          </div>
-        </div>
-      )}
-      <div className="flex-1 flex flex-col isolate">
+      <div className="flex-1 flex flex-col isolate min-w-0">
         {/* Header */}
         <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-          <div className="mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <button
-                  className="md:hidden inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-foreground hover:bg-muted"
-                  onClick={() => setMobileOpen(true)}
-                  aria-label="Open menu"
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
-                {/* Mobile: keep Richtato logo */}
-                <img
-                  src="/richtato.png"
-                  alt="Richtato"
-                  className="h-8 w-8 rounded md:hidden"
-                />
-                <div className="flex items-center gap-2">
-                  <IconComponent className="h-6 w-6 text-foreground" />
-                  <h1 className="text-xl md:text-2xl font-semibold text-foreground">
-                    {currentPageConfig.title}
-                  </h1>
-                </div>
+          <div className="mx-auto px-4 md:px-6 py-4">
+            <div className="flex items-center gap-3">
+              {/* Mobile: app logo in header */}
+              <img
+                src="/richtato.png"
+                alt="Richtato"
+                className="h-7 w-7 rounded md:hidden"
+              />
+              <div className="flex items-center gap-2">
+                <IconComponent className="h-5 w-5 md:h-6 md:w-6 text-foreground" />
+                <h1 className="text-lg md:text-2xl font-semibold text-foreground">
+                  {currentPageConfig.title}
+                </h1>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Main Content */}
+        {/* Main Content — extra bottom padding on mobile for the tab bar */}
         <main className="flex-1 overflow-auto scrollbar-thin min-w-0">
-          <div className="w-full max-w-full p-6 overflow-x-hidden">
+          <div className="w-full max-w-full p-4 md:p-6 pb-20 md:pb-6 overflow-x-hidden">
             <Outlet />
           </div>
         </main>
       </div>
+
+      <BottomTabBar />
     </div>
   );
 }
