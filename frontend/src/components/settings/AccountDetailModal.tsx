@@ -9,12 +9,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useHousehold } from '@/contexts/HouseholdContext';
 import { Account } from '@/lib/api/transactions';
 import {
   AVAILABLE_CARD_IMAGES,
   getAutoDetectedImageKey,
 } from '@/lib/imageMapping';
-import { Check, Cloud, Lock, RefreshCw, Sparkles, Unlink } from 'lucide-react';
+import {
+  Check,
+  Cloud,
+  Lock,
+  RefreshCw,
+  Sparkles,
+  Unlink,
+  Users,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 interface AccountDetailModalProps {
@@ -26,6 +35,7 @@ interface AccountDetailModalProps {
     type: string;
     entity: string;
     image_key?: string | null;
+    shared_with_household?: boolean;
   }) => Promise<void>;
   onDelete: () => void;
   onSync: () => void;
@@ -47,11 +57,13 @@ export function AccountDetailModal({
   entityOptions,
   loading,
 }: AccountDetailModalProps) {
+  const { isInHousehold } = useHousehold();
   const [form, setForm] = useState({
     name: '',
     type: 'checking',
     entity: '',
     imageKey: null as string | null,
+    sharedWithHousehold: false,
   });
 
   // Find the matching entity option value for this account
@@ -92,6 +104,7 @@ export function AccountDetailModal({
         type: account.account_type || account.type || 'checking',
         entity: findEntityValue(account),
         imageKey: account.image_key ?? null,
+        sharedWithHousehold: account.shared_with_household ?? false,
       });
     }
     // findEntityValue depends on entityOptions which is already in deps
@@ -119,6 +132,7 @@ export function AccountDetailModal({
       type: form.type,
       entity: form.entity,
       image_key: form.imageKey,
+      shared_with_household: form.sharedWithHousehold,
     });
   };
 
@@ -382,6 +396,41 @@ export function AccountDetailModal({
               <span className="font-mono">
                 ····{account.account_number_last4}
               </span>
+            </div>
+          )}
+
+          {/* Household Sharing Toggle */}
+          {isInHousehold && (
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Share with Household</p>
+                  <p className="text-xs text-muted-foreground">
+                    Include this account in your household dashboard
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.sharedWithHousehold}
+                onClick={() =>
+                  setForm(prev => ({
+                    ...prev,
+                    sharedWithHousehold: !prev.sharedWithHousehold,
+                  }))
+                }
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                  form.sharedWithHousehold ? 'bg-primary' : 'bg-muted'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow-lg ring-0 transition-transform ${
+                    form.sharedWithHousehold ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
             </div>
           )}
 

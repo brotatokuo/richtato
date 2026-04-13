@@ -9,6 +9,7 @@ import { transactionsApiService } from '@/lib/api/transactions';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { getEntityLogo } from '@/lib/imageMapping';
 import { cn } from '@/lib/utils';
+import { useHousehold } from '@/contexts/HouseholdContext';
 import {
   ArrowRight,
   ArrowUpDown,
@@ -20,6 +21,7 @@ import {
   TrendingDown,
   TrendingUp,
   Unlink,
+  Users,
   Wifi,
   WifiOff,
 } from 'lucide-react';
@@ -66,6 +68,7 @@ export function AccountDetailPanel({
   onAccountUpdated,
 }: AccountDetailPanelProps) {
   const { preferences } = usePreferences();
+  const { isInHousehold } = useHousehold();
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [balanceHistory, setBalanceHistory] = useState<BalancePoint[]>([]);
@@ -77,6 +80,9 @@ export function AccountDetailPanel({
   const [showSetBalance, setShowSetBalance] = useState(false);
   const [showDisconnect, setShowDisconnect] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
+  const [isShared, setIsShared] = useState(
+    account?.shared_with_household ?? false
+  );
 
   const [accountTypeOptions, setAccountTypeOptions] = useState<
     Array<{ value: string; label: string }>
@@ -118,6 +124,7 @@ export function AccountDetailPanel({
     if (!account) return;
     setTransactions([]);
     setBalanceHistory([]);
+    setIsShared(account.shared_with_household ?? false);
     fetchData(account.id);
   }, [account, fetchData]);
 
@@ -372,8 +379,14 @@ export function AccountDetailPanel({
               )}
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-foreground leading-tight">
+              <h2 className="text-lg font-semibold text-foreground leading-tight flex items-center gap-2">
                 {account.name}
+                {isShared && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                    <Users className="h-3 w-3" />
+                    Shared
+                  </span>
+                )}
               </h2>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <span className="text-sm text-muted-foreground">
@@ -577,6 +590,36 @@ export function AccountDetailPanel({
           <Scale className="h-3.5 w-3.5 mr-1.5" />
           Set Balance
         </Button>
+        {isInHousehold && (
+          <Button
+            size="sm"
+            variant={isShared ? 'default' : 'outline'}
+            onClick={async () => {
+              const newValue = !isShared;
+              setIsShared(newValue);
+              try {
+                await transactionsApiService.updateAccount(account.id, {
+                  shared_with_household: newValue,
+                });
+                onAccountUpdated();
+                toast.success(
+                  newValue
+                    ? 'Account shared with household'
+                    : 'Account is now personal'
+                );
+              } catch (e) {
+                setIsShared(!newValue);
+                toast.error('Failed to update sharing', {
+                  description: e instanceof Error ? e.message : undefined,
+                });
+              }
+            }}
+            className="h-8 text-xs"
+          >
+            <Users className="h-3.5 w-3.5 mr-1.5" />
+            {isShared ? 'Shared' : 'Share'}
+          </Button>
+        )}
         {account.has_connection && (
           <>
             <Button

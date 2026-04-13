@@ -36,6 +36,7 @@ import {
   PenLine,
   Plus,
   RefreshCw,
+  Users,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -204,6 +205,7 @@ export function UnifiedAccountsSection() {
     type: string;
     entity: string;
     image_key?: string | null;
+    shared_with_household?: boolean;
   }) => {
     if (!selectedAccount) return;
     try {
@@ -211,6 +213,7 @@ export function UnifiedAccountsSection() {
       await transactionsApiService.updateAccount(selectedAccount.id, {
         name: form.name,
         image_key: form.image_key,
+        shared_with_household: form.shared_with_household,
       });
       await refresh();
       setShowDetail(false);
@@ -386,6 +389,16 @@ export function UnifiedAccountsSection() {
         {/* Sync Badge */}
         <SyncBadge account={account} />
 
+        {/* Shared Badge */}
+        {account.shared_with_household && (
+          <div
+            className="absolute top-2 left-2 z-20 p-1 rounded-full bg-primary shadow-md"
+            title="Shared with household"
+          >
+            <Users className="h-3 w-3 text-primary-foreground" />
+          </div>
+        )}
+
         {/* Background Image */}
         <div
           className="absolute inset-0"
@@ -479,8 +492,14 @@ export function UnifiedAccountsSection() {
         {/* Content */}
         <div className="relative z-10 flex flex-col h-full">
           <div className="flex-1">
-            <div className="text-sm font-semibold mb-1 truncate pr-8">
+            <div className="text-sm font-semibold mb-1 truncate pr-8 flex items-center gap-1.5">
               {account.name}
+              {account.shared_with_household && (
+                <Users
+                  className="h-3 w-3 text-primary shrink-0"
+                  title="Shared with household"
+                />
+              )}
             </div>
             <div className="text-xs text-muted-foreground mb-2">
               {account.institution_name ||

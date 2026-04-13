@@ -417,16 +417,22 @@ class TransactionsApiService {
     type: string;
     institution_slug?: string;
     asset_entity_name?: string;
+    starting_balance?: number;
   }): Promise<Account> {
+    const body: Record<string, unknown> = {
+      name: input.name,
+      account_type: input.type,
+      institution_slug: input.institution_slug,
+    };
+    if (input.starting_balance !== undefined) {
+      body.initial_balance = input.starting_balance;
+    }
+
     let response = await fetch(`${this.baseUrl}/accounts/`, {
       method: 'POST',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
-      body: JSON.stringify({
-        name: input.name,
-        account_type: input.type,
-        institution_slug: input.institution_slug,
-      }),
+      body: JSON.stringify(body),
     });
 
     // If CSRF token is invalid, refresh it and retry once
@@ -436,11 +442,7 @@ class TransactionsApiService {
         method: 'POST',
         headers: await csrfService.getHeaders(),
         credentials: 'include',
-        body: JSON.stringify({
-          name: input.name,
-          account_type: input.type,
-          institution_slug: input.institution_slug,
-        }),
+        body: JSON.stringify(body),
       });
     }
 
@@ -457,6 +459,7 @@ class TransactionsApiService {
       type: string;
       asset_entity_name: string;
       image_key: string | null;
+      shared_with_household: boolean;
     }>
   ): Promise<Account> {
     let response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
