@@ -36,6 +36,9 @@ const Preferences = lazy(() =>
 const Setup = lazy(() =>
   import('./pages/Setup').then(m => ({ default: m.Setup }))
 );
+const Accounts = lazy(() =>
+  import('./pages/Accounts').then(m => ({ default: m.Accounts }))
+);
 
 function App() {
   return (
@@ -125,6 +128,14 @@ function App() {
                 element={
                   <Suspense fallback={null}>
                     <Setup />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="accounts"
+                element={
+                  <Suspense fallback={null}>
+                    <Accounts />
                   </Suspense>
                 }
               />

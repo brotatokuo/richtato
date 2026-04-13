@@ -10,11 +10,19 @@ interface AccountCreateModalProps {
     name: string;
     type: string;
     entity: string;
+    starting_balance?: string;
   }) => Promise<void>;
   accountTypeOptions: Array<{ value: string; label: string }>;
   entityOptions: Array<{ value: string; label: string }>;
   loading: boolean;
 }
+
+const EMPTY_FORM = {
+  name: '',
+  type: 'checking',
+  entity: 'other',
+  starting_balance: '',
+};
 
 export function AccountCreateModal({
   isOpen,
@@ -24,14 +32,10 @@ export function AccountCreateModal({
   entityOptions,
   loading,
 }: AccountCreateModalProps) {
-  const [form, setForm] = useState({
-    name: '',
-    type: 'checking',
-    entity: 'other',
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
 
   const handleFieldChange = (
-    field: 'name' | 'type' | 'entity',
+    field: 'name' | 'type' | 'entity' | 'starting_balance',
     value: string
   ) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -39,12 +43,11 @@ export function AccountCreateModal({
 
   const handleSubmit = async () => {
     await onSubmit(form);
-    // Reset form after successful submission
-    setForm({ name: '', type: 'checking', entity: 'other' });
+    setForm(EMPTY_FORM);
   };
 
   const handleClose = () => {
-    setForm({ name: '', type: 'checking', entity: 'other' });
+    setForm(EMPTY_FORM);
     onClose();
   };
 
@@ -57,6 +60,7 @@ export function AccountCreateModal({
           accountTypeOptions={accountTypeOptions}
           entityOptions={entityOptions}
           idPrefix="acc"
+          showStartingBalance
         />
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={handleClose}>

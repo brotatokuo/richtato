@@ -16,6 +16,13 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
 };
 
 /**
+ * Get the currency symbol for a given currency code
+ */
+export function getCurrencySymbol(currency: string = 'USD'): string {
+  return CURRENCY_SYMBOLS[currency] || '$';
+}
+
+/**
  * Format a number as currency based on user preferences
  */
 export function formatCurrency(

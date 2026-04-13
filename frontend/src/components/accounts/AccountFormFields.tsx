@@ -13,11 +13,16 @@ interface AccountFormFieldsProps {
     name: string;
     type: string;
     entity: string;
+    starting_balance?: string;
   };
-  onChange: (field: 'name' | 'type' | 'entity', value: string) => void;
+  onChange: (
+    field: 'name' | 'type' | 'entity' | 'starting_balance',
+    value: string
+  ) => void;
   accountTypeOptions: Array<{ value: string; label: string }>;
   entityOptions: Array<{ value: string; label: string }>;
   idPrefix?: string;
+  showStartingBalance?: boolean;
 }
 
 export function AccountFormFields({
@@ -26,6 +31,7 @@ export function AccountFormFields({
   accountTypeOptions,
   entityOptions,
   idPrefix = 'acc',
+  showStartingBalance = false,
 }: AccountFormFieldsProps) {
   return (
     <>
@@ -68,6 +74,32 @@ export function AccountFormFields({
           </SelectContent>
         </Select>
       </div>
+      {showStartingBalance && (
+        <div>
+          <Label htmlFor={`${idPrefix}-balance`}>
+            Opening Balance{' '}
+            <span className="text-muted-foreground font-normal">(optional)</span>
+          </Label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+              $
+            </span>
+            <Input
+              id={`${idPrefix}-balance`}
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="0.00"
+              value={form.starting_balance ?? ''}
+              onChange={e => onChange('starting_balance', e.target.value)}
+              className="pl-7"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Current balance of this account when you start tracking it.
+          </p>
+        </div>
+      )}
     </>
   );
 }

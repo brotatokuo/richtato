@@ -7,12 +7,20 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import { usePlaidLink } from '@/hooks/usePlaidLink';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { bankConnectionsApiService } from '@/lib/api/bankConnections';
 import { syncService } from '@/lib/api/sync';
 import { Account, transactionsApiService } from '@/lib/api/transactions';
+import { formatCurrency } from '@/lib/format';
 import {
   getBankLogo,
   getCardImage,
@@ -25,6 +33,7 @@ import {
   CreditCard,
   Landmark,
   Loader2,
+  PenLine,
   Plus,
   RefreshCw,
 } from 'lucide-react';
@@ -34,6 +43,7 @@ import { AccountDetailModal } from './AccountDetailModal';
 import { DisconnectConfirmModal } from './DisconnectConfirmModal';
 
 export function UnifiedAccountsSection() {
+  const { preferences } = usePreferences();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -164,13 +174,19 @@ export function UnifiedAccountsSection() {
     name: string;
     type: string;
     entity: string;
+    starting_balance?: string;
   }) => {
     try {
       setLoading(true);
+      const balance =
+        form.starting_balance && !isNaN(Number(form.starting_balance))
+          ? Number(form.starting_balance)
+          : undefined;
       await transactionsApiService.createAccount({
         name: form.name,
         type: form.type,
         institution_slug: form.entity,
+        ...(balance !== undefined && { starting_balance: balance }),
       });
       await refresh();
       setShowCreate(false);
@@ -405,23 +421,34 @@ export function UnifiedAccountsSection() {
             </div>
           )}
 
-          {/* Bank Logo and Last 4 at Bottom */}
-          {!hasSpecificImage && (
-            <div className="flex justify-between items-end">
-              {account.account_number_last4 && (
-                <div className="text-xs text-white/80 font-mono drop-shadow-md">
-                  ····{account.account_number_last4}
-                </div>
-              )}
-              {bankLogo && (
-                <img
-                  src={bankLogo}
-                  alt={`${bank} logo`}
-                  className="w-8 h-8 object-contain drop-shadow-md relative z-10"
-                />
-              )}
-            </div>
-          )}
+          {/* Bottom row: last4 + logo (default card) or balance overlay (specific image) */}
+          <div className="flex justify-between items-end">
+            {hasSpecificImage ? (
+              /* Balance overlay for cards with specific artwork */
+              <div className="bg-black/40 backdrop-blur-sm rounded px-2 py-0.5">
+                <span className="text-xs font-bold text-white drop-shadow tabular-nums">
+                  {account.balance !== undefined && account.balance !== null
+                    ? formatCurrency(Math.abs(Number(account.balance)), preferences.currency, 0)
+                    : ''}
+                </span>
+              </div>
+            ) : (
+              <>
+                {account.account_number_last4 && (
+                  <div className="text-xs text-white/80 font-mono drop-shadow-md">
+                    ····{account.account_number_last4}
+                  </div>
+                )}
+              </>
+            )}
+            {!hasSpecificImage && bankLogo && (
+              <img
+                src={bankLogo}
+                alt={`${bank} logo`}
+                className="w-8 h-8 object-contain drop-shadow-md relative z-10"
+              />
+            )}
+          </div>
         </div>
       </button>
     );
@@ -468,20 +495,33 @@ export function UnifiedAccountsSection() {
             )}
           </div>
 
-          {/* Bank Logo in bottom-right */}
-          {entityLogo && (
-            <div className="flex justify-end mt-2">
+          {/* Balance + bank logo row */}
+          <div className="flex items-end justify-between mt-2">
+            {account.balance !== undefined && account.balance !== null ? (
+              <span
+                className={`text-sm font-bold tabular-nums ${
+                  Number(account.balance) >= 0 ? 'text-green-600' : 'text-red-500'
+                }`}
+              >
+                {formatCurrency(Number(account.balance), preferences.currency, 0)}
+              </span>
+            ) : (
+              <span />
+            )}
+            {entityLogo && (
               <img
                 src={entityLogo}
                 alt={`${account.institution_name || entity} logo`}
                 className="w-8 h-8 object-contain opacity-70 group-hover:opacity-100 transition-opacity"
               />
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </button>
     );
   };
+
+  const connectedCount = accounts.filter(a => a.has_connection).length;
 
   return (
     <Card>
@@ -496,48 +536,58 @@ export function UnifiedAccountsSection() {
               Manage your bank accounts and credit cards
             </CardDescription>
           </div>
-          <div className="flex gap-2">
-            {/* Sync All Button */}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleSyncAll}
-              disabled={
-                syncStatus?.is_syncing ||
-                accounts.filter(a => a.has_connection).length === 0
-              }
-            >
-              {syncStatus?.is_syncing ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Syncing...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Sync All
-                </>
-              )}
-            </Button>
-            {isPlaidAvailable && (
+          <div className="flex items-center gap-2">
+            {/* Sync All — only visible once at least one connected account exists */}
+            {connectedCount > 0 && (
               <Button
                 type="button"
-                variant="outline"
-                onClick={handleConnectPlaid}
-                disabled={isConnecting}
+                variant="ghost"
+                size="sm"
+                onClick={handleSyncAll}
+                disabled={syncStatus?.is_syncing}
+                title="Sync all connected accounts"
               >
-                <Building2 className="h-4 w-4 mr-2" />
-                {isConnecting ? 'Connecting...' : 'Connect Bank'}
+                {syncStatus?.is_syncing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                <span className="ml-2 hidden sm:inline">
+                  {syncStatus?.is_syncing ? 'Syncing…' : 'Sync All'}
+                </span>
               </Button>
             )}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowCreate(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Manual
-            </Button>
+
+            {/* Add Account dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Account
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {isPlaidAvailable ? (
+                  <DropdownMenuItem
+                    onClick={handleConnectPlaid}
+                    disabled={isConnecting}
+                  >
+                    <Building2 className="h-4 w-4 mr-2" />
+                    {isConnecting ? 'Connecting…' : 'Connect Bank'}
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem disabled>
+                    <Building2 className="h-4 w-4 mr-2 opacity-40" />
+                    <span className="opacity-40">Connect Bank</span>
+                    <span className="ml-2 text-xs text-muted-foreground">(unavailable)</span>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => setShowCreate(true)}>
+                  <PenLine className="h-4 w-4 mr-2" />
+                  Add Manually
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </CardHeader>
@@ -549,8 +599,38 @@ export function UnifiedAccountsSection() {
             <LoadingSpinner />
           </div>
         ) : accounts.length === 0 ? (
-          <div className="text-sm text-muted-foreground">
-            No accounts yet. Connect a bank or add an account manually.
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
+            {/* Connect Bank CTA */}
+            <button
+              type="button"
+              onClick={isPlaidAvailable ? handleConnectPlaid : undefined}
+              disabled={!isPlaidAvailable || isConnecting}
+              className="group rounded-xl border-2 border-dashed border-muted-foreground/20 p-6 text-left transition-all hover:border-primary/40 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Building2 className="h-8 w-8 mb-3 text-primary/70 group-hover:text-primary transition-colors" />
+              <p className="font-medium mb-1">Connect Bank</p>
+              <p className="text-sm text-muted-foreground">
+                Sync transactions automatically from your bank or credit card.
+              </p>
+              {!isPlaidAvailable && (
+                <p className="text-xs text-muted-foreground mt-2 italic">
+                  Bank connection unavailable in this environment.
+                </p>
+              )}
+            </button>
+
+            {/* Add Manually CTA */}
+            <button
+              type="button"
+              onClick={() => setShowCreate(true)}
+              className="group rounded-xl border-2 border-dashed border-muted-foreground/20 p-6 text-left transition-all hover:border-primary/40 hover:bg-primary/5"
+            >
+              <PenLine className="h-8 w-8 mb-3 text-primary/70 group-hover:text-primary transition-colors" />
+              <p className="font-medium mb-1">Add Manually</p>
+              <p className="text-sm text-muted-foreground">
+                Track an account manually by entering balances yourself.
+              </p>
+            </button>
           </div>
         ) : (
           <>
