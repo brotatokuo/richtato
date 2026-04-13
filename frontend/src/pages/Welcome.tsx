@@ -268,7 +268,6 @@ export function Welcome() {
               <p className="text-destructive text-center">{loginError}</p>
             </div>
           )}
-
         </div>
 
         {/* Scroll indicator */}
