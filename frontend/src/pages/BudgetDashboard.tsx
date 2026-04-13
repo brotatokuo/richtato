@@ -4,6 +4,7 @@ import { BudgetTrendsChart } from '@/components/budget_dashboard/BudgetTrendsCha
 import { ExpenseBreakdown } from '@/components/budget_dashboard/ExpenseBreakdown';
 import { ExpenseDetailModal } from '@/components/budget_dashboard/ExpenseDetailModal';
 import { MonthTimeline } from '@/components/budget_dashboard/MonthTimeline';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
@@ -11,20 +12,31 @@ import {
   BudgetDateRangeProvider,
   useBudgetDateRange,
 } from '@/contexts/BudgetDateRangeContext';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import {
   budgetDashboardApiService,
   type MonthlyBudgetData,
 } from '@/lib/api/budget-dashboard';
+import { transactionsApiService } from '@/lib/api/transactions';
+import { categorySettingsApi } from '@/lib/api/user';
+import { formatCurrency } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import {
   AlertTriangle,
+  ArrowDown,
+  ArrowUpDown,
   CalendarDays,
+  DollarSign,
   Gauge,
   Pencil,
   Percent,
+  PiggyBank,
   TrendingUp,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+
+type SortOption = 'default' | 'over-first' | 'name' | 'spent';
 
 export function Dashboard() {
   return (
@@ -36,6 +48,7 @@ export function Dashboard() {
 
 function DashboardContent() {
   const { setRange } = useBudgetDateRange();
+  const { preferences } = usePreferences();
   const [monthlyData, setMonthlyData] = useState<MonthlyBudgetData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,13 +59,13 @@ function DashboardContent() {
     useState<MonthlyBudgetData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const lastFetchRef = useRef<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortOption>('default');
+  const [monthlyIncome, setMonthlyIncome] = useState<number>(0);
 
-  // Year and month state for the picker
   const now = new Date();
   const [year, setYear] = useState<number>(now.getFullYear());
   const [month, setMonth] = useState<number>(now.getMonth() + 1);
 
-  // Calculate aggregate KPIs from monthly data
   const currentMonthData =
     monthlyData.length > 0 ? monthlyData[monthlyData.length - 1] : null;
 
@@ -84,7 +97,6 @@ function DashboardContent() {
 
       setMonthlyData(multiMonthData.monthly_data);
 
-      // Set the date range context to current month for expense breakdown
       if (multiMonthData.monthly_data.length > 0) {
         const current =
           multiMonthData.monthly_data[multiMonthData.monthly_data.length - 1];
@@ -101,6 +113,22 @@ function DashboardContent() {
     }
   }, [setRange]);
 
+  // Fetch income for the displayed month
+  useEffect(() => {
+    if (!displayedMonth) return;
+    transactionsApiService
+      .getTransactions({
+        startDate: displayedMonth.start_date,
+        endDate: displayedMonth.end_date,
+        type: 'credit',
+      })
+      .then(({ transactions }) => {
+        const income = transactions.reduce((sum, t) => sum + t.amount, 0);
+        setMonthlyIncome(income);
+      })
+      .catch(() => setMonthlyIncome(0));
+  }, [displayedMonth]);
+
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
@@ -109,7 +137,6 @@ function DashboardContent() {
     setSelectedMonth(month);
     setDisplayedMonth(month);
     setIsModalOpen(true);
-    // Update date range context for expense breakdown
     setRange({
       startDate: month.start_date,
       endDate: month.end_date,
@@ -121,12 +148,10 @@ function DashboardContent() {
     setSelectedMonth(null);
   };
 
-  // Handle year/month change from picker
   const handleDateChange = (newYear: number, newMonth: number) => {
     setYear(newYear);
     setMonth(newMonth);
 
-    // Find the corresponding month in our data
     const found = monthlyData.find(
       m => m.year === newYear && m.month === newMonth
     );
@@ -140,7 +165,36 @@ function DashboardContent() {
     }
   };
 
-  // Sync picker state when displayedMonth changes (e.g., from timeline click)
+  const handleEditBudget = async (categoryName: string, newAmount: number) => {
+    const catalogRes = await categorySettingsApi.getCatalog();
+    const cat = catalogRes.categories.find(
+      c =>
+        c.display === categoryName ||
+        c.name === categoryName.toLowerCase().replace(/\s+/g, '-')
+    );
+    if (!cat) return;
+
+    await categorySettingsApi.updateSettings({
+      enabled: catalogRes.categories.map(c => c.name),
+      disabled: [],
+      budgets: {
+        [cat.name]: {
+          amount: newAmount,
+          start_date:
+            displayedMonth?.start_date ??
+            new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+              .toISOString()
+              .slice(0, 10),
+          end_date: null,
+        },
+      },
+    });
+
+    // Refresh data
+    lastFetchRef.current = null;
+    await loadDashboardData();
+  };
+
   useEffect(() => {
     if (displayedMonth) {
       setYear(displayedMonth.year);
@@ -176,7 +230,32 @@ function DashboardContent() {
     );
   }
 
-  // Convert displayedMonth categories to the format expected by BudgetBreakdownChart
+  // Empty state
+  if (monthlyData.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="text-center max-w-md space-y-4">
+          <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+            <PiggyBank className="h-8 w-8 text-primary" />
+          </div>
+          <h2 className="text-xl font-semibold text-foreground">
+            No budgets set up yet
+          </h2>
+          <p className="text-muted-foreground">
+            Create budgets for your expense categories to start tracking your
+            spending. You&apos;ll see progress charts, trends, and alerts here.
+          </p>
+          <Link to="/setup?tab=budgets">
+            <Button className="mt-2">
+              <PiggyBank className="h-4 w-4 mr-2" />
+              Set Up Budgets
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const budgetProgress = displayedMonth
     ? displayedMonth.categories.map(cat => ({
         category: cat.category,
@@ -189,27 +268,165 @@ function DashboardContent() {
       }))
     : [];
 
+  const totalBudget = displayedMonth?.total_budget ?? 0;
+  const totalSpent = displayedMonth?.total_spent ?? 0;
+  const leftToBudget = monthlyIncome - totalBudget;
+
+  // Budget alerts
+  const overBudgetCategories = displayedMonth
+    ? displayedMonth.categories.filter(c => c.percentage > 100)
+    : [];
+  const warningCategories = displayedMonth
+    ? displayedMonth.categories.filter(
+        c => c.percentage > 80 && c.percentage <= 100
+      )
+    : [];
+
+  // Spending projection
+  const daysInMonth = displayedMonth
+    ? new Date(displayedMonth.year, displayedMonth.month, 0).getDate()
+    : 30;
+  const currentDay = Math.min(now.getDate(), daysInMonth);
+  const isCurrentMonth =
+    displayedMonth?.year === now.getFullYear() &&
+    displayedMonth?.month === now.getMonth() + 1;
+  const projectedSpend =
+    isCurrentMonth && currentDay > 0
+      ? Math.round((totalSpent / currentDay) * daysInMonth)
+      : totalSpent;
+
+  const sortOptions: { value: SortOption; label: string }[] = [
+    { value: 'default', label: 'Default' },
+    { value: 'over-first', label: 'Over budget first' },
+    { value: 'name', label: 'Name A-Z' },
+    { value: 'spent', label: 'Most spent' },
+  ];
+
   return (
     <div className="space-y-6 w-full max-w-full overflow-hidden">
-      {/* Month/Year Picker + Edit Budgets shortcut */}
+      {/* Header row */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <MonthYearPicker
           year={year}
           month={month}
           onChange={handleDateChange}
         />
-        <Link
-          to="/setup?tab=budgets"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-          Edit Budgets
-        </Link>
+        <div className="flex items-center gap-3">
+          {/* Sort dropdown */}
+          <div className="relative">
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as SortOption)}
+              className="appearance-none text-sm bg-transparent border border-border rounded-md px-3 py-1.5 pr-7 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+            >
+              {sortOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <ArrowUpDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+          </div>
+          <Link
+            to="/setup?tab=budgets"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Edit Budgets
+          </Link>
+        </div>
       </div>
 
-      {/* Selected Month Budget Breakdown - At the Top */}
+      {/* Budget alerts banner */}
+      {(overBudgetCategories.length > 0 || warningCategories.length > 0) && (
+        <div
+          className={cn(
+            'rounded-lg border p-3 text-sm flex items-start gap-2',
+            overBudgetCategories.length > 0
+              ? 'border-destructive/50 bg-destructive/5 text-destructive'
+              : 'border-amber-500/50 bg-amber-500/5 text-amber-700 dark:text-amber-400'
+          )}
+        >
+          <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <div>
+            {overBudgetCategories.length > 0 && (
+              <span className="font-medium">
+                {overBudgetCategories.length}{' '}
+                {overBudgetCategories.length === 1
+                  ? 'category is'
+                  : 'categories are'}{' '}
+                over budget
+                {overBudgetCategories.length <= 3 &&
+                  `: ${overBudgetCategories.map(c => c.category).join(', ')}`}
+                .{' '}
+              </span>
+            )}
+            {warningCategories.length > 0 && (
+              <span>
+                {warningCategories.length} approaching limit (&gt;80%).
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Income context bar */}
+      <Card>
+        <CardContent className="py-3 px-4">
+          <div className="flex items-center justify-between flex-wrap gap-x-6 gap-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-emerald-500" />
+              <span className="text-muted-foreground">Income</span>
+              <span className="font-semibold text-foreground">
+                {formatCurrency(monthlyIncome, preferences.currency)}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ArrowDown className="h-4 w-4 text-blue-500" />
+              <span className="text-muted-foreground">Budgeted</span>
+              <span className="font-semibold text-foreground">
+                {formatCurrency(totalBudget, preferences.currency)}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <PiggyBank className="h-4 w-4 text-primary" />
+              <span className="text-muted-foreground">Left to budget</span>
+              <span
+                className={cn(
+                  'font-semibold',
+                  leftToBudget < 0 ? 'text-destructive' : 'text-emerald-600'
+                )}
+              >
+                {formatCurrency(leftToBudget, preferences.currency)}
+              </span>
+            </div>
+            {isCurrentMonth && (
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-amber-500" />
+                <span className="text-muted-foreground">Projected spend</span>
+                <span
+                  className={cn(
+                    'font-semibold',
+                    projectedSpend > totalBudget
+                      ? 'text-destructive'
+                      : 'text-foreground'
+                  )}
+                >
+                  {formatCurrency(projectedSpend, preferences.currency)}
+                </span>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Budget Breakdown with inline editing */}
       <div className="w-full min-w-0">
-        <BudgetBreakdownChart progress={budgetProgress} />
+        <BudgetBreakdownChart
+          progress={budgetProgress}
+          onEditBudget={handleEditBudget}
+          sortBy={sortBy}
+        />
       </div>
 
       {/* Month Timeline */}
@@ -309,7 +526,7 @@ function DashboardContent() {
         <BudgetTrendsChart monthlyData={monthlyData} loading={loading} />
       </div>
 
-      {/* Expense Breakdown - shows data for selected/current month */}
+      {/* Expense Breakdown */}
       <div className="w-full min-w-0">
         <ExpenseBreakdown />
       </div>

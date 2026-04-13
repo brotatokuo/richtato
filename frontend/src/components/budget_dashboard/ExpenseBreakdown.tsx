@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useBudgetDateRange } from '@/contexts/BudgetDateRangeContext';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import { budgetDashboardApiService } from '@/lib/api/budget-dashboard';
+import { formatCurrency } from '@/lib/format';
 import { AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { PieWithDetailedLegend } from './PieWithDetailedLegend';
@@ -23,6 +25,7 @@ interface ExpenseCategory {
 
 export function ExpenseBreakdown() {
   const { startDate, endDate } = useBudgetDateRange();
+  const { preferences } = usePreferences();
   const [chartData, setChartData] = useState<{
     series: unknown[];
     [key: string]: unknown;
@@ -244,7 +247,7 @@ export function ExpenseBreakdown() {
                     {expense.percentage}%
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    ${expense.value.toLocaleString()}
+                    {formatCurrency(expense.value, preferences.currency)}
                   </div>
                 </div>
               </div>

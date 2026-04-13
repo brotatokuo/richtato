@@ -12,9 +12,11 @@ import { transactionsApiService } from '@/lib/api/transactions';
 import { CategoryCatalogItem, categorySettingsApi } from '@/lib/api/user';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { PiggyBank, Search } from 'lucide-react';
+import { ArrowUpDown, PiggyBank, Search } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { BudgetModal } from './BudgetModal';
+
+type SortOption = 'default' | 'budgeted-first' | 'name' | 'spent';
 
 interface BudgetProgress {
   category: string;
@@ -33,8 +35,8 @@ export function BudgetsSection() {
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
 
-  // Search state
   const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('default');
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -88,12 +90,27 @@ export function BudgetsSection() {
     };
   });
 
-  // Search filter
-  const categoriesWithProgress = allCategoriesWithProgress.filter(
+  const filteredCategories = allCategoriesWithProgress.filter(
     cat =>
       search.trim() === '' ||
       cat.display.toLowerCase().includes(search.toLowerCase())
   );
+
+  const categoriesWithProgress = [...filteredCategories].sort((a, b) => {
+    switch (sortBy) {
+      case 'budgeted-first': {
+        const aHas = a.budget != null && a.budget.amount > 0 ? 1 : 0;
+        const bHas = b.budget != null && b.budget.amount > 0 ? 1 : 0;
+        return bHas - aHas;
+      }
+      case 'name':
+        return a.display.localeCompare(b.display);
+      case 'spent':
+        return b.spent - a.spent;
+      default:
+        return 0;
+    }
+  });
 
   // Total monthly budget summary
   const budgetedCategories = allCategoriesWithProgress.filter(
@@ -113,6 +130,8 @@ export function BudgetsSection() {
     amount: number;
     start_date: string;
     end_date: string | null;
+    rollover_enabled?: boolean;
+    period_type?: string;
   }) => {
     if (!selectedCategory) return;
 
@@ -128,7 +147,6 @@ export function BudgetsSection() {
       },
     });
 
-    // Refresh data
     await fetchData();
   };
 
@@ -139,7 +157,7 @@ export function BudgetsSection() {
       enabled: catalog.map(c => c.name),
       disabled: [],
       budgets: {
-        [selectedCategory.name]: { amount: null },
+        [selectedCategory.name]: null,
       },
     });
 
@@ -193,14 +211,29 @@ export function BudgetsSection() {
             </div>
           )}
           {expenseCategories.length > 0 && (
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input
-                placeholder="Search categories…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="pl-9"
-              />
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  placeholder="Search categories…"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="relative">
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value as SortOption)}
+                  className="appearance-none h-9 text-sm bg-transparent border border-input rounded-md px-3 pr-7 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                >
+                  <option value="default">Default</option>
+                  <option value="budgeted-first">Budgeted first</option>
+                  <option value="name">Name A-Z</option>
+                  <option value="spent">Most spent</option>
+                </select>
+                <ArrowUpDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+              </div>
             </div>
           )}
           {categoriesWithProgress.length === 0 && search.trim() !== '' && (

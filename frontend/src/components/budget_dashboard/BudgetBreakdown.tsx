@@ -34,8 +34,12 @@ const getCSSValue = (property: string) => {
     .trim();
 };
 
+type SortOption = 'default' | 'over-first' | 'name' | 'spent';
+
 export function BudgetDashboard({
   progress,
+  onEditBudget,
+  sortBy = 'default',
 }: {
   progress?: Array<{
     category: string;
@@ -46,6 +50,8 @@ export function BudgetDashboard({
     year: number;
     month: number;
   }>;
+  onEditBudget?: (categoryName: string, newAmount: number) => Promise<void>;
+  sortBy?: SortOption;
 }) {
   const { preferences } = usePreferences();
   const { startDate, endDate } = useBudgetDateRange();
@@ -358,7 +364,13 @@ export function BudgetDashboard({
         centerPrimary={`${overallPercentage}%`}
         centerSecondaryLabel="Used"
         centerTertiaryLabel={`${formatCurrency(totalSpent, preferences.currency)} / ${formatCurrency(totalBudget, preferences.currency)}`}
-        legend={<CategoryBreakdown categories={budgetCategories} />}
+        legend={
+          <CategoryBreakdown
+            categories={budgetCategories}
+            sortBy={sortBy}
+            onEditBudget={onEditBudget}
+          />
+        }
         height="20rem"
       />
     </div>

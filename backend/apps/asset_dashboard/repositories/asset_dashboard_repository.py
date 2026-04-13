@@ -1,5 +1,7 @@
 """Repository for Asset Dashboard data aggregation queries."""
 
+import bisect
+from collections import defaultdict
 from datetime import date
 from decimal import Decimal
 
@@ -108,8 +110,10 @@ class AssetDashboardRepository:
 
         Returns list of {date, networth, assets, liabilities} for each date
         where we have balance history records.
+
+        Uses bulk queries to avoid N+1: fetches all account history in 2 DB
+        queries, then resolves "balance at date" in Python via binary search.
         """
-        # Calculate date range based on period
         end_date = date.today()
         if period == "1m":
             start_date = end_date - relativedelta(months=1)
@@ -124,32 +128,59 @@ class AssetDashboardRepository:
         else:
             start_date = end_date - relativedelta(months=6)
 
-        # Get all user accounts
-        asset_accounts = self.get_user_asset_accounts(user)
-        liability_accounts = self.get_user_liability_accounts(user)
+        # Single query for all active accounts
+        all_accounts = list(FinancialAccount.objects.filter(user=user, is_active=True).values("id", "balance", "is_liability"))
+        if not all_accounts:
+            return []
 
-        # Get all balance history entries
-        balance_query = AccountBalanceHistory.objects.filter(account__user=user).order_by("date")
+        account_ids = [a["id"] for a in all_accounts]
+        account_defaults = {a["id"]: a["balance"] for a in all_accounts}
 
-        if start_date:
-            balance_query = balance_query.filter(date__gte=start_date)
+        # Single query for all balance history up to end_date.
+        # We intentionally fetch records older than start_date too so that
+        # "balance at start of period" correctly resolves to the last known
+        # balance before the window, rather than falling back to current balance.
+        all_history_qs = (
+            AccountBalanceHistory.objects.filter(account_id__in=account_ids, date__lte=end_date)
+            .order_by("account_id", "date")
+            .values("account_id", "date", "balance")
+        )
 
-        balance_query = balance_query.filter(date__lte=end_date)
+        # Build per-account sorted lists for binary-search lookups
+        account_dates: dict[int, list] = defaultdict(list)
+        account_balances: dict[int, list] = defaultdict(list)
+        for entry in all_history_qs:
+            aid = entry["account_id"]
+            account_dates[aid].append(entry["date"])
+            account_balances[aid].append(entry["balance"])
 
-        # Get unique dates from balance history
-        unique_dates = balance_query.values_list("date", flat=True).distinct().order_by("date")
+        def balance_at_date(account_id: int, target_date: date) -> Decimal:
+            dates = account_dates.get(account_id)
+            if not dates:
+                return account_defaults[account_id]
+            idx = bisect.bisect_right(dates, target_date) - 1
+            if idx < 0:
+                return account_defaults[account_id]
+            return account_balances[account_id][idx]
 
-        # For each date, calculate total assets and liabilities
+        # Unique dates within the requested period only
+        all_dates_in_period = set()
+        for aid in account_ids:
+            for d in account_dates.get(aid, []):
+                if start_date is None or d >= start_date:
+                    all_dates_in_period.add(d)
+        unique_dates = sorted(all_dates_in_period)
+
         history = []
         for record_date in unique_dates:
             total_assets = Decimal("0")
-            for account in asset_accounts:
-                total_assets += self.get_balance_at_date(account, record_date)
-
-            # Liability balances are stored negative; show as positive for display
             total_liabilities = Decimal("0")
-            for account in liability_accounts:
-                total_liabilities += abs(self.get_balance_at_date(account, record_date))
+            for account in all_accounts:
+                bal = balance_at_date(account["id"], record_date)
+                if account["is_liability"]:
+                    total_liabilities += abs(bal)
+                else:
+                    total_assets += bal
 
             history.append(
                 {
