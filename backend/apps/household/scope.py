@@ -9,7 +9,8 @@ def get_scope_user_ids(request) -> list[int]:
     - ``personal`` (default): only the requesting user
     - ``household``: all members of the user's household (falls back to personal)
     """
-    scope = request.query_params.get("scope", "personal")
+    params = getattr(request, "query_params", request.GET)
+    scope = params.get("scope", "personal")
     if scope == "household":
         try:
             membership = HouseholdMember.objects.select_related("household").get(user=request.user)
