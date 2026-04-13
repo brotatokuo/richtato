@@ -16,7 +16,6 @@ import {
   Settings as SettingsIcon,
   SlidersHorizontal,
   Table,
-  TrendingUp,
   User,
   Wallet,
 } from 'lucide-react';
@@ -24,14 +23,13 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const primaryTabs = [
-  { name: 'Report', href: '/report', icon: BarChart3 },
+  { name: 'Dashboard', href: '/report', icon: BarChart3 },
   { name: 'Budget', href: '/budget', icon: Wallet },
-  { name: 'Cashflow', href: '/cashflow', icon: TrendingUp },
-  { name: 'Assets', href: '/assets', icon: PieChart },
+  { name: 'Accounts', href: '/accounts', icon: PieChart },
 ];
 
 const secondaryItems = [
-  { name: 'Data', href: '/data', icon: Table },
+  { name: 'Transactions', href: '/transactions', icon: Table },
   { name: 'Setup', href: '/setup', icon: SlidersHorizontal },
   { name: 'Preferences', href: '/preferences', icon: SettingsIcon },
   { name: 'Profile', href: '/profile', icon: User },
@@ -122,7 +120,7 @@ export function MobileBottomNav() {
                   location.pathname === item.href ||
                   location.pathname.startsWith(`${item.href}/`);
                 const Icon = item.icon;
-                const isDataPage = item.href === '/data';
+                const isDataPage = item.href === '/transactions';
 
                 return (
                   <button

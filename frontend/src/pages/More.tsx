@@ -6,7 +6,6 @@ import {
   LogOut,
   Settings as SettingsIcon,
   SlidersHorizontal,
-  TrendingUp,
   User,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -112,10 +111,6 @@ export function More() {
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
       </Link>
-
-      <Section title="Navigation">
-        <MenuRow href="/cashflow" icon={TrendingUp} label="Cashflow" />
-      </Section>
 
       <Section title="Settings">
         <MenuRow href="/setup" icon={SlidersHorizontal} label="Setup" />

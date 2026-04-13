@@ -514,7 +514,7 @@ export function AccountDetailPanel({
             Recent Transactions
           </p>
           <button
-            onClick={() => navigate(`/data?account=${account.id}`)}
+            onClick={() => navigate(`/transactions?account=${account.id}`)}
             className="text-xs text-primary hover:underline flex items-center gap-1"
           >
             View all

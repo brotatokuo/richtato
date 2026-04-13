@@ -11,21 +11,14 @@ import {
 import { Link, useLocation } from 'react-router-dom';
 
 const primaryTabs = [
-  { name: 'Report', href: '/report', icon: BarChart3 },
+  { name: 'Dashboard', href: '/report', icon: BarChart3 },
   { name: 'Accounts', href: '/accounts', icon: Landmark },
   { name: 'Budget', href: '/budget', icon: Wallet },
-  { name: 'Data', href: '/data', icon: Table },
+  { name: 'Transactions', href: '/transactions', icon: Table },
   { name: 'More', href: '/more', icon: MoreHorizontal },
 ];
 
-const moreRoutes = [
-  '/cashflow',
-  '/setup',
-  '/preferences',
-  '/profile',
-  '/formulas',
-  '/more',
-];
+const moreRoutes = ['/setup', '/preferences', '/profile', '/formulas', '/more'];
 
 export function BottomTabBar() {
   const location = useLocation();
@@ -49,7 +42,7 @@ export function BottomTabBar() {
             ? isMoreActive
             : location.pathname === tab.href ||
               location.pathname.startsWith(`${tab.href}/`);
-          const isData = tab.href === '/data';
+          const isData = tab.href === '/transactions';
           const isSyncing = isData && syncStatus?.is_syncing;
 
           return (

@@ -13,9 +13,6 @@ import { Welcome } from './pages/Welcome';
 const Dashboard = lazy(() =>
   import('./pages/BudgetDashboard').then(m => ({ default: m.Dashboard }))
 );
-const Cashflow = lazy(() =>
-  import('./pages/Cashflow').then(m => ({ default: m.Cashflow }))
-);
 const DataTable = lazy(() =>
   import('./pages/DataTable').then(m => ({ default: m.DataTable }))
 );
@@ -78,7 +75,7 @@ function App() {
                   }
                 />
                 <Route
-                  path="data"
+                  path="transactions"
                   element={
                     <Suspense fallback={null}>
                       <DataTable />
@@ -87,11 +84,7 @@ function App() {
                 />
                 <Route
                   path="cashflow"
-                  element={
-                    <Suspense fallback={null}>
-                      <Cashflow />
-                    </Suspense>
-                  }
+                  element={<Navigate to="/report" replace />}
                 />
                 <Route
                   path="report"

@@ -1,7 +1,5 @@
-import { MetricCard } from '@/components/asset_dashboard/MetricCard';
 import { BudgetDashboard as BudgetBreakdownChart } from '@/components/budget_dashboard/BudgetBreakdown';
 import { BudgetTrendsChart } from '@/components/budget_dashboard/BudgetTrendsChart';
-import { ExpenseBreakdown } from '@/components/budget_dashboard/ExpenseBreakdown';
 import { ExpenseDetailModal } from '@/components/budget_dashboard/ExpenseDetailModal';
 import { MonthTimeline } from '@/components/budget_dashboard/MonthTimeline';
 import { Button } from '@/components/ui/button';
@@ -28,9 +26,7 @@ import {
   ArrowUpDown,
   CalendarDays,
   DollarSign,
-  Gauge,
   Pencil,
-  Percent,
   PiggyBank,
   TrendingUp,
 } from 'lucide-react';
@@ -67,21 +63,6 @@ function DashboardContent() {
   const now = new Date();
   const [year, setYear] = useState<number>(now.getFullYear());
   const [month, setMonth] = useState<number>(now.getMonth() + 1);
-
-  const currentMonthData =
-    monthlyData.length > 0 ? monthlyData[monthlyData.length - 1] : null;
-
-  const aggregateStats = {
-    averageUtilization:
-      monthlyData.length > 0
-        ? Math.round(
-            monthlyData.reduce((sum, m) => sum + m.percentage, 0) /
-              monthlyData.length
-          )
-        : 0,
-    monthsOverBudget: monthlyData.filter(m => m.percentage > 100).length,
-    currentUtilization: currentMonthData?.percentage ?? 0,
-  };
 
   const loadDashboardData = useCallback(async () => {
     const fetchKey = `multi-month-12-${scope}`;
@@ -462,77 +443,9 @@ function DashboardContent() {
         </div>
       </div>
 
-      {/* KPI Summary Row */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 w-full min-w-0">
-        <MetricCard
-          title="Current Month"
-          value={`${aggregateStats.currentUtilization}%`}
-          subtitle={currentMonthData?.label ?? 'N/A'}
-          icon={<Gauge className="h-4 w-4" />}
-          info={
-            <div className="space-y-2">
-              <p className="text-foreground">
-                Budget utilization for the current month.
-              </p>
-              <p>Shows how much of this month&apos;s budget has been used.</p>
-            </div>
-          }
-        />
-
-        <MetricCard
-          title="12-Month Average"
-          value={`${aggregateStats.averageUtilization}%`}
-          subtitle="average utilization"
-          icon={<Percent className="h-4 w-4" />}
-          info={
-            <div className="space-y-2">
-              <p className="text-foreground">
-                Average budget utilization over the last 12 months.
-              </p>
-              <p>A lower average indicates better budget discipline.</p>
-            </div>
-          }
-        />
-
-        <MetricCard
-          title="Months Over Budget"
-          value={String(aggregateStats.monthsOverBudget)}
-          subtitle="in the last 12 months"
-          icon={<TrendingUp className="h-4 w-4" />}
-          info={
-            <div className="space-y-2">
-              <p className="text-foreground">
-                Number of months where spending exceeded the budget.
-              </p>
-              <p>Aim to keep this number as low as possible.</p>
-            </div>
-          }
-        />
-
-        <MetricCard
-          title="Months Tracked"
-          value={String(monthlyData.length)}
-          subtitle="with budget data"
-          icon={<CalendarDays className="h-4 w-4" />}
-          info={
-            <div className="space-y-2">
-              <p className="text-foreground">
-                Total months with budget tracking data.
-              </p>
-              <p>Click on any month in the timeline to view details.</p>
-            </div>
-          }
-        />
-      </div>
-
       {/* Budget Trends Chart */}
       <div className="w-full min-w-0">
         <BudgetTrendsChart monthlyData={monthlyData} loading={loading} />
-      </div>
-
-      {/* Expense Breakdown */}
-      <div className="w-full min-w-0">
-        <ExpenseBreakdown />
       </div>
 
       {/* Expense Detail Modal */}

@@ -16,7 +16,6 @@ import {
   Settings as SettingsIcon,
   SlidersHorizontal,
   Table,
-  TrendingUp,
   Wallet,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -46,16 +45,15 @@ export function Sidebar({
 
   const navigationItems: NavItem[] = useMemo(() => {
     const items: NavItem[] = [
-      { name: 'Report', href: '/report', icon: BarChart3 },
+      { name: 'Dashboard', href: '/report', icon: BarChart3 },
       { name: 'Accounts', href: '/accounts', icon: Landmark },
       { name: 'Budget', href: '/budget', icon: Wallet },
-      { name: 'Cashflow', href: '/cashflow', icon: TrendingUp },
     ];
     if (isInHousehold) {
       items.push({ name: 'Household', href: '/household', icon: Heart });
     }
     items.push(
-      { name: 'Data', href: '/data', icon: Table },
+      { name: 'Transactions', href: '/transactions', icon: Table },
       { name: 'Setup', href: '/setup', icon: SlidersHorizontal },
       { name: 'Preferences', href: '/preferences', icon: SettingsIcon },
       { name: 'Formulas', href: '/formulas', icon: Calculator }
@@ -127,7 +125,7 @@ export function Sidebar({
           const Icon = item.icon;
 
           // Show sync indicator and badge on Data page
-          const isDataPage = item.href === '/data';
+          const isDataPage = item.href === '/transactions';
           const isSyncing = isDataPage && syncStatus?.is_syncing;
           const newTransactionCount =
             isDataPage && syncStatus?.new_transaction_count

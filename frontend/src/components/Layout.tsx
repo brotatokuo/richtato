@@ -5,6 +5,7 @@ import {
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import {
   BarChart3,
+  Calculator,
   CloudUpload,
   Heart,
   Landmark,
@@ -12,7 +13,6 @@ import {
   Settings,
   SlidersHorizontal,
   Table,
-  TrendingUp,
   Wallet,
 } from 'lucide-react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
@@ -28,15 +28,15 @@ const routeConfig: Record<
 > = {
   '/accounts': { title: 'Accounts', icon: Landmark },
   '/budget': { title: 'Budget', icon: Wallet },
-  '/data': { title: 'Data', icon: Table },
-  '/cashflow': { title: 'Cashflow', icon: TrendingUp },
-  '/report': { title: 'Report', icon: BarChart3 },
+  '/transactions': { title: 'Transactions', icon: Table },
+  '/report': { title: 'Dashboard', icon: BarChart3 },
   '/upload': { title: 'Upload', icon: CloudUpload },
   '/preferences': { title: 'Preferences', icon: Settings },
   '/setup': { title: 'Setup', icon: SlidersHorizontal },
   '/settings': { title: 'Settings', icon: Settings },
   '/more': { title: 'More', icon: MoreHorizontal },
   '/household': { title: 'Household', icon: Heart },
+  '/formulas': { title: 'Formulas', icon: Calculator },
 };
 
 export function Layout() {

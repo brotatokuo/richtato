@@ -1,0 +1,41 @@
+---
+description: Enforce complete route registration when adding new pages
+globs: frontend/src/App.tsx,frontend/src/components/Layout.tsx,frontend/src/components/Sidebar.tsx,frontend/src/components/BottomTabBar.tsx,frontend/src/pages/More.tsx
+alwaysApply: false
+---
+
+# Route Registration Checklist
+
+Every new route in this app requires updates in **all four places**. Missing any one causes a broken header title, missing nav link, or invisible page.
+
+## The Four Places
+
+| File | What to add |
+|------|-------------|
+| `App.tsx` | `<Route path="..." element={...} />` inside the Layout |
+| `Layout.tsx` `routeConfig` | `'/path': { title: 'Page Title', icon: IconComponent }` |
+| `Sidebar.tsx` `navigationItems` | `{ name: '...', href: '/path', icon: IconComponent }` |
+| `BottomTabBar.tsx` or `More.tsx` | Tab entry or `<MenuRow>` link for mobile nav |
+
+## Example
+
+Adding a new `/goals` page:
+
+```tsx
+// App.tsx
+const Goals = lazy(() => import('./pages/Goals').then(m => ({ default: m.Goals })));
+<Route path="goals" element={<Suspense fallback={null}><Goals /></Suspense>} />
+
+// Layout.tsx routeConfig
+'/goals': { title: 'Goals', icon: Target },
+
+// Sidebar.tsx navigationItems
+{ name: 'Goals', href: '/goals', icon: Target }
+
+// More.tsx (mobile) or BottomTabBar.tsx
+<MenuRow href="/goals" icon={Target} label="Goals" />
+```
+
+## Rule
+
+When adding or renaming a route, always update all four locations before finishing. The `routeConfig` in `Layout.tsx` drives the page header — if it's missing, the header silently falls back to "Dashboard".

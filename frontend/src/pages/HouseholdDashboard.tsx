@@ -302,7 +302,7 @@ export function HouseholdDashboard() {
                   Recent Shared Transactions
                 </CardTitle>
                 <Link
-                  to="/data"
+                  to="/transactions"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   View all

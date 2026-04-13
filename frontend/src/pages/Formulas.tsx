@@ -142,7 +142,7 @@ export function Formulas() {
               'The time window is configurable: 30d, 60d, 90d, 6 months, or 1 year.',
               'Transfers (e.g. credit card payments) are excluded to prevent double-counting.',
             ]}
-            usedOn={['Accounts', 'Household', 'Cashflow']}
+            usedOn={['Accounts', 'Household', 'Dashboard']}
           />
 
           <FormulaCard
@@ -174,14 +174,14 @@ export function Formulas() {
           />
 
           <FormulaCard
-            title="Net Savings (Cashflow Page)"
+            title="Net Savings (Dashboard)"
             icon={<Wallet className="h-4 w-4 text-primary" />}
             formula="Net Savings = Income − Expenses − Investments"
-            description="Same formula as Net Cash Flow, applied to the month you select on the Cashflow page. Broken down by category for detailed analysis."
+            description="Same formula as Net Cash Flow, shown on the Dashboard in monthly mode. Broken down by category in the Sankey and breakdown table."
             details={[
               'Income, expenses, and investments are grouped by category for the Sankey / breakdown charts.',
             ]}
-            usedOn={['Cashflow']}
+            usedOn={['Dashboard']}
           />
 
           <FormulaCard
@@ -225,8 +225,8 @@ export function Formulas() {
               across all metrics.
             </li>
             <li>
-              All surfaces &mdash; Accounts, Household, Cashflow, and Report
-              &mdash; now use the same category-type filters, so you should see
+              All surfaces &mdash; Accounts, Household, and Dashboard &mdash;
+              now use the same category-type filters, so you should see
               consistent numbers everywhere.
             </li>
             <li>
