@@ -497,7 +497,7 @@ export function UnifiedAccountsSection() {
               {account.shared_with_household && (
                 <Users
                   className="h-3 w-3 text-primary shrink-0"
-                  title="Shared with household"
+                  aria-label="Shared with household"
                 />
               )}
             </div>
