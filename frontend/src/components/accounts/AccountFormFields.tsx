@@ -90,7 +90,6 @@ export function AccountFormFields({
               id={`${idPrefix}-balance`}
               type="number"
               step="0.01"
-              min="0"
               placeholder="0.00"
               value={form.starting_balance ?? ''}
               onChange={e => onChange('starting_balance', e.target.value)}

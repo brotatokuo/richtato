@@ -32,6 +32,24 @@ class FinancialAccountRepository:
             queryset = queryset.filter(is_active=is_active)
         return list(queryset.all())
 
+    def get_by_user_ids_shared(
+        self,
+        user_ids: list[int],
+        is_active: bool | None = None,
+    ) -> list[FinancialAccount]:
+        """Get shared accounts for multiple users (household scope)."""
+        queryset = (
+            FinancialAccount.objects.filter(
+                user_id__in=user_ids,
+                shared_with_household=True,
+            )
+            .select_related("institution", "user")
+            .prefetch_related("sync_connections")
+        )
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active)
+        return list(queryset.all())
+
     def get_by_type(self, user: User, account_type: str, is_active: bool = True) -> list[FinancialAccount]:
         """Get accounts by type for a user."""
         return list(

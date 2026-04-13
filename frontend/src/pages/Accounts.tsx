@@ -7,17 +7,19 @@ import { AccountBreakdownChart } from '@/components/asset_dashboard/AccountBreak
 import { MetricCard } from '@/components/asset_dashboard/MetricCard';
 import { NetWorthTrendChart } from '@/components/asset_dashboard/NetWorthTrendChart';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import {
   AssetDashboardData,
   assetDashboardApiService,
 } from '@/lib/api/asset-dashboard';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatPeriodLabel } from '@/lib/format';
 import { PiggyBank, TrendingUp, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export function Accounts() {
   const { preferences } = usePreferences();
+  const { scope } = useHousehold();
   const [selectedAccount, setSelectedAccount] =
     useState<AccountWithBalance | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -42,7 +44,7 @@ export function Accounts() {
         setMetricsLoading(true);
         setMetricsError(null);
         const dashboardMetrics =
-          await assetDashboardApiService.getDashboardMetrics();
+          await assetDashboardApiService.getDashboardMetrics({ scope });
         setDashboardData(dashboardMetrics);
       } catch (err) {
         setMetricsError(
@@ -54,11 +56,9 @@ export function Accounts() {
     };
 
     loadDashboardData();
-  }, []);
+  }, [scope]);
 
-  const netCashFlow = dashboardData
-    ? dashboardData.income_sum - dashboardData.expense_sum
-    : 0;
+  const netCashFlow = dashboardData ? dashboardData.net_cashflow : 0;
 
   return (
     <div className="space-y-4">
@@ -136,7 +136,7 @@ export function Accounts() {
             </div>
 
             <MetricCard
-              title="Savings Rate (30d)"
+              title={`Savings Rate (${formatPeriodLabel(dashboardData.period)})`}
               value={dashboardData.savings_rate}
               subtitle={dashboardData.savings_rate_context}
               icon={<PiggyBank className="h-4 w-4" />}
@@ -150,7 +150,7 @@ export function Accounts() {
             />
 
             <MetricCard
-              title="Net Cash Flow (30d)"
+              title={`Net Cash Flow (${formatPeriodLabel(dashboardData.period)})`}
               value={formatCurrency(netCashFlow, preferences.currency, 0)}
               subtitle={`Inflow ${formatCurrency(dashboardData.income_sum, preferences.currency, 0)} • Outflow ${formatCurrency(dashboardData.expense_sum, preferences.currency, 0)}`}
               icon={<Wallet className="h-4 w-4" />}

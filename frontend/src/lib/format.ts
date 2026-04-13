@@ -104,3 +104,15 @@ export function formatSignedCurrency(
 
   return `${sign}${formatCurrency(Math.abs(numAmount), currency)}`;
 }
+
+const PERIOD_LABELS: Record<string, string> = {
+  '30d': '30d',
+  '60d': '60d',
+  '90d': '90d',
+  '6m': '6mo',
+  '1y': '1yr',
+};
+
+export function formatPeriodLabel(period: string): string {
+  return PERIOD_LABELS[period] ?? period;
+}

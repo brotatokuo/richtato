@@ -40,7 +40,11 @@ export interface CategorySettingsPayload {
   disabled: string[];
   budgets?: Record<
     string,
-    { amount: number | null; start_date?: string; end_date?: string | null }
+    {
+      amount: number | null;
+      start_date?: string;
+      end_date?: string | null;
+    } | null
   >;
   category_types?: Record<string, CategoryType>;
 }

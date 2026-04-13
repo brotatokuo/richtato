@@ -24,6 +24,8 @@ from .services.annual_analysis_service import AnnualAnalysisService
 def expense_categories_data(request):
     """Get expense breakdown by category - delegates to service layer."""
     try:
+        from apps.household.scope import get_scope_user_ids
+
         year = request.GET.get("year")
         month = request.GET.get("month")
 
@@ -35,10 +37,15 @@ def expense_categories_data(request):
         year_int = int(year) if year else None
         month_int = int(month) if month else None
 
+        scope = request.GET.get("scope", "personal")
+        user_ids = get_scope_user_ids(request) if scope == "household" else None
+
         repo = BudgetDashboardRepository()
         service = BudgetDashboardService(repo)
 
-        data = service.get_expense_categories_data(request.user, start_date, end_date, year_int, month_int)
+        data = service.get_expense_categories_data(
+            request.user, start_date, end_date, year_int, month_int, user_ids=user_ids
+        )
         return JsonResponse(data)
 
     except Exception as e:
@@ -160,6 +167,8 @@ def expense_years(request):
 def budget_progress_multi_month(request):
     """Get budget progress for multiple months - delegates to service layer."""
     try:
+        from apps.household.scope import get_scope_user_ids
+
         # Extract parameters
         months_param = request.GET.get("months", "12")
         try:
@@ -171,12 +180,15 @@ def budget_progress_multi_month(request):
         except (TypeError, ValueError):
             months = 12
 
+        scope = request.GET.get("scope", "personal")
+        user_ids = get_scope_user_ids(request) if scope == "household" else None
+
         # Inject dependencies and delegate to service
         repo = BudgetDashboardRepository()
         service = BudgetDashboardService(repo)
 
         # Delegate to service
-        result = service.get_budget_progress_multi_month(request.user, months=months)
+        result = service.get_budget_progress_multi_month(request.user, months=months, user_ids=user_ids)
         return JsonResponse(result)
 
     except Exception as e:
@@ -188,6 +200,8 @@ def budget_progress_multi_month(request):
 def annual_analysis(request):
     """Get comprehensive annual analysis data - delegates to service layer."""
     try:
+        from apps.household.scope import get_scope_user_ids
+
         # Extract year parameter (default to current year)
         year_param = request.GET.get("year")
         try:
@@ -195,12 +209,15 @@ def annual_analysis(request):
         except (TypeError, ValueError):
             return JsonResponse({"error": "Invalid year"}, status=400)
 
+        scope = request.GET.get("scope", "personal")
+        user_ids = get_scope_user_ids(request) if scope == "household" else None
+
         # Inject dependencies and delegate to service
         repo = AnnualAnalysisRepository()
         service = AnnualAnalysisService(repo)
 
         # Delegate to service
-        result = service.get_annual_analysis(request.user, year)
+        result = service.get_annual_analysis(request.user, year, user_ids=user_ids)
         return JsonResponse(result)
 
     except Exception as e:
@@ -212,12 +229,17 @@ def annual_analysis(request):
 def annual_analysis_years(request):
     """Get list of years with transaction data - delegates to service layer."""
     try:
+        from apps.household.scope import get_scope_user_ids
+
+        scope = request.GET.get("scope", "personal")
+        user_ids = get_scope_user_ids(request) if scope == "household" else None
+
         # Inject dependencies and delegate to service
         repo = AnnualAnalysisRepository()
         service = AnnualAnalysisService(repo)
 
         # Delegate to service
-        years = service.get_available_years(request.user)
+        years = service.get_available_years(request.user, user_ids=user_ids)
         return JsonResponse({"years": years})
 
     except Exception as e:

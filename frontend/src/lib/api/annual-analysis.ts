@@ -33,6 +33,8 @@ export interface AnnualAnalysisData {
   total_expenses: number;
   essential_total: number;
   non_essential_total: number;
+  net_savings: number;
+  savings_rate: number;
   monthly_breakdown: MonthlyBreakdown[];
   category_breakdown: CategoryBreakdown[];
   income_sources: IncomeSource[];
@@ -46,12 +48,16 @@ class AnnualAnalysisApiService extends BaseApiClient {
   /**
    * Get comprehensive annual analysis data
    */
-  async getAnnualAnalysis(year?: number): Promise<AnnualAnalysisData> {
+  async getAnnualAnalysis(
+    year?: number,
+    scope?: 'personal' | 'household'
+  ): Promise<AnnualAnalysisData> {
     const url = new URL(
       `${this.baseUrl}/annual-analysis/`,
       window.location.origin
     );
     if (year) url.searchParams.append('year', String(year));
+    if (scope && scope !== 'personal') url.searchParams.append('scope', scope);
 
     const response = await fetchWithAuth(url.toString(), {
       method: 'GET',
@@ -65,15 +71,17 @@ class AnnualAnalysisApiService extends BaseApiClient {
   /**
    * Get available years with transaction data
    */
-  async getAvailableYears(): Promise<number[]> {
-    const response = await fetchWithAuth(
+  async getAvailableYears(scope?: 'personal' | 'household'): Promise<number[]> {
+    const url = new URL(
       `${this.baseUrl}/annual-analysis/years/`,
-      {
-        method: 'GET',
-        headers: this.getHeaders(),
-        credentials: 'include',
-      }
+      window.location.origin
     );
+    if (scope && scope !== 'personal') url.searchParams.append('scope', scope);
+    const response = await fetchWithAuth(url.toString(), {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
     const data = await this.handleResponse<{ years: number[] }>(response);
     return data.years || [];
   }

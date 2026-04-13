@@ -1,0 +1,83 @@
+---
+description: Mandatory pre-commit CI checks that must pass before every commit
+globs:
+alwaysApply: true
+---
+
+# Pre-Commit CI Checks (MANDATORY)
+
+**Every commit MUST pass the same checks that run in GitHub Actions CI.** Run these checks on modified files before creating any commit. Do NOT commit code that fails these checks.
+
+## Backend Checks (when `backend/` files changed)
+
+Run from `backend/` directory:
+
+```bash
+# 1. Lint — must have zero errors
+ruff check .
+
+# 2. Format — must report "X files already formatted" with zero reformats
+ruff format --check .
+
+# If format fails, fix with:
+ruff format .
+
+# 3. Migration consistency — no conflicting or missing migrations
+python manage.py makemigrations --check --dry-run --skip-checks --settings=richtato.settings
+
+# 4. Django system check
+python manage.py check --settings=richtato.test_settings
+
+# 5. Tests (when test files or tested code changed)
+python -m pytest apps/ -v --tb=short
+```
+
+**Ruff version pinned in pre-commit: `v0.14.3`** — formatting rules may differ across versions.
+
+## Frontend Checks (when `frontend/` files changed)
+
+Run from `frontend/` directory:
+
+```bash
+# 1. Lint — ESLint
+yarn lint
+
+# 2. Format — Prettier (check mode)
+yarn format:check
+
+# If format fails, fix with:
+npx prettier --write <files>
+
+# 3. TypeScript type check — zero errors
+yarn type-check
+
+# 4. Tests with coverage (when test files or tested code changed)
+yarn test:coverage
+```
+
+**Shortcut**: run `yarn lint && yarn format:check && yarn type-check` (or add a `ci-check` script if desired).
+
+## What Each CI Workflow Checks
+
+### Backend CI (`.github/workflows/backend.yml`)
+| Step | Command | Fails on |
+|---|---|---|
+| Lint | `ruff check .` | Any lint error |
+| Format | `ruff format --check .` | Any file needing reformat |
+| Tests | `python -m pytest apps/ -v --tb=short` | Any test failure |
+
+### Frontend CI (`.github/workflows/frontend.yml`)
+| Step | Command | Fails on |
+|---|---|---|
+| Lint | `yarn lint` | ESLint errors |
+| Format | `yarn format:check` (Prettier) | Any file not formatted |
+| Type check | `yarn type-check` (tsc --noEmit) | TypeScript errors |
+| Tests | `yarn test:coverage` (Vitest) | Any test failure |
+
+## Rules for Agents
+
+1. **Always run linters and formatters BEFORE staging files** — never commit then fix.
+2. **If ruff is not installed locally**, restructure code to follow known ruff formatting rules: avoid inline ternary conditionals spanning multiple lines, keep import ordering consistent (stdlib → third-party → local).
+3. **If Prettier reformats a file**, apply the fix and include it in the same commit.
+4. **Never skip checks** — even for "small" changes. A one-line Python change can fail `ruff format`.
+5. **Run only the relevant stack's checks** — backend-only changes don't need frontend checks and vice versa. If both stacks are modified, run both.

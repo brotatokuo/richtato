@@ -1,15 +1,21 @@
+import { HouseholdSettings } from '@/components/household/HouseholdSettings';
 import { BudgetsSection } from '@/components/settings/BudgetsSection';
 import { CategoriesSection } from '@/components/settings/CategoriesSection';
 import { SyncHistorySection } from '@/components/settings/SyncHistorySection';
 import { UnifiedAccountsSection } from '@/components/settings/UnifiedAccountsSection';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Landmark, PiggyBank, Tag } from 'lucide-react';
+import { Landmark, PiggyBank, Tag, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-type TabValue = 'accounts' | 'categories' | 'budgets';
+type TabValue = 'accounts' | 'categories' | 'budgets' | 'household';
 
-const VALID_TABS: TabValue[] = ['accounts', 'categories', 'budgets'];
+const VALID_TABS: TabValue[] = [
+  'accounts',
+  'categories',
+  'budgets',
+  'household',
+];
 
 export function Setup() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -36,7 +42,7 @@ export function Setup() {
       onValueChange={handleTabChange}
       className="space-y-4"
     >
-      <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-grid">
+      <TabsList className="grid w-full grid-cols-4 sm:w-auto sm:inline-grid">
         <TabsTrigger value="accounts" className="flex items-center gap-2">
           <Landmark className="h-4 w-4" />
           <span>Accounts</span>
@@ -48,6 +54,10 @@ export function Setup() {
         <TabsTrigger value="budgets" className="flex items-center gap-2">
           <PiggyBank className="h-4 w-4" />
           <span>Budgets</span>
+        </TabsTrigger>
+        <TabsTrigger value="household" className="flex items-center gap-2">
+          <Users className="h-4 w-4" />
+          <span>Household</span>
         </TabsTrigger>
       </TabsList>
 
@@ -62,6 +72,10 @@ export function Setup() {
 
       <TabsContent value="budgets">
         <BudgetsSection />
+      </TabsContent>
+
+      <TabsContent value="household">
+        <HouseholdSettings />
       </TabsContent>
     </Tabs>
   );

@@ -26,10 +26,30 @@ class AccountService:
         """Get all accounts for a user."""
         return self.account_repository.get_by_user(user, is_active=active_only if active_only else None)
 
-    def get_account_by_id(self, account_id: int, user: User) -> FinancialAccount | None:
-        """Get account by ID, ensuring it belongs to the user."""
+    def get_household_accounts(
+        self,
+        user_ids: list[int],
+        active_only: bool = True,
+    ) -> list[FinancialAccount]:
+        """Get shared accounts for a set of household member user IDs."""
+        return self.account_repository.get_by_user_ids_shared(
+            user_ids,
+            is_active=active_only if active_only else None,
+        )
+
+    def get_account_by_id(
+        self,
+        account_id: int,
+        user: User,
+        household_user_ids: list[int] | None = None,
+    ) -> FinancialAccount | None:
+        """Get account by ID, ensuring it belongs to the user or their household."""
         account = self.account_repository.get_by_id(account_id)
-        if account and account.user == user:
+        if not account:
+            return None
+        if account.user == user:
+            return account
+        if household_user_ids and account.user_id in household_user_ids and account.shared_with_household:
             return account
         return None
 

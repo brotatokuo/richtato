@@ -31,6 +31,26 @@ class CategoryRepository:
             queryset = queryset.filter(is_deleted=False)
         return list(queryset.order_by("name"))
 
+    def get_merged_for_users(
+        self,
+        user_ids: list[int],
+        include_deleted: bool = False,
+    ) -> list[TransactionCategory]:
+        """Get categories for multiple users, merged by slug.
+
+        When two users share a slug, the first user's category metadata
+        (name, icon, color, type) is used as canonical.
+        """
+        queryset = TransactionCategory.objects.filter(user_id__in=user_ids)
+        if not include_deleted:
+            queryset = queryset.filter(is_deleted=False)
+
+        seen_slugs: dict[str, TransactionCategory] = {}
+        for cat in queryset.order_by("user_id", "name"):
+            if cat.slug not in seen_slugs:
+                seen_slugs[cat.slug] = cat
+        return sorted(seen_slugs.values(), key=lambda c: c.name)
+
     def get_root_categories(self, user: User, include_deleted: bool = False) -> list[TransactionCategory]:
         """Get top-level categories (no parent) for a user."""
         queryset = TransactionCategory.objects.filter(parent__isnull=True, user=user)

@@ -31,7 +31,6 @@ import {
   transformTransaction,
 } from '@/types/transactions';
 import {
-  ArrowLeftRight,
   Calendar,
   CreditCard,
   Plus,
@@ -648,10 +647,6 @@ export function TransactionTable({
     <div className="space-y-3">
       {/* Header with Search and Filters */}
       <div className="flex items-center gap-4 flex-wrap py-2">
-        <h2 className="text-xl font-bold text-card-foreground flex items-center gap-2 shrink-0">
-          <ArrowLeftRight className="h-5 w-5 text-primary" />
-          Transactions
-        </h2>
         <div className="flex-1 min-w-[200px] relative">
           <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input

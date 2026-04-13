@@ -40,6 +40,23 @@ class TransactionService:
             transaction_type=transaction_type,
         )
 
+    def get_household_transactions(
+        self,
+        user_ids: list[int],
+        start_date: date | None = None,
+        end_date: date | None = None,
+        category: TransactionCategory | None = None,
+        transaction_type: str | None = None,
+    ) -> QuerySet[Transaction]:
+        """Get transactions from shared accounts for household members."""
+        return self.transaction_repository.get_by_user_ids_shared(
+            user_ids=user_ids,
+            start_date=start_date,
+            end_date=end_date,
+            category=category,
+            transaction_type=transaction_type,
+        )
+
     def get_transaction_by_id(self, transaction_id: int, user: User) -> Transaction | None:
         """Get transaction by ID, ensuring it belongs to the user."""
         transaction = self.transaction_repository.get_by_id(transaction_id)
@@ -198,16 +215,28 @@ class TransactionService:
             "by_category": by_category,
         }
 
-    def get_cashflow_summary(self, user: User, start_date: date, end_date: date) -> dict:
+    def get_cashflow_summary(
+        self, user: User, start_date: date, end_date: date, user_ids: list[int] | None = None
+    ) -> dict:
         """
         Get cashflow summary for a date range using DB aggregation.
         Returns income/expense/investment totals by category without loading all transactions.
-        """
-        base = Transaction.objects.filter(user=user, date__gte=start_date, date__lte=end_date)
 
-        # Income by category (credits only)
+        Uses the canonical category-type filters from core.constants so that the
+        definition of income / expense / investment is consistent across all surfaces.
+        """
+        from apps.core.constants import get_expense_filter, get_income_filter, get_investment_filter
+
+        if user_ids and len(user_ids) > 1:
+            base = Transaction.objects.filter(
+                user_id__in=user_ids, account__shared_with_household=True, date__gte=start_date, date__lte=end_date
+            )
+        else:
+            base = Transaction.objects.filter(user=user, date__gte=start_date, date__lte=end_date)
+
+        # Income by category
         income_agg = (
-            base.filter(transaction_type="credit")
+            base.filter(get_income_filter())
             .values("category__name")
             .annotate(total=Coalesce(Sum("amount"), Decimal("0")))
         )
@@ -219,28 +248,33 @@ class TransactionService:
             income_by_category[name] = float(amt)
             total_income += amt
 
-        # Debits: split into expenses vs investments by category type
-        debit_agg = (
-            base.filter(transaction_type="debit")
-            .values("category__name", "category__type")
+        # Expenses by category
+        expense_agg = (
+            base.filter(get_expense_filter())
+            .values("category__name")
             .annotate(total=Coalesce(Sum("amount"), Decimal("0")))
         )
         expenses_by_category = {}
-        investments_by_category = {}
         total_expenses = Decimal("0")
-        total_investments = Decimal("0")
-
-        for row in debit_agg:
+        for row in expense_agg:
             name = row["category__name"] or "Uncategorized"
-            cat_type = row["category__type"] or ""
             amt = row["total"]
-            is_investment = cat_type == "investment" or (name and "investment" in name.lower())
-            if is_investment:
-                total_investments += amt
-                investments_by_category[name] = investments_by_category.get(name, 0) + float(amt)
-            else:
-                total_expenses += amt
-                expenses_by_category[name] = expenses_by_category.get(name, 0) + float(amt)
+            expenses_by_category[name] = expenses_by_category.get(name, 0) + float(amt)
+            total_expenses += amt
+
+        # Investments by category
+        investment_agg = (
+            base.filter(get_investment_filter())
+            .values("category__name")
+            .annotate(total=Coalesce(Sum("amount"), Decimal("0")))
+        )
+        investments_by_category = {}
+        total_investments = Decimal("0")
+        for row in investment_agg:
+            name = row["category__name"] or "Investments"
+            amt = row["total"]
+            investments_by_category[name] = investments_by_category.get(name, 0) + float(amt)
+            total_investments += amt
 
         return {
             "total_income": float(total_income),

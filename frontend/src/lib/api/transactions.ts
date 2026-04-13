@@ -61,6 +61,8 @@ export interface Account {
   is_active?: boolean;
   // Card customization
   image_key?: string | null;
+  // Household sharing
+  shared_with_household?: boolean;
   // Sync connection fields
   sync_source?: string;
   has_connection?: boolean;
@@ -123,6 +125,7 @@ class TransactionsApiService {
     accountId?: number;
     categoryId?: number;
     search?: string;
+    scope?: 'personal' | 'household';
   }): Promise<{
     transactions: Transaction[];
     page?: number;
@@ -146,6 +149,8 @@ class TransactionsApiService {
     if (input?.categoryId)
       url.searchParams.append('category_id', String(input.categoryId));
     if (input?.search) url.searchParams.append('search', input.search);
+    if (input?.scope && input.scope !== 'personal')
+      url.searchParams.append('scope', input.scope);
 
     const response = await fetch(url.toString(), {
       method: 'GET',
@@ -274,8 +279,14 @@ class TransactionsApiService {
   /**
    * Get all accounts
    */
-  async getAccounts(): Promise<Account[]> {
-    const response = await fetch(`${this.baseUrl}/accounts/`, {
+  async getAccounts(input?: {
+    scope?: 'personal' | 'household';
+  }): Promise<Account[]> {
+    const url = new URL(`${this.baseUrl}/accounts/`, window.location.origin);
+    if (input?.scope && input.scope !== 'personal')
+      url.searchParams.append('scope', input.scope);
+
+    const response = await fetch(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -406,16 +417,22 @@ class TransactionsApiService {
     type: string;
     institution_slug?: string;
     asset_entity_name?: string;
+    starting_balance?: number;
   }): Promise<Account> {
+    const body: Record<string, unknown> = {
+      name: input.name,
+      account_type: input.type,
+      institution_slug: input.institution_slug,
+    };
+    if (input.starting_balance !== undefined) {
+      body.initial_balance = input.starting_balance;
+    }
+
     let response = await fetch(`${this.baseUrl}/accounts/`, {
       method: 'POST',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
-      body: JSON.stringify({
-        name: input.name,
-        account_type: input.type,
-        institution_slug: input.institution_slug,
-      }),
+      body: JSON.stringify(body),
     });
 
     // If CSRF token is invalid, refresh it and retry once
@@ -425,11 +442,7 @@ class TransactionsApiService {
         method: 'POST',
         headers: await csrfService.getHeaders(),
         credentials: 'include',
-        body: JSON.stringify({
-          name: input.name,
-          account_type: input.type,
-          institution_slug: input.institution_slug,
-        }),
+        body: JSON.stringify(body),
       });
     }
 
@@ -446,6 +459,7 @@ class TransactionsApiService {
       type: string;
       asset_entity_name: string;
       image_key: string | null;
+      shared_with_household: boolean;
     }>
   ): Promise<Account> {
     let response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
@@ -643,7 +657,8 @@ class TransactionsApiService {
    */
   async getCashflowSummary(
     startDate: string,
-    endDate: string
+    endDate: string,
+    scope?: 'personal' | 'household'
   ): Promise<{
     total_income: number;
     total_expenses: number;
@@ -659,6 +674,7 @@ class TransactionsApiService {
     );
     url.searchParams.append('start_date', startDate);
     url.searchParams.append('end_date', endDate);
+    if (scope && scope !== 'personal') url.searchParams.append('scope', scope);
 
     const response = await fetch(url.toString(), {
       method: 'GET',

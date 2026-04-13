@@ -6,6 +6,7 @@ import { BaseApiClient } from './base-client';
 import { fetchWithAuth } from './fetchClient';
 
 export interface AssetDashboardData {
+  period: string;
   networth: number;
   total_assets: number;
   total_liabilities: number;
@@ -16,6 +17,8 @@ export interface AssetDashboardData {
   savings_rate_context: string;
   expense_sum: number;
   income_sum: number;
+  investment_sum: number;
+  net_cashflow: number;
 }
 
 export interface CashFlowData {
@@ -64,8 +67,16 @@ class AssetDashboardApiService extends BaseApiClient {
   /**
    * Get dashboard metrics (net worth, savings rate, etc.)
    */
-  async getDashboardMetrics(): Promise<AssetDashboardData> {
-    const response = await fetchWithAuth(`${this.baseUrl}/metrics/`, {
+  async getDashboardMetrics(input?: {
+    scope?: 'personal' | 'household';
+    period?: string;
+  }): Promise<AssetDashboardData> {
+    const url = new URL(`${this.baseUrl}/metrics/`, window.location.origin);
+    if (input?.scope && input.scope !== 'personal')
+      url.searchParams.append('scope', input.scope);
+    if (input?.period) url.searchParams.append('period', input.period);
+
+    const response = await fetchWithAuth(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',

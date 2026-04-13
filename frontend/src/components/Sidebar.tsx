@@ -1,22 +1,24 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useHousehold } from '@/contexts/HouseholdContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { cn } from '@/lib/utils';
 import {
   BarChart3,
+  Calculator,
   ChevronLeft,
   ChevronRight,
+  Heart,
   Landmark,
   Loader2,
   LogOut,
   Settings as SettingsIcon,
   SlidersHorizontal,
   Table,
-  TrendingUp,
   Wallet,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 interface SidebarProps {
@@ -24,43 +26,11 @@ interface SidebarProps {
   hideCollapseToggle?: boolean;
 }
 
-const navigationItems = [
-  {
-    name: 'Report',
-    href: '/report',
-    icon: BarChart3,
-  },
-  {
-    name: 'Accounts',
-    href: '/accounts',
-    icon: Landmark,
-  },
-  {
-    name: 'Budget',
-    href: '/budget',
-    icon: Wallet,
-  },
-  {
-    name: 'Cashflow',
-    href: '/cashflow',
-    icon: TrendingUp,
-  },
-  {
-    name: 'Data',
-    href: '/data',
-    icon: Table,
-  },
-  {
-    name: 'Setup',
-    href: '/setup',
-    icon: SlidersHorizontal,
-  },
-  {
-    name: 'Preferences',
-    href: '/preferences',
-    icon: SettingsIcon,
-  },
-];
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
 
 export function Sidebar({
   className,
@@ -71,6 +41,25 @@ export function Sidebar({
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { status: syncStatus } = useSyncStatus();
+  const { isInHousehold } = useHousehold();
+
+  const navigationItems: NavItem[] = useMemo(() => {
+    const items: NavItem[] = [
+      { name: 'Dashboard', href: '/report', icon: BarChart3 },
+      { name: 'Accounts', href: '/accounts', icon: Landmark },
+      { name: 'Budget', href: '/budget', icon: Wallet },
+    ];
+    if (isInHousehold) {
+      items.push({ name: 'Household', href: '/household', icon: Heart });
+    }
+    items.push(
+      { name: 'Transactions', href: '/transactions', icon: Table },
+      { name: 'Setup', href: '/setup', icon: SlidersHorizontal },
+      { name: 'Preferences', href: '/preferences', icon: SettingsIcon },
+      { name: 'Formulas', href: '/formulas', icon: Calculator }
+    );
+    return items;
+  }, [isInHousehold]);
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
@@ -98,7 +87,7 @@ export function Sidebar({
     >
       {/* Header */}
       <div className="flex h-16 items-center justify-between border-b border-slate-200/50 dark:border-slate-700/50 px-4">
-        <div className="flex items-center gap-3">
+        <Link to="/report" className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center">
             <img
               src="/richtato.png"
@@ -111,7 +100,7 @@ export function Sidebar({
               Richtato
             </span>
           )}
-        </div>
+        </Link>
         {!hideCollapseToggle && (
           <Button
             variant="ghost"
@@ -136,7 +125,7 @@ export function Sidebar({
           const Icon = item.icon;
 
           // Show sync indicator and badge on Data page
-          const isDataPage = item.href === '/data';
+          const isDataPage = item.href === '/transactions';
           const isSyncing = isDataPage && syncStatus?.is_syncing;
           const newTransactionCount =
             isDataPage && syncStatus?.new_transaction_count

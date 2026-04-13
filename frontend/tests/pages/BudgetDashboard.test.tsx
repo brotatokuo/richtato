@@ -37,10 +37,23 @@ vi.mock('@/contexts/PreferencesContext', () => ({
   }),
 }));
 
+vi.mock('@/contexts/HouseholdContext', () => ({
+  useHousehold: () => ({
+    household: null,
+    isInHousehold: false,
+    isLoading: false,
+    scope: 'personal' as const,
+    setScope: vi.fn(),
+    partnerName: null,
+    members: [],
+    refreshHousehold: vi.fn(),
+  }),
+}));
+
 vi.mock('@/lib/api/transactions', () => ({
   transactionsApiService: {
     getBudgetDashboard: vi.fn().mockResolvedValue({ budgets: [] }),
-    getTransactions: vi.fn().mockResolvedValue({ results: [] }),
+    getTransactions: vi.fn().mockResolvedValue({ transactions: [] }),
   },
 }));
 
@@ -110,31 +123,34 @@ describe('BudgetDashboard page', () => {
     renderDashboard();
 
     await waitFor(() => {
-      expect(mockGetMultiMonth).toHaveBeenCalledWith({ months: 12 });
+      expect(mockGetMultiMonth).toHaveBeenCalledWith({
+        months: 12,
+        scope: 'personal',
+      });
     });
   });
 
-  it('renders KPI cards after loading', async () => {
+  it('renders main dashboard sections after loading', async () => {
     mockGetMultiMonth.mockResolvedValueOnce(mockMultiMonthData);
 
     renderDashboard();
 
     await waitFor(() => {
-      expect(screen.getByText('Current Month')).toBeInTheDocument();
+      expect(screen.getByText('Monthly Budget Timeline')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('12-Month Average')).toBeInTheDocument();
-    expect(screen.getByText('Months Over Budget')).toBeInTheDocument();
-    expect(screen.getByText('Months Tracked')).toBeInTheDocument();
+    expect(screen.getByText('Income')).toBeInTheDocument();
+    expect(screen.getByText('Budgeted')).toBeInTheDocument();
+    expect(screen.getByText('Edit Budgets')).toBeInTheDocument();
   });
 
-  it('shows correct current month utilization', async () => {
+  it('shows month utilization in the timeline', async () => {
     mockGetMultiMonth.mockResolvedValueOnce(mockMultiMonthData);
 
     renderDashboard();
 
     await waitFor(() => {
-      expect(screen.getByText('110%')).toBeInTheDocument();
+      expect(screen.getByText('110% used')).toBeInTheDocument();
     });
   });
 

@@ -88,12 +88,19 @@ def savings_data(request):
 def dashboard_metrics(request):
     """Get dashboard metrics - delegates to service layer."""
     try:
-        # Inject dependencies and delegate to service
+        from apps.household.scope import get_scope_user_ids
+
         repo = AssetDashboardRepository()
         service = AssetDashboardService(repo)
 
-        # Delegate to service
-        context = service.get_dashboard_metrics(request.user)
+        scope = request.GET.get("scope", "personal")
+        period = request.GET.get("period", "30d")
+        user_ids = get_scope_user_ids(request)
+
+        if scope == "household" and len(user_ids) > 1:
+            context = service.get_dashboard_metrics_for_users(user_ids, period=period)
+        else:
+            context = service.get_dashboard_metrics(request.user, period=period)
         return JsonResponse(context)
     except Exception as e:
         logger.error(f"Error getting dashboard metrics: {e}")

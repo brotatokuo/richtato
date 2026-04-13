@@ -5,102 +5,80 @@ from decimal import Decimal
 
 from django.db.models import Q, Sum
 
+from apps.core.constants import get_expense_filter, get_income_filter
 from apps.transaction.models import Transaction
-
-# Canonical slug for Credit Card Payment category (excluded from expenses)
-CC_PAYMENT_CATEGORY_SLUG = "credit-card-payment"
 
 
 class AnnualAnalysisRepository:
     """Repository for Annual Analysis aggregation queries - ORM layer only."""
 
     def _get_expense_filter(self):
-        """
-        Get Q filter for expense transactions.
-
-        Expense is determined by:
-        1. Transactions with category type="expense", OR
-        2. Uncategorized debit transactions (fallback for backward compatibility)
-
-        Explicitly excludes Credit Card Payment category.
-        """
-        expense_filter = Q(category__type="expense") | Q(category__isnull=True, transaction_type="debit")
-        cc_payment_exclusion = ~Q(category__slug=CC_PAYMENT_CATEGORY_SLUG)
-        return expense_filter & cc_payment_exclusion
+        return get_expense_filter()
 
     def _get_income_filter(self):
-        """
-        Get Q filter for income transactions.
+        return get_income_filter()
 
-        Income is determined by category type="income".
-        """
-        return Q(category__type="income")
+    def _tx_base(self, user, user_ids: list[int] | None = None):
+        """Return base Transaction queryset scoped to user or household shared accounts."""
+        if user_ids and len(user_ids) > 1:
+            return Transaction.objects.filter(user_id__in=user_ids, account__shared_with_household=True)
+        return Transaction.objects.filter(user=user)
 
-    def get_expense_sum(self, user, start_date: date, end_date: date) -> Decimal:
+    def get_expense_sum(self, user, start_date: date, end_date: date, user_ids: list[int] | None = None) -> Decimal:
         """Get sum of all expenses for a date range."""
         result = (
-            Transaction.objects.filter(
-                user=user,
-                date__gte=start_date,
-                date__lte=end_date,
-            )
+            self._tx_base(user, user_ids)
+            .filter(date__gte=start_date, date__lte=end_date)
             .filter(self._get_expense_filter())
             .aggregate(total=Sum("amount"))
         )
         return result["total"] or Decimal("0")
 
-    def get_income_sum(self, user, start_date: date, end_date: date) -> Decimal:
+    def get_income_sum(self, user, start_date: date, end_date: date, user_ids: list[int] | None = None) -> Decimal:
         """Get sum of all income for a date range."""
         result = (
-            Transaction.objects.filter(
-                user=user,
-                date__gte=start_date,
-                date__lte=end_date,
-            )
+            self._tx_base(user, user_ids)
+            .filter(date__gte=start_date, date__lte=end_date)
             .filter(self._get_income_filter())
             .aggregate(total=Sum("amount"))
         )
         return result["total"] or Decimal("0")
 
-    def get_essential_expense_sum(self, user, start_date: date, end_date: date) -> Decimal:
+    def get_essential_expense_sum(
+        self, user, start_date: date, end_date: date, user_ids: list[int] | None = None
+    ) -> Decimal:
         """Get sum of essential expenses for a date range."""
         result = (
-            Transaction.objects.filter(
-                user=user,
-                date__gte=start_date,
-                date__lte=end_date,
-                category__expense_priority="essential",
-            )
+            self._tx_base(user, user_ids)
+            .filter(date__gte=start_date, date__lte=end_date, category__expense_priority="essential")
             .filter(self._get_expense_filter())
             .aggregate(total=Sum("amount"))
         )
         return result["total"] or Decimal("0")
 
-    def get_non_essential_expense_sum(self, user, start_date: date, end_date: date) -> Decimal:
+    def get_non_essential_expense_sum(
+        self, user, start_date: date, end_date: date, user_ids: list[int] | None = None
+    ) -> Decimal:
         """Get sum of non-essential expenses for a date range.
 
         Includes expenses where expense_priority is 'non_essential' or null.
         """
         result = (
-            Transaction.objects.filter(
-                user=user,
-                date__gte=start_date,
-                date__lte=end_date,
-            )
+            self._tx_base(user, user_ids)
+            .filter(date__gte=start_date, date__lte=end_date)
             .filter(self._get_expense_filter())
             .filter(Q(category__expense_priority="non_essential") | Q(category__expense_priority__isnull=True))
             .aggregate(total=Sum("amount"))
         )
         return result["total"] or Decimal("0")
 
-    def get_expenses_by_category_with_priority(self, user, start_date: date, end_date: date) -> list[dict]:
+    def get_expenses_by_category_with_priority(
+        self, user, start_date: date, end_date: date, user_ids: list[int] | None = None
+    ) -> list[dict]:
         """Get expenses grouped by category with essential/non-essential flag."""
         queryset = (
-            Transaction.objects.filter(
-                user=user,
-                date__gte=start_date,
-                date__lte=end_date,
-            )
+            self._tx_base(user, user_ids)
+            .filter(date__gte=start_date, date__lte=end_date)
             .filter(self._get_expense_filter())
             .values(
                 "category__name",
@@ -123,14 +101,13 @@ class AnnualAnalysisRepository:
             for item in queryset
         ]
 
-    def get_income_by_category(self, user, start_date: date, end_date: date) -> list[dict]:
+    def get_income_by_category(
+        self, user, start_date: date, end_date: date, user_ids: list[int] | None = None
+    ) -> list[dict]:
         """Get income grouped by category."""
         queryset = (
-            Transaction.objects.filter(
-                user=user,
-                date__gte=start_date,
-                date__lte=end_date,
-            )
+            self._tx_base(user, user_ids)
+            .filter(date__gte=start_date, date__lte=end_date)
             .filter(self._get_income_filter())
             .values("category__name", "category__color")
             .annotate(total=Sum("amount"))
@@ -146,7 +123,7 @@ class AnnualAnalysisRepository:
             for item in queryset
         ]
 
-    def get_transaction_years(self, user) -> list[int]:
+    def get_transaction_years(self, user, user_ids: list[int] | None = None) -> list[int]:
         """Get list of years where user has transactions."""
-        date_list = Transaction.objects.filter(user=user).dates("date", "year", order="DESC")
+        date_list = self._tx_base(user, user_ids).dates("date", "year", order="DESC")
         return [d.year for d in date_list]

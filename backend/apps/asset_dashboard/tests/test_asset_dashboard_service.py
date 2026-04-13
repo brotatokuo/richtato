@@ -83,6 +83,7 @@ class TestAssetDashboardService:
         mock_repo.get_total_liabilities.return_value = Decimal("2000.00")
         mock_repo.get_income_sum_by_date_range.return_value = Decimal("2000.00")
         mock_repo.get_expense_sum_by_date_range.return_value = Decimal("1200.00")
+        mock_repo.get_investment_sum_by_date_range.return_value = Decimal("0.00")
         mock_repo.get_user_accounts.return_value = []
 
         # Execute

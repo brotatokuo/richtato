@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta
+from django.db.models import Sum
 
 
 class AssetDashboardService:
@@ -192,58 +193,121 @@ class AssetDashboardService:
             ],
         }
 
-    def get_dashboard_metrics(self, user) -> dict:
-        """
-        Calculate key dashboard metrics.
+    # ------------------------------------------------------------------
+    # Shared helpers for date-range resolution and cashflow metrics
+    # ------------------------------------------------------------------
 
-        Business logic: Aggregates multiple metrics for dashboard cards.
-        Net worth = Assets - Liabilities
+    PERIOD_MAP = {
+        "30d": lambda: timedelta(days=30),
+        "60d": lambda: timedelta(days=60),
+        "90d": lambda: timedelta(days=90),
+        "6m": lambda: relativedelta(months=6),
+        "1y": lambda: relativedelta(years=1),
+    }
+
+    def _resolve_date_range(self, period: str) -> tuple[date, date]:
+        """Convert a period string like '30d' / '6m' / '1y' into (start, end)."""
+        end = date.today()
+        delta_fn = self.PERIOD_MAP.get(period, self.PERIOD_MAP["30d"])
+        start = end - delta_fn()
+        return start, end
+
+    def _compute_cashflow_metrics(self, income: Decimal, expenses: Decimal, investments: Decimal) -> dict:
+        """Canonical savings-rate formula used across all dashboard surfaces.
+
+        savings_rate = (income − expenses − investments) / income
+        """
+        net_cashflow = income - expenses - investments
+        if income > 0:
+            savings_rate = round((net_cashflow / income) * 100, 1)
+        else:
+            savings_rate = 0.0
+        savings_rate_str = f"{savings_rate}%"
+        savings_rate_context, savings_rate_class = self._calculate_savings_rate_context(savings_rate_str)
+        return {
+            "income_sum": float(income),
+            "expense_sum": float(expenses),
+            "investment_sum": float(investments),
+            "net_cashflow": float(net_cashflow),
+            "savings_rate": savings_rate_str,
+            "savings_rate_context": savings_rate_context,
+            "savings_rate_class": savings_rate_class,
+        }
+
+    # ------------------------------------------------------------------
+
+    def get_dashboard_metrics(self, user, period: str = "30d") -> dict:
+        """Calculate key dashboard metrics for an arbitrary time window.
 
         Args:
             user: User instance
-
-        Returns:
-            Dictionary with formatted metrics
+            period: '30d', '60d', '90d', '6m', or '1y'
         """
         total_assets = self.repo.get_total_assets(user)
         total_liabilities = self.repo.get_total_liabilities(user)
         networth = self.repo.get_networth(user)
 
-        # Calculate networth growth
         networth_growth = self._calculate_networth_growth(user)
         networth_growth_class = (
             "positive" if networth_growth.startswith("+") else "negative" if networth_growth.startswith("-") else ""
         )
 
-        # Calculate cash flow for past 30 days
-        thirty_days_ago = date.today() - timedelta(days=30)
-        today = date.today()
+        start_date, end_date = self._resolve_date_range(period)
+        income = self.repo.get_income_sum_by_date_range(user, start_date, end_date)
+        expenses = self.repo.get_expense_sum_by_date_range(user, start_date, end_date)
+        investments = self.repo.get_investment_sum_by_date_range(user, start_date, end_date)
 
-        income_30_days = self.repo.get_income_sum_by_date_range(user, thirty_days_ago, today)
-        expense_30_days = self.repo.get_expense_sum_by_date_range(user, thirty_days_ago, today)
-
-        cash_flow_30_days = income_30_days - expense_30_days
-
-        # Calculate savings rate
-        if income_30_days > 0:
-            savings_rate = round((cash_flow_30_days / income_30_days) * 100, 1)
-        else:
-            savings_rate = 0
-
-        savings_rate_str = f"{savings_rate}%"
-        savings_rate_context, savings_rate_class = self._calculate_savings_rate_context(savings_rate_str)
+        cashflow = self._compute_cashflow_metrics(income, expenses, investments)
 
         return {
+            "period": period,
             "networth": float(networth),
             "total_assets": float(total_assets),
             "total_liabilities": float(total_liabilities),
             "networth_growth": networth_growth,
             "networth_growth_class": networth_growth_class,
-            "expense_sum": float(expense_30_days),
-            "income_sum": float(income_30_days),
-            "savings_rate": savings_rate_str,
-            "savings_rate_context": savings_rate_context,
-            "savings_rate_class": savings_rate_class,
+            **cashflow,
+        }
+
+    def get_dashboard_metrics_for_users(self, user_ids: list[int], period: str = "30d") -> dict:
+        """Aggregate dashboard metrics across multiple household members' shared accounts."""
+        from apps.core.constants import get_expense_filter, get_income_filter, get_investment_filter
+        from apps.financial_account.models import FinancialAccount
+        from apps.transaction.models import Transaction
+
+        shared_accounts = FinancialAccount.objects.filter(
+            user_id__in=user_ids,
+            is_active=True,
+            shared_with_household=True,
+        )
+
+        total_assets = sum(a.balance for a in shared_accounts if not a.is_liability) or Decimal("0")
+        total_liabilities = abs(sum(a.balance for a in shared_accounts if a.is_liability)) or Decimal("0")
+        networth = total_assets - total_liabilities
+
+        start_date, end_date = self._resolve_date_range(period)
+        shared_account_ids = list(shared_accounts.values_list("id", flat=True))
+
+        base_qs = Transaction.objects.filter(
+            account_id__in=shared_account_ids,
+            date__gte=start_date,
+            date__lte=end_date,
+        )
+
+        income = (base_qs.filter(get_income_filter()).aggregate(total=Sum("amount"))["total"]) or Decimal("0")
+        expenses = (base_qs.filter(get_expense_filter()).aggregate(total=Sum("amount"))["total"]) or Decimal("0")
+        investments = (base_qs.filter(get_investment_filter()).aggregate(total=Sum("amount"))["total"]) or Decimal("0")
+
+        cashflow = self._compute_cashflow_metrics(income, expenses, investments)
+
+        return {
+            "period": period,
+            "networth": float(networth),
+            "total_assets": float(total_assets),
+            "total_liabilities": float(total_liabilities),
+            "networth_growth": "N/A",
+            "networth_growth_class": "",
+            **cashflow,
         }
 
     def get_networth_history(self, user, period: str = "6m") -> dict:

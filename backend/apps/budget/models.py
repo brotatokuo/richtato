@@ -19,6 +19,10 @@ class Budget(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     is_active = models.BooleanField(default=True)
+    is_household = models.BooleanField(
+        default=False,
+        help_text="Whether this is a household-level budget visible in household scope.",
+    )
 
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)

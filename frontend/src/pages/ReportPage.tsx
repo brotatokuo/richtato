@@ -1,229 +1,195 @@
+import { IncomeExpenseChart } from '@/components/asset_dashboard/IncomeExpenseChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
 import { YearPicker } from '@/components/ui/YearPicker';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import {
   annualAnalysisApiService,
-  type AnnualAnalysisData,
+  type CategoryBreakdown,
+  type IncomeSource,
 } from '@/lib/api/annual-analysis';
+import { transactionsApiService } from '@/lib/api/transactions';
 import { formatCurrency } from '@/lib/format';
 import echarts, { type ECharts, type EChartsOption } from '@/lib/echarts';
+import { cn } from '@/lib/utils';
 import {
   AlertTriangle,
   ArrowDownRight,
   ArrowUpRight,
+  PiggyBank,
   TrendingUp,
-  Wallet,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-// Colors for charts
-const ESSENTIAL_COLOR = '#22c55e'; // green-500
-const NON_ESSENTIAL_COLOR = '#f97316'; // orange-500
-const INCOME_COLOR = '#3b82f6'; // blue-500
+type TimeScope = 'month' | 'year';
+
+const COLORS = {
+  income: '#22c55e',
+  expense: '#ef4444',
+  investment: '#3b82f6',
+  savings: '#eab308',
+};
+
+interface NormalizedData {
+  totalIncome: number;
+  totalExpenses: number;
+  totalInvestments: number;
+  netSavings: number;
+  savingsRate: number;
+  incomeByCategory: Map<string, number>;
+  expensesByCategory: Map<string, number>;
+  investmentsByCategory: Map<string, number>;
+  categoryBreakdown: CategoryBreakdown[];
+  incomeSources: IncomeSource[];
+}
+
+function getCSSValue(property: string) {
+  if (typeof window === 'undefined') return '';
+  return getComputedStyle(document.documentElement)
+    .getPropertyValue(property)
+    .trim();
+}
 
 export function ReportPage() {
   const { preferences } = usePreferences();
-  const [data, setData] = useState<AnnualAnalysisData | null>(null);
-  const [availableYears, setAvailableYears] = useState<number[]>([]);
-  const [selectedYear, setSelectedYear] = useState<number>(
-    new Date().getFullYear()
-  );
+  const [scope, setScope] = useState<TimeScope>('month');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Chart refs
-  const donutChartRef = useRef<HTMLDivElement>(null);
-  const barChartRef = useRef<HTMLDivElement>(null);
-  const sankeyChartRef = useRef<HTMLDivElement>(null);
+  // Month mode state
+  const now = new Date();
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [monthYear, setMonthYear] = useState(now.getFullYear());
 
-  // Chart instances
-  const donutChartInstance = useRef<ECharts | null>(null);
-  const barChartInstance = useRef<ECharts | null>(null);
+  // Year mode state
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+
+  const [data, setData] = useState<NormalizedData | null>(null);
+
+  // Sankey chart refs
+  const sankeyChartRef = useRef<HTMLDivElement>(null);
   const sankeyChartInstance = useRef<ECharts | null>(null);
 
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const loadMonthData = useCallback(async () => {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const startDate = `${monthYear}-${pad(month)}-01`;
+    const endOfMonth = new Date(monthYear, month, 0);
+    const endDate = `${endOfMonth.getFullYear()}-${pad(endOfMonth.getMonth() + 1)}-${pad(endOfMonth.getDate())}`;
 
-      const [analysisData, years] = await Promise.all([
-        annualAnalysisApiService.getAnnualAnalysis(selectedYear),
-        annualAnalysisApiService.getAvailableYears(),
-      ]);
+    const summary = await transactionsApiService.getCashflowSummary(
+      startDate,
+      endDate
+    );
 
-      setData(analysisData);
-      setAvailableYears(years.length > 0 ? years : [new Date().getFullYear()]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
-    } finally {
-      setLoading(false);
-    }
+    const incomeByCategory = new Map(
+      Object.entries(summary.income_by_category)
+    );
+    const expensesByCategory = new Map(
+      Object.entries(summary.expenses_by_category)
+    );
+    const investmentsByCategory = new Map(
+      Object.entries(summary.investments_by_category)
+    );
+
+    const categoryBreakdown: CategoryBreakdown[] = [
+      ...Array.from(expensesByCategory.entries()).map(([name, amount]) => ({
+        name,
+        amount,
+        is_essential: false,
+        color: COLORS.expense,
+        icon: '',
+      })),
+      ...Array.from(investmentsByCategory.entries()).map(([name, amount]) => ({
+        name,
+        amount,
+        is_essential: false,
+        color: COLORS.investment,
+        icon: '',
+      })),
+    ];
+
+    const incomeSources: IncomeSource[] = Array.from(
+      incomeByCategory.entries()
+    ).map(([name, amount]) => ({
+      name,
+      amount,
+      color: COLORS.income,
+    }));
+
+    setData({
+      totalIncome: summary.total_income,
+      totalExpenses: summary.total_expenses,
+      totalInvestments: summary.total_investments,
+      netSavings: summary.net_savings,
+      savingsRate:
+        summary.total_income > 0
+          ? Math.round((summary.net_savings / summary.total_income) * 100)
+          : 0,
+      incomeByCategory,
+      expensesByCategory,
+      investmentsByCategory,
+      categoryBreakdown,
+      incomeSources,
+    });
+  }, [month, monthYear]);
+
+  const loadYearData = useCallback(async () => {
+    const [analysisData, years] = await Promise.all([
+      annualAnalysisApiService.getAnnualAnalysis(selectedYear),
+      annualAnalysisApiService.getAvailableYears(),
+    ]);
+
+    setAvailableYears(years.length > 0 ? years : [now.getFullYear()]);
+
+    const expensesByCategory = new Map<string, number>();
+    const investmentsByCategory = new Map<string, number>();
+
+    analysisData.category_breakdown.forEach(cat => {
+      expensesByCategory.set(cat.name, cat.amount);
+    });
+
+    const incomeByCategory = new Map<string, number>();
+    analysisData.income_sources.forEach(s => {
+      incomeByCategory.set(s.name, s.amount);
+    });
+
+    setData({
+      totalIncome: analysisData.total_income,
+      totalExpenses: analysisData.total_expenses,
+      totalInvestments: 0,
+      netSavings: analysisData.net_savings,
+      savingsRate: analysisData.savings_rate,
+      incomeByCategory,
+      expensesByCategory,
+      investmentsByCategory,
+      categoryBreakdown: analysisData.category_breakdown,
+      incomeSources: analysisData.income_sources,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedYear]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  // Initialize and update Donut Chart
-  useEffect(() => {
-    if (!donutChartRef.current || !data) return;
-
-    if (donutChartInstance.current) {
-      donutChartInstance.current.dispose();
-    }
-
-    donutChartInstance.current = echarts.init(donutChartRef.current);
-
-    const option: EChartsOption = {
-      tooltip: {
-        trigger: 'item',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        formatter: (params: any) => {
-          return `${params.name}: ${formatCurrency(params.value, preferences.currency)} (${params.percent}%)`;
-        },
-      },
-      legend: {
-        orient: 'vertical',
-        right: '5%',
-        top: 'center',
-        textStyle: { color: '#9ca3af' },
-      },
-      series: [
-        {
-          name: 'Spending',
-          type: 'pie',
-          radius: ['50%', '70%'],
-          center: ['35%', '50%'],
-          avoidLabelOverlap: false,
-          itemStyle: {
-            borderRadius: 8,
-            borderColor: '#1f2937',
-            borderWidth: 2,
-          },
-          label: {
-            show: true,
-            position: 'center',
-            formatter: () => {
-              const total = data.essential_total + data.non_essential_total;
-              return `Total\n${formatCurrency(total, preferences.currency)}`;
-            },
-            fontSize: 14,
-            fontWeight: 'bold',
-            color: '#f3f4f6',
-          },
-          emphasis: {
-            label: {
-              show: true,
-              fontSize: 16,
-              fontWeight: 'bold',
-            },
-          },
-          labelLine: {
-            show: false,
-          },
-          data: [
-            {
-              value: data.essential_total,
-              name: 'Essential',
-              itemStyle: { color: ESSENTIAL_COLOR },
-            },
-            {
-              value: data.non_essential_total,
-              name: 'Non-Essential',
-              itemStyle: { color: NON_ESSENTIAL_COLOR },
-            },
-          ],
-        },
-      ],
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        if (scope === 'month') {
+          await loadMonthData();
+        } else {
+          await loadYearData();
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load data');
+      } finally {
+        setLoading(false);
+      }
     };
+    load();
+  }, [scope, loadMonthData, loadYearData]);
 
-    donutChartInstance.current.setOption(option);
-
-    return () => {
-      donutChartInstance.current?.dispose();
-    };
-  }, [data, preferences.currency]);
-
-  // Initialize and update Bar Chart
-  useEffect(() => {
-    if (!barChartRef.current || !data) return;
-
-    if (barChartInstance.current) {
-      barChartInstance.current.dispose();
-    }
-
-    barChartInstance.current = echarts.init(barChartRef.current);
-
-    const option: EChartsOption = {
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'shadow' },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        formatter: (params: any) => {
-          const lines = params.map(
-            (p: { color: string; seriesName: string; value: number }) => {
-              return `<span style="color:${p.color}">●</span> ${p.seriesName}: ${formatCurrency(p.value, preferences.currency)}`;
-            }
-          );
-          return `${params[0].name}<br/>${lines.join('<br/>')}`;
-        },
-      },
-      legend: {
-        data: ['Essential', 'Non-Essential'],
-        bottom: 0,
-        textStyle: { color: '#9ca3af' },
-      },
-      grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '15%',
-        top: '10%',
-        containLabel: true,
-      },
-      xAxis: {
-        type: 'category',
-        data: data.monthly_breakdown.map(m => m.month),
-        axisLabel: { color: '#9ca3af' },
-        axisLine: { lineStyle: { color: '#374151' } },
-      },
-      yAxis: {
-        type: 'value',
-        axisLabel: {
-          color: '#9ca3af',
-          formatter: (value: number) => {
-            if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
-            return formatCurrency(value, preferences.currency, 0);
-          },
-        },
-        splitLine: { lineStyle: { color: '#374151' } },
-      },
-      series: [
-        {
-          name: 'Essential',
-          type: 'bar',
-          stack: 'total',
-          data: data.monthly_breakdown.map(m => m.essential),
-          itemStyle: { color: ESSENTIAL_COLOR },
-        },
-        {
-          name: 'Non-Essential',
-          type: 'bar',
-          stack: 'total',
-          data: data.monthly_breakdown.map(m => m.non_essential),
-          itemStyle: { color: NON_ESSENTIAL_COLOR },
-        },
-      ],
-    };
-
-    barChartInstance.current.setOption(option);
-
-    return () => {
-      barChartInstance.current?.dispose();
-    };
-  }, [data, preferences.currency]);
-
-  // Initialize and update Sankey Chart
+  // Sankey chart
   useEffect(() => {
     if (!sankeyChartRef.current || !data) return;
 
@@ -233,129 +199,183 @@ export function ReportPage() {
 
     sankeyChartInstance.current = echarts.init(sankeyChartRef.current);
 
-    // Build nodes and links for Sankey
-    const nodes: { name: string; itemStyle?: { color: string } }[] = [];
-    const links: { source: string; target: string; value: number }[] = [];
+    const sankeyText =
+      getCSSValue('--sankey-text') || getCSSValue('--foreground');
+    const sankeyBg = getCSSValue('--sankey-bg') || getCSSValue('--card');
+    const sankeyBorder =
+      getCSSValue('--sankey-border') || getCSSValue('--border');
 
-    // Add income sources as nodes
-    data.income_sources.forEach(source => {
-      nodes.push({
-        name: source.name,
-        itemStyle: { color: source.color || INCOME_COLOR },
-      });
+    const nodes: Array<{ name: string; itemStyle: { color: string } }> = [];
+    const links: Array<{ source: string; target: string; value: number }> = [];
+    const nodeSet = new Set<string>();
+    const usedNames = new Set<string>();
+
+    const addNode = (name: string, color: string) => {
+      if (!nodeSet.has(name)) {
+        nodeSet.add(name);
+        nodes.push({ name, itemStyle: { color } });
+      }
+    };
+
+    // Income sources
+    const incomeColors = ['#22c55e', '#86efac', '#4ade80', '#16a34a'];
+    let ci = 0;
+    const incomeNodeNames = new Map<string, string>();
+    data.incomeByCategory.forEach((_v, name) => {
+      incomeNodeNames.set(name, name);
+      usedNames.add(name);
+      addNode(name, incomeColors[ci % incomeColors.length]);
+      ci++;
     });
 
-    // Add "Total Income" node
-    nodes.push({ name: 'Total Income', itemStyle: { color: INCOME_COLOR } });
+    addNode('Total Income', COLORS.income);
+    usedNames.add('Total Income');
 
-    // Add Essential/Non-Essential nodes
-    nodes.push({ name: 'Essential', itemStyle: { color: ESSENTIAL_COLOR } });
-    nodes.push({
-      name: 'Non-Essential',
-      itemStyle: { color: NON_ESSENTIAL_COLOR },
+    // Expense categories
+    const expenseColors = [
+      '#ef4444',
+      '#fca5a5',
+      '#f87171',
+      '#dc2626',
+      '#b91c1c',
+      '#991b1b',
+    ];
+    let ei = 0;
+    const expenseNodeNames = new Map<string, string>();
+    data.expensesByCategory.forEach((_v, catName) => {
+      let nodeName = catName;
+      if (usedNames.has(catName)) nodeName = `${catName} (Expense)`;
+      expenseNodeNames.set(catName, nodeName);
+      usedNames.add(nodeName);
+      addNode(nodeName, expenseColors[ei % expenseColors.length]);
+      ei++;
     });
 
-    // Add expense category nodes
-    data.category_breakdown.forEach(cat => {
-      nodes.push({
-        name: cat.name,
-        itemStyle: { color: cat.color || '#6b7280' },
-      });
+    // Investment categories
+    const investColors = ['#3b82f6', '#93c5fd', '#60a5fa', '#2563eb'];
+    let ii = 0;
+    const investNodeNames = new Map<string, string>();
+    data.investmentsByCategory.forEach((_v, catName) => {
+      let nodeName = catName;
+      if (usedNames.has(catName)) nodeName = `${catName} (Investment)`;
+      investNodeNames.set(catName, nodeName);
+      usedNames.add(nodeName);
+      addNode(nodeName, investColors[ii % investColors.length]);
+      ii++;
     });
 
-    // Add Savings node if income > expenses
-    const totalExpenses = data.essential_total + data.non_essential_total;
-    if (data.total_income > totalExpenses) {
-      nodes.push({ name: 'Savings', itemStyle: { color: '#10b981' } });
+    if (data.netSavings > 0) {
+      addNode('Net Savings', COLORS.savings);
     }
 
-    // Links: Income sources -> Total Income
-    data.income_sources.forEach(source => {
-      links.push({
-        source: source.name,
-        target: 'Total Income',
-        value: source.amount,
-      });
+    // Links: Income → Total Income
+    data.incomeByCategory.forEach((value, name) => {
+      if (value > 0)
+        links.push({
+          source: incomeNodeNames.get(name) || name,
+          target: 'Total Income',
+          value,
+        });
     });
 
-    // Links: Total Income -> Essential/Non-Essential
-    links.push({
-      source: 'Total Income',
-      target: 'Essential',
-      value: data.essential_total,
-    });
-    links.push({
-      source: 'Total Income',
-      target: 'Non-Essential',
-      value: data.non_essential_total,
+    // Links: Total Income → Expenses
+    data.expensesByCategory.forEach((value, catName) => {
+      if (value > 0)
+        links.push({
+          source: 'Total Income',
+          target: expenseNodeNames.get(catName) || catName,
+          value,
+        });
     });
 
-    // Link to Savings if applicable
-    if (data.total_income > totalExpenses) {
+    // Links: Total Income → Investments
+    data.investmentsByCategory.forEach((value, catName) => {
+      if (value > 0)
+        links.push({
+          source: 'Total Income',
+          target: investNodeNames.get(catName) || catName,
+          value,
+        });
+    });
+
+    if (data.netSavings > 0) {
       links.push({
         source: 'Total Income',
-        target: 'Savings',
-        value: data.total_income - totalExpenses,
+        target: 'Net Savings',
+        value: data.netSavings,
       });
     }
 
-    // Links: Essential/Non-Essential -> Categories
-    data.category_breakdown.forEach(cat => {
-      links.push({
-        source: cat.is_essential ? 'Essential' : 'Non-Essential',
-        target: cat.name,
-        value: cat.amount,
-      });
-    });
-
     const option: EChartsOption = {
+      backgroundColor: 'transparent',
       tooltip: {
         trigger: 'item',
         triggerOn: 'mousemove',
+        backgroundColor: `hsl(${sankeyBg})`,
+        borderColor: `hsl(${sankeyBorder})`,
+        textStyle: { color: `hsl(${sankeyText})` },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         formatter: (params: any) => {
-          if (params.dataType === 'edge') {
-            return `${params.data?.source} → ${params.data?.target}<br/>${formatCurrency(params.data?.value ?? 0, preferences.currency)}`;
+          if (params.dataType === 'node') {
+            const value = params.data.value || 0;
+            const pct =
+              data.totalIncome > 0
+                ? ((value / data.totalIncome) * 100).toFixed(1)
+                : '0';
+            return `<strong>${params.data.name}</strong><br/>Amount: ${formatCurrency(value, preferences.currency)}<br/>% of Income: ${pct}%`;
+          } else if (params.dataType === 'edge') {
+            const pct =
+              data.totalIncome > 0
+                ? (((params.data.value || 0) / data.totalIncome) * 100).toFixed(
+                    1
+                  )
+                : '0';
+            return `<strong>${params.data.source} → ${params.data.target}</strong><br/>Amount: ${formatCurrency(params.data.value || 0, preferences.currency)}<br/>% of Income: ${pct}%`;
           }
-          return params.name ?? '';
+          return '';
         },
       },
       series: [
         {
           type: 'sankey',
-          emphasis: {
-            focus: 'adjacency',
-          },
-          nodeAlign: 'left',
           data: nodes,
-          links: links,
-          lineStyle: {
-            color: 'gradient',
-            curveness: 0.5,
-          },
-          label: {
-            color: '#f3f4f6',
-            fontSize: 11,
-          },
+          links,
+          emphasis: { focus: 'adjacency' },
+          levels: [
+            {
+              depth: 0,
+              itemStyle: { borderWidth: 0 },
+              lineStyle: { opacity: 0.6 },
+            },
+            {
+              depth: 1,
+              itemStyle: { borderWidth: 0 },
+              lineStyle: { opacity: 0.5 },
+            },
+            {
+              depth: 2,
+              itemStyle: { borderWidth: 0 },
+              lineStyle: { opacity: 0.4 },
+            },
+          ],
+          lineStyle: { color: 'gradient', curveness: 0.5 },
+          itemStyle: { borderWidth: 1, borderColor: `hsl(${sankeyBorder})` },
+          label: { color: `hsl(${sankeyText})`, fontSize: 11, fontWeight: 500 },
+          nodeAlign: 'justify',
+          layoutIterations: 32,
         },
       ],
     };
 
     sankeyChartInstance.current.setOption(option);
-
     return () => {
       sankeyChartInstance.current?.dispose();
     };
   }, [data, preferences.currency]);
 
-  // Handle window resize
+  // Resize handler
   useEffect(() => {
-    const handleResize = () => {
-      donutChartInstance.current?.resize();
-      barChartInstance.current?.resize();
-      sankeyChartInstance.current?.resize();
-    };
-
+    const handleResize = () => sankeyChartInstance.current?.resize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -379,126 +399,185 @@ export function ReportPage() {
 
   if (!data) return null;
 
-  const totalExpenses = data.essential_total + data.non_essential_total;
-  const essentialPercent =
-    totalExpenses > 0
-      ? Math.round((data.essential_total / totalExpenses) * 100)
-      : 0;
-  const savingsAmount = data.total_income - totalExpenses;
-  const savingsRate =
-    data.total_income > 0
-      ? Math.round((savingsAmount / data.total_income) * 100)
-      : 0;
+  const totalOutflow = data.totalExpenses + data.totalInvestments;
 
   return (
-    <>
-      {/* Floating Year Picker */}
-      <YearPicker
-        year={selectedYear}
-        availableYears={availableYears}
-        onChange={setSelectedYear}
-      />
-
-      <div className="space-y-6">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="border-border bg-card">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Income</p>
-                  <p className="text-2xl font-bold text-green-500">
-                    {formatCurrency(data.total_income, preferences.currency)}
-                  </p>
-                </div>
-                <ArrowUpRight className="h-8 w-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border bg-card">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Total Expenses
-                  </p>
-                  <p className="text-2xl font-bold text-orange-500">
-                    {formatCurrency(totalExpenses, preferences.currency)}
-                  </p>
-                </div>
-                <ArrowDownRight className="h-8 w-8 text-orange-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border bg-card">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Essential %</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {essentialPercent}%
-                  </p>
-                </div>
-                <Wallet className="h-8 w-8 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border bg-card">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Savings Rate</p>
-                  <p
-                    className={`text-2xl font-bold ${savingsAmount >= 0 ? 'text-green-500' : 'text-red-500'}`}
-                  >
-                    {savingsRate}%
-                  </p>
-                </div>
-                <TrendingUp
-                  className={`h-8 w-8 ${savingsAmount >= 0 ? 'text-green-500' : 'text-red-500'}`}
-                />
-              </div>
-            </CardContent>
-          </Card>
+    <div className="space-y-6">
+      {/* Time scope toggle + picker */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="inline-flex rounded-full border border-border/50 bg-muted/30 p-1">
+          <button
+            onClick={() => setScope('month')}
+            className={cn(
+              'px-4 py-1.5 rounded-full text-sm font-medium transition-all',
+              scope === 'month'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Month
+          </button>
+          <button
+            onClick={() => setScope('year')}
+            className={cn(
+              'px-4 py-1.5 rounded-full text-sm font-medium transition-all',
+              scope === 'year'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Year
+          </button>
         </div>
+        {scope === 'month' ? (
+          <MonthYearPicker
+            year={monthYear}
+            month={month}
+            onChange={(y, m) => {
+              setMonthYear(y);
+              setMonth(m);
+            }}
+          />
+        ) : (
+          <YearPicker
+            year={selectedYear}
+            availableYears={availableYears}
+            onChange={setSelectedYear}
+          />
+        )}
+      </div>
 
-        {/* Charts Row 1 */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Essential vs Non-Essential Donut */}
-          <Card className="border-border bg-card">
-            <CardHeader>
-              <CardTitle className="text-lg">
-                Essential vs Non-Essential
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div ref={donutChartRef} className="h-80" />
-            </CardContent>
-          </Card>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Card className="border-border bg-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Income</p>
+                <p className="text-2xl font-bold text-green-500">
+                  {formatCurrency(data.totalIncome, preferences.currency, 0)}
+                </p>
+              </div>
+              <ArrowUpRight className="h-8 w-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Monthly Spending Trends */}
-          <Card className="border-border bg-card">
-            <CardHeader>
-              <CardTitle className="text-lg">Monthly Spending Trends</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div ref={barChartRef} className="h-80" />
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="border-border bg-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Expenses</p>
+                <p className="text-2xl font-bold text-red-500">
+                  {formatCurrency(totalOutflow, preferences.currency, 0)}
+                </p>
+              </div>
+              <ArrowDownRight className="h-8 w-8 text-red-500" />
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Charts Row 2 */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Category Breakdown Table */}
-          <Card className="border-border bg-card">
-            <CardHeader>
-              <CardTitle className="text-lg">Category Breakdown</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80 overflow-y-auto">
+        <Card className="border-border bg-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Net Savings</p>
+                <p
+                  className={cn(
+                    'text-2xl font-bold',
+                    data.netSavings >= 0 ? 'text-green-500' : 'text-red-500'
+                  )}
+                >
+                  {formatCurrency(data.netSavings, preferences.currency, 0)}
+                </p>
+              </div>
+              <PiggyBank
+                className={cn(
+                  'h-8 w-8',
+                  data.netSavings >= 0 ? 'text-green-500' : 'text-red-500'
+                )}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border bg-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Savings Rate</p>
+                <p
+                  className={cn(
+                    'text-2xl font-bold',
+                    data.savingsRate >= 20
+                      ? 'text-green-500'
+                      : data.savingsRate >= 0
+                        ? 'text-yellow-500'
+                        : 'text-red-500'
+                  )}
+                >
+                  {data.savingsRate}%
+                </p>
+              </div>
+              <TrendingUp
+                className={cn(
+                  'h-8 w-8',
+                  data.savingsRate >= 0 ? 'text-green-500' : 'text-red-500'
+                )}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Money Flow Sankey */}
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle className="text-lg">Money Flow</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {data.totalIncome === 0 && totalOutflow === 0 ? (
+            <div className="flex h-80 items-center justify-center text-muted-foreground">
+              No income or expense data for this period.
+            </div>
+          ) : (
+            <>
+              <div ref={sankeyChartRef} className="h-[420px]" />
+              <div className="flex flex-wrap gap-4 mt-4 justify-center text-sm">
+                {[
+                  { color: COLORS.income, label: 'Income' },
+                  { color: COLORS.expense, label: 'Expenses' },
+                  { color: COLORS.investment, label: 'Investments' },
+                  { color: COLORS.savings, label: 'Savings' },
+                ].map(({ color, label }) => (
+                  <div key={label} className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: color }}
+                    />
+                    <span className="text-muted-foreground">{label}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Category Breakdown + Income vs Expenses */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Category Breakdown Table */}
+        <Card className="border-border bg-card">
+          <CardHeader>
+            <CardTitle className="text-lg">Category Breakdown</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-80 overflow-y-auto">
+              {data.categoryBreakdown.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-muted-foreground">
+                  No spending data for this period.
+                </div>
+              ) : (
                 <table className="w-full">
                   <thead className="sticky top-0 bg-card">
                     <tr className="border-b border-border text-left text-xs text-muted-foreground">
@@ -508,14 +587,12 @@ export function ReportPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...data.category_breakdown]
+                    {[...data.categoryBreakdown]
                       .sort((a, b) => b.amount - a.amount)
                       .map(category => {
-                        const totalExpenses =
-                          data.essential_total + data.non_essential_total;
                         const percentage =
-                          totalExpenses > 0
-                            ? (category.amount / totalExpenses) * 100
+                          totalOutflow > 0
+                            ? (category.amount / totalOutflow) * 100
                             : 0;
                         return (
                           <tr
@@ -546,21 +623,14 @@ export function ReportPage() {
                       })}
                   </tbody>
                 </table>
-              </div>
-            </CardContent>
-          </Card>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Income Flow Sankey */}
-          <Card className="border-border bg-card">
-            <CardHeader>
-              <CardTitle className="text-lg">Income Flow</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div ref={sankeyChartRef} className="h-80" />
-            </CardContent>
-          </Card>
-        </div>
+        {/* Income vs Expenses over time */}
+        <IncomeExpenseChart />
       </div>
-    </>
+    </div>
   );
 }
