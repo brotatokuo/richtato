@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useHousehold } from '@/contexts/HouseholdContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { cn } from '@/lib/utils';
@@ -7,6 +8,7 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
+  Heart,
   Landmark,
   Loader2,
   LogOut,
@@ -16,7 +18,7 @@ import {
   TrendingUp,
   Wallet,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 interface SidebarProps {
@@ -24,43 +26,11 @@ interface SidebarProps {
   hideCollapseToggle?: boolean;
 }
 
-const navigationItems = [
-  {
-    name: 'Report',
-    href: '/report',
-    icon: BarChart3,
-  },
-  {
-    name: 'Accounts',
-    href: '/accounts',
-    icon: Landmark,
-  },
-  {
-    name: 'Budget',
-    href: '/budget',
-    icon: Wallet,
-  },
-  {
-    name: 'Cashflow',
-    href: '/cashflow',
-    icon: TrendingUp,
-  },
-  {
-    name: 'Data',
-    href: '/data',
-    icon: Table,
-  },
-  {
-    name: 'Setup',
-    href: '/setup',
-    icon: SlidersHorizontal,
-  },
-  {
-    name: 'Preferences',
-    href: '/preferences',
-    icon: SettingsIcon,
-  },
-];
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
 
 export function Sidebar({
   className,
@@ -71,6 +41,25 @@ export function Sidebar({
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { status: syncStatus } = useSyncStatus();
+  const { isInHousehold } = useHousehold();
+
+  const navigationItems: NavItem[] = useMemo(() => {
+    const items: NavItem[] = [
+      { name: 'Report', href: '/report', icon: BarChart3 },
+      { name: 'Accounts', href: '/accounts', icon: Landmark },
+      { name: 'Budget', href: '/budget', icon: Wallet },
+      { name: 'Cashflow', href: '/cashflow', icon: TrendingUp },
+    ];
+    if (isInHousehold) {
+      items.push({ name: 'Household', href: '/household', icon: Heart });
+    }
+    items.push(
+      { name: 'Data', href: '/data', icon: Table },
+      { name: 'Setup', href: '/setup', icon: SlidersHorizontal },
+      { name: 'Preferences', href: '/preferences', icon: SettingsIcon }
+    );
+    return items;
+  }, [isInHousehold]);
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);

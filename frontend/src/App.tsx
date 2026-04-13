@@ -40,6 +40,11 @@ const Accounts = lazy(() =>
 const More = lazy(() =>
   import('./pages/More').then(m => ({ default: m.More }))
 );
+const HouseholdDashboard = lazy(() =>
+  import('./pages/HouseholdDashboard').then(m => ({
+    default: m.HouseholdDashboard,
+  }))
+);
 
 function App() {
   return (
@@ -130,6 +135,14 @@ function App() {
                   element={
                     <Suspense fallback={null}>
                       <Accounts />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="household"
+                  element={
+                    <Suspense fallback={null}>
+                      <HouseholdDashboard />
                     </Suspense>
                   }
                 />
