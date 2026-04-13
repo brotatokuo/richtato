@@ -4,7 +4,6 @@ import {
   CloudUpload,
   Landmark,
   Menu,
-  PieChart,
   Settings,
   SlidersHorizontal,
   Table,
@@ -23,7 +22,6 @@ const routeConfig: Record<
 > = {
   '/accounts': { title: 'Accounts', icon: Landmark },
   '/budget': { title: 'Budget', icon: Wallet },
-  '/assets': { title: 'Assets', icon: PieChart },
   '/data': { title: 'Data', icon: Table },
   '/cashflow': { title: 'Cashflow', icon: TrendingUp },
   '/report': { title: 'Report', icon: BarChart3 },
@@ -63,7 +61,7 @@ export function Layout() {
   );
   const currentPageConfig = matchedKey
     ? routeConfig[matchedKey]
-    : { title: 'Dashboard', icon: PieChart };
+    : { title: 'Dashboard', icon: Landmark };
   const IconComponent = currentPageConfig.icon;
 
   return (

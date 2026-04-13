@@ -9,9 +9,6 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Welcome } from './pages/Welcome';
 
-const AssetDashboard = lazy(() =>
-  import('./pages/AssetDashboard').then(m => ({ default: m.AssetDashboard }))
-);
 const Dashboard = lazy(() =>
   import('./pages/BudgetDashboard').then(m => ({ default: m.Dashboard }))
 );
@@ -64,14 +61,6 @@ function App() {
                 element={
                   <Suspense fallback={null}>
                     <Dashboard />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="assets"
-                element={
-                  <Suspense fallback={null}>
-                    <AssetDashboard />
                   </Suspense>
                 }
               />

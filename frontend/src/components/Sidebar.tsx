@@ -10,7 +10,6 @@ import {
   Landmark,
   Loader2,
   LogOut,
-  PieChart,
   Settings as SettingsIcon,
   SlidersHorizontal,
   Table,
@@ -45,11 +44,6 @@ const navigationItems = [
     name: 'Cashflow',
     href: '/cashflow',
     icon: TrendingUp,
-  },
-  {
-    name: 'Assets',
-    href: '/assets',
-    icon: PieChart,
   },
   {
     name: 'Data',
