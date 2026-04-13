@@ -164,6 +164,8 @@ class TransactionListCreateAPIView(APIView):
 
     def get(self, request):
         """List transactions with optional filters and pagination."""
+        from apps.household.scope import get_scope_user_ids
+
         account_id = request.query_params.get("account_id")
         category_id = request.query_params.get("category_id")
         transaction_type = request.query_params.get("type")
@@ -174,6 +176,9 @@ class TransactionListCreateAPIView(APIView):
             100,
         )
         start_date, end_date = parse_date_range_params(request.query_params)
+
+        scope = request.query_params.get("scope", "personal")
+        user_ids = get_scope_user_ids(request)
 
         # Get account and category if specified
         account = None
@@ -192,14 +197,23 @@ class TransactionListCreateAPIView(APIView):
             return Response({"transactions": serializer.data})
 
         # Paginated list
-        queryset = self.transaction_service.get_user_transactions(
-            user=request.user,
-            start_date=start_date,
-            end_date=end_date,
-            account=account,
-            category=category,
-            transaction_type=transaction_type,
-        )
+        if scope == "household" and len(user_ids) > 1:
+            queryset = self.transaction_service.get_household_transactions(
+                user_ids=user_ids,
+                start_date=start_date,
+                end_date=end_date,
+                category=category,
+                transaction_type=transaction_type,
+            )
+        else:
+            queryset = self.transaction_service.get_user_transactions(
+                user=request.user,
+                start_date=start_date,
+                end_date=end_date,
+                account=account,
+                category=category,
+                transaction_type=transaction_type,
+            )
         total_count = queryset.count()
         start = (page - 1) * page_size
         end = start + page_size
@@ -428,8 +442,17 @@ class CategoryListCreateAPIView(APIView):
         self.category_repository = CategoryRepository()
 
     def get(self, request):
-        """List all categories for the user."""
-        categories = self.category_repository.get_all_for_user(request.user)
+        """List all categories for the user (or merged household categories)."""
+        from apps.household.scope import get_scope_user_ids
+
+        scope = request.query_params.get("scope", "personal")
+        user_ids = get_scope_user_ids(request)
+
+        if scope == "household" and len(user_ids) > 1:
+            categories = self.category_repository.get_merged_for_users(user_ids)
+        else:
+            categories = self.category_repository.get_all_for_user(request.user)
+
         serializer = TransactionCategorySerializer(categories, many=True)
         return Response({"categories": serializer.data})
 

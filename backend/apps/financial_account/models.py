@@ -68,6 +68,12 @@ class FinancialAccount(models.Model):
     )
     sync_source = models.CharField(max_length=20, choices=SYNC_SOURCE_CHOICES, default="manual")
 
+    # Household sharing
+    shared_with_household = models.BooleanField(
+        default=False,
+        help_text="Whether this account is visible in household view.",
+    )
+
     # Card customization
     image_key = models.CharField(
         max_length=100,

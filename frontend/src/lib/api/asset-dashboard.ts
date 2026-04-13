@@ -64,8 +64,14 @@ class AssetDashboardApiService extends BaseApiClient {
   /**
    * Get dashboard metrics (net worth, savings rate, etc.)
    */
-  async getDashboardMetrics(): Promise<AssetDashboardData> {
-    const response = await fetchWithAuth(`${this.baseUrl}/metrics/`, {
+  async getDashboardMetrics(input?: {
+    scope?: 'personal' | 'household';
+  }): Promise<AssetDashboardData> {
+    const url = new URL(`${this.baseUrl}/metrics/`, window.location.origin);
+    if (input?.scope && input.scope !== 'personal')
+      url.searchParams.append('scope', input.scope);
+
+    const response = await fetchWithAuth(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',

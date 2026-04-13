@@ -31,16 +31,24 @@ class FinancialAccountListCreateAPIView(APIView):
 
     def get(self, request):
         """List all financial accounts for the user."""
+        from apps.household.scope import get_scope_user_ids
+
         active_only = request.query_params.get("active_only", "true").lower() == "true"
         account_type = request.query_params.get("type")
 
-        if account_type:
+        scope = request.query_params.get("scope", "personal")
+        user_ids = get_scope_user_ids(request)
+
+        if scope == "household" and len(user_ids) > 1:
+            accounts = self.account_service.get_household_accounts(
+                user_ids, active_only=active_only,
+            )
+        elif account_type:
             accounts = self.account_service.get_accounts_by_type(request.user, account_type)
         else:
             accounts = self.account_service.get_user_accounts(request.user, active_only=active_only)
 
         serializer = FinancialAccountSerializer(accounts, many=True)
-        # Return both formats for compatibility
         return Response({"accounts": serializer.data, "rows": serializer.data})
 
     def post(self, request):

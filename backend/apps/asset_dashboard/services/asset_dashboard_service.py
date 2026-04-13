@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta
+from django.db.models import Sum
 
 
 class AssetDashboardService:
@@ -239,6 +240,67 @@ class AssetDashboardService:
             "total_liabilities": float(total_liabilities),
             "networth_growth": networth_growth,
             "networth_growth_class": networth_growth_class,
+            "expense_sum": float(expense_30_days),
+            "income_sum": float(income_30_days),
+            "savings_rate": savings_rate_str,
+            "savings_rate_context": savings_rate_context,
+            "savings_rate_class": savings_rate_class,
+        }
+
+    def get_dashboard_metrics_for_users(self, user_ids: list[int]) -> dict:
+        """Aggregate dashboard metrics across multiple household members' shared accounts."""
+        from apps.core.constants import get_expense_filter, get_income_filter
+        from apps.financial_account.models import FinancialAccount
+        from apps.transaction.models import Transaction
+
+        shared_accounts = FinancialAccount.objects.filter(
+            user_id__in=user_ids, is_active=True, shared_with_household=True,
+        )
+
+        total_assets = sum(
+            a.balance for a in shared_accounts if not a.is_liability
+        ) or Decimal("0")
+        total_liabilities = abs(sum(
+            a.balance for a in shared_accounts if a.is_liability
+        )) or Decimal("0")
+        networth = total_assets - total_liabilities
+
+        thirty_days_ago = date.today() - timedelta(days=30)
+        today = date.today()
+
+        shared_account_ids = list(shared_accounts.values_list("id", flat=True))
+
+        income_30_days = (
+            Transaction.objects.filter(
+                account_id__in=shared_account_ids,
+                date__gte=thirty_days_ago,
+                date__lte=today,
+            )
+            .filter(get_income_filter())
+            .aggregate(total=Sum("amount"))["total"]
+        ) or Decimal("0")
+
+        expense_30_days = (
+            Transaction.objects.filter(
+                account_id__in=shared_account_ids,
+                date__gte=thirty_days_ago,
+                date__lte=today,
+            )
+            .filter(get_expense_filter())
+            .aggregate(total=Sum("amount"))["total"]
+        ) or Decimal("0")
+
+        cash_flow = income_30_days - expense_30_days
+        savings_rate = round((cash_flow / income_30_days) * 100, 1) if income_30_days > 0 else 0
+        savings_rate_str = f"{savings_rate}%"
+        savings_rate_context, savings_rate_class = self._calculate_savings_rate_context(savings_rate_str)
+
+        return {
+            "networth": float(networth),
+            "total_assets": float(total_assets),
+            "total_liabilities": float(total_liabilities),
+            "networth_growth": "N/A",
+            "networth_growth_class": "",
             "expense_sum": float(expense_30_days),
             "income_sum": float(income_30_days),
             "savings_rate": savings_rate_str,

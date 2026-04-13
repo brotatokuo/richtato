@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     "apps.categorization",
     "apps.sync",
     "apps.budget",
+    "apps.household",
     "django.contrib.humanize",
     "django.contrib.admin",
     "django.contrib.auth",

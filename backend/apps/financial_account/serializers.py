@@ -56,6 +56,7 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
             "is_active",
             "sync_source",
             "image_key",
+            "shared_with_household",
             "created_at",
             "updated_at",
             # Backward compatibility
@@ -149,3 +150,4 @@ class FinancialAccountUpdateSerializer(serializers.Serializer):
     balance = serializers.DecimalField(max_digits=15, decimal_places=2, required=False)
     is_active = serializers.BooleanField(required=False)
     image_key = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
+    shared_with_household = serializers.BooleanField(required=False)

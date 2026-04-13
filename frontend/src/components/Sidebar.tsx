@@ -98,7 +98,7 @@ export function Sidebar({
     >
       {/* Header */}
       <div className="flex h-16 items-center justify-between border-b border-slate-200/50 dark:border-slate-700/50 px-4">
-        <div className="flex items-center gap-3">
+        <Link to="/report" className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center">
             <img
               src="/richtato.png"
@@ -111,7 +111,7 @@ export function Sidebar({
               Richtato
             </span>
           )}
-        </div>
+        </Link>
         {!hideCollapseToggle && (
           <Button
             variant="ghost"

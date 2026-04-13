@@ -4,17 +4,21 @@ This file provides guidance when working with the Richtato frontend codebase.
 
 ## Project Overview
 
-Richtato Frontend is a **React-based personal finance management interface** providing dashboards for tracking expenses, income, budgets, and net worth. It connects to a Django backend API for data and supports bank account syncing.
+Richtato is a **Monarch Money competitor** — an AI-native personal finance app with beautiful data visualization, frictionless transaction management, and real-time bank sync. The frontend is a React SPA with responsive design: sidebar navigation on desktop, bottom tab bar on mobile.
 
 ## Tech Stack
 
-- **React 19** with TypeScript
+- **React 19** with TypeScript (strict mode)
 - **React Router 7** for client-side routing
-- **Vite 7** as build tool with HMR
+- **Vite 6** as build tool with HMR
 - **Tailwind CSS 3.4** for styling
-- **Shadcn/UI** component library
-- **Lucide React** for icons
-- **Vitest** for testing
+- **Shadcn/UI** + **Radix UI** primitives
+- **Apache ECharts** (`echarts` + `echarts-for-react`) for all charts
+- **TanStack Table** (`@tanstack/react-table`) for data tables
+- **Lucide React** for all icons
+- **Sonner** for toast notifications
+- **date-fns** for date formatting/manipulation
+- **Vitest** + **Testing Library** for tests
 
 ## Development Commands
 
@@ -35,6 +39,9 @@ yarn type-check
 yarn lint
 yarn lint:fix
 
+# Formatting
+yarn format
+
 # Testing
 yarn test
 yarn test:run
@@ -45,60 +52,129 @@ yarn test:coverage
 
 ```
 src/
-├── pages/              # Route-level components
-│   ├── AssetDashboard.tsx     # Net worth & account overview
-│   ├── BudgetDashboard.tsx    # Budget tracking & trends
-│   ├── Cashflow.tsx           # Income/expense flow
-│   ├── Transactions.tsx       # Transaction list & management
-│   ├── Settings.tsx           # App settings & preferences
-│   ├── Login.tsx              # Authentication
-│   └── Profile.tsx            # User profile
+├── pages/                        # Route-level components
+│   ├── ReportPage.tsx            # Net worth & account overview (hero page)
+│   ├── BudgetDashboard.tsx       # Budget vs actual, category breakdown
+│   ├── Cashflow.tsx              # Income/expense flow visualization
+│   ├── DataTable.tsx             # Transaction list with filtering & bulk actions
+│   ├── Accounts.tsx              # Account management with history panels
+│   ├── Preferences.tsx           # Settings: appearance, categories, budgets
+│   ├── Setup.tsx                 # Bank connections & initial account setup
+│   ├── More.tsx                  # Mobile-only overflow menu
+│   ├── Profile.tsx               # User profile
+│   ├── Upload.tsx                # CSV/manual transaction import
+│   ├── Welcome.tsx               # Marketing/onboarding landing page
+│   ├── Login.tsx                 # Authentication
+│   └── Register.tsx              # Registration
 │
-├── components/         # Reusable UI components
-│   ├── Layout.tsx             # Main app layout with sidebar
-│   ├── Sidebar.tsx            # Navigation sidebar
-│   ├── ProtectedRoute.tsx     # Auth-guarded route wrapper
-│   ├── ThemeToggle.tsx        # Dark/light mode toggle
-│   ├── ui/                    # Shadcn/UI base components
-│   ├── asset_dashboard/       # Asset/net worth charts
-│   ├── budget_dashboard/      # Budget visualization
-│   ├── transactions/          # Transaction table & forms
-│   ├── accounts/              # Account cards & modals
-│   └── settings/              # Settings panels & modals
+├── components/
+│   ├── Layout.tsx                # Main app layout (header + sidebar + outlet)
+│   ├── Sidebar.tsx               # Desktop collapsible navigation
+│   ├── BottomTabBar.tsx          # Mobile bottom tab navigation
+│   ├── ProtectedRoute.tsx        # Auth-guarded route wrapper
+│   ├── ThemeToggle.tsx           # Dark/light mode toggle
+│   ├── MobileBottomNav.tsx       # (legacy, prefer BottomTabBar)
+│   │
+│   ├── asset_dashboard/          # Report page charts & components
+│   │   ├── BaseChart.tsx         # Shared ECharts config/wrapper
+│   │   ├── NetWorthTrendChart.tsx
+│   │   ├── IncomeExpenseChart.tsx
+│   │   ├── AssetTrendsChart.tsx
+│   │   ├── SavingsChart.tsx
+│   │   ├── AccountBreakdownChart.tsx
+│   │   ├── AccountsList.tsx
+│   │   ├── AccountHistoryPanel.tsx
+│   │   ├── GroupHistoryPanel.tsx
+│   │   └── MetricCard.tsx        # Key financial metric display card
+│   │
+│   ├── budget_dashboard/         # Budget page components
+│   │   ├── BudgetBreakdown.tsx
+│   │   ├── BudgetTrendsChart.tsx
+│   │   ├── CategoryBreakdown.tsx
+│   │   ├── ExpenseBreakdown.tsx
+│   │   ├── PieWithDetailedLegend.tsx
+│   │   ├── MonthTimeline.tsx     # Month-by-month navigation
+│   │   └── ExpenseDetailModal.tsx
+│   │
+│   ├── transactions/             # Transaction management
+│   │   ├── TransactionTable.tsx  # Main sortable/filterable table
+│   │   ├── TransactionForm.tsx   # Create/edit modal
+│   │   ├── SearchAndFilter.tsx   # Filter bar
+│   │   ├── RecategorizeDialog.tsx       # AI bulk recategorization
+│   │   └── RecategorizeProgressModal.tsx
+│   │
+│   ├── accounts/                 # Account components
+│   │   ├── AccountsSidebar.tsx
+│   │   ├── AccountDetailPanel.tsx
+│   │   ├── AccountFormFields.tsx
+│   │   ├── AccountCreateModal.tsx
+│   │   └── AccountBalanceForm.tsx
+│   │
+│   ├── settings/                 # Preferences page sections
+│   │   ├── AppearanceSection.tsx
+│   │   ├── CategoriesSection.tsx
+│   │   ├── BudgetsSection.tsx
+│   │   ├── BudgetModal.tsx
+│   │   ├── UnifiedAccountsSection.tsx
+│   │   ├── AccountDetailModal.tsx
+│   │   ├── BulkKeywordsModal.tsx
+│   │   ├── NotificationsSection.tsx
+│   │   ├── SyncHistorySection.tsx
+│   │   └── DisconnectConfirmModal.tsx
+│   │
+│   └── ui/                       # Shadcn/UI base components
+│       ├── button, card, dialog, input, select, switch, tabs
+│       ├── badge, avatar, alert, progress, label
+│       ├── calendar, date-range-picker, MonthYearPicker, YearPicker
+│       ├── DataTable.tsx         # TanStack Table wrapper
+│       ├── SortableHeader.tsx    # Table column header with sort
+│       ├── ColumnFilterPopover.tsx
+│       ├── Pagination.tsx
+│       ├── Modal.tsx
+│       ├── ContextMenu.tsx
+│       ├── LoadingSpinner.tsx
+│       ├── dropdown-menu, popover, collapsible, alert-dialog, table
 │
 ├── lib/
-│   ├── api/            # API service classes
-│   │   ├── auth.ts            # Login, logout, demo
-│   │   ├── transactions.ts    # Transactions & categories
-│   │   ├── asset-dashboard.ts # Net worth metrics
-│   │   ├── budget-dashboard.ts# Budget analytics
-│   │   ├── bankConnections.ts # Bank sync management (Plaid)
-│   │   ├── user.ts            # User profile & settings
-│   │   └── csrf.ts            # CSRF token handling
-│   └── utils.ts        # Utility functions (cn, formatting)
+│   ├── api/                      # API service singletons
+│   │   ├── auth.ts               # Login, logout, demo, register
+│   │   ├── transactions.ts       # Transactions & categories
+│   │   ├── asset-dashboard.ts    # Net worth metrics & trends
+│   │   ├── budget-dashboard.ts   # Budget analytics
+│   │   ├── bankConnections.ts    # Bank sync management (Plaid/Teller)
+│   │   ├── user.ts               # User profile & settings
+│   │   └── csrf.ts               # CSRF token handling
+│   └── utils.ts                  # cn(), currency formatting, date utils
 │
-├── contexts/           # React Context providers
-│   ├── AuthContext.tsx        # Authentication state
-│   ├── PreferencesContext.tsx # User preferences
-│   └── ThemeContext.tsx       # Theme management
+├── contexts/
+│   ├── AuthContext.tsx            # Auth state + login/logout/checkAuth
+│   ├── PreferencesContext.tsx     # Currency, date format, display prefs
+│   └── ThemeContext.tsx           # Dark/light mode
 │
-├── hooks/              # Custom React hooks
-│   └── usePlaidLink.ts        # Plaid bank connection
+├── hooks/
+│   ├── useAuth.ts                 # Auth context consumer
+│   ├── useSyncStatus.ts           # Bank sync polling + callbacks
+│   ├── usePlaidLink.ts            # Plaid Link integration
+│   └── usePolling.ts              # Generic polling hook
 │
-└── types/              # TypeScript type definitions
+└── types/                         # Shared TypeScript type definitions
 ```
 
 ## API Service Pattern
 
-All API calls use class-based services in `lib/api/`:
+All API calls use class-based service singletons in `lib/api/`:
 
 ```typescript
-// Example: transactions.ts
 class TransactionService {
   private baseUrl = '/api/v1';
 
-  async getTransactions(filters: TransactionFilters): Promise<TransactionResponse> {
-    const response = await fetch(`${this.baseUrl}/transactions/`, {...});
+  async getTransactions(
+    filters: TransactionFilters
+  ): Promise<TransactionResponse> {
+    const response = await fetch(`${this.baseUrl}/transactions/?${params}`, {
+      credentials: 'include',
+      headers: this.getHeaders(),
+    });
     return this.handleResponse(response);
   }
 
@@ -106,6 +182,7 @@ class TransactionService {
     const csrf = await getCSRFToken();
     const response = await fetch(`${this.baseUrl}/transactions/${id}/`, {
       method: 'PUT',
+      credentials: 'include',
       headers: { 'X-CSRFToken': csrf, ...this.getHeaders() },
       body: JSON.stringify(data),
     });
@@ -116,30 +193,83 @@ class TransactionService {
 export const transactionService = new TransactionService();
 ```
 
-**Key patterns:**
+**Rules:**
 
-- Services are singleton instances exported from each file
-- CSRF tokens fetched via `getCSRFToken()` for mutations
-- `handleResponse()` method for consistent error handling
-- Credentials: 'include' for cookie-based auth
+- Services are singleton instances — import the instance, not the class
+- `credentials: 'include'` on every request (cookie-based auth)
+- CSRF token via `getCSRFToken()` on all mutations (POST/PUT/PATCH/DELETE)
+- `handleResponse()` for consistent error handling
 
 ## State Management
 
-### Authentication (`AuthContext`)
+| Layer              | Tool                 | Use Case                      |
+| ------------------ | -------------------- | ----------------------------- |
+| Global auth        | `AuthContext`        | login state, user object      |
+| Global preferences | `PreferencesContext` | currency, date format         |
+| Theme              | `ThemeContext`       | dark/light                    |
+| Filter state       | URL search params    | date ranges, category filters |
+| Local UI           | `useState`           | modals, loading, form state   |
 
-- Manages user login state
-- Provides `login()`, `logout()`, `checkAuth()` methods
-- Handles demo user creation
+## Data Fetching Pattern
 
-### Preferences (`PreferencesContext`)
+```typescript
+useEffect(() => {
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const data = await someService.getData(filters);
+      setData(data);
+    } catch (error) {
+      setError('Failed to load');
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchData();
+}, [filters]);
+```
 
-- User display preferences (date format, currency)
-- Persisted via backend API
+## Charts (ECharts)
 
-### Local State
+All charts use `echarts-for-react`. Reference `BaseChart.tsx` for shared setup.
 
-- Component-level `useState` for UI state
-- URL search params for filters (date ranges, categories)
+```typescript
+import ReactECharts from 'echarts-for-react';
+
+const option = {
+  tooltip: { trigger: 'axis' },
+  xAxis: { type: 'category', data: labels },
+  yAxis: { type: 'value' },
+  series: [{ type: 'line', data: values, smooth: true }],
+};
+
+<ReactECharts option={option} style={{ height: '300px' }} />
+```
+
+**Chart guidelines:**
+
+- Use `smooth: true` for line charts (Monarch aesthetic)
+- Pass theme-aware colors — read from CSS variables or accept as props
+- Always set explicit `height` on the wrapper style
+- Use `tooltip.formatter` to show currency values with the user's preferred format
+
+## Tables (TanStack Table)
+
+The `ui/DataTable.tsx` component wraps TanStack Table. Use `SortableHeader` for sortable columns and `ColumnFilterPopover` for column-level filtering.
+
+```typescript
+import { DataTable } from '@/components/ui/DataTable';
+
+const columns: ColumnDef<Transaction>[] = [
+  {
+    accessorKey: 'date',
+    header: ({ column }) => <SortableHeader column={column} title="Date" />,
+  },
+  // ...
+];
+
+<DataTable columns={columns} data={transactions} />
+```
 
 ## Component Conventions
 
@@ -149,97 +279,75 @@ export const transactionService = new TransactionService();
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { ChevronRight, DollarSign } from 'lucide-react';
+import { TrendingUp, DollarSign } from 'lucide-react';
 ```
 
 ### Conditional Classes
 
 ```typescript
 <div className={cn(
-  "base-classes",
-  isActive && "active-classes",
-  variant === "secondary" && "secondary-classes"
+  'base-classes',
+  isActive && 'active-classes',
+  variant === 'secondary' && 'secondary-classes'
 )}>
 ```
 
-### Data Fetching
+### Toasts (Sonner)
 
 ```typescript
-useEffect(() => {
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const data = await someService.getData();
-      setData(data);
-    } catch (error) {
-      setError('Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  };
-  fetchData();
-}, [dependency]);
+import { toast } from 'sonner';
+
+toast.success('Sync complete', { description: '12 new transactions' });
+toast.error('Failed to sync', { description: error.message });
 ```
 
-## Key Pages
+### Loading States
 
-| Page              | Purpose                                              |
-| ----------------- | ---------------------------------------------------- |
-| `AssetDashboard`  | Net worth overview, account breakdown, trends        |
-| `BudgetDashboard` | Budget progress, spending by category                |
-| `Transactions`    | Transaction list with filtering, bulk categorization |
-| `Cashflow`        | Income vs expense visualization                      |
-| `Settings`        | Accounts, categories, budgets, bank connections      |
+Use `animate-shimmer` skeleton divs for loading states, matching the shape of the loaded content. Avoid full-page spinners for data fetches.
 
-## Component Features
+## Responsive Design
 
-### Asset Dashboard (`components/asset_dashboard/`)
+The app uses a **sidebar + bottom tab bar** pattern:
 
-- `MetricCard` - Key financial metrics display
-- `NetWorthTrendChart` - Line chart of net worth over time
-- `AccountsList` - Grouped accounts with balances
-- `IncomeExpenseChart` - Income vs expense comparison
+```
+Desktop (md+):         Mobile (<md):
+┌────────┬──────────┐  ┌──────────────┐
+│Sidebar │  Content │  │   Header     │
+│        │          │  │   Content    │
+│        │          │  │              │
+└────────┴──────────┘  │──────────────│
+                       │  Bottom Tabs │
+                       └──────────────┘
+```
 
-### Budget Dashboard (`components/budget_dashboard/`)
+- `Sidebar`: `hidden md:flex` — only visible on desktop
+- `BottomTabBar`: `md:hidden fixed bottom-0` — only visible on mobile
+- Main content: `pb-20 md:pb-6` — extra bottom padding on mobile for tab bar clearance
+- Header: sticky, `bg-background/95 backdrop-blur` for scroll effect
 
-- `BudgetBreakdown` - Budget allocation by category
-- `ExpenseBreakdown` - Spending breakdown pie chart
-- `MonthTimeline` - Month-by-month navigation
+## UX Patterns (Monarch-inspired)
 
-### Transactions (`components/transactions/`)
-
-- `TransactionTable` - Sortable, filterable transaction list
-- `TransactionForm` - Create/edit transaction modal
-- `RecategorizeDialog` - Bulk AI re-categorization
-
-### Settings (`components/settings/`)
-
-- `CategoriesSection` - Manage transaction categories
-- `BudgetsSection` - Budget allocation management
-- `BankConnectionsSection` - Bank connection management
-- `UnifiedAccountsSection` - Account overview
-
-## UI Components (`components/ui/`)
-
-Based on Shadcn/UI, includes:
-
-- `Button`, `Card`, `Dialog`, `Modal`
-- `Input`, `Select`, `Switch`, `Calendar`
-- `Table`, `DataTable` (with sorting/filtering)
-- `DropdownMenu`, `Popover`, `ContextMenu`
+- **Metric cards**: Large number + label + trend indicator. Use `MetricCard` component.
+- **Month navigation**: `MonthTimeline` for budget and cashflow time navigation
+- **Inline editing**: Click-to-edit on transaction rows rather than navigating away
+- **Bulk actions**: Select multiple transactions → bulk categorize, delete
+- **AI recategorization**: `RecategorizeDialog` triggers backend AI to re-classify transactions
+- **Sync status badge**: Emerald badge on Data tab shows new transaction count after sync
+- **Positive = emerald, negative = destructive**: Consistent across all money displays
 
 ## Configuration
 
-| File                 | Purpose                                    |
-| -------------------- | ------------------------------------------ |
-| `vite.config.ts`     | Build config, path aliases (`@/` → `src/`) |
-| `tailwind.config.js` | Theme customization                        |
-| `tsconfig.json`      | TypeScript with strict mode                |
-| `eslint.config.js`   | ESLint flat config                         |
+| File                 | Purpose                                                          |
+| -------------------- | ---------------------------------------------------------------- |
+| `vite.config.ts`     | Build config, path aliases (`@/` → `src/`), dev proxy to backend |
+| `tailwind.config.js` | Theme, custom animations, typography plugin                      |
+| `tsconfig.json`      | TypeScript strict mode                                           |
+| `eslint.config.js`   | ESLint flat config                                               |
 
 ## Development Notes
 
-- **Port**: Development server runs on port 5927
-- **Auth**: Cookie-based with CSRF protection
-- **API Proxy**: Vite proxies `/api/` to backend in dev
-- **Path Alias**: Use `@/` for imports from `src/`
+- **Port**: Dev server runs on port 5927
+- **Auth**: Cookie-based session with CSRF protection
+- **API Proxy**: Vite proxies `/api/` to backend in development
+- **Path Alias**: Always use `@/` for imports from `src/`
+- **No console.log**: Use proper error boundaries or silent failure with toast

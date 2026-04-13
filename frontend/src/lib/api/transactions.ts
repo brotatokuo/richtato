@@ -61,6 +61,8 @@ export interface Account {
   is_active?: boolean;
   // Card customization
   image_key?: string | null;
+  // Household sharing
+  shared_with_household?: boolean;
   // Sync connection fields
   sync_source?: string;
   has_connection?: boolean;
@@ -123,6 +125,7 @@ class TransactionsApiService {
     accountId?: number;
     categoryId?: number;
     search?: string;
+    scope?: 'personal' | 'household';
   }): Promise<{
     transactions: Transaction[];
     page?: number;
@@ -146,6 +149,8 @@ class TransactionsApiService {
     if (input?.categoryId)
       url.searchParams.append('category_id', String(input.categoryId));
     if (input?.search) url.searchParams.append('search', input.search);
+    if (input?.scope && input.scope !== 'personal')
+      url.searchParams.append('scope', input.scope);
 
     const response = await fetch(url.toString(), {
       method: 'GET',
@@ -274,8 +279,14 @@ class TransactionsApiService {
   /**
    * Get all accounts
    */
-  async getAccounts(): Promise<Account[]> {
-    const response = await fetch(`${this.baseUrl}/accounts/`, {
+  async getAccounts(input?: {
+    scope?: 'personal' | 'household';
+  }): Promise<Account[]> {
+    const url = new URL(`${this.baseUrl}/accounts/`, window.location.origin);
+    if (input?.scope && input.scope !== 'personal')
+      url.searchParams.append('scope', input.scope);
+
+    const response = await fetch(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',

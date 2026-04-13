@@ -40,6 +40,23 @@ class TransactionService:
             transaction_type=transaction_type,
         )
 
+    def get_household_transactions(
+        self,
+        user_ids: list[int],
+        start_date: date | None = None,
+        end_date: date | None = None,
+        category: TransactionCategory | None = None,
+        transaction_type: str | None = None,
+    ) -> QuerySet[Transaction]:
+        """Get transactions from shared accounts for household members."""
+        return self.transaction_repository.get_by_user_ids_shared(
+            user_ids=user_ids,
+            start_date=start_date,
+            end_date=end_date,
+            category=category,
+            transaction_type=transaction_type,
+        )
+
     def get_transaction_by_id(self, transaction_id: int, user: User) -> Transaction | None:
         """Get transaction by ID, ensuring it belongs to the user."""
         transaction = self.transaction_repository.get_by_id(transaction_id)

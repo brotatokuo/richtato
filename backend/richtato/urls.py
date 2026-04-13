@@ -73,6 +73,8 @@ urlpatterns = [
     path("demo-login/", user_views.demo_login, name="demo_login"),
     # Cron endpoint for scheduled sync (used by Render Cron Jobs)
     path("api/cron/sync/", sync_views.CronSyncAPIView.as_view(), name="cron-sync"),
+    # Household endpoints
+    path("api/v1/household/", include("apps.household.urls")),
     # Add sync status endpoint at both /api/sync/ and /api/v1/sync/
     path("api/v1/sync/", include("apps.sync.urls")),
 ]

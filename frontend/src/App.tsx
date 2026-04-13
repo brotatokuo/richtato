@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
+import { HouseholdProvider } from './contexts/HouseholdContext';
 import { PreferencesProvider } from './contexts/PreferencesContext';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
@@ -43,110 +44,112 @@ const More = lazy(() =>
 function App() {
   return (
     <AuthProvider>
-      <PreferencesProvider>
-        <Toaster position="top-right" richColors closeButton />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/welcome" element={<Welcome />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Layout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Navigate to="/report" replace />} />
+      <HouseholdProvider>
+        <PreferencesProvider>
+          <Toaster position="top-right" richColors closeButton />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/welcome" element={<Welcome />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
               <Route
-                path="budget"
+                path="/"
                 element={
-                  <Suspense fallback={null}>
-                    <Dashboard />
-                  </Suspense>
+                  <ProtectedRoute>
+                    <Layout />
+                  </ProtectedRoute>
                 }
-              />
-              <Route
-                path="data"
-                element={
-                  <Suspense fallback={null}>
-                    <DataTable />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="cashflow"
-                element={
-                  <Suspense fallback={null}>
-                    <Cashflow />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="report"
-                element={
-                  <Suspense fallback={null}>
-                    <ReportPage />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="upload"
-                element={
-                  <Suspense fallback={null}>
-                    <Upload />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="profile"
-                element={
-                  <Suspense fallback={null}>
-                    <Profile />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="preferences"
-                element={
-                  <Suspense fallback={null}>
-                    <Preferences />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="setup"
-                element={
-                  <Suspense fallback={null}>
-                    <Setup />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="accounts"
-                element={
-                  <Suspense fallback={null}>
-                    <Accounts />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="settings"
-                element={<Navigate to="/preferences" replace />}
-              />
-              <Route
-                path="more"
-                element={
-                  <Suspense fallback={null}>
-                    <More />
-                  </Suspense>
-                }
-              />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </PreferencesProvider>
+              >
+                <Route index element={<Navigate to="/report" replace />} />
+                <Route
+                  path="budget"
+                  element={
+                    <Suspense fallback={null}>
+                      <Dashboard />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="data"
+                  element={
+                    <Suspense fallback={null}>
+                      <DataTable />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="cashflow"
+                  element={
+                    <Suspense fallback={null}>
+                      <Cashflow />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="report"
+                  element={
+                    <Suspense fallback={null}>
+                      <ReportPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="upload"
+                  element={
+                    <Suspense fallback={null}>
+                      <Upload />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="profile"
+                  element={
+                    <Suspense fallback={null}>
+                      <Profile />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="preferences"
+                  element={
+                    <Suspense fallback={null}>
+                      <Preferences />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="setup"
+                  element={
+                    <Suspense fallback={null}>
+                      <Setup />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="accounts"
+                  element={
+                    <Suspense fallback={null}>
+                      <Accounts />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="settings"
+                  element={<Navigate to="/preferences" replace />}
+                />
+                <Route
+                  path="more"
+                  element={
+                    <Suspense fallback={null}>
+                      <More />
+                    </Suspense>
+                  }
+                />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </PreferencesProvider>
+      </HouseholdProvider>
     </AuthProvider>
   );
 }

@@ -47,6 +47,35 @@ class TransactionRepository:
 
         return queryset
 
+    def get_by_user_ids_shared(
+        self,
+        user_ids: list[int],
+        start_date: date | None = None,
+        end_date: date | None = None,
+        category: TransactionCategory | None = None,
+        transaction_type: str | None = None,
+    ) -> QuerySet[Transaction]:
+        """Get transactions from shared accounts for multiple users (household scope)."""
+        queryset = (
+            Transaction.objects.filter(
+                user_id__in=user_ids,
+                account__shared_with_household=True,
+            )
+            .select_related("account", "category", "user")
+            .order_by("-date", "-created_at")
+        )
+
+        if start_date:
+            queryset = queryset.filter(date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(date__lte=end_date)
+        if category:
+            queryset = queryset.filter(category=category)
+        if transaction_type:
+            queryset = queryset.filter(transaction_type=transaction_type)
+
+        return queryset
+
     def get_by_account(
         self,
         account: FinancialAccount,

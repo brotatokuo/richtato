@@ -10,9 +10,10 @@ import {
   TrendingUp,
   Wallet,
 } from 'lucide-react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { BottomTabBar } from './BottomTabBar';
+import { ScopeToggle } from './household/ScopeToggle';
 import { Sidebar } from './Sidebar';
 
 // Route to page title and icon mapping
@@ -73,17 +74,20 @@ export function Layout() {
           <div className="mx-auto px-4 md:px-6 py-4">
             <div className="flex items-center gap-3">
               {/* Mobile: app logo in header */}
-              <img
-                src="/richtato.png"
-                alt="Richtato"
-                className="h-7 w-7 rounded md:hidden"
-              />
-              <div className="flex items-center gap-2">
+              <Link to="/report">
+                <img
+                  src="/richtato.png"
+                  alt="Richtato"
+                  className="h-7 w-7 rounded md:hidden"
+                />
+              </Link>
+              <div className="flex items-center gap-2 flex-1">
                 <IconComponent className="h-5 w-5 md:h-6 md:w-6 text-foreground" />
                 <h1 className="text-lg md:text-2xl font-semibold text-foreground">
                   {currentPageConfig.title}
                 </h1>
               </div>
+              <ScopeToggle className="hidden md:inline-flex" />
             </div>
           </div>
         </header>

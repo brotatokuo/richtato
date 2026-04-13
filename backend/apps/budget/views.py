@@ -26,9 +26,18 @@ class BudgetListCreateAPIView(APIView):
         self.budget_service = BudgetService()
 
     def get(self, request):
-        """List all budgets for the user."""
+        """List all budgets for the user (or household budgets in household scope)."""
+        from apps.household.scope import get_scope_user_ids
+
         active_only = request.query_params.get("active_only", "true").lower() == "true"
-        budgets = self.budget_service.get_user_budgets(request.user, active_only)
+        scope = request.query_params.get("scope", "personal")
+        user_ids = get_scope_user_ids(request)
+
+        if scope == "household" and len(user_ids) > 1:
+            budgets = self.budget_service.get_household_budgets(user_ids, active_only)
+        else:
+            budgets = self.budget_service.get_user_budgets(request.user, active_only)
+
         serializer = BudgetSerializer(budgets, many=True)
         return Response({"budgets": serializer.data})
 
