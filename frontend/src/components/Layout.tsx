@@ -1,3 +1,7 @@
+import {
+  HeaderSlotProvider,
+  useHeaderSlot,
+} from '@/contexts/HeaderSlotContext';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import {
   BarChart3,
@@ -36,7 +40,16 @@ const routeConfig: Record<
 };
 
 export function Layout() {
+  return (
+    <HeaderSlotProvider>
+      <LayoutInner />
+    </HeaderSlotProvider>
+  );
+}
+
+function LayoutInner() {
   const location = useLocation();
+  const { headerSlot } = useHeaderSlot();
 
   // Global sync status monitoring for toast notifications
   useSyncStatus({
@@ -89,6 +102,9 @@ export function Layout() {
                   {currentPageConfig.title}
                 </h1>
               </div>
+              {headerSlot && (
+                <div className="hidden md:flex items-center">{headerSlot}</div>
+              )}
               <ScopeToggle className="hidden md:inline-flex" />
             </div>
           </div>

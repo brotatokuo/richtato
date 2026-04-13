@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { YearPicker } from '@/components/ui/YearPicker';
+import { useHeaderSlot } from '@/contexts/HeaderSlotContext';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import {
@@ -26,6 +27,7 @@ const INCOME_COLOR = '#3b82f6'; // blue-500
 export function ReportPage() {
   const { preferences } = usePreferences();
   const { scope } = useHousehold();
+  const { setHeaderSlot } = useHeaderSlot();
   const [data, setData] = useState<AnnualAnalysisData | null>(null);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [selectedYear, setSelectedYear] = useState<number>(
@@ -66,6 +68,18 @@ export function ReportPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Register the year picker into the header slot
+  useEffect(() => {
+    setHeaderSlot(
+      <YearPicker
+        year={selectedYear}
+        availableYears={availableYears}
+        onChange={setSelectedYear}
+      />
+    );
+    return () => setHeaderSlot(null);
+  }, [selectedYear, availableYears, setHeaderSlot]);
 
   // Initialize and update Donut Chart
   useEffect(() => {
@@ -391,13 +405,6 @@ export function ReportPage() {
 
   return (
     <>
-      {/* Floating Year Picker */}
-      <YearPicker
-        year={selectedYear}
-        availableYears={availableYears}
-        onChange={setSelectedYear}
-      />
-
       <div className="space-y-6">
         {/* Summary Cards */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">

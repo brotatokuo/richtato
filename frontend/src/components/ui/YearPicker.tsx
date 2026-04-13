@@ -50,7 +50,7 @@ export function YearPicker({
   };
 
   return (
-    <div className={cn('fixed top-2 right-2 z-50', className)}>
+    <div className={cn(className)}>
       <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
         <DropdownMenuTrigger asChild>
           <button

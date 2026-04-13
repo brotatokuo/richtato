@@ -2,6 +2,7 @@ import { IncomeExpenseChart } from '@/components/asset_dashboard/IncomeExpenseCh
 import { Card, CardContent } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
+import { useHeaderSlot } from '@/contexts/HeaderSlotContext';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { transactionsApiService } from '@/lib/api/transactions';
 import ReactECharts from 'echarts-for-react';
@@ -48,6 +49,7 @@ interface CashflowData {
 
 export function Cashflow() {
   const { scope } = useHousehold();
+  const { setHeaderSlot } = useHeaderSlot();
   const [cashflowData, setCashflowData] = useState<CashflowData>({
     totalIncome: 0,
     totalExpenses: 0,
@@ -71,6 +73,15 @@ export function Cashflow() {
     setYear(newYear);
     setMonth(newMonth);
   };
+
+  // Register the month/year picker into the header slot
+  useEffect(() => {
+    setHeaderSlot(
+      <MonthYearPicker year={year} month={month} onChange={handleDateChange} />
+    );
+    return () => setHeaderSlot(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, month]);
 
   // Fetch cashflow data from server-side aggregation (no raw transactions)
   const fetchCashflowData = async () => {
@@ -422,9 +433,6 @@ export function Cashflow() {
 
   return (
     <div className="min-h-screen bg-background p-6">
-      {/* Floating Month/Year Picker */}
-      <MonthYearPicker year={year} month={month} onChange={handleDateChange} />
-
       <div className="max-w-7xl mx-auto space-y-6">
         {hasNoData ? (
           <Card className="bg-card/50 backdrop-blur-sm border-border/50">
