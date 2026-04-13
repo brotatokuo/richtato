@@ -126,24 +126,14 @@ export function BudgetsSection() {
     setModalOpen(true);
   };
 
-  const handleSaveBudget = async (data: {
-    amount: number;
-    start_date: string;
-    end_date: string | null;
-    rollover_enabled?: boolean;
-    period_type?: string;
-  }) => {
+  const handleSaveBudget = async (data: { amount: number }) => {
     if (!selectedCategory) return;
 
     await categorySettingsApi.updateSettings({
       enabled: catalog.map(c => c.name),
       disabled: [],
       budgets: {
-        [selectedCategory.name]: {
-          amount: data.amount,
-          start_date: data.start_date,
-          end_date: data.end_date,
-        },
+        [selectedCategory.name]: { amount: data.amount },
       },
     });
 

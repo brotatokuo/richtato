@@ -10,11 +10,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -24,25 +19,17 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { budgetDashboardApiService } from '@/lib/api/budget-dashboard';
 import { CategoryCatalogItem } from '@/lib/api/user';
 import { formatCurrency, getCurrencySymbol } from '@/lib/format';
-import { cn } from '@/lib/utils';
-import { ChevronDown, TrendingUp } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface BudgetModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: {
-    amount: number;
-    start_date: string;
-    end_date: string | null;
-    rollover_enabled?: boolean;
-    period_type?: string;
-  }) => Promise<void>;
+  onSave: (data: { amount: number }) => Promise<void>;
   onRemove?: () => Promise<void>;
   category: CategoryCatalogItem | null;
   loading?: boolean;
@@ -60,41 +47,14 @@ export function BudgetModal({
   const currencySymbol = getCurrencySymbol(preferences.currency);
 
   const [amount, setAmount] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [saving, setSaving] = useState(false);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [rolloverEnabled, setRolloverEnabled] = useState(false);
-  const [periodType, setPeriodType] = useState<'monthly' | 'yearly' | 'custom'>(
-    'monthly'
-  );
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [avgSpending, setAvgSpending] = useState<number | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => {
     if (category && isOpen) {
-      if (category.budget) {
-        setAmount(category.budget.amount.toString());
-        setStartDate(category.budget.start_date);
-        setEndDate(category.budget.end_date || '');
-        setAdvancedOpen(
-          !!category.budget.end_date ||
-            category.budget.start_date !==
-              new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-                .toISOString()
-                .slice(0, 10)
-        );
-      } else {
-        const today = new Date();
-        const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        setAmount('');
-        setStartDate(firstOfMonth.toISOString().slice(0, 10));
-        setEndDate('');
-        setAdvancedOpen(false);
-      }
-      setRolloverEnabled(false);
-      setPeriodType('monthly');
+      setAmount(category.budget ? category.budget.amount.toString() : '');
       setShowRemoveConfirm(false);
     }
   }, [category, isOpen]);
@@ -151,13 +111,7 @@ export function BudgetModal({
 
     setSaving(true);
     try {
-      await onSave({
-        amount: Number(amount),
-        start_date: startDate,
-        end_date: endDate || null,
-        rollover_enabled: rolloverEnabled,
-        period_type: periodType,
-      });
+      await onSave({ amount: Number(amount) });
       onClose();
     } catch {
       // Error handling is done by parent
@@ -181,12 +135,6 @@ export function BudgetModal({
   };
 
   const hasBudget = category?.budget != null;
-
-  const periodLabels: Record<string, string> = {
-    monthly: 'Monthly',
-    yearly: 'Yearly',
-    custom: 'Custom',
-  };
 
   return (
     <>
@@ -239,33 +187,9 @@ export function BudgetModal({
               </div>
             )}
 
-            {/* Period type selector */}
-            <div className="space-y-2">
-              <Label>Budget Period</Label>
-              <div className="flex gap-1 bg-muted rounded-lg p-1">
-                {(['monthly', 'yearly', 'custom'] as const).map(pt => (
-                  <button
-                    key={pt}
-                    type="button"
-                    onClick={() => setPeriodType(pt)}
-                    className={cn(
-                      'flex-1 text-sm py-1.5 px-3 rounded-md transition-colors',
-                      periodType === pt
-                        ? 'bg-background text-foreground shadow-sm font-medium'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    {periodLabels[pt]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Amount */}
             <div className="space-y-2">
-              <Label htmlFor="budget-amount">
-                {periodType === 'yearly' ? 'Yearly' : 'Monthly'} Amount
-              </Label>
+              <Label htmlFor="budget-amount">Monthly Amount</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground select-none">
                   {currencySymbol}
@@ -282,78 +206,7 @@ export function BudgetModal({
                   autoFocus
                 />
               </div>
-              {periodType === 'yearly' && amount && Number(amount) > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  ~{formatCurrency(Number(amount) / 12, preferences.currency)}
-                  /month
-                </p>
-              )}
             </div>
-
-            {/* Rollover toggle */}
-            <div className="flex items-center justify-between p-3 rounded-lg border border-border/50">
-              <div className="space-y-0.5">
-                <Label
-                  htmlFor="rollover-toggle"
-                  className="text-sm font-medium cursor-pointer"
-                >
-                  Rollover unused budget
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Carry unspent amount to the next period
-                </p>
-              </div>
-              <Switch
-                id="rollover-toggle"
-                checked={rolloverEnabled}
-                onCheckedChange={setRolloverEnabled}
-              />
-            </div>
-
-            {/* Advanced date range */}
-            <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-              <CollapsibleTrigger asChild>
-                <button
-                  type="button"
-                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ChevronDown
-                    className={`h-4 w-4 transition-transform duration-200 ${advancedOpen ? 'rotate-180' : ''}`}
-                  />
-                  Advanced: date range
-                </button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-3 pt-3">
-                <div className="space-y-2">
-                  <Label htmlFor="budget-start">Start Date</Label>
-                  <Input
-                    id="budget-start"
-                    type="date"
-                    value={startDate}
-                    onChange={e => setStartDate(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="budget-end">
-                    End Date{' '}
-                    <span className="text-muted-foreground font-normal">
-                      (optional)
-                    </span>
-                  </Label>
-                  <Input
-                    id="budget-end"
-                    type="date"
-                    value={endDate}
-                    onChange={e => setEndDate(e.target.value)}
-                    placeholder="Never expires"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Leave empty for an ongoing budget
-                  </p>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
