@@ -109,7 +109,7 @@ export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailP
     setTransactions([]);
     setBalanceHistory([]);
     fetchData(account.id);
-  }, [account?.id, fetchData]);
+  }, [account, fetchData]);
 
   useEffect(() => {
     return () => {

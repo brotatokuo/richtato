@@ -22,7 +22,7 @@ export function Setup() {
     if (tabParam && VALID_TABS.includes(tabParam) && tabParam !== activeTab) {
       setActiveTab(tabParam);
     }
-  }, [tabParam]);
+  }, [tabParam, activeTab]);
 
   const handleTabChange = (value: string) => {
     const tab = value as TabValue;
