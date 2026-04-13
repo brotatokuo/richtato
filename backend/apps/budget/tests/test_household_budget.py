@@ -36,12 +36,18 @@ def service():
 class TestHouseholdBudget:
     def test_personal_scope_excludes_household_budgets(self, service, user_a):
         Budget.objects.create(
-            user=user_a, name="Personal", period_type="monthly",
-            start_date=date(2024, 1, 1), end_date=date(2024, 1, 31),
+            user=user_a,
+            name="Personal",
+            period_type="monthly",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 31),
         )
         Budget.objects.create(
-            user=user_a, name="Household", period_type="monthly",
-            start_date=date(2024, 1, 1), end_date=date(2024, 1, 31),
+            user=user_a,
+            name="Household",
+            period_type="monthly",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 31),
             is_household=True,
         )
         result = service.get_user_budgets(user_a)
@@ -51,12 +57,18 @@ class TestHouseholdBudget:
 
     def test_household_scope_returns_household_budgets(self, service, user_a, user_b, household_both):
         Budget.objects.create(
-            user=user_a, name="Personal", period_type="monthly",
-            start_date=date(2024, 1, 1), end_date=date(2024, 1, 31),
+            user=user_a,
+            name="Personal",
+            period_type="monthly",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 31),
         )
         Budget.objects.create(
-            user=user_a, name="Household Budget", period_type="monthly",
-            start_date=date(2024, 1, 1), end_date=date(2024, 1, 31),
+            user=user_a,
+            name="Household Budget",
+            period_type="monthly",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 31),
             is_household=True,
         )
         result = service.get_household_budgets([user_a.id, user_b.id])
@@ -65,13 +77,19 @@ class TestHouseholdBudget:
 
     def test_household_budgets_only_include_is_household_true(self, service, user_a, user_b, household_both):
         Budget.objects.create(
-            user=user_a, name="Not HH", period_type="monthly",
-            start_date=date(2024, 1, 1), end_date=date(2024, 1, 31),
+            user=user_a,
+            name="Not HH",
+            period_type="monthly",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 31),
             is_household=False,
         )
         Budget.objects.create(
-            user=user_b, name="HH Budget", period_type="monthly",
-            start_date=date(2024, 1, 1), end_date=date(2024, 1, 31),
+            user=user_b,
+            name="HH Budget",
+            period_type="monthly",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 31),
             is_household=True,
         )
         result = service.get_household_budgets([user_a.id, user_b.id])

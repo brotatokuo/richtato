@@ -43,7 +43,9 @@ class HouseholdService:
         expires_at = timezone.now() + timedelta(hours=INVITE_CODE_EXPIRY_HOURS)
 
         self.repository.update_household(
-            household, invite_code=code, invite_code_expires_at=expires_at,
+            household,
+            invite_code=code,
+            invite_code_expires_at=expires_at,
         )
 
         return {"invite_code": code, "expires_at": expires_at}
@@ -67,7 +69,9 @@ class HouseholdService:
         self.repository.add_member(household, user)
 
         self.repository.update_household(
-            household, invite_code=None, invite_code_expires_at=None,
+            household,
+            invite_code=None,
+            invite_code_expires_at=None,
         )
 
         return self.repository.get_by_id(household.id)

@@ -4,25 +4,32 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('financial_account', '0009_accountbalancehistory_source'),
+        ("financial_account", "0009_accountbalancehistory_source"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='financialaccount',
-            name='shared_with_household',
-            field=models.BooleanField(default=False, help_text='Whether this account is visible in household view.'),
+            model_name="financialaccount",
+            name="shared_with_household",
+            field=models.BooleanField(default=False, help_text="Whether this account is visible in household view."),
         ),
         migrations.AlterField(
-            model_name='financialaccount',
-            name='balance',
-            field=models.DecimalField(decimal_places=2, default=0, help_text='Current balance. Positive for assets, negative for liabilities (e.g. credit cards).', max_digits=15),
+            model_name="financialaccount",
+            name="balance",
+            field=models.DecimalField(
+                decimal_places=2,
+                default=0,
+                help_text="Current balance. Positive for assets, negative for liabilities (e.g. credit cards).",
+                max_digits=15,
+            ),
         ),
         migrations.AlterField(
-            model_name='financialaccount',
-            name='is_liability',
-            field=models.BooleanField(default=False, help_text='True for credit cards and other liability accounts. Balance stored as negative.'),
+            model_name="financialaccount",
+            name="is_liability",
+            field=models.BooleanField(
+                default=False,
+                help_text="True for credit cards and other liability accounts. Balance stored as negative.",
+            ),
         ),
     ]

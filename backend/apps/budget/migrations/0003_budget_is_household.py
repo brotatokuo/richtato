@@ -4,15 +4,16 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('budget', '0002_initial'),
+        ("budget", "0002_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='budget',
-            name='is_household',
-            field=models.BooleanField(default=False, help_text='Whether this is a household-level budget visible in household scope.'),
+            model_name="budget",
+            name="is_household",
+            field=models.BooleanField(
+                default=False, help_text="Whether this is a household-level budget visible in household scope."
+            ),
         ),
     ]

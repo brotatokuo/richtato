@@ -41,7 +41,8 @@ class FinancialAccountListCreateAPIView(APIView):
 
         if scope == "household" and len(user_ids) > 1:
             accounts = self.account_service.get_household_accounts(
-                user_ids, active_only=active_only,
+                user_ids,
+                active_only=active_only,
             )
         elif account_type:
             accounts = self.account_service.get_accounts_by_type(request.user, account_type)

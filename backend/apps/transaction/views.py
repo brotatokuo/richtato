@@ -423,7 +423,9 @@ class TransactionCashflowSummaryAPIView(APIView):
             scope = request.query_params.get("scope", "personal")
             user_ids = get_scope_user_ids(request) if scope == "household" else None
 
-            summary = self.transaction_service.get_cashflow_summary(request.user, start_date, end_date, user_ids=user_ids)
+            summary = self.transaction_service.get_cashflow_summary(
+                request.user, start_date, end_date, user_ids=user_ids
+            )
             return Response(summary)
 
         except ValueError:

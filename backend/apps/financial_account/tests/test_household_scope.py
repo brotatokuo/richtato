@@ -31,32 +31,44 @@ def household_both(user_a, user_b):
 @pytest.fixture
 def shared_a(user_a):
     return FinancialAccount.objects.create(
-        user=user_a, name="A Shared", account_type="checking",
-        balance=Decimal("1000"), shared_with_household=True,
+        user=user_a,
+        name="A Shared",
+        account_type="checking",
+        balance=Decimal("1000"),
+        shared_with_household=True,
     )
 
 
 @pytest.fixture
 def private_a(user_a):
     return FinancialAccount.objects.create(
-        user=user_a, name="A Private", account_type="savings",
-        balance=Decimal("2000"), shared_with_household=False,
+        user=user_a,
+        name="A Private",
+        account_type="savings",
+        balance=Decimal("2000"),
+        shared_with_household=False,
     )
 
 
 @pytest.fixture
 def shared_b(user_b):
     return FinancialAccount.objects.create(
-        user=user_b, name="B Shared", account_type="checking",
-        balance=Decimal("3000"), shared_with_household=True,
+        user=user_b,
+        name="B Shared",
+        account_type="checking",
+        balance=Decimal("3000"),
+        shared_with_household=True,
     )
 
 
 @pytest.fixture
 def private_b(user_b):
     return FinancialAccount.objects.create(
-        user=user_b, name="B Private", account_type="savings",
-        balance=Decimal("500"), shared_with_household=False,
+        user=user_b,
+        name="B Private",
+        account_type="savings",
+        balance=Decimal("500"),
+        shared_with_household=False,
     )
 
 
@@ -74,7 +86,13 @@ class TestHouseholdScopeAccounts:
         assert shared_b.id not in ids
 
     def test_household_scope_returns_shared_accounts_from_all_members(
-        self, repo, user_a, user_b, household_both, shared_a, shared_b,
+        self,
+        repo,
+        user_a,
+        user_b,
+        household_both,
+        shared_a,
+        shared_b,
     ):
         user_ids = [user_a.id, user_b.id]
         result = repo.get_by_user_ids_shared(user_ids)
@@ -83,7 +101,13 @@ class TestHouseholdScopeAccounts:
         assert shared_b.id in ids
 
     def test_household_scope_excludes_unshared_accounts(
-        self, repo, user_a, user_b, household_both, shared_a, private_b,
+        self,
+        repo,
+        user_a,
+        user_b,
+        household_both,
+        shared_a,
+        private_b,
     ):
         user_ids = [user_a.id, user_b.id]
         result = repo.get_by_user_ids_shared(user_ids)

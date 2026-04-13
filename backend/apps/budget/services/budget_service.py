@@ -23,7 +23,8 @@ class BudgetService:
     def get_household_budgets(self, user_ids: list[int], active_only: bool = True) -> list[Budget]:
         """Get household-level budgets for any of the given user IDs."""
         queryset = Budget.objects.filter(
-            user_id__in=user_ids, is_household=True,
+            user_id__in=user_ids,
+            is_household=True,
         ).prefetch_related("budget_categories", "budget_categories__category")
         if active_only:
             queryset = queryset.filter(is_active=True)

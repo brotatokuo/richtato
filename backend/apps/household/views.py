@@ -41,7 +41,8 @@ class HouseholdAPIView(APIView):
 
         try:
             household = self.service.create_household(
-                user=request.user, name=serializer.validated_data["name"],
+                user=request.user,
+                name=serializer.validated_data["name"],
             )
             return Response(
                 HouseholdSerializer(household).data,
@@ -91,7 +92,8 @@ class HouseholdJoinAPIView(APIView):
 
         try:
             household = self.service.join_household(
-                user=request.user, invite_code=serializer.validated_data["code"],
+                user=request.user,
+                invite_code=serializer.validated_data["code"],
             )
             return Response(HouseholdSerializer(household).data)
         except ValueError as e:

@@ -23,7 +23,9 @@ class BudgetDashboardRepository:
         return Transaction.objects.filter(user=user)
 
     # Expense queries (based on category.type='expense' or debit transactions)
-    def get_expense_sum_by_date_range(self, user, start_date: date, end_date: date, user_ids: list[int] | None = None) -> Decimal:
+    def get_expense_sum_by_date_range(
+        self, user, start_date: date, end_date: date, user_ids: list[int] | None = None
+    ) -> Decimal:
         """Get sum of expenses for a date range (based on category.type='expense')."""
         result = (
             self._tx_base(user, user_ids)
@@ -33,7 +35,9 @@ class BudgetDashboardRepository:
         )
         return result["total"] or Decimal("0")
 
-    def get_expenses_by_category(self, user, start_date: date, end_date: date, limit: int | None = None, user_ids: list[int] | None = None):
+    def get_expenses_by_category(
+        self, user, start_date: date, end_date: date, limit: int | None = None, user_ids: list[int] | None = None
+    ):
         """Get expenses grouped by category for a date range."""
         qs = (
             self._tx_base(user, user_ids)
@@ -47,7 +51,9 @@ class BudgetDashboardRepository:
             qs = qs[:limit]
         return qs
 
-    def get_category_expense_sum(self, user, category, start_date: date, end_date: date, user_ids: list[int] | None = None) -> Decimal:
+    def get_category_expense_sum(
+        self, user, category, start_date: date, end_date: date, user_ids: list[int] | None = None
+    ) -> Decimal:
         """Get sum of expenses for a specific category and date range."""
         result = (
             self._tx_base(user, user_ids)
@@ -56,7 +62,9 @@ class BudgetDashboardRepository:
         )
         return result["total"] or Decimal("0")
 
-    def get_nonessential_expense_sum(self, user, start_date: date, end_date: date, user_ids: list[int] | None = None) -> Decimal:
+    def get_nonessential_expense_sum(
+        self, user, start_date: date, end_date: date, user_ids: list[int] | None = None
+    ) -> Decimal:
         """Get sum of non-essential expenses for a date range.
 
         Filters by category.type='expense' for categorized transactions
@@ -72,11 +80,7 @@ class BudgetDashboardRepository:
 
     def get_expense_years(self, user, user_ids: list[int] | None = None) -> list[int]:
         """Get list of years where user has expenses."""
-        date_list = (
-            self._tx_base(user, user_ids)
-            .filter(self._get_expense_filter())
-            .dates("date", "year", order="DESC")
-        )
+        date_list = self._tx_base(user, user_ids).filter(self._get_expense_filter()).dates("date", "year", order="DESC")
         return [d.year for d in date_list]
 
     # Budget queries (using budget_v2)

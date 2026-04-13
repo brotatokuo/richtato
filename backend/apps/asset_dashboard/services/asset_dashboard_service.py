@@ -212,9 +212,7 @@ class AssetDashboardService:
         start = end - delta_fn()
         return start, end
 
-    def _compute_cashflow_metrics(
-        self, income: Decimal, expenses: Decimal, investments: Decimal
-    ) -> dict:
+    def _compute_cashflow_metrics(self, income: Decimal, expenses: Decimal, investments: Decimal) -> dict:
         """Canonical savings-rate formula used across all dashboard surfaces.
 
         savings_rate = (income − expenses − investments) / income
@@ -278,15 +276,13 @@ class AssetDashboardService:
         from apps.transaction.models import Transaction
 
         shared_accounts = FinancialAccount.objects.filter(
-            user_id__in=user_ids, is_active=True, shared_with_household=True,
+            user_id__in=user_ids,
+            is_active=True,
+            shared_with_household=True,
         )
 
-        total_assets = sum(
-            a.balance for a in shared_accounts if not a.is_liability
-        ) or Decimal("0")
-        total_liabilities = abs(sum(
-            a.balance for a in shared_accounts if a.is_liability
-        )) or Decimal("0")
+        total_assets = sum(a.balance for a in shared_accounts if not a.is_liability) or Decimal("0")
+        total_liabilities = abs(sum(a.balance for a in shared_accounts if a.is_liability)) or Decimal("0")
         networth = total_assets - total_liabilities
 
         start_date, end_date = self._resolve_date_range(period)
@@ -298,15 +294,9 @@ class AssetDashboardService:
             date__lte=end_date,
         )
 
-        income = (
-            base_qs.filter(get_income_filter()).aggregate(total=Sum("amount"))["total"]
-        ) or Decimal("0")
-        expenses = (
-            base_qs.filter(get_expense_filter()).aggregate(total=Sum("amount"))["total"]
-        ) or Decimal("0")
-        investments = (
-            base_qs.filter(get_investment_filter()).aggregate(total=Sum("amount"))["total"]
-        ) or Decimal("0")
+        income = (base_qs.filter(get_income_filter()).aggregate(total=Sum("amount"))["total"]) or Decimal("0")
+        expenses = (base_qs.filter(get_expense_filter()).aggregate(total=Sum("amount"))["total"]) or Decimal("0")
+        investments = (base_qs.filter(get_investment_filter()).aggregate(total=Sum("amount"))["total"]) or Decimal("0")
 
         cashflow = self._compute_cashflow_metrics(income, expenses, investments)
 

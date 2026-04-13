@@ -116,7 +116,9 @@ class BudgetDashboardService:
             for budget_category in budget.budget_categories.all():
                 category = budget_category.category
                 # Get total expenses for this category during the period
-                total_spent = self.repo.get_category_expense_sum(user, category, start_date, end_date, user_ids=user_ids)
+                total_spent = self.repo.get_category_expense_sum(
+                    user, category, start_date, end_date, user_ids=user_ids
+                )
 
                 budget_amount = budget_category.allocated_amount or Decimal(0)
                 percentage = int(round((total_spent / budget_amount) * 100)) if budget_amount > 0 else 0

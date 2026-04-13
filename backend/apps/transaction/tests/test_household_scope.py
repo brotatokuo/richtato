@@ -33,24 +33,33 @@ def household_both(user_a, user_b):
 @pytest.fixture
 def shared_account_a(user_a):
     return FinancialAccount.objects.create(
-        user=user_a, name="A Shared", account_type="checking",
-        balance=Decimal("1000"), shared_with_household=True,
+        user=user_a,
+        name="A Shared",
+        account_type="checking",
+        balance=Decimal("1000"),
+        shared_with_household=True,
     )
 
 
 @pytest.fixture
 def private_account_b(user_b):
     return FinancialAccount.objects.create(
-        user=user_b, name="B Private", account_type="savings",
-        balance=Decimal("500"), shared_with_household=False,
+        user=user_b,
+        name="B Private",
+        account_type="savings",
+        balance=Decimal("500"),
+        shared_with_household=False,
     )
 
 
 @pytest.fixture
 def shared_account_b(user_b):
     return FinancialAccount.objects.create(
-        user=user_b, name="B Shared", account_type="checking",
-        balance=Decimal("3000"), shared_with_household=True,
+        user=user_b,
+        name="B Shared",
+        account_type="checking",
+        balance=Decimal("3000"),
+        shared_with_household=True,
     )
 
 
@@ -61,15 +70,25 @@ def repo():
 
 def _create_txn(user, account, amount=Decimal("50")):
     return Transaction.objects.create(
-        user=user, account=account, amount=amount,
-        date=date(2024, 6, 15), description="test",
-        transaction_type="debit", sync_source="manual",
+        user=user,
+        account=account,
+        amount=amount,
+        date=date(2024, 6, 15),
+        description="test",
+        transaction_type="debit",
+        sync_source="manual",
     )
 
 
 class TestHouseholdScopeTransactions:
     def test_personal_scope_returns_only_own_transactions(
-        self, repo, user_a, user_b, shared_account_a, shared_account_b, household_both,
+        self,
+        repo,
+        user_a,
+        user_b,
+        shared_account_a,
+        shared_account_b,
+        household_both,
     ):
         txn_a = _create_txn(user_a, shared_account_a)
         txn_b = _create_txn(user_b, shared_account_b)
@@ -79,7 +98,13 @@ class TestHouseholdScopeTransactions:
         assert txn_b.id not in ids
 
     def test_household_scope_returns_transactions_from_shared_accounts(
-        self, repo, user_a, user_b, shared_account_a, shared_account_b, household_both,
+        self,
+        repo,
+        user_a,
+        user_b,
+        shared_account_a,
+        shared_account_b,
+        household_both,
     ):
         txn_a = _create_txn(user_a, shared_account_a)
         txn_b = _create_txn(user_b, shared_account_b)
@@ -89,7 +114,13 @@ class TestHouseholdScopeTransactions:
         assert txn_b.id in ids
 
     def test_household_scope_excludes_transactions_from_unshared_accounts(
-        self, repo, user_a, user_b, shared_account_a, private_account_b, household_both,
+        self,
+        repo,
+        user_a,
+        user_b,
+        shared_account_a,
+        private_account_b,
+        household_both,
     ):
         _create_txn(user_a, shared_account_a)
         txn_private = _create_txn(user_b, private_account_b)
@@ -98,7 +129,10 @@ class TestHouseholdScopeTransactions:
         assert txn_private.id not in ids
 
     def test_household_scope_with_single_user(
-        self, repo, user_a, shared_account_a,
+        self,
+        repo,
+        user_a,
+        shared_account_a,
     ):
         txn = _create_txn(user_a, shared_account_a)
         result = list(repo.get_by_user_ids_shared([user_a.id]))

@@ -40,10 +40,18 @@ class TestCategoryMerge:
 
     def test_canonical_metadata_uses_first_members_category(self, repo, user_a, user_b):
         TransactionCategory.objects.create(
-            user=user_a, name="Hobby A", slug="test-hobby", type="expense", icon="apple",
+            user=user_a,
+            name="Hobby A",
+            slug="test-hobby",
+            type="expense",
+            icon="apple",
         )
         TransactionCategory.objects.create(
-            user=user_b, name="Hobby B", slug="test-hobby", type="expense", icon="cart",
+            user=user_b,
+            name="Hobby B",
+            slug="test-hobby",
+            type="expense",
+            icon="cart",
         )
         result = repo.get_merged_for_users([user_a.id, user_b.id])
         hobby_cats = [c for c in result if c.slug == "test-hobby"]

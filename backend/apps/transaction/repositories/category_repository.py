@@ -32,7 +32,9 @@ class CategoryRepository:
         return list(queryset.order_by("name"))
 
     def get_merged_for_users(
-        self, user_ids: list[int], include_deleted: bool = False,
+        self,
+        user_ids: list[int],
+        include_deleted: bool = False,
     ) -> list[TransactionCategory]:
         """Get categories for multiple users, merged by slug.
 

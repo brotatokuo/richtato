@@ -17,10 +17,7 @@ class HouseholdRepository:
         """Get the household a user belongs to, or None."""
         try:
             membership = HouseholdMember.objects.select_related("household").get(user=user)
-            return (
-                Household.objects.prefetch_related("members__user")
-                .get(id=membership.household_id)
-            )
+            return Household.objects.prefetch_related("members__user").get(id=membership.household_id)
         except HouseholdMember.DoesNotExist:
             return None
 

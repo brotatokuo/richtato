@@ -85,21 +85,30 @@ def private_account_b(user_b):
 @pytest.fixture
 def category_a(user_a):
     return TransactionCategory.objects.create(
-        user=user_a, name="Groceries", slug="groceries", type="expense",
+        user=user_a,
+        name="Groceries",
+        slug="groceries",
+        type="expense",
     )
 
 
 @pytest.fixture
 def category_b(user_b):
     return TransactionCategory.objects.create(
-        user=user_b, name="Groceries", slug="groceries", type="expense",
+        user=user_b,
+        name="Groceries",
+        slug="groceries",
+        type="expense",
     )
 
 
 @pytest.fixture
 def unique_category_a(user_a):
     return TransactionCategory.objects.create(
-        user=user_a, name="Pet Supplies", slug="pet-supplies", type="expense",
+        user=user_a,
+        name="Pet Supplies",
+        slug="pet-supplies",
+        type="expense",
     )
 
 

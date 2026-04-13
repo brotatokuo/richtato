@@ -43,7 +43,9 @@ def expense_categories_data(request):
         repo = BudgetDashboardRepository()
         service = BudgetDashboardService(repo)
 
-        data = service.get_expense_categories_data(request.user, start_date, end_date, year_int, month_int, user_ids=user_ids)
+        data = service.get_expense_categories_data(
+            request.user, start_date, end_date, year_int, month_int, user_ids=user_ids
+        )
         return JsonResponse(data)
 
     except Exception as e:

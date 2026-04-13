@@ -42,7 +42,9 @@ class AnnualAnalysisService:
         monthly_breakdown = self._get_monthly_breakdown(user, year, user_ids=user_ids)
 
         # Get category breakdown
-        category_breakdown = self.repo.get_expenses_by_category_with_priority(user, start_date, end_date, user_ids=user_ids)
+        category_breakdown = self.repo.get_expenses_by_category_with_priority(
+            user, start_date, end_date, user_ids=user_ids
+        )
 
         # Get income sources
         income_sources = self.repo.get_income_by_category(user, start_date, end_date, user_ids=user_ids)

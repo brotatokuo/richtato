@@ -145,7 +145,9 @@ class AssetDashboardRepository:
             start_date = end_date - relativedelta(months=6)
 
         # Single query for all active accounts
-        all_accounts = list(FinancialAccount.objects.filter(user=user, is_active=True).values("id", "balance", "is_liability"))
+        all_accounts = list(
+            FinancialAccount.objects.filter(user=user, is_active=True).values("id", "balance", "is_liability")
+        )
         if not all_accounts:
             return []
 

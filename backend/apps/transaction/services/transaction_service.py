@@ -215,7 +215,9 @@ class TransactionService:
             "by_category": by_category,
         }
 
-    def get_cashflow_summary(self, user: User, start_date: date, end_date: date, user_ids: list[int] | None = None) -> dict:
+    def get_cashflow_summary(
+        self, user: User, start_date: date, end_date: date, user_ids: list[int] | None = None
+    ) -> dict:
         """
         Get cashflow summary for a date range using DB aggregation.
         Returns income/expense/investment totals by category without loading all transactions.
@@ -226,7 +228,9 @@ class TransactionService:
         from apps.core.constants import get_expense_filter, get_income_filter, get_investment_filter
 
         if user_ids and len(user_ids) > 1:
-            base = Transaction.objects.filter(user_id__in=user_ids, account__shared_with_household=True, date__gte=start_date, date__lte=end_date)
+            base = Transaction.objects.filter(
+                user_id__in=user_ids, account__shared_with_household=True, date__gte=start_date, date__lte=end_date
+            )
         else:
             base = Transaction.objects.filter(user=user, date__gte=start_date, date__lte=end_date)
 

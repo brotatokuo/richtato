@@ -14,9 +14,7 @@ def get_scope_user_ids(request) -> list[int]:
     if scope == "household":
         try:
             membership = HouseholdMember.objects.select_related("household").get(user=request.user)
-            return list(
-                membership.household.members.values_list("user_id", flat=True)
-            )
+            return list(membership.household.members.values_list("user_id", flat=True))
         except HouseholdMember.DoesNotExist:
             pass
     return [request.user.id]

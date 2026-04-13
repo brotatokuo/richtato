@@ -15,7 +15,10 @@ class Household(models.Model):
         related_name="created_households",
     )
     invite_code = models.CharField(
-        max_length=32, unique=True, null=True, blank=True,
+        max_length=32,
+        unique=True,
+        null=True,
+        blank=True,
         help_text="Single-use invite code for joining",
     )
     invite_code_expires_at = models.DateTimeField(null=True, blank=True)
@@ -33,10 +36,13 @@ class HouseholdMember(models.Model):
     """Links a user to exactly one household."""
 
     household = models.ForeignKey(
-        Household, on_delete=models.CASCADE, related_name="members",
+        Household,
+        on_delete=models.CASCADE,
+        related_name="members",
     )
     user = models.OneToOneField(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
         related_name="household_membership",
     )
     joined_at = models.DateTimeField(auto_now_add=True)

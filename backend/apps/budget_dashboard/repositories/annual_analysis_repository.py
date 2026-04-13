@@ -44,7 +44,9 @@ class AnnualAnalysisRepository:
         )
         return result["total"] or Decimal("0")
 
-    def get_essential_expense_sum(self, user, start_date: date, end_date: date, user_ids: list[int] | None = None) -> Decimal:
+    def get_essential_expense_sum(
+        self, user, start_date: date, end_date: date, user_ids: list[int] | None = None
+    ) -> Decimal:
         """Get sum of essential expenses for a date range."""
         result = (
             self._tx_base(user, user_ids)
@@ -54,7 +56,9 @@ class AnnualAnalysisRepository:
         )
         return result["total"] or Decimal("0")
 
-    def get_non_essential_expense_sum(self, user, start_date: date, end_date: date, user_ids: list[int] | None = None) -> Decimal:
+    def get_non_essential_expense_sum(
+        self, user, start_date: date, end_date: date, user_ids: list[int] | None = None
+    ) -> Decimal:
         """Get sum of non-essential expenses for a date range.
 
         Includes expenses where expense_priority is 'non_essential' or null.
@@ -68,7 +72,9 @@ class AnnualAnalysisRepository:
         )
         return result["total"] or Decimal("0")
 
-    def get_expenses_by_category_with_priority(self, user, start_date: date, end_date: date, user_ids: list[int] | None = None) -> list[dict]:
+    def get_expenses_by_category_with_priority(
+        self, user, start_date: date, end_date: date, user_ids: list[int] | None = None
+    ) -> list[dict]:
         """Get expenses grouped by category with essential/non-essential flag."""
         queryset = (
             self._tx_base(user, user_ids)
@@ -95,7 +101,9 @@ class AnnualAnalysisRepository:
             for item in queryset
         ]
 
-    def get_income_by_category(self, user, start_date: date, end_date: date, user_ids: list[int] | None = None) -> list[dict]:
+    def get_income_by_category(
+        self, user, start_date: date, end_date: date, user_ids: list[int] | None = None
+    ) -> list[dict]:
         """Get income grouped by category."""
         queryset = (
             self._tx_base(user, user_ids)
