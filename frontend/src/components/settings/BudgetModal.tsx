@@ -61,11 +61,7 @@ export function BudgetModal({
         setAdvancedOpen(
           !!category.budget.end_date ||
             category.budget.start_date !==
-              new Date(
-                new Date().getFullYear(),
-                new Date().getMonth(),
-                1
-              )
+              new Date(new Date().getFullYear(), new Date().getMonth(), 1)
                 .toISOString()
                 .slice(0, 10)
         );

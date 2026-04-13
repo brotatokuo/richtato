@@ -321,6 +321,7 @@ class AccountBalanceUpdateAPIView(APIView):
 
     def post(self, request):
         """Set the account balance to the given amount on the given date."""
+        from datetime import date as date_type
         from decimal import Decimal
 
         account_id = request.data.get("account")
@@ -345,13 +346,25 @@ class AccountBalanceUpdateAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        try:
+            parsed_balance_date = date_type.fromisoformat(str(balance_date))
+        except ValueError:
+            return Response(
+                {"error": "Invalid date format (use YYYY-MM-DD)"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         old_balance = account.balance
-        updated_account = self.balance_service.update_balance(account, balance_decimal, balance_date)
+        updated_account = self.balance_service.set_balance_snapshot(
+            account=account,
+            new_balance=balance_decimal,
+            balance_date=parsed_balance_date,
+        )
 
         return Response(
             {
                 "balance": str(updated_account.balance),
-                "date": str(balance_date),
+                "date": str(parsed_balance_date),
                 "previous_balance": str(old_balance),
                 "adjustment": str(updated_account.balance - old_balance),
             },

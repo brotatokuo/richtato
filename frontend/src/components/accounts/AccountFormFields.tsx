@@ -78,7 +78,9 @@ export function AccountFormFields({
         <div>
           <Label htmlFor={`${idPrefix}-balance`}>
             Opening Balance{' '}
-            <span className="text-muted-foreground font-normal">(optional)</span>
+            <span className="text-muted-foreground font-normal">
+              (optional)
+            </span>
           </Label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">

@@ -193,7 +193,11 @@ function DashboardContent() {
     <div className="space-y-6 w-full max-w-full overflow-hidden">
       {/* Month/Year Picker + Edit Budgets shortcut */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <MonthYearPicker year={year} month={month} onChange={handleDateChange} />
+        <MonthYearPicker
+          year={year}
+          month={month}
+          onChange={handleDateChange}
+        />
         <Link
           to="/setup?tab=budgets"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"

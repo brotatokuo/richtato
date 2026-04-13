@@ -375,10 +375,16 @@ export function AccountsList({
                           const logo = getEntityLogo(account.entity || '');
                           return logo ? (
                             <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                              <img src={logo} alt={account.institution_name || ''} className="w-5 h-5 object-contain" />
+                              <img
+                                src={logo}
+                                alt={account.institution_name || ''}
+                                className="w-5 h-5 object-contain"
+                              />
                             </div>
                           ) : (
-                            <div className={`p-2 rounded-lg ${getAccountTypeColor(account.type)} text-white shrink-0`}>
+                            <div
+                              className={`p-2 rounded-lg ${getAccountTypeColor(account.type)} text-white shrink-0`}
+                            >
                               {getAccountIcon(account.type)}
                             </div>
                           );
@@ -421,7 +427,13 @@ export function AccountsList({
                           )}
                         </span>
                         {account.has_connection && (
-                          <span title={account.connection_status === 'error' ? 'Sync error' : 'Connected'}>
+                          <span
+                            title={
+                              account.connection_status === 'error'
+                                ? 'Sync error'
+                                : 'Connected'
+                            }
+                          >
                             {account.connection_status === 'error' ? (
                               <WifiOff className="h-3 w-3 text-red-500" />
                             ) : (

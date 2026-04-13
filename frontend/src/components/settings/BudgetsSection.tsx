@@ -89,9 +89,10 @@ export function BudgetsSection() {
   });
 
   // Search filter
-  const categoriesWithProgress = allCategoriesWithProgress.filter(cat =>
-    search.trim() === '' ||
-    cat.display.toLowerCase().includes(search.toLowerCase())
+  const categoriesWithProgress = allCategoriesWithProgress.filter(
+    cat =>
+      search.trim() === '' ||
+      cat.display.toLowerCase().includes(search.toLowerCase())
   );
 
   // Total monthly budget summary
@@ -163,7 +164,9 @@ export function BudgetsSection() {
                     <span className="text-muted-foreground/40">·</span>
                     <span>
                       {budgetedCategories.length}{' '}
-                      {budgetedCategories.length === 1 ? 'category' : 'categories'}{' '}
+                      {budgetedCategories.length === 1
+                        ? 'category'
+                        : 'categories'}{' '}
                       &middot;{' '}
                       <span className="font-medium text-foreground">
                         {formatCurrency(totalBudget, preferences.currency)}/mo

@@ -61,7 +61,10 @@ function timeAgo(isoString: string | null | undefined): string {
   return `${days}d ago`;
 }
 
-export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailPanelProps) {
+export function AccountDetailPanel({
+  account,
+  onAccountUpdated,
+}: AccountDetailPanelProps) {
   const { preferences } = usePreferences();
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
@@ -75,16 +78,23 @@ export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailP
   const [showDisconnect, setShowDisconnect] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
 
-  const [accountTypeOptions, setAccountTypeOptions] = useState<Array<{ value: string; label: string }>>([]);
-  const [entityOptions, setEntityOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [accountTypeOptions, setAccountTypeOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
+  const [entityOptions, setEntityOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    transactionsApiService.getAccountFieldChoices().then(c => {
-      setAccountTypeOptions(c.type || []);
-      setEntityOptions(c.entity || []);
-    }).catch(() => {});
+    transactionsApiService
+      .getAccountFieldChoices()
+      .then(c => {
+        setAccountTypeOptions(c.type || []);
+        setEntityOptions(c.entity || []);
+      })
+      .catch(() => {});
   }, []);
 
   const fetchData = useCallback(async (accountId: number) => {
@@ -122,14 +132,22 @@ export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailP
     const sorted = [...balanceHistory].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
-    const isLiability = (account?.account_type || account?.type) === 'credit_card';
+    const isLiability =
+      (account?.account_type || account?.type) === 'credit_card';
     const lineColor = isLiability ? '#ef4444' : '#22c55e';
-    const areaColorStart = isLiability ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)';
-    const areaColorEnd = isLiability ? 'rgba(239,68,68,0.02)' : 'rgba(34,197,94,0.02)';
+    const areaColorStart = isLiability
+      ? 'rgba(239,68,68,0.15)'
+      : 'rgba(34,197,94,0.15)';
+    const areaColorEnd = isLiability
+      ? 'rgba(239,68,68,0.02)'
+      : 'rgba(34,197,94,0.02)';
 
     return {
       dates: sorted.map(d =>
-        new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        new Date(d.date).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        })
       ),
       series: [
         {
@@ -143,7 +161,10 @@ export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailP
           areaStyle: {
             color: {
               type: 'linear',
-              x: 0, y: 0, x2: 0, y2: 1,
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
               colorStops: [
                 { offset: 0, color: areaColorStart },
                 { offset: 1, color: areaColorEnd },
@@ -189,7 +210,13 @@ export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailP
         },
         splitLine: { lineStyle: { color: '#1f2937' } },
       },
-      grid: { left: '2%', right: '2%', bottom: '8%', top: '8%', containLabel: true },
+      grid: {
+        left: '2%',
+        right: '2%',
+        bottom: '8%',
+        top: '8%',
+        containLabel: true,
+      },
     }),
     [chartData, preferences.currency]
   );
@@ -212,12 +239,16 @@ export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailP
       await bankConnectionsApiService.syncConnection(account.connection_id);
       toast.info('Sync started', { description: 'Syncing transactions...' });
       pollRef.current = setInterval(async () => {
-        const progress = await bankConnectionsApiService.getSyncJobProgress(account.connection_id!).catch(() => null);
+        const progress = await bankConnectionsApiService
+          .getSyncJobProgress(account.connection_id!)
+          .catch(() => null);
         if (progress && progress.status !== 'running') {
           if (pollRef.current) clearInterval(pollRef.current);
           setSyncing(false);
           if (progress.status === 'completed') {
-            toast.success('Sync completed', { description: `${progress.transactions_synced} transactions synced` });
+            toast.success('Sync completed', {
+              description: `${progress.transactions_synced} transactions synced`,
+            });
             fetchData(account.id);
             onAccountUpdated();
           } else {
@@ -226,20 +257,32 @@ export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailP
         }
       }, 1500);
     } catch (e) {
-      toast.error('Sync failed', { description: e instanceof Error ? e.message : undefined });
+      toast.error('Sync failed', {
+        description: e instanceof Error ? e.message : undefined,
+      });
       setSyncing(false);
     }
   };
 
-  const handleEdit = async (form: { name: string; type: string; entity: string; image_key?: string | null }) => {
+  const handleEdit = async (form: {
+    name: string;
+    type: string;
+    entity: string;
+    image_key?: string | null;
+  }) => {
     if (!account) return;
     setEditLoading(true);
     try {
-      await transactionsApiService.updateAccount(account.id, { name: form.name, image_key: form.image_key });
+      await transactionsApiService.updateAccount(account.id, {
+        name: form.name,
+        image_key: form.image_key,
+      });
       onAccountUpdated();
       setShowEdit(false);
     } catch (e) {
-      toast.error('Failed to update', { description: e instanceof Error ? e.message : undefined });
+      toast.error('Failed to update', {
+        description: e instanceof Error ? e.message : undefined,
+      });
     } finally {
       setEditLoading(false);
     }
@@ -253,7 +296,9 @@ export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailP
       onAccountUpdated();
       setShowEdit(false);
     } catch (e) {
-      toast.error('Failed to delete', { description: e instanceof Error ? e.message : undefined });
+      toast.error('Failed to delete', {
+        description: e instanceof Error ? e.message : undefined,
+      });
     } finally {
       setEditLoading(false);
     }
@@ -261,7 +306,11 @@ export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailP
 
   const handleSetBalance = async (data: { balance: number; date: string }) => {
     if (!account) return;
-    await transactionsApiService.setAccountBalance({ account: account.id, balance: data.balance, date: data.date });
+    await transactionsApiService.setAccountBalance({
+      account: account.id,
+      balance: data.balance,
+      date: data.date,
+    });
     fetchData(account.id);
     onAccountUpdated();
     setShowSetBalance(false);
@@ -271,11 +320,16 @@ export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailP
     if (!account?.connection_id) return;
     setEditLoading(true);
     try {
-      await bankConnectionsApiService.deleteConnection(account.connection_id, deleteData);
+      await bankConnectionsApiService.deleteConnection(
+        account.connection_id,
+        deleteData
+      );
       onAccountUpdated();
       setShowDisconnect(false);
     } catch (e) {
-      toast.error('Failed to disconnect', { description: e instanceof Error ? e.message : undefined });
+      toast.error('Failed to disconnect', {
+        description: e instanceof Error ? e.message : undefined,
+      });
     } finally {
       setEditLoading(false);
     }
@@ -285,9 +339,12 @@ export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailP
     return (
       <div className="flex flex-col items-center justify-center h-full text-center px-8">
         <Landmark className="h-12 w-12 text-muted-foreground/30 mb-4" />
-        <p className="text-base font-medium text-muted-foreground">Select an account</p>
+        <p className="text-base font-medium text-muted-foreground">
+          Select an account
+        </p>
         <p className="text-sm text-muted-foreground/60 mt-1">
-          Choose an account from the list to view details, balance history, and recent transactions.
+          Choose an account from the list to view details, balance history, and
+          recent transactions.
         </p>
       </div>
     );
@@ -305,16 +362,24 @@ export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailP
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
               {entityLogo ? (
-                <img src={entityLogo} alt={account.institution_name || ''} className="w-6 h-6 object-contain" />
+                <img
+                  src={entityLogo}
+                  alt={account.institution_name || ''}
+                  className="w-6 h-6 object-contain"
+                />
               ) : (
                 <Landmark className="h-5 w-5 text-muted-foreground" />
               )}
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-foreground leading-tight">{account.name}</h2>
+              <h2 className="text-lg font-semibold text-foreground leading-tight">
+                {account.name}
+              </h2>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <span className="text-sm text-muted-foreground">
-                  {account.institution_name || account.entity_display || 'Manual'}
+                  {account.institution_name ||
+                    account.entity_display ||
+                    'Manual'}
                 </span>
                 {account.account_number_last4 && (
                   <span className="text-sm text-muted-foreground/60 font-mono">
@@ -322,7 +387,9 @@ export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailP
                   </span>
                 )}
                 <Badge variant="secondary" className="text-xs h-5">
-                  {account.account_type_display || account.type_display || 'Account'}
+                  {account.account_type_display ||
+                    account.type_display ||
+                    'Account'}
                 </Badge>
               </div>
             </div>
@@ -338,8 +405,16 @@ export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailP
                   : 'bg-green-500/10 text-green-600'
               )}
             >
-              {hasError ? <WifiOff className="h-3 w-3" /> : <Wifi className="h-3 w-3" />}
-              {hasError ? 'Sync error' : account.last_sync ? `Synced ${timeAgo(account.last_sync)}` : 'Connected'}
+              {hasError ? (
+                <WifiOff className="h-3 w-3" />
+              ) : (
+                <Wifi className="h-3 w-3" />
+              )}
+              {hasError
+                ? 'Sync error'
+                : account.last_sync
+                  ? `Synced ${timeAgo(account.last_sync)}`
+                  : 'Connected'}
             </div>
           )}
         </div>
@@ -370,15 +445,25 @@ export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailP
                   <TrendingDown className="h-4 w-4" />
                 )}
                 {balanceChange >= 0 ? '+' : '-'}
-                {formatCurrency(Math.abs(balanceChange), preferences.currency, 0)}
+                {formatCurrency(
+                  Math.abs(balanceChange),
+                  preferences.currency,
+                  0
+                )}
               </div>
             )}
           </div>
           {account.lastUpdated && (
             <p className="text-xs text-muted-foreground/60 mt-1">
-              Last updated {new Date(account.lastUpdated + 'T00:00:00').toLocaleDateString(undefined, {
-                month: 'short', day: 'numeric', year: 'numeric',
-              })}
+              Last updated{' '}
+              {new Date(account.lastUpdated + 'T00:00:00').toLocaleDateString(
+                undefined,
+                {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                }
+              )}
             </p>
           )}
         </div>
@@ -386,24 +471,35 @@ export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailP
 
       {/* Balance chart */}
       <div className="px-6 py-4 border-b border-border/40">
-        <p className="text-sm font-medium text-muted-foreground mb-3">Balance History</p>
+        <p className="text-sm font-medium text-muted-foreground mb-3">
+          Balance History
+        </p>
         {chartLoading ? (
           <div className="h-32 flex items-center justify-center">
             <LoadingSpinner />
           </div>
         ) : balanceHistory.length < 2 ? (
           <div className="h-32 flex items-center justify-center">
-            <p className="text-sm text-muted-foreground/60">Not enough data to show chart</p>
+            <p className="text-sm text-muted-foreground/60">
+              Not enough data to show chart
+            </p>
           </div>
         ) : (
-          <BaseChart type="line" data={chartData} options={chartOptions} height="140px" />
+          <BaseChart
+            type="line"
+            data={chartData}
+            options={chartOptions}
+            height="140px"
+          />
         )}
       </div>
 
       {/* Recent Transactions */}
       <div className="px-6 py-4 flex-1">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-medium text-muted-foreground">Recent Transactions</p>
+          <p className="text-sm font-medium text-muted-foreground">
+            Recent Transactions
+          </p>
           <button
             onClick={() => navigate(`/data?account=${account.id}`)}
             className="text-xs text-primary hover:underline flex items-center gap-1"
@@ -420,7 +516,9 @@ export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailP
         ) : transactions.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-24 text-center">
             <ArrowUpDown className="h-6 w-6 text-muted-foreground/30 mb-2" />
-            <p className="text-sm text-muted-foreground/60">No transactions found</p>
+            <p className="text-sm text-muted-foreground/60">
+              No transactions found
+            </p>
           </div>
         ) : (
           <div className="space-y-0">
@@ -516,7 +614,10 @@ export function AccountDetailPanel({ account, onAccountUpdated }: AccountDetailP
         onSubmit={handleEdit}
         onDelete={handleDelete}
         onSync={handleSync}
-        onDisconnect={() => { setShowEdit(false); setShowDisconnect(true); }}
+        onDisconnect={() => {
+          setShowEdit(false);
+          setShowDisconnect(true);
+        }}
         accountTypeOptions={accountTypeOptions}
         entityOptions={entityOptions}
         loading={editLoading}

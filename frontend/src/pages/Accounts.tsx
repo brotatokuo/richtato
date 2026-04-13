@@ -1,9 +1,13 @@
 import { AccountDetailPanel } from '@/components/accounts/AccountDetailPanel';
-import { AccountsSidebar, AccountWithBalance } from '@/components/accounts/AccountsSidebar';
+import {
+  AccountsSidebar,
+  AccountWithBalance,
+} from '@/components/accounts/AccountsSidebar';
 import { useState } from 'react';
 
 export function Accounts() {
-  const [selectedAccount, setSelectedAccount] = useState<AccountWithBalance | null>(null);
+  const [selectedAccount, setSelectedAccount] =
+    useState<AccountWithBalance | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   const handleAccountsChange = () => {

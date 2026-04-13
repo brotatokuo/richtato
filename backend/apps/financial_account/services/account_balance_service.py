@@ -65,6 +65,29 @@ class AccountBalanceService:
 
         return account
 
+    def set_balance_snapshot(
+        self, account: FinancialAccount, new_balance: Decimal, balance_date: date = None
+    ) -> FinancialAccount:
+        """Set absolute balance and overwrite/create history for the date.
+
+        This is used by manual reconciliation/snapshot flows where users provide
+        the true account balance for a specific date. Unlike adjustment-transaction
+        mode, this writes the account anchor and dated history directly.
+        """
+        updated_account = self.account_repository.update_balance(
+            account=account,
+            balance=new_balance,
+            balance_date=balance_date,
+            source="manual",
+        )
+
+        logger.info(
+            f"Set balance snapshot for account {updated_account.id} ({updated_account.name}) "
+            f"to {new_balance} on {balance_date or date.today()}"
+        )
+
+        return updated_account
+
     def get_balance_history(
         self,
         account: FinancialAccount,

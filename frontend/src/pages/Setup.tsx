@@ -31,7 +31,11 @@ export function Setup() {
   };
 
   return (
-    <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
+    <Tabs
+      value={activeTab}
+      onValueChange={handleTabChange}
+      className="space-y-4"
+    >
       <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-grid">
         <TabsTrigger value="accounts" className="flex items-center gap-2">
           <Landmark className="h-4 w-4" />

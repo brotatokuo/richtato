@@ -428,7 +428,11 @@ export function UnifiedAccountsSection() {
               <div className="bg-black/40 backdrop-blur-sm rounded px-2 py-0.5">
                 <span className="text-xs font-bold text-white drop-shadow tabular-nums">
                   {account.balance !== undefined && account.balance !== null
-                    ? formatCurrency(Math.abs(Number(account.balance)), preferences.currency, 0)
+                    ? formatCurrency(
+                        Math.abs(Number(account.balance)),
+                        preferences.currency,
+                        0
+                      )
                     : ''}
                 </span>
               </div>
@@ -500,10 +504,16 @@ export function UnifiedAccountsSection() {
             {account.balance !== undefined && account.balance !== null ? (
               <span
                 className={`text-sm font-bold tabular-nums ${
-                  Number(account.balance) >= 0 ? 'text-green-600' : 'text-red-500'
+                  Number(account.balance) >= 0
+                    ? 'text-green-600'
+                    : 'text-red-500'
                 }`}
               >
-                {formatCurrency(Number(account.balance), preferences.currency, 0)}
+                {formatCurrency(
+                  Number(account.balance),
+                  preferences.currency,
+                  0
+                )}
               </span>
             ) : (
               <span />
@@ -579,7 +589,9 @@ export function UnifiedAccountsSection() {
                   <DropdownMenuItem disabled>
                     <Building2 className="h-4 w-4 mr-2 opacity-40" />
                     <span className="opacity-40">Connect Bank</span>
-                    <span className="ml-2 text-xs text-muted-foreground">(unavailable)</span>
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      (unavailable)
+                    </span>
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem onClick={() => setShowCreate(true)}>

@@ -57,8 +57,10 @@ function timeAgo(isoString: string | null | undefined): string {
 
 function AccountIcon({ type }: { type: string }) {
   const t = (type || '').toLowerCase();
-  if (t === 'credit_card' || t === 'credit') return <CreditCard className="h-4 w-4" />;
-  if (t === 'savings' || t === 'savings_account') return <Wallet className="h-4 w-4" />;
+  if (t === 'credit_card' || t === 'credit')
+    return <CreditCard className="h-4 w-4" />;
+  if (t === 'savings' || t === 'savings_account')
+    return <Wallet className="h-4 w-4" />;
   return <Building2 className="h-4 w-4" />;
 }
 
@@ -73,7 +75,9 @@ export function AccountsSidebar({
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncingAll, setSyncingAll] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
+    new Set()
+  );
   const [showCreate, setShowCreate] = useState(false);
   const [accountTypeOptions, setAccountTypeOptions] = useState<
     Array<{ value: string; label: string }>
@@ -108,10 +112,13 @@ export function AccountsSidebar({
 
   useEffect(() => {
     loadAccounts();
-    transactionsApiService.getAccountFieldChoices().then(c => {
-      setAccountTypeOptions(c.type || []);
-      setEntityOptions(c.entity || []);
-    }).catch(() => {});
+    transactionsApiService
+      .getAccountFieldChoices()
+      .then(c => {
+        setAccountTypeOptions(c.type || []);
+        setEntityOptions(c.entity || []);
+      })
+      .catch(() => {});
   }, [loadAccounts]);
 
   useEffect(() => {
@@ -173,7 +180,9 @@ export function AccountsSidebar({
     try {
       const result = await syncService.triggerSyncAll();
       if (result.status === 'sync_started') {
-        toast.info('Sync started', { description: 'Syncing all connected accounts...' });
+        toast.info('Sync started', {
+          description: 'Syncing all connected accounts...',
+        });
         pollRef.current = setInterval(async () => {
           await loadAccounts();
         }, 3000);
@@ -195,7 +204,11 @@ export function AccountsSidebar({
     }
   };
 
-  const handleCreate = async (form: { name: string; type: string; entity: string }) => {
+  const handleCreate = async (form: {
+    name: string;
+    type: string;
+    entity: string;
+  }) => {
     setCreating(true);
     try {
       await transactionsApiService.createAccount({
@@ -319,11 +332,17 @@ export function AccountsSidebar({
                   <span
                     className={cn(
                       'text-xs font-semibold tabular-nums',
-                      group.isLiability ? 'text-red-500' : 'text-muted-foreground'
+                      group.isLiability
+                        ? 'text-red-500'
+                        : 'text-muted-foreground'
                     )}
                   >
                     {group.isLiability ? '-' : ''}
-                    {formatCurrency(Math.abs(group.total), preferences.currency, 0)}
+                    {formatCurrency(
+                      Math.abs(group.total),
+                      preferences.currency,
+                      0
+                    )}
                   </span>
                 </button>
 
@@ -351,9 +370,7 @@ export function AccountsSidebar({
                           <div
                             className={cn(
                               'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center overflow-hidden',
-                              isSelected
-                                ? 'bg-primary/15'
-                                : 'bg-muted'
+                              isSelected ? 'bg-primary/15' : 'bg-muted'
                             )}
                           >
                             {entityLogo ? (
@@ -363,8 +380,17 @@ export function AccountsSidebar({
                                 className="w-5 h-5 object-contain"
                               />
                             ) : (
-                              <span className={cn('text-muted-foreground', isSelected && 'text-primary')}>
-                                <AccountIcon type={account.account_type || account.type || ''} />
+                              <span
+                                className={cn(
+                                  'text-muted-foreground',
+                                  isSelected && 'text-primary'
+                                )}
+                              >
+                                <AccountIcon
+                                  type={
+                                    account.account_type || account.type || ''
+                                  }
+                                />
                               </span>
                             )}
                           </div>
@@ -375,7 +401,9 @@ export function AccountsSidebar({
                               <span
                                 className={cn(
                                   'text-sm font-medium truncate',
-                                  isSelected ? 'text-primary' : 'text-foreground'
+                                  isSelected
+                                    ? 'text-primary'
+                                    : 'text-foreground'
                                 )}
                               >
                                 {account.name}
@@ -408,11 +436,27 @@ export function AccountsSidebar({
                                   : 'text-foreground'
                               )}
                             >
-                              {group.isLiability && account.balance < 0 ? '' : group.isLiability ? '-' : ''}
-                              {formatCurrency(Math.abs(account.balance), preferences.currency, 0)}
+                              {group.isLiability && account.balance < 0
+                                ? ''
+                                : group.isLiability
+                                  ? '-'
+                                  : ''}
+                              {formatCurrency(
+                                Math.abs(account.balance),
+                                preferences.currency,
+                                0
+                              )}
                             </span>
                             {account.has_connection && (
-                              <span title={hasError ? 'Sync error' : isActive ? 'Connected' : 'Disconnected'}>
+                              <span
+                                title={
+                                  hasError
+                                    ? 'Sync error'
+                                    : isActive
+                                      ? 'Connected'
+                                      : 'Disconnected'
+                                }
+                              >
                                 {hasError ? (
                                   <WifiOff className="h-3 w-3 text-red-500" />
                                 ) : (
