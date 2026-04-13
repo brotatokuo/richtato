@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { YearPicker } from '@/components/ui/YearPicker';
+import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import {
   annualAnalysisApiService,
@@ -24,6 +25,7 @@ const INCOME_COLOR = '#3b82f6'; // blue-500
 
 export function ReportPage() {
   const { preferences } = usePreferences();
+  const { scope } = useHousehold();
   const [data, setData] = useState<AnnualAnalysisData | null>(null);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [selectedYear, setSelectedYear] = useState<number>(
@@ -48,8 +50,8 @@ export function ReportPage() {
       setError(null);
 
       const [analysisData, years] = await Promise.all([
-        annualAnalysisApiService.getAnnualAnalysis(selectedYear),
-        annualAnalysisApiService.getAvailableYears(),
+        annualAnalysisApiService.getAnnualAnalysis(selectedYear, scope),
+        annualAnalysisApiService.getAvailableYears(scope),
       ]);
 
       setData(analysisData);
@@ -59,7 +61,7 @@ export function ReportPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedYear]);
+  }, [selectedYear, scope]);
 
   useEffect(() => {
     loadData();
@@ -384,11 +386,8 @@ export function ReportPage() {
     totalExpenses > 0
       ? Math.round((data.essential_total / totalExpenses) * 100)
       : 0;
-  const savingsAmount = data.total_income - totalExpenses;
-  const savingsRate =
-    data.total_income > 0
-      ? Math.round((savingsAmount / data.total_income) * 100)
-      : 0;
+  const savingsAmount = data.net_savings;
+  const savingsRate = data.savings_rate;
 
   return (
     <>

@@ -94,12 +94,13 @@ def dashboard_metrics(request):
         service = AssetDashboardService(repo)
 
         scope = request.GET.get("scope", "personal")
+        period = request.GET.get("period", "30d")
         user_ids = get_scope_user_ids(request)
 
         if scope == "household" and len(user_ids) > 1:
-            context = service.get_dashboard_metrics_for_users(user_ids)
+            context = service.get_dashboard_metrics_for_users(user_ids, period=period)
         else:
-            context = service.get_dashboard_metrics(request.user)
+            context = service.get_dashboard_metrics(request.user, period=period)
         return JsonResponse(context)
     except Exception as e:
         logger.error(f"Error getting dashboard metrics: {e}")

@@ -24,6 +24,7 @@ class BudgetDashboardService:
         end_date: date | None = None,
         year: int | None = None,
         month: int | None = None,
+        user_ids: list[int] | None = None,
     ) -> dict:
         """
         Generate expense breakdown by category for pie chart.
@@ -44,7 +45,7 @@ class BudgetDashboardService:
         start_date, end_date = self._determine_date_range(start_date, end_date, year, month)
 
         # Get expenses by category
-        expenses = self.repo.get_expenses_by_category(user, start_date, end_date, limit=6)
+        expenses = self.repo.get_expenses_by_category(user, start_date, end_date, limit=6, user_ids=user_ids)
 
         labels = [exp["category__name"] or "Uncategorized" for exp in expenses]
         data = [float(exp["total"]) for exp in expenses]
@@ -73,6 +74,7 @@ class BudgetDashboardService:
         month: int | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        user_ids: list[int] | None = None,
     ) -> dict:
         """
         Get budget progress for a date range.
@@ -114,7 +116,7 @@ class BudgetDashboardService:
             for budget_category in budget.budget_categories.all():
                 category = budget_category.category
                 # Get total expenses for this category during the period
-                total_spent = self.repo.get_category_expense_sum(user, category, start_date, end_date)
+                total_spent = self.repo.get_category_expense_sum(user, category, start_date, end_date, user_ids=user_ids)
 
                 budget_amount = budget_category.allocated_amount or Decimal(0)
                 percentage = int(round((total_spent / budget_amount) * 100)) if budget_amount > 0 else 0
@@ -286,6 +288,7 @@ class BudgetDashboardService:
         self,
         user,
         months: int = 12,
+        user_ids: list[int] | None = None,
     ) -> dict:
         """
         Get budget progress for the last N months.
@@ -312,7 +315,7 @@ class BudgetDashboardService:
                 year -= 1
 
             # Get budget progress for this month
-            progress = self.get_budget_progress(user, year=year, month=month)
+            progress = self.get_budget_progress(user, year=year, month=month, user_ids=user_ids)
 
             # Calculate totals for this month
             budgets = progress.get("budgets", [])

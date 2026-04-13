@@ -8,7 +8,7 @@ from decimal import Decimal
 from dateutil.relativedelta import relativedelta
 from django.db.models import Sum
 
-from apps.core.constants import get_expense_filter, get_income_filter
+from apps.core.constants import get_expense_filter, get_income_filter, get_investment_filter
 from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
 from apps.transaction.models import Transaction
 
@@ -21,6 +21,9 @@ class AssetDashboardRepository:
 
     def _get_expense_filter(self):
         return get_expense_filter()
+
+    def _get_investment_filter(self):
+        return get_investment_filter()
 
     # Income queries (based on category.is_income or credit transactions)
     def get_earliest_income_date(self, user) -> date | None:
@@ -56,6 +59,19 @@ class AssetDashboardRepository:
                 date__lte=end_date,
             )
             .filter(self._get_expense_filter())
+            .aggregate(total=Sum("amount"))
+        )
+        return result["total"] or Decimal("0")
+
+    def get_investment_sum_by_date_range(self, user, start_date: date, end_date: date) -> Decimal:
+        """Get sum of investment transactions for a date range."""
+        result = (
+            Transaction.objects.filter(
+                user=user,
+                date__gte=start_date,
+                date__lte=end_date,
+            )
+            .filter(self._get_investment_filter())
             .aggregate(total=Sum("amount"))
         )
         return result["total"] or Decimal("0")

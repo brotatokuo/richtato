@@ -12,7 +12,7 @@ import {
   Transaction,
   transactionsApiService,
 } from '@/lib/api/transactions';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatPeriodLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import {
   ArrowRight,
@@ -84,7 +84,7 @@ export function HouseholdDashboard() {
     return <Navigate to="/setup?tab=household" replace />;
   }
 
-  const netCashFlow = metrics ? metrics.income_sum - metrics.expense_sum : 0;
+  const netCashFlow = metrics ? metrics.net_cashflow : 0;
 
   return (
     <div className="space-y-6">
@@ -197,7 +197,7 @@ export function HouseholdDashboard() {
               </div>
 
               <MetricCard
-                title="Savings Rate (30d)"
+                title={`Savings Rate (${formatPeriodLabel(metrics.period)})`}
                 value={metrics.savings_rate}
                 subtitle={metrics.savings_rate_context}
                 icon={<PiggyBank className="h-4 w-4" />}
@@ -211,7 +211,7 @@ export function HouseholdDashboard() {
               />
 
               <MetricCard
-                title="Net Cash Flow (30d)"
+                title={`Net Cash Flow (${formatPeriodLabel(metrics.period)})`}
                 value={formatCurrency(netCashFlow, preferences.currency, 0)}
                 subtitle={`In ${formatCurrency(metrics.income_sum, preferences.currency, 0)} · Out ${formatCurrency(metrics.expense_sum, preferences.currency, 0)}`}
                 icon={<Wallet className="h-4 w-4" />}

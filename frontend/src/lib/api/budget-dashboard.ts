@@ -66,6 +66,7 @@ class BudgetDashboardApiService extends BaseApiClient {
     endDate?: string;
     year?: number;
     month?: number;
+    scope?: 'personal' | 'household';
   }): Promise<ExpenseCategoriesData> {
     const url = new URL(
       `${this.baseUrl}/expense-categories/`,
@@ -76,6 +77,8 @@ class BudgetDashboardApiService extends BaseApiClient {
     if (params?.endDate) url.searchParams.append('end_date', params.endDate);
     if (params?.year) url.searchParams.append('year', String(params.year));
     if (params?.month) url.searchParams.append('month', String(params.month));
+    if (params?.scope && params.scope !== 'personal')
+      url.searchParams.append('scope', params.scope);
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
@@ -159,6 +162,7 @@ class BudgetDashboardApiService extends BaseApiClient {
    */
   async getBudgetProgressMultiMonth(params?: {
     months?: number;
+    scope?: 'personal' | 'household';
   }): Promise<MultiMonthBudgetProgressData> {
     const url = new URL(
       `${this.baseUrl}/progress/multi-month/`,
@@ -166,6 +170,8 @@ class BudgetDashboardApiService extends BaseApiClient {
     );
     if (params?.months)
       url.searchParams.append('months', String(params.months));
+    if (params?.scope && params.scope !== 'personal')
+      url.searchParams.append('scope', params.scope);
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),

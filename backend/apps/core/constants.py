@@ -21,3 +21,11 @@ def get_income_filter() -> Q:
     Income = category.type == "income" OR uncategorized credit.
     """
     return Q(category__type="income") | Q(category__isnull=True, transaction_type="credit")
+
+
+def get_investment_filter() -> Q:
+    """Q filter for investment transactions.
+
+    Investment = category.type == "investment".
+    """
+    return Q(category__type="investment")

@@ -657,7 +657,8 @@ class TransactionsApiService {
    */
   async getCashflowSummary(
     startDate: string,
-    endDate: string
+    endDate: string,
+    scope?: 'personal' | 'household'
   ): Promise<{
     total_income: number;
     total_expenses: number;
@@ -673,6 +674,7 @@ class TransactionsApiService {
     );
     url.searchParams.append('start_date', startDate);
     url.searchParams.append('end_date', endDate);
+    if (scope && scope !== 'personal') url.searchParams.append('scope', scope);
 
     const response = await fetch(url.toString(), {
       method: 'GET',

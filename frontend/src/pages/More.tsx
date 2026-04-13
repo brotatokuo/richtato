@@ -1,6 +1,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import {
+  Calculator,
   ChevronRight,
   LogOut,
   Settings as SettingsIcon,
@@ -119,6 +120,7 @@ export function More() {
       <Section title="Settings">
         <MenuRow href="/setup" icon={SlidersHorizontal} label="Setup" />
         <MenuRow href="/preferences" icon={SettingsIcon} label="Preferences" />
+        <MenuRow href="/formulas" icon={Calculator} label="Formulas" />
       </Section>
 
       <Section title="Account">

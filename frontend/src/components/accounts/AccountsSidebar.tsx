@@ -1,6 +1,7 @@
 import { AccountCreateModal } from '@/components/accounts/AccountCreateModal';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { syncService } from '@/lib/api/sync';
 import { Account, transactionsApiService } from '@/lib/api/transactions';
@@ -72,6 +73,7 @@ export function AccountsSidebar({
   onAccountsChange,
 }: AccountsSidebarProps) {
   const { preferences } = usePreferences();
+  const { scope } = useHousehold();
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncingAll, setSyncingAll] = useState(false);
@@ -90,7 +92,7 @@ export function AccountsSidebar({
 
   const loadAccounts = useCallback(async () => {
     try {
-      const data = await transactionsApiService.getAccounts();
+      const data = await transactionsApiService.getAccounts({ scope });
       const withBalance: AccountWithBalance[] = data.map(a => {
         const raw = a as Account & { balance?: number | string; date?: string };
         return {
@@ -108,7 +110,7 @@ export function AccountsSidebar({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [scope]);
 
   useEffect(() => {
     loadAccounts();

@@ -6,6 +6,7 @@ import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { cn } from '@/lib/utils';
 import {
   BarChart3,
+  Calculator,
   ChevronLeft,
   ChevronRight,
   Heart,
@@ -56,7 +57,8 @@ export function Sidebar({
     items.push(
       { name: 'Data', href: '/data', icon: Table },
       { name: 'Setup', href: '/setup', icon: SlidersHorizontal },
-      { name: 'Preferences', href: '/preferences', icon: SettingsIcon }
+      { name: 'Preferences', href: '/preferences', icon: SettingsIcon },
+      { name: 'Formulas', href: '/formulas', icon: Calculator }
     );
     return items;
   }, [isInHousehold]);

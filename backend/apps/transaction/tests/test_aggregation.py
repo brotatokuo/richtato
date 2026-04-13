@@ -331,8 +331,14 @@ class TestCashflowSummary:
         assert result["total_investments"] == 1000.0
         assert result["net_savings"] == 3000.0
 
-    def test_uncategorized_credit_counted_as_income(self, user, account):
-        """Credits without a category should fall into income (via cashflow_summary)."""
+    def test_uncategorized_credit_excluded_from_income(self, user, account):
+        """Auto-uncategorized credits (type='other') are not counted as income.
+
+        Transaction.save() auto-assigns the 'Uncategorized' category with
+        type='other'. Since cashflow_summary now uses the canonical category-type
+        filter (category__type='income'), these are excluded — consistent with
+        AssetDashboardRepository.
+        """
         Transaction.objects.create(
             user=user,
             account=account,
@@ -344,10 +350,14 @@ class TestCashflowSummary:
         )
         tx_service = TransactionService()
         result = tx_service.get_cashflow_summary(user, date(2025, 3, 1), date(2025, 3, 31))
-        assert result["total_income"] == 250.0
+        assert result["total_income"] == 0.0
 
-    def test_uncategorized_debit_counted_as_expense(self, user, account):
-        """Debits without a category should fall into expenses (via cashflow_summary)."""
+    def test_uncategorized_debit_excluded_from_expenses(self, user, account):
+        """Auto-uncategorized debits (type='other') are not counted as expenses.
+
+        Same rationale as above: canonical filters require an explicit category
+        type to classify transactions.
+        """
         Transaction.objects.create(
             user=user,
             account=account,
@@ -359,7 +369,7 @@ class TestCashflowSummary:
         )
         tx_service = TransactionService()
         result = tx_service.get_cashflow_summary(user, date(2025, 3, 1), date(2025, 3, 31))
-        assert result["total_expenses"] == 75.0
+        assert result["total_expenses"] == 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -417,9 +427,8 @@ class TestDashboardRepoAggregation:
     def test_auto_uncategorized_credit_excluded_from_income(self, dashboard_repo, user, account):
         """Transaction.save() auto-assigns the 'Uncategorized' category (type='other').
 
-        Since dashboard repo filters by category__type='income', auto-uncategorized
-        credits are NOT counted in income sums. This documents a known inconsistency
-        with get_cashflow_summary which DOES count them (it filters by transaction_type).
+        Since all surfaces now use the canonical category-type filters,
+        auto-uncategorized credits are consistently excluded from income sums.
         """
         Transaction.objects.create(
             user=user,
@@ -434,7 +443,7 @@ class TestDashboardRepoAggregation:
         assert total == Decimal("0")
 
     def test_auto_uncategorized_debit_excluded_from_expenses(self, dashboard_repo, user, account):
-        """Same as above — auto-uncategorized debits are NOT counted in expenses."""
+        """Same as above — auto-uncategorized debits (type='other') are excluded from expenses."""
         Transaction.objects.create(
             user=user,
             account=account,

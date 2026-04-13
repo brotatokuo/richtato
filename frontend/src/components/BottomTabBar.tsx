@@ -18,7 +18,14 @@ const primaryTabs = [
   { name: 'More', href: '/more', icon: MoreHorizontal },
 ];
 
-const moreRoutes = ['/cashflow', '/setup', '/preferences', '/profile', '/more'];
+const moreRoutes = [
+  '/cashflow',
+  '/setup',
+  '/preferences',
+  '/profile',
+  '/formulas',
+  '/more',
+];
 
 export function BottomTabBar() {
   const location = useLocation();

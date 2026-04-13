@@ -12,6 +12,7 @@ import {
   BudgetDateRangeProvider,
   useBudgetDateRange,
 } from '@/contexts/BudgetDateRangeContext';
+import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import {
   budgetDashboardApiService,
@@ -49,6 +50,7 @@ export function Dashboard() {
 function DashboardContent() {
   const { setRange } = useBudgetDateRange();
   const { preferences } = usePreferences();
+  const { scope } = useHousehold();
   const [monthlyData, setMonthlyData] = useState<MonthlyBudgetData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +84,7 @@ function DashboardContent() {
   };
 
   const loadDashboardData = useCallback(async () => {
-    const fetchKey = 'multi-month-12';
+    const fetchKey = `multi-month-12-${scope}`;
     if (lastFetchRef.current === fetchKey) return;
     lastFetchRef.current = fetchKey;
 
@@ -93,6 +95,7 @@ function DashboardContent() {
       const multiMonthData =
         await budgetDashboardApiService.getBudgetProgressMultiMonth({
           months: 12,
+          scope,
         });
 
       setMonthlyData(multiMonthData.monthly_data);
@@ -111,7 +114,7 @@ function DashboardContent() {
     } finally {
       setLoading(false);
     }
-  }, [setRange]);
+  }, [setRange, scope]);
 
   // Fetch income for the displayed month
   useEffect(() => {
@@ -121,13 +124,14 @@ function DashboardContent() {
         startDate: displayedMonth.start_date,
         endDate: displayedMonth.end_date,
         type: 'credit',
+        scope,
       })
       .then(({ transactions }) => {
         const income = transactions.reduce((sum, t) => sum + t.amount, 0);
         setMonthlyIncome(income);
       })
       .catch(() => setMonthlyIncome(0));
-  }, [displayedMonth]);
+  }, [displayedMonth, scope]);
 
   useEffect(() => {
     loadDashboardData();

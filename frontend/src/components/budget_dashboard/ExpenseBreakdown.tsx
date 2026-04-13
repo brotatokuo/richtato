@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useBudgetDateRange } from '@/contexts/BudgetDateRangeContext';
+import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { budgetDashboardApiService } from '@/lib/api/budget-dashboard';
 import { formatCurrency } from '@/lib/format';
@@ -26,6 +27,7 @@ interface ExpenseCategory {
 export function ExpenseBreakdown() {
   const { startDate, endDate } = useBudgetDateRange();
   const { preferences } = usePreferences();
+  const { scope } = useHousehold();
   const [chartData, setChartData] = useState<{
     series: unknown[];
     [key: string]: unknown;
@@ -48,6 +50,7 @@ export function ExpenseBreakdown() {
       const data = await budgetDashboardApiService.getExpenseCategoriesData({
         startDate,
         endDate,
+        scope,
       });
       const labels = data.labels || [];
       const values = (data.datasets?.[0]?.data as number[]) || [];
@@ -90,7 +93,7 @@ export function ExpenseBreakdown() {
     fetchExpenseData();
     // fetchExpenseData is stable - intentionally not in deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate]);
+  }, [startDate, endDate, scope]);
 
   useEffect(() => {
     if (expenseCategories.length === 0) return;

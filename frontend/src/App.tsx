@@ -45,6 +45,9 @@ const HouseholdDashboard = lazy(() =>
     default: m.HouseholdDashboard,
   }))
 );
+const Formulas = lazy(() =>
+  import('./pages/Formulas').then(m => ({ default: m.Formulas }))
+);
 
 function App() {
   return (
@@ -143,6 +146,14 @@ function App() {
                   element={
                     <Suspense fallback={null}>
                       <HouseholdDashboard />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="formulas"
+                  element={
+                    <Suspense fallback={null}>
+                      <Formulas />
                     </Suspense>
                   }
                 />

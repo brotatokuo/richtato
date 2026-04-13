@@ -405,6 +405,8 @@ class TransactionCashflowSummaryAPIView(APIView):
 
     def get(self, request):
         """Get cashflow summary."""
+        from apps.household.scope import get_scope_user_ids
+
         start_date_str = request.query_params.get("start_date")
         end_date_str = request.query_params.get("end_date")
 
@@ -418,7 +420,10 @@ class TransactionCashflowSummaryAPIView(APIView):
             start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
             end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
 
-            summary = self.transaction_service.get_cashflow_summary(request.user, start_date, end_date)
+            scope = request.query_params.get("scope", "personal")
+            user_ids = get_scope_user_ids(request) if scope == "household" else None
+
+            summary = self.transaction_service.get_cashflow_summary(request.user, start_date, end_date, user_ids=user_ids)
             return Response(summary)
 
         except ValueError:
