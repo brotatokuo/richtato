@@ -3,6 +3,7 @@
  */
 
 import { csrfService } from './csrf';
+import { fetchWithAuth } from './fetchClient';
 
 export interface User {
   id: number;
@@ -148,7 +149,7 @@ class AuthApiService {
       // Get CSRF token first
       const csrfHeaders = await csrfService.getHeaders();
 
-      const response = await fetch(`${this.baseUrl}/auth/login/`, {
+      const response = await fetchWithAuth(`${this.baseUrl}/auth/login/`, {
         method: 'POST',
         headers: {
           ...this.getHeaders(),
@@ -164,15 +165,18 @@ class AuthApiService {
           .refreshToken()
           .then(() => csrfService.getHeaders());
 
-        const retryResponse = await fetch(`${this.baseUrl}/auth/login/`, {
-          method: 'POST',
-          headers: {
-            ...this.getHeaders(),
-            ...refreshedCsrfHeaders,
-          },
-          body: JSON.stringify(credentials),
-          credentials: 'include',
-        });
+        const retryResponse = await fetchWithAuth(
+          `${this.baseUrl}/auth/login/`,
+          {
+            method: 'POST',
+            headers: {
+              ...this.getHeaders(),
+              ...refreshedCsrfHeaders,
+            },
+            body: JSON.stringify(credentials),
+            credentials: 'include',
+          }
+        );
 
         const data = await this.handleResponse<LoginResponse>(retryResponse);
         if (data.success) {
@@ -204,7 +208,7 @@ class AuthApiService {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/auth/logout/`, {
+      const response = await fetchWithAuth(`${this.baseUrl}/auth/logout/`, {
         method: 'POST',
         headers: this.getHeaders(),
         credentials: 'include', // Include cookies for session authentication
@@ -243,7 +247,7 @@ class AuthApiService {
     } as const;
 
     const makeRequest = async () =>
-      fetch(`${this.baseUrl}/auth/register/`, {
+      fetchWithAuth(`${this.baseUrl}/auth/register/`, {
         method: 'POST',
         headers: {
           ...this.getHeaders(),
@@ -261,7 +265,7 @@ class AuthApiService {
         .refreshToken()
         .then(() => csrfService.getHeaders());
 
-      response = await fetch(`${this.baseUrl}/auth/register/`, {
+      response = await fetchWithAuth(`${this.baseUrl}/auth/register/`, {
         method: 'POST',
         headers: {
           ...this.getHeaders(),
@@ -291,7 +295,7 @@ class AuthApiService {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(`${this.baseUrl}/auth/profile/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/auth/profile/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include', // Include cookies for session authentication
@@ -309,7 +313,7 @@ class AuthApiService {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/auth/check/`, {
+      const response = await fetchWithAuth(`${this.baseUrl}/auth/check/`, {
         method: 'GET',
         headers: this.getHeaders(),
       });
@@ -372,7 +376,7 @@ class AuthApiService {
       // Get CSRF token first
       const csrfHeaders = await csrfService.getHeaders();
 
-      const response = await fetch(`${this.baseUrl}/auth/demo-login/`, {
+      const response = await fetchWithAuth(`${this.baseUrl}/auth/demo-login/`, {
         method: 'POST',
         headers: {
           ...this.getHeaders(),
@@ -387,14 +391,17 @@ class AuthApiService {
           .refreshToken()
           .then(() => csrfService.getHeaders());
 
-        const retryResponse = await fetch(`${this.baseUrl}/auth/demo-login/`, {
-          method: 'POST',
-          headers: {
-            ...this.getHeaders(),
-            ...refreshedCsrfHeaders,
-          },
-          credentials: 'include',
-        });
+        const retryResponse = await fetchWithAuth(
+          `${this.baseUrl}/auth/demo-login/`,
+          {
+            method: 'POST',
+            headers: {
+              ...this.getHeaders(),
+              ...refreshedCsrfHeaders,
+            },
+            credentials: 'include',
+          }
+        );
 
         const data = await this.handleResponse<LoginResponse>(retryResponse);
         if (data.success) {

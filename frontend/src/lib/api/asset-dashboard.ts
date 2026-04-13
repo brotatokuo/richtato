@@ -3,6 +3,8 @@
  */
 import { BaseApiClient } from './base-client';
 
+import { fetchWithAuth } from './fetchClient';
+
 export interface AssetDashboardData {
   networth: number;
   total_assets: number;
@@ -63,7 +65,7 @@ class AssetDashboardApiService extends BaseApiClient {
    * Get dashboard metrics (net worth, savings rate, etc.)
    */
   async getDashboardMetrics(): Promise<AssetDashboardData> {
-    const response = await fetch(`${this.baseUrl}/metrics/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/metrics/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -76,7 +78,7 @@ class AssetDashboardApiService extends BaseApiClient {
    * Get cash flow data for a specified period
    */
   async getCashFlowData(period: string = '6m'): Promise<CashFlowData> {
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${this.baseUrl}/cash-flow/?period=${period}`,
       {
         method: 'GET',
@@ -102,7 +104,7 @@ class AssetDashboardApiService extends BaseApiClient {
     if (params?.startDate)
       url.searchParams.append('start_date', params.startDate);
     if (params?.endDate) url.searchParams.append('end_date', params.endDate);
-    const response = await fetch(url.toString(), {
+    const response = await fetchWithAuth(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -115,7 +117,7 @@ class AssetDashboardApiService extends BaseApiClient {
    * Get savings data for the last 6 months
    */
   async getSavingsData(): Promise<CashFlowData> {
-    const response = await fetch(`${this.baseUrl}/savings/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/savings/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -128,7 +130,7 @@ class AssetDashboardApiService extends BaseApiClient {
    * Get top spending categories
    */
   async getTopCategoriesData(): Promise<unknown> {
-    const response = await fetch(`${this.baseUrl}/top-categories/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/top-categories/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -141,7 +143,7 @@ class AssetDashboardApiService extends BaseApiClient {
    * Get Sankey diagram data
    */
   async getSankeyData(): Promise<unknown> {
-    const response = await fetch(`${this.baseUrl}/sankey-data/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/sankey-data/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -156,7 +158,7 @@ class AssetDashboardApiService extends BaseApiClient {
   async getNetWorthHistory(
     period: '1m' | '3m' | '6m' | '1y' | 'all' = '6m'
   ): Promise<NetWorthHistoryData> {
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${this.baseUrl}/networth-history/?period=${period}`,
       {
         method: 'GET',
@@ -172,7 +174,7 @@ class AssetDashboardApiService extends BaseApiClient {
    * Get account balances grouped by type
    */
   async getAccountBreakdown(): Promise<AccountBreakdownData> {
-    const response = await fetch(`${this.baseUrl}/account-breakdown/`, {
+    const response = await fetchWithAuth(`${this.baseUrl}/account-breakdown/`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',

@@ -3,6 +3,8 @@
  */
 import { BaseApiClient } from './base-client';
 
+import { fetchWithAuth } from './fetchClient';
+
 export interface MonthlyBreakdown {
   month: string;
   month_num: number;
@@ -51,7 +53,7 @@ class AnnualAnalysisApiService extends BaseApiClient {
     );
     if (year) url.searchParams.append('year', String(year));
 
-    const response = await fetch(url.toString(), {
+    const response = await fetchWithAuth(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
@@ -64,11 +66,14 @@ class AnnualAnalysisApiService extends BaseApiClient {
    * Get available years with transaction data
    */
   async getAvailableYears(): Promise<number[]> {
-    const response = await fetch(`${this.baseUrl}/annual-analysis/years/`, {
-      method: 'GET',
-      headers: this.getHeaders(),
-      credentials: 'include',
-    });
+    const response = await fetchWithAuth(
+      `${this.baseUrl}/annual-analysis/years/`,
+      {
+        method: 'GET',
+        headers: this.getHeaders(),
+        credentials: 'include',
+      }
+    );
     const data = await this.handleResponse<{ years: number[] }>(response);
     return data.years || [];
   }

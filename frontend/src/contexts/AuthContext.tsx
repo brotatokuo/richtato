@@ -1,4 +1,5 @@
 import { authApi, Organization, User } from '@/lib/api/auth';
+import { SESSION_EXPIRED_EVENT } from '@/lib/api/fetchClient';
 import { ReactNode, useEffect, useState } from 'react';
 import {
   AuthContext,
@@ -107,6 +108,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     initializeAuth();
+  }, []);
+
+  // Log user out when any API call returns 401 (session expired)
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      authApi.setToken(null);
+      setUser(null);
+      setOrganization(null);
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    return () =>
+      window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
   }, []);
 
   const value: AuthContextType = {
