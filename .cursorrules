@@ -1,15 +1,27 @@
-# Richtato - Personal Finance Management Platform
+# Richtato — AI-Native Personal Finance
 
-## Project Overview
+## Product Vision
 
-Richtato is a comprehensive personal finance management application for tracking expenses, income, budgets, and net worth. It features bank account syncing (Teller/Plaid), AI-powered transaction categorization, and interactive dashboards.
+Richtato is a **Monarch Money competitor**: a polished, AI-native personal finance app for tracking spending, budgets, and net worth. The north-star UX is Monarch — clean data visualization, frictionless categorization, and insights that feel like having a personal CFO. Every feature should feel intentional, fast, and beautiful.
+
+**Core UX principles:**
+- **Data-forward**: Key numbers are large, prominent, and immediately meaningful
+- **Minimal friction**: Inline editing, quick actions, smart defaults — never more than 2 taps/clicks to accomplish common tasks
+- **AI-native**: AI categorization surfaces proactively; insights appear contextually; natural language is a first-class interaction model
+- **Responsive-first**: Sidebar navigation on desktop, bottom tab bar on mobile — same data, optimized interactions per device
+- **Polished motion**: Subtle animations (fade-in-up, scale-in, shimmer skeletons) make the app feel alive without being distracting
+- **Dark/light parity**: Every screen looks great in both modes; use CSS variables, never hard-code colors
 
 ## Tech Stack
 
 - **Backend**: Django 5.x, Django REST Framework, PostgreSQL, Gunicorn
-- **Frontend**: React 19, TypeScript, Vite 7, Tailwind CSS, Shadcn/UI
+- **Frontend**: React 19, TypeScript, Vite 6, Tailwind CSS 3.4, Shadcn/UI
+- **Charts**: Apache ECharts (`echarts` + `echarts-for-react`)
+- **Tables**: TanStack Table (`@tanstack/react-table`)
 - **Infrastructure**: Docker, Nginx (single-container deployment)
 - **Integrations**: Teller (bank sync), Plaid (bank sync), OpenAI (AI categorization)
+- **Notifications**: Sonner toasts
+- **Date handling**: date-fns
 
 ## Architecture
 
@@ -33,6 +45,104 @@ Pages (routes) → Components (UI) → lib/api/* (API calls) → Contexts (state
 - **components/**: Reusable UI components (organized by feature)
 - **lib/api/**: API service classes (transactions, auth, dashboard, etc.)
 - **contexts/**: React Context for global state (Auth, Preferences)
+- **hooks/**: Custom hooks (`useAuth`, `useSyncStatus`, `usePlaidLink`, `usePolling`)
+
+## Navigation Structure
+
+### Desktop (Sidebar — `components/Sidebar.tsx`)
+Collapsible left sidebar. Active item uses `bg-primary text-primary-foreground` pill style.
+
+| Route | Page | Icon |
+|-------|------|------|
+| `/report` | ReportPage | BarChart3 |
+| `/accounts` | Accounts | Landmark |
+| `/budget` | BudgetDashboard | Wallet |
+| `/cashflow` | Cashflow | TrendingUp |
+| `/data` | DataTable | Table |
+| `/setup` | Setup | SlidersHorizontal |
+| `/preferences` | Preferences | Settings |
+
+### Mobile (Bottom Tab Bar — `components/BottomTabBar.tsx`)
+Fixed bottom nav, 5 primary tabs. Overflow items live in `/more`.
+
+| Tab | Route |
+|-----|-------|
+| Report | `/report` |
+| Accounts | `/accounts` |
+| Budget | `/budget` |
+| Data | `/data` |
+| More | `/more` → Cashflow, Setup, Preferences, Profile |
+
+**Responsive layout rule**: Sidebar is `hidden md:flex`. BottomTabBar is `md:hidden`. Main content has `pb-20 md:pb-6` for tab bar clearance.
+
+## Pages
+
+| Page | File | Purpose |
+|------|------|---------|
+| Report | `ReportPage.tsx` | Net worth overview, income/expense charts, account breakdown |
+| Accounts | `Accounts.tsx` | Account list with balances, history panels |
+| Budget | `BudgetDashboard.tsx` | Budget vs actual, category breakdown, month timeline |
+| Cashflow | `Cashflow.tsx` | Income vs expense flow visualization |
+| Data | `DataTable.tsx` | Transaction table with filtering, bulk categorization |
+| Setup | `Setup.tsx` | Bank connections, account setup |
+| Preferences | `Preferences.tsx` | Display, appearance, category settings, budgets |
+| More | `More.tsx` | Mobile-only overflow menu (settings + profile) |
+| Profile | `Profile.tsx` | User profile |
+| Upload | `Upload.tsx` | CSV/manual transaction import |
+| Welcome | `Welcome.tsx` | Marketing/onboarding landing page |
+
+## Database Models (Core)
+
+| Model | Purpose |
+|-------|---------|
+| `User` | Extended Django user with preferences |
+| `FinancialAccount` | Bank accounts, credit cards, investment accounts |
+| `Transaction` | All financial transactions (debit/credit) |
+| `TransactionCategory` | Hierarchical categories with type (income/expense/transfer) |
+| `CategoryKeyword` | Keywords for auto-categorization |
+| `Budget` | Budget periods with category allocations |
+| `BankConnection` | Teller/Plaid connection credentials |
+
+## API Structure
+
+```
+/api/v1/
+├── /auth/              # Login, logout, demo user
+├── /transactions/      # CRUD transactions, categories, AI recategorize
+├── /accounts/          # Financial accounts
+├── /budget/            # Budget management
+├── /budget-dashboard/  # Budget analytics
+├── /asset-dashboard/   # Net worth, metrics, trends
+├── /sync/              # Bank sync (Teller, Plaid)
+└── /user/              # Profile, preferences, category settings
+```
+
+## Design System
+
+### Color Tokens (CSS variables, Shadcn convention)
+All colors are `hsl(var(--token))`. Never hard-code hex/rgb — use token names:
+- `background` / `foreground`
+- `card` / `card-foreground`
+- `primary` / `primary-foreground`
+- `muted` / `muted-foreground`
+- `border`, `input`, `ring`
+- `destructive` / `destructive-foreground`
+
+Semantic colors used directly (Tailwind): `emerald-500` for positive/synced, `destructive` for negative/error.
+
+### Charts (ECharts)
+All charts use `echarts-for-react`. Follow `BaseChart` component in `components/asset_dashboard/BaseChart.tsx` for shared config. Chart colors must respect dark/light mode — pass theme-aware colors via component props or CSS variable reads.
+
+### Animations (Tailwind custom)
+Available custom animation classes: `animate-fade-in-up`, `animate-fade-in`, `animate-fade-in-left`, `animate-scale-in`, `animate-shimmer`, `animate-slide-in-bottom`, `animate-float`, `animate-pulse-glow`.
+
+Use `animate-shimmer` for loading skeletons. Use `animate-fade-in-up` for page/section entry.
+
+### Spacing & Layout
+- Page content: `p-4 md:p-6`
+- Cards: Shadcn `Card` component
+- Sections: `mb-6` between major sections
+- Max width on wide screens: let content fill naturally, avoid over-constraining
 
 ## Development Commands
 
@@ -52,60 +162,54 @@ docker compose exec backend python manage.py shell
 
 # Run migrations
 docker compose exec backend python manage.py migrate
-```
 
-## Database Models (Core)
-
-| Model | Purpose |
-|-------|---------|
-| `User` | Extended Django user with preferences |
-| `FinancialAccount` | Bank accounts, credit cards, investment accounts |
-| `Transaction` | All financial transactions (debit/credit) |
-| `TransactionCategory` | Hierarchical categories with type (income/expense/transfer) |
-| `CategoryKeyword` | Keywords for auto-categorization |
-| `Budget` | Budget periods with category allocations |
-| `BankConnection` | Teller/Plaid connection credentials |
-
-## API Structure
-
-```
-/api/v1/
-├── /auth/              # Login, logout, demo user
-├── /transactions/      # CRUD transactions, categories
-├── /accounts/          # Financial accounts
-├── /budget/            # Budget management
-├── /budget-dashboard/  # Budget analytics
-├── /asset-dashboard/   # Net worth, metrics, trends
-├── /sync/              # Bank sync (Teller, Plaid)
-└── /user/              # Profile, preferences, category settings
+# Reset demo data
+docker compose exec backend ./create_or_reset_demo.sh
 ```
 
 ## Key Files
 
 ### Backend
-- `backend/richtato/settings.py` - Django configuration
-- `backend/richtato/urls.py` - Root URL routing
-- `backend/config/categories_defaults.yaml` - Default category definitions
-- `backend/apps/*/views.py` - API endpoints
-- `backend/apps/*/services/*.py` - Business logic
-- `backend/apps/*/repositories/*.py` - Database queries
+- `backend/richtato/settings.py` — Django configuration
+- `backend/richtato/urls.py` — Root URL routing
+- `backend/config/categories_defaults.yaml` — Default category definitions
+- `backend/apps/*/views.py` — API endpoints
+- `backend/apps/*/services/*.py` — Business logic
+- `backend/apps/*/repositories/*.py` — Database queries
+- `backend/artificial_intelligence/ai.py` — OpenAI categorization
+- `backend/integrations/plaid/client.py` — Plaid API client
 
 ### Frontend
-- `frontend/src/App.tsx` - Root component with routing
-- `frontend/src/components/Layout.tsx` - Main layout with sidebar
-- `frontend/src/contexts/AuthContext.tsx` - Authentication state
-- `frontend/src/lib/api/*.ts` - API service classes
+- `frontend/src/App.tsx` — Root component with routing
+- `frontend/src/components/Layout.tsx` — Main layout (sidebar + header + outlet)
+- `frontend/src/components/Sidebar.tsx` — Desktop navigation
+- `frontend/src/components/BottomTabBar.tsx` — Mobile tab navigation
+- `frontend/src/contexts/AuthContext.tsx` — Authentication state
+- `frontend/src/contexts/PreferencesContext.tsx` — User preferences
+- `frontend/src/lib/api/*.ts` — API service classes
 
-## Conventions
+## Coding Conventions
 
-- **Logging**: Use `loguru.logger` (backend), avoid `console.log` (frontend)
-- **Icons**: Lucide React icons
-- **Styling**: Tailwind CSS utilities, use `cn()` for conditional classes
-- **State**: React Context for global, useState for local
-- **API Calls**: Async/await with try-catch, CSRF tokens for mutations
+- **Logging**: `loguru.logger` (backend); avoid `console.log` (frontend)
+- **Icons**: Lucide React only
+- **Styling**: Tailwind utilities + `cn()` for conditional classes; never inline styles
+- **State**: React Context for global, `useState` for local; URL search params for filters
+- **API calls**: Async/await with try-catch; CSRF tokens for all mutations
+- **No comments narrating code**: only explain non-obvious intent or trade-offs
+
+## Feature Roadmap Context (Monarch-inspired gaps to close)
+
+When building new features, prioritize Monarch parity:
+- **Spending insights**: AI-generated monthly summaries ("You spent 23% more on dining this month")
+- **Goals**: Savings goals with progress tracking
+- **Recurring transactions**: Auto-detect and display subscriptions/bills
+- **Net worth timeline**: Prominent, beautiful net worth trend as the hero metric
+- **Transaction search**: Full-text search with instant results
+- **Split transactions**: Split a single transaction across multiple categories
+- **Household/multi-user**: Shared accounts and budgets
 
 ## For More Context
 
-- `frontend/CLAUDE.md` - Frontend-specific patterns and components
-- `backend/CLAUDE.md` - Backend-specific patterns and Django apps
-- `API_REFERENCE.md` - Complete API endpoint documentation
+- `frontend/CLAUDE.md` — Frontend-specific patterns and components
+- `backend/CLAUDE.md` — Backend-specific patterns and Django apps
+- `API_REFERENCE.md` — Complete API endpoint documentation
