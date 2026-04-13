@@ -121,25 +121,6 @@ export function HouseholdDashboard() {
         </div>
       </div>
 
-      {/* Members */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {members.map(m => (
-          <Card key={m.user_id} className="bg-card/50 border-border/50">
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
-                {m.username.charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{m.username}</p>
-                <p className="text-xs text-muted-foreground">
-                  Joined {new Date(m.joined_at).toLocaleDateString()}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
       {loading ? (
         <div className="flex h-64 items-center justify-center">
           <LoadingSpinner />

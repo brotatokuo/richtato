@@ -2,6 +2,7 @@ import { useSyncStatus } from '@/hooks/useSyncStatus';
 import {
   BarChart3,
   CloudUpload,
+  Heart,
   Landmark,
   MoreHorizontal,
   Settings,
@@ -31,6 +32,7 @@ const routeConfig: Record<
   '/setup': { title: 'Setup', icon: SlidersHorizontal },
   '/settings': { title: 'Settings', icon: Settings },
   '/more': { title: 'More', icon: MoreHorizontal },
+  '/household': { title: 'Household', icon: Heart },
 };
 
 export function Layout() {
