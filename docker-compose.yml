@@ -50,6 +50,22 @@ services:
       - backend
     command: yarn dev --host 0.0.0.0
 
+  # Statement download automation (Playwright + scheduler)
+  automation:
+    build:
+      context: ./scripts/automation
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - ./local_data:/app/local_data
+      - ./scripts/automation:/app/scripts/automation
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+    command: python -m scripts.automation.scheduler
+
 volumes:
   postgres_data:
   static_volume:

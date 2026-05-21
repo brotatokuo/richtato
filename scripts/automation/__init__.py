@@ -1,0 +1,1 @@
+"""Daily statement download automation."""
