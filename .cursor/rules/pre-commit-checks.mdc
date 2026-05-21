@@ -6,7 +6,7 @@ alwaysApply: true
 
 # Pre-Commit CI Checks (MANDATORY)
 
-**Every commit MUST pass the same checks that run in GitHub Actions CI.** Run these checks on modified files before creating any commit. Do NOT commit code that fails these checks.
+**Every commit MUST pass the relevant checks before staging or committing.** Run the checks for the stack you changed. Do NOT commit code that fails these checks.
 
 ## Backend Checks (when `backend/` files changed)
 
@@ -22,10 +22,10 @@ ruff format --check .
 # If format fails, fix with:
 ruff format .
 
-# 3. Migration consistency — no conflicting or missing migrations
+# 3. Local safety check — no missing migrations
 python manage.py makemigrations --check --dry-run --skip-checks --settings=richtato.settings
 
-# 4. Django system check
+# 4. Local safety check — Django configuration
 python manage.py check --settings=richtato.test_settings
 
 # 5. Tests (when test files or tested code changed)
@@ -55,7 +55,7 @@ yarn type-check
 yarn test:coverage
 ```
 
-**Shortcut**: run `yarn lint && yarn format:check && yarn type-check` (or add a `ci-check` script if desired).
+**Shortcut**: run `yarn lint && yarn format:check && yarn type-check`.
 
 ## What Each CI Workflow Checks
 
@@ -81,3 +81,4 @@ yarn test:coverage
 3. **If Prettier reformats a file**, apply the fix and include it in the same commit.
 4. **Never skip checks** — even for "small" changes. A one-line Python change can fail `ruff format`.
 5. **Run only the relevant stack's checks** — backend-only changes don't need frontend checks and vice versa. If both stacks are modified, run both.
+6. **Docs-only changes** do not require frontend/backend test suites, but still review Markdown/rule files for stale commands, paths, ports, and API routes.

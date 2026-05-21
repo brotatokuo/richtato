@@ -1,0 +1,37 @@
+---
+description: Backend Django architecture, data access, and test patterns
+globs: backend/**/*.py
+alwaysApply: false
+---
+
+# Backend Patterns
+
+## Architecture
+
+- Prefer Repository -> Service -> View for new backend work.
+- Views validate requests and translate service errors into HTTP responses.
+- Services hold business logic, orchestration, calculations, and cross-app coordination.
+- Repositories hold ORM queries, `select_related`/`prefetch_related`, and persistence details.
+- Dashboard apps commonly use `@login_required` function views plus service/repository dependency injection; CRUD APIs commonly use DRF `APIView`.
+- Some existing simple apps, especially `budget`, query in services. Do not force a repository unless query complexity warrants it.
+
+## Cross-Cutting Rules
+
+- Household-aware list and aggregate endpoints should use `apps.household.scope.get_scope_user_ids(request)` and respect shared accounts plus household budgets.
+- Use `apps.core.constants` filters for income, expense, transfer, and investment classification. Do not reimplement category-type logic in aggregations.
+- Transaction saves/deletes trigger balance and history updates through `apps.transaction.signals`; do not manually adjust `FinancialAccount.balance` around normal transaction CRUD.
+- Categories are soft-deleted with `is_deleted=True` when they may have transactions.
+- Sync is currently Plaid/manual through `SyncConnection`; do not add Teller docs or code paths unless implementing Teller intentionally.
+- Log with `loguru.logger`; avoid `print` or stdlib logging in app code.
+
+## API And URLs
+
+- Most APIs are exposed at both `/api/...` and `/api/v1/...` in `backend/richtato/urls.py`; match the existing pattern for the app you touch.
+- Auth and user preferences live under `/api/v1/auth/`.
+- Budgets live under `/api/v1/budgets/`.
+- Household endpoints are v1-only under `/api/v1/household/`.
+
+## Validation
+
+- Backend CI runs from `backend/`: `ruff check .`, `ruff format --check .`, and `python -m pytest apps/ -v --tb=short`.
+- Local safety checks before commit: `python manage.py makemigrations --check --dry-run --skip-checks --settings=richtato.settings` and `python manage.py check --settings=richtato.test_settings`.

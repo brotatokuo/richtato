@@ -1,0 +1,36 @@
+---
+description: Frontend architecture, API, routing, and UI patterns
+globs: frontend/src/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Frontend Patterns
+
+## Architecture
+
+- Routes live in `frontend/src/App.tsx`; route pages live in `frontend/src/pages/`.
+- Protected app pages render inside `Layout`, which owns `HeaderSlotProvider`, `Sidebar`, `BottomTabBar`, and the global `ScopeToggle`.
+- Use `@/` imports for anything under `frontend/src`.
+- Prefer feature folders under `components/` and Shadcn primitives under `components/ui/`.
+- `MobileBottomNav.tsx` is legacy; use `BottomTabBar.tsx`.
+
+## API And State
+
+- API services live in `frontend/src/lib/api/` and should export singleton instances.
+- Use `BaseApiClient`/`fetchWithAuth` for authenticated GET-style service clients.
+- Use `csrfService.fetchWithCsrf()` for POST, PUT, PATCH, and DELETE.
+- Always include credentials through the shared clients; do not introduce raw unauthenticated `fetch`.
+- Household-aware reads should get `scope` from `useHousehold()` and omit the query param for personal scope. Only send `scope=household` for household views.
+- Global state belongs in React contexts; URL search params are preferred for shareable filters.
+
+## UI
+
+- Use CSS tokens and Tailwind utilities; do not hard-code hex/rgb colors in new UI.
+- Use `formatCurrency`, `formatSignedCurrency`, and preference helpers for money display.
+- ECharts code should import from `@/lib/echarts` and follow `components/asset_dashboard/BaseChart.tsx`.
+- Desktop navigation is `Sidebar` (`hidden md:flex`); mobile navigation is `BottomTabBar` (`md:hidden`) with content padding for tab clearance.
+
+## Validation
+
+- Before finishing frontend behavior changes, run from `frontend/`: `yarn lint && yarn format:check && yarn type-check`.
+- Run `yarn test:coverage` when tests or tested behavior changed.

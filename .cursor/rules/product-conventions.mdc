@@ -1,0 +1,25 @@
+---
+description: Always-on Richtato product and coding conventions
+alwaysApply: true
+---
+
+# Richtato Product Conventions
+
+Richtato is an AI-native personal finance app with Monarch Money as the UX north star. Prioritize polished financial dashboards, fast categorization, low-friction editing, and responsive desktop/mobile navigation.
+
+## Agent Defaults
+
+- Read the local code before changing behavior; prefer existing services, components, contexts, and design tokens.
+- Keep changes scoped to the requested feature. Do not refactor unrelated modules while fixing docs or behavior.
+- Preserve dark/light parity. Use CSS variables and Tailwind tokens such as `bg-background`, `text-foreground`, `border-border`, `primary`, `muted`, and `destructive`.
+- Use Tailwind utilities with `cn()` for conditional classes. Avoid inline styles except chart dimensions or library-required values.
+- Backend logging uses `loguru.logger`. Frontend code should avoid new `console.log`; use user-facing Sonner toasts or proper error state.
+- Icons come from `lucide-react`; notifications use `sonner`; date handling uses `date-fns`.
+- For money and dates in UI, use project formatting helpers and user preferences instead of ad hoc `toFixed()` or locale formatting.
+
+## Source Of Truth
+
+- Agent entrypoint: `AGENTS.md`.
+- Frontend patterns: `frontend/CLAUDE.md`.
+- Backend patterns: `backend/CLAUDE.md`.
+- HTTP API: `API_REFERENCE.md` and `/api/docs/` Swagger in a running backend.

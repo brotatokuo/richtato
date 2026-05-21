@@ -1,220 +1,151 @@
-# Richtato - Personal Finance Management Platform
+# Richtato
 
-A comprehensive personal finance management application for tracking expenses, income, budgets, and net worth. Features bank account syncing, AI-powered categorization, and interactive dashboards.
+Richtato is an AI-native personal finance app for tracking transactions, budgets, account balances, net worth, household finances, bank sync, and AI-powered categorization.
+
+The product goal is Monarch Money quality: clean financial dashboards, fast transaction workflows, helpful automation, responsive desktop/mobile navigation, and strong dark/light mode parity.
 
 ## Features
 
-- **Transaction Tracking**: Track all financial transactions with automatic categorization
-- **Bank Sync**: Connect bank accounts via Plaid for automatic transaction import
-- **Budget Management**: Set and monitor budgets by category with visual progress
-- **Net Worth Dashboard**: Track assets, liabilities, and net worth over time
-- **AI Categorization**: Intelligent transaction categorization using OpenAI
-- **Interactive Charts**: Visualize spending patterns, trends, and cash flow
-- **Multi-Account Support**: Checking, savings, credit cards, investments
-- **Demo Mode**: Try the application with sample data
+- Transaction tracking with categories, filters, bulk actions, and AI recategorization.
+- Plaid bank sync with sync status polling and account connection management.
+- Net worth and cash flow dashboard with ECharts visualizations.
+- Budget tracking by month, category, and household scope.
+- Household sharing for shared accounts and household budgets.
+- User preferences for display, currency, appearance, categories, and account settings.
+- Demo mode for quickly exploring populated data.
 
 ## Tech Stack
 
-### Backend
-- **Django 5.x** with Django REST Framework
-- **PostgreSQL** database
-- **Gunicorn** WSGI server
-- **OpenAI** for AI categorization
-- **Plaid** for bank sync
-
-### Frontend
-- **React 19** with TypeScript
-- **Vite 7** build tool
-- **Tailwind CSS** for styling
-- **Shadcn/UI** component library
-- **Lucide React** icons
-
-### Infrastructure
-- **Docker** containerization
-- **Nginx** reverse proxy (production)
+| Area | Stack |
+| --- | --- |
+| Backend | Django 5.x, Django REST Framework, PostgreSQL, Gunicorn, Loguru |
+| Frontend | React 19, TypeScript, Vite 6, React Router 7, Tailwind CSS 3.4 |
+| UI | Shadcn/Radix primitives, Lucide icons, Sonner toasts |
+| Data viz | Apache ECharts, TanStack Table |
+| Integrations | Plaid for bank sync, OpenAI for categorization |
+| Infrastructure | Docker Compose locally, single-container production build |
 
 ## Project Structure
 
-```
+```text
 richtato/
+├── AGENTS.md                 # AI-agent orientation
+├── API_REFERENCE.md          # HTTP API reference
 ├── backend/
-│   ├── apps/                    # Django applications
-│   │   ├── transaction/         # Transactions and categories
-│   │   ├── financial_account/   # Bank accounts and balances
-│   │   ├── budget/              # Budget management
-│   │   ├── budget_dashboard/    # Budget analytics
-│   │   ├── asset_dashboard/     # Net worth and metrics
-│   │   ├── sync/                # Bank sync (Plaid)
-│   │   ├── categorization/      # AI categorization
-│   │   ├── richtato_user/       # User management
-│   │   └── core/                # Shared utilities
-│   ├── integrations/            # External API clients
-│   │   └── plaid/               # Plaid API
-│   ├── artificial_intelligence/ # OpenAI integration
-│   ├── statement_imports/       # Bank statement parsers
-│   ├── richtato/                # Django settings
-│   └── config/                  # Configuration files
+│   ├── apps/                 # Django apps
+│   ├── integrations/         # External clients, currently Plaid
+│   ├── artificial_intelligence/
+│   ├── config/
+│   └── richtato/             # Django settings and root URLs
 ├── frontend/
-│   ├── src/
-│   │   ├── pages/               # Route components
-│   │   ├── components/          # UI components
-│   │   ├── lib/api/             # API services
-│   │   ├── contexts/            # React contexts
-│   │   └── hooks/               # Custom hooks
-│   └── public/                  # Static assets
-├── .cursorrules                 # AI assistant context
-├── API_REFERENCE.md             # API documentation
-└── docker-compose.yml           # Docker configuration
+│   ├── src/pages/            # Route-level React pages
+│   ├── src/components/       # Feature and UI components
+│   ├── src/contexts/         # Global React contexts
+│   ├── src/hooks/
+│   └── src/lib/api/          # API service singletons
+├── scripts/
+├── cli/
+└── docker-compose.yml
 ```
 
 ## Quick Start
 
-### Docker (Recommended)
-
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd richtato
-
-# Copy environment template
 cp env.template .env
-# Edit .env with your configuration
-
-# Start all services
 docker compose up -d
-
-# Access the application
-open http://localhost:5927
+open http://localhost:3000
 ```
 
-### Manual Setup
+The frontend dev server runs on port `3000` and proxies `/api/` plus `/demo-login` to the backend.
 
-#### Backend
+Useful Docker commands:
+
+```bash
+docker compose logs -f backend
+docker compose logs -f frontend
+docker compose exec backend python manage.py migrate
+docker compose exec backend python manage.py shell
+docker compose restart backend frontend
+```
+
+## Manual Development
+
+Backend:
 
 ```bash
 cd backend
-
-# Create virtual environment
 python -m venv venv
 source venv/bin/activate
-
-# Install dependencies
 pip install -e .
-
-# Set up database
-createdb richtato_db
 python manage.py migrate
-
-# Run server
 python manage.py runserver
 ```
 
-#### Frontend
+Frontend:
 
 ```bash
 cd frontend
-
-# Install dependencies
 yarn install
-
-# Run development server
 yarn dev
 ```
 
-## Environment Variables
+## Current App Routes
 
-```bash
-# Backend
-SECRET_KEY=your_django_secret_key
-DATABASE_URL=postgresql://user:password@localhost/richtato_db
-OPENAI_API_KEY=your_openai_api_key
-
-# Bank Sync (optional)
-PLAID_CLIENT_ID=your_plaid_client_id
-PLAID_SECRET=your_plaid_secret
-
-# Deployment
-DEPLOY_STAGE=DEV  # or PROD
-```
-
-## Development
-
-### Commands
-
-```bash
-# Backend
-docker compose logs -f backend
-docker compose exec backend python manage.py shell
-docker compose exec backend python manage.py migrate
-
-# Frontend
-yarn dev          # Development server
-yarn build        # Production build
-yarn lint         # Run linter
-yarn type-check   # TypeScript check
-```
-
-### Architecture
-
-The backend follows a **Repository → Service → View** pattern:
-- **Views**: Thin HTTP handlers
-- **Services**: Business logic
-- **Repositories**: Database access
-
-See `backend/CLAUDE.md` for detailed backend documentation.
-
-The frontend uses a **Page → Component → API Service** pattern:
-- **Pages**: Route-level components
-- **Components**: Reusable UI elements
-- **API Services**: Backend communication
-
-See `frontend/CLAUDE.md` for detailed frontend documentation.
+- Public: `/welcome`, `/login`, `/register`.
+- Protected: `/dashboard`, `/accounts`, `/budget`, `/transactions`, `/setup`, `/preferences`, `/profile`, `/upload`, `/household`, `/formulas`, `/more`.
+- Redirects: `/` to `/dashboard`, `/cashflow` to `/dashboard`, `/settings` to `/preferences`.
 
 ## API Documentation
 
-See [API_REFERENCE.md](API_REFERENCE.md) for complete API documentation.
+Primary API endpoints are under `/api/v1/`; many also exist under `/api/` for compatibility. See `API_REFERENCE.md` for the maintained reference and `/api/docs/` for Swagger when the backend is running.
 
-Key endpoints:
-- `/api/v1/auth/` - Authentication
-- `/api/v1/transactions/` - Transaction management
-- `/api/v1/accounts/` - Account management
-- `/api/v1/budgets/` - Budget management
-- `/api/v1/asset-dashboard/` - Net worth metrics
-- `/api/v1/budget-dashboard/` - Budget analytics
-- `/api/v1/sync/` - Bank sync
+Key roots:
+
+- `/api/v1/auth/`
+- `/api/v1/accounts/`
+- `/api/v1/transactions/`
+- `/api/v1/budgets/`
+- `/api/v1/asset-dashboard/`
+- `/api/v1/budget-dashboard/`
+- `/api/v1/sync/`
+- `/api/v1/household/`
+
+## Validation
+
+Backend checks from `backend/`:
+
+```bash
+ruff check .
+ruff format --check .
+python manage.py makemigrations --check --dry-run --skip-checks --settings=richtato.settings
+python manage.py check --settings=richtato.test_settings
+python -m pytest apps/ -v --tb=short
+```
+
+Frontend checks from `frontend/`:
+
+```bash
+yarn lint
+yarn format:check
+yarn type-check
+yarn test:coverage
+```
+
+## Agent And Developer Docs
+
+- `AGENTS.md` explains where AI agents should look first.
+- `.cursor/rules/` contains focused Cursor rules.
+- `frontend/CLAUDE.md` documents frontend architecture and patterns.
+- `backend/CLAUDE.md` documents backend architecture and patterns.
+- `API_REFERENCE.md` documents the HTTP API.
 
 ## Deployment
 
-### Docker (Single Container)
+Build and run the production container with environment variables:
 
 ```bash
-# Build production image
 ./scripts/build.sh richtato:latest
-
-# Run with environment variables
-docker run -p 10000:10000 \
-  -e SECRET_KEY=... \
-  -e DATABASE_URL=... \
-  richtato:latest
+docker run -p 10000:10000 --env-file .env richtato:latest
 ```
 
-### Render
-
-1. Create a Render Web Service (Docker)
-2. Set build arg: `VITE_API_BASE_URL=/api`
-3. Configure environment variables
-4. Deploy
-
-## Testing
-
-```bash
-# Backend tests
-docker compose exec backend python manage.py test
-
-# Frontend tests
-cd frontend && yarn test
-```
-
-## License
-
-MIT License - see LICENSE file for details.
+Render deployments should set `VITE_API_BASE_URL=/api` at build time and provide the backend environment variables from `env.template`.

@@ -6,16 +6,24 @@ alwaysApply: false
 
 # Route Registration Checklist
 
-Every new route in this app requires updates in **all four places**. Missing any one causes a broken header title, missing nav link, or invisible page.
+Every new route in this app requires updates in the router, header config, and desktop/mobile navigation. Missing one causes a broken header title, missing nav link, or invisible page.
 
-## The Four Places
+## Current Routes
+
+- Primary app routes: `/dashboard`, `/accounts`, `/budget`, `/transactions`, `/setup`, `/preferences`, `/profile`, `/upload`, `/household`, `/formulas`, `/more`.
+- Redirects: `/` -> `/dashboard`, `/cashflow` -> `/dashboard`, `/settings` -> `/preferences`.
+- Public routes: `/welcome`, `/login`, `/register`.
+
+## Required Places
 
 | File | What to add |
 |------|-------------|
-| `App.tsx` | `<Route path="..." element={...} />` inside the Layout |
+| `App.tsx` | Lazy import and `<Route path="..." element={...} />` inside the protected `Layout` |
 | `Layout.tsx` `routeConfig` | `'/path': { title: 'Page Title', icon: IconComponent }` |
 | `Sidebar.tsx` `navigationItems` | `{ name: '...', href: '/path', icon: IconComponent }` |
 | `BottomTabBar.tsx` or `More.tsx` | Tab entry or `<MenuRow>` link for mobile nav |
+
+`/household` is conditional in `Sidebar.tsx` through `useHousehold().isInHousehold`; preserve that behavior for household-only navigation.
 
 ## Example
 
@@ -38,4 +46,4 @@ const Goals = lazy(() => import('./pages/Goals').then(m => ({ default: m.Goals }
 
 ## Rule
 
-When adding or renaming a route, always update all four locations before finishing. The `routeConfig` in `Layout.tsx` drives the page header — if it's missing, the header silently falls back to "Dashboard".
+When adding or renaming a route, update every relevant location before finishing. The `routeConfig` in `Layout.tsx` drives the page header; if it is missing, the header silently falls back to "Dashboard".
