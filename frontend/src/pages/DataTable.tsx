@@ -3,7 +3,6 @@ import { RecategorizeProgressModal } from '@/components/transactions/Recategoriz
 import { TransactionTable } from '@/components/transactions/TransactionTable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useHousehold } from '@/contexts/HouseholdContext';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import {
   Account,
@@ -17,7 +16,6 @@ const PAGE_SIZE = 50;
 
 // Main DataTable Component - Transactions Only
 export function DataTable() {
-  const { scope } = useHousehold();
   const [transactions, setTransactions] = useState<DisplayTransaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -44,10 +42,9 @@ export function DataTable() {
           transactionsApiService.getTransactions({
             page: 1,
             pageSize: PAGE_SIZE,
-            scope,
           }),
           transactionsApiService.getCategories(),
-          transactionsApiService.getAccounts({ scope }),
+          transactionsApiService.getAccounts(),
         ]
       );
 
@@ -65,7 +62,7 @@ export function DataTable() {
     } finally {
       setLoading(false);
     }
-  }, [scope]);
+  }, []);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasNext) return;
@@ -75,7 +72,6 @@ export function DataTable() {
       const res = await transactionsApiService.getTransactions({
         page: nextPage,
         pageSize: PAGE_SIZE,
-        scope,
       });
       const newTxns = res.transactions.map(transformTransaction);
       setTransactions(prev => [...prev, ...newTxns]);
@@ -86,7 +82,7 @@ export function DataTable() {
     } finally {
       setLoadingMore(false);
     }
-  }, [page, hasNext, loadingMore, scope]);
+  }, [page, hasNext, loadingMore]);
 
   const loadData = useCallback(async () => {
     await loadInitialData();

@@ -2,7 +2,6 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import {
   HouseholdContext,
   type HouseholdContextType,
-  type Scope,
 } from '@/contexts/HouseholdContext';
 import { HouseholdSettings } from '@/components/household/HouseholdSettings';
 
@@ -34,8 +33,6 @@ function makeCtx(
     household: null,
     isInHousehold: false,
     isLoading: false,
-    scope: 'personal' as Scope,
-    setScope: vi.fn(),
     partnerName: null,
     members: [],
     refreshHousehold: vi.fn(),

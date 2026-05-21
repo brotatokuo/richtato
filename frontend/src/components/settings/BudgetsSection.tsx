@@ -7,7 +7,6 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
-import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { CategoryCatalogItem, categorySettingsApi } from '@/lib/api/user';
@@ -29,7 +28,6 @@ interface BudgetProgress {
 
 export function BudgetsSection() {
   const { preferences } = usePreferences();
-  const { scope } = useHousehold();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<CategoryCatalogItem[]>([]);
@@ -73,7 +71,7 @@ export function BudgetsSection() {
       // Fetch catalog and budget progress in parallel
       const [catalogRes, progressRes] = await Promise.all([
         categorySettingsApi.getCatalog(),
-        transactionsApiService.getBudgetDashboard({ year, month, scope }),
+        transactionsApiService.getBudgetDashboard({ year, month }),
       ]);
 
       setCatalog(catalogRes.categories);
@@ -83,7 +81,7 @@ export function BudgetsSection() {
     } finally {
       setLoading(false);
     }
-  }, [year, month, scope]);
+  }, [year, month]);
 
   useEffect(() => {
     fetchData();
@@ -147,7 +145,6 @@ export function BudgetsSection() {
     if (!selectedCategory) return;
 
     await categorySettingsApi.updateSettings({
-      scope,
       budgets: {
         [selectedCategory.name]: { amount: data.amount, ...selectedPeriod() },
       },
@@ -160,7 +157,6 @@ export function BudgetsSection() {
     if (!selectedCategory) return;
 
     await categorySettingsApi.updateSettings({
-      scope,
       budgets: {
         [selectedCategory.name]: { amount: null, ...selectedPeriod() },
       },
@@ -342,7 +338,6 @@ export function BudgetsSection() {
         onRemove={handleRemoveBudget}
         category={selectedCategory}
         loading={loading}
-        scope={scope}
       />
     </>
   );

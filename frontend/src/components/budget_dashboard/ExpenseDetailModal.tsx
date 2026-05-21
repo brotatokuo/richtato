@@ -11,14 +11,12 @@ interface ExpenseDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   monthData: MonthlyBudgetData | null;
-  scope: 'personal' | 'household';
 }
 
 export function ExpenseDetailModal({
   isOpen,
   onClose,
   monthData,
-  scope,
 }: ExpenseDetailModalProps) {
   const { preferences } = usePreferences();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -44,7 +42,6 @@ export function ExpenseDetailModal({
           startDate: monthData.start_date,
           endDate: monthData.end_date,
           type: 'debit',
-          scope,
           page,
           pageSize: 500,
         });
@@ -66,7 +63,7 @@ export function ExpenseDetailModal({
     } finally {
       setLoading(false);
     }
-  }, [monthData, scope]);
+  }, [monthData]);
 
   useEffect(() => {
     if (isOpen && monthData) {

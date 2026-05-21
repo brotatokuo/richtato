@@ -10,7 +10,6 @@ import {
   BudgetDateRangeProvider,
   useBudgetDateRange,
 } from '@/contexts/BudgetDateRangeContext';
-import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import {
   budgetDashboardApiService,
@@ -51,7 +50,7 @@ async function getAllTransactionsForBudgetSummary(input: {
   startDate: string;
   endDate: string;
   type: 'debit' | 'credit';
-  scope: 'personal' | 'household';
+  scope?: 'personal' | 'household';
 }) {
   const transactions: Transaction[] = [];
   let page = 1;
@@ -82,7 +81,6 @@ export function Dashboard() {
 function DashboardContent() {
   const { setRange } = useBudgetDateRange();
   const { preferences } = usePreferences();
-  const { scope } = useHousehold();
   const [monthlyData, setMonthlyData] = useState<MonthlyBudgetData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -101,7 +99,7 @@ function DashboardContent() {
   const [month, setMonth] = useState<number>(now.getMonth() + 1);
 
   const loadDashboardData = useCallback(async () => {
-    const fetchKey = `multi-month-12-${scope}`;
+    const fetchKey = 'multi-month-12';
     if (lastFetchRef.current === fetchKey) return;
     lastFetchRef.current = fetchKey;
 
@@ -112,7 +110,6 @@ function DashboardContent() {
       const multiMonthData =
         await budgetDashboardApiService.getBudgetProgressMultiMonth({
           months: 12,
-          scope,
         });
 
       setMonthlyData(multiMonthData.monthly_data);
@@ -131,7 +128,7 @@ function DashboardContent() {
     } finally {
       setLoading(false);
     }
-  }, [setRange, scope]);
+  }, [setRange]);
 
   // Fetch income for the displayed month
   useEffect(() => {
@@ -140,7 +137,6 @@ function DashboardContent() {
       startDate: displayedMonth.start_date,
       endDate: displayedMonth.end_date,
       type: 'credit',
-      scope,
     })
       .then(transactions => {
         const income = transactions.reduce((sum, t) => sum + t.amount, 0);
@@ -150,7 +146,7 @@ function DashboardContent() {
         setMonthlyIncome(0);
         toast.error('Failed to load income for this budget period');
       });
-  }, [displayedMonth, scope]);
+  }, [displayedMonth]);
 
   useEffect(() => {
     loadDashboardData();
@@ -204,7 +200,6 @@ function DashboardContent() {
 
     try {
       await categorySettingsApi.updateSettings({
-        scope,
         budgets: {
           [cat.name]: {
             amount: newAmount,
@@ -507,7 +502,6 @@ function DashboardContent() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         monthData={selectedMonth}
-        scope={scope}
       />
     </div>
   );

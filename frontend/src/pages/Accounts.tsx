@@ -7,7 +7,6 @@ import { AccountBreakdownChart } from '@/components/asset_dashboard/AccountBreak
 import { MetricCard } from '@/components/asset_dashboard/MetricCard';
 import { NetWorthTrendChart } from '@/components/asset_dashboard/NetWorthTrendChart';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import {
   AssetDashboardData,
@@ -19,7 +18,6 @@ import { useEffect, useState } from 'react';
 
 export function Accounts() {
   const { preferences } = usePreferences();
-  const { scope } = useHousehold();
   const [selectedAccount, setSelectedAccount] =
     useState<AccountWithBalance | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -44,7 +42,7 @@ export function Accounts() {
         setMetricsLoading(true);
         setMetricsError(null);
         const dashboardMetrics =
-          await assetDashboardApiService.getDashboardMetrics({ scope });
+          await assetDashboardApiService.getDashboardMetrics();
         setDashboardData(dashboardMetrics);
       } catch (err) {
         setMetricsError(
@@ -56,7 +54,7 @@ export function Accounts() {
     };
 
     loadDashboardData();
-  }, [scope]);
+  }, []);
 
   const netCashFlow = dashboardData ? dashboardData.net_cashflow : 0;
 

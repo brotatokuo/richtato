@@ -2,17 +2,15 @@ import { useAuth } from '@/hooks/useAuth';
 import { householdApi } from '@/lib/api/household';
 import { ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 import type { Household } from '@/lib/api/household';
-import type { Scope } from './HouseholdContextInstance';
 import { HouseholdContext } from './HouseholdContextInstance';
 
-export type { Scope, HouseholdContextType } from './HouseholdContextInstance';
+export type { HouseholdContextType } from './HouseholdContextInstance';
 export { HouseholdContext } from './HouseholdContextInstance';
 
 export function HouseholdProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, user } = useAuth();
   const [household, setHousehold] = useState<Household | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [scope, setScope] = useState<Scope>('personal');
 
   const refreshHousehold = useCallback(async () => {
     if (!isAuthenticated) {
@@ -39,20 +37,12 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
   const partnerName =
     members.find(m => m.user_id !== user?.id)?.username ?? null;
 
-  useEffect(() => {
-    if (!isInHousehold && scope === 'household') {
-      setScope('personal');
-    }
-  }, [isInHousehold, scope]);
-
   return (
     <HouseholdContext.Provider
       value={{
         household,
         isInHousehold,
         isLoading,
-        scope,
-        setScope,
         partnerName,
         members,
         refreshHousehold,

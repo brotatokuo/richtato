@@ -42,8 +42,6 @@ vi.mock('@/contexts/HouseholdContext', () => ({
     household: null,
     isInHousehold: false,
     isLoading: false,
-    scope: 'personal' as const,
-    setScope: vi.fn(),
     partnerName: null,
     members: [],
     refreshHousehold: vi.fn(),
@@ -125,7 +123,6 @@ describe('BudgetDashboard page', () => {
     await waitFor(() => {
       expect(mockGetMultiMonth).toHaveBeenCalledWith({
         months: 12,
-        scope: 'personal',
       });
     });
   });

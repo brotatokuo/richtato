@@ -1,8 +1,10 @@
 import { useAuth } from '@/hooks/useAuth';
+import { useHousehold } from '@/contexts/HouseholdContext';
 import { cn } from '@/lib/utils';
 import {
   Calculator,
   ChevronRight,
+  Heart,
   LogOut,
   Settings as SettingsIcon,
   SlidersHorizontal,
@@ -79,6 +81,7 @@ function Section({ title, children }: SectionProps) {
 
 export function More() {
   const { user, logout } = useAuth();
+  const { isInHousehold } = useHousehold();
 
   const handleLogout = async () => {
     try {
@@ -110,6 +113,12 @@ export function More() {
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
       </Link>
+
+      {isInHousehold && (
+        <Section title="Household">
+          <MenuRow href="/household" icon={Heart} label="Household" />
+        </Section>
+      )}
 
       <Section title="Settings">
         <MenuRow href="/preferences" icon={SettingsIcon} label="Preferences" />

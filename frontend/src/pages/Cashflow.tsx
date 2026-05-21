@@ -3,7 +3,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
 import { useHeaderSlot } from '@/contexts/HeaderSlotContext';
-import { useHousehold } from '@/contexts/HouseholdContext';
 import { transactionsApiService } from '@/lib/api/transactions';
 import ReactECharts from 'echarts-for-react';
 import {
@@ -48,7 +47,6 @@ interface CashflowData {
 }
 
 export function Cashflow() {
-  const { scope } = useHousehold();
   const { setHeaderSlot } = useHeaderSlot();
   const [cashflowData, setCashflowData] = useState<CashflowData>({
     totalIncome: 0,
@@ -97,8 +95,7 @@ export function Cashflow() {
 
       const summary = await transactionsApiService.getCashflowSummary(
         startDate,
-        endDate,
-        scope
+        endDate
       );
 
       // Convert record to Map for compatibility with existing code
@@ -136,7 +133,7 @@ export function Cashflow() {
   useEffect(() => {
     fetchCashflowData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, month, scope]);
+  }, [year, month]);
 
   // Listen for theme changes
   useEffect(() => {

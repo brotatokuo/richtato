@@ -19,12 +19,6 @@ vi.mock('@/contexts/PreferencesContext', () => ({
   }),
 }));
 
-vi.mock('@/contexts/HouseholdContext', () => ({
-  useHousehold: () => ({
-    scope: 'personal' as const,
-  }),
-}));
-
 const mockGetCatalog = vi.fn();
 const mockGetBudgetDashboard = vi.fn();
 const mockUpdateSettings = vi.fn();

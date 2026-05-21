@@ -18,7 +18,6 @@ import {
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { BottomTabBar } from './BottomTabBar';
-import { ScopeToggle } from './household/ScopeToggle';
 import { Sidebar } from './Sidebar';
 
 // Route to page title and icon mapping
@@ -113,7 +112,6 @@ function LayoutInner() {
               {headerSlot && (
                 <div className="hidden items-center md:flex">{headerSlot}</div>
               )}
-              <ScopeToggle className="border border-border/60 bg-muted/50 shadow-sm" />
             </div>
           </div>
         </header>
