@@ -3,6 +3,7 @@ import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { cn } from '@/lib/utils';
 import {
   BarChart3,
+  CloudUpload,
   Landmark,
   MoreHorizontal,
   Table,
@@ -13,6 +14,7 @@ import { Link, useLocation } from 'react-router-dom';
 const primaryTabs = [
   { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
   { name: 'Accounts', href: '/accounts', icon: Landmark },
+  { name: 'Upload', href: '/upload', icon: CloudUpload },
   { name: 'Budget', href: '/budget', icon: Wallet },
   { name: 'Transactions', href: '/transactions', icon: Table },
   { name: 'More', href: '/more', icon: MoreHorizontal },

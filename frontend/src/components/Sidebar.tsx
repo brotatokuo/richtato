@@ -17,6 +17,7 @@ import {
   Calculator,
   ChevronLeft,
   ChevronRight,
+  CloudUpload,
   Heart,
   Landmark,
   Loader2,
@@ -56,6 +57,7 @@ export function Sidebar({
       { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
       { name: 'Transactions', href: '/transactions', icon: Table },
       { name: 'Accounts', href: '/accounts', icon: Landmark },
+      { name: 'Upload', href: '/upload', icon: CloudUpload },
       { name: 'Budget', href: '/budget', icon: Wallet },
     ];
     if (isInHousehold) {

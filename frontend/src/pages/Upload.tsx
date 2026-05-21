@@ -16,15 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  CloudUpload,
-  Download,
-  FileText,
-  Folder,
-  RefreshCw,
-  ShieldCheck,
-  Trash2,
-} from 'lucide-react';
+import { CloudUpload, Download, Folder, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
@@ -62,6 +54,7 @@ export function Upload() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLibraryLoading, setIsLibraryLoading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [showUploadForm, setShowUploadForm] = useState(false);
 
   const loadLibrary = async (filters?: {
     account?: string;
@@ -325,17 +318,27 @@ export function Upload() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-2">
+      {showUploadForm && (
         <Card>
           <CardHeader>
-            <CardTitle>Upload Statement</CardTitle>
-            <CardDescription>
-              Import CSV or Excel statements exported from your financial
-              institutions.
-            </CardDescription>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <CardTitle>Upload Statement</CardTitle>
+                <CardDescription>
+                  Save a CSV or Excel statement into your local library.
+                </CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowUploadForm(false)}
+              >
+                Hide
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-4">
               <div className="space-y-2">
                 <Label>Account</Label>
                 <Select
@@ -372,9 +375,6 @@ export function Upload() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="statement-period">Statement Period</Label>
                 <Input
@@ -405,110 +405,84 @@ export function Upload() {
               </div>
             </div>
 
-            <div
-              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                isDragOver
-                  ? 'border-primary bg-primary/5'
-                  : 'border-muted-foreground/25 hover:border-muted-foreground/50'
-              }`}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-            >
-              <CloudUpload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-lg font-medium mb-2">Drop files here</p>
-              <p className="text-sm text-muted-foreground mb-4">
-                or click to browse your computer
-              </p>
-              <Button
-                onClick={() => document.getElementById('file-input')?.click()}
-                variant="outline"
+            <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div
+                className={`rounded-lg border border-dashed p-4 transition-colors ${
+                  isDragOver
+                    ? 'border-primary bg-primary/5'
+                    : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+                }`}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
               >
-                Choose Files
-              </Button>
-              <input
-                id="file-input"
-                type="file"
-                accept=".csv,.xlsx,.xls"
-                className="hidden"
-                onChange={e => handleFileSelect(e.target.files)}
-              />
-            </div>
-
-            {selectedFile && (
-              <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
-                <p className="font-medium">{selectedFile.name}</p>
-                <p className="text-muted-foreground">
-                  {formatFileSize(selectedFile.size)}
-                </p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <CloudUpload className="h-6 w-6 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">
+                        {selectedFile ? selectedFile.name : 'Drop a file here'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {selectedFile
+                          ? formatFileSize(selectedFile.size)
+                          : 'CSV, XLS, or XLSX'}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() =>
+                      document.getElementById('file-input')?.click()
+                    }
+                    variant="outline"
+                    size="sm"
+                  >
+                    Choose File
+                  </Button>
+                  <input
+                    id="file-input"
+                    type="file"
+                    accept=".csv,.xlsx,.xls"
+                    className="hidden"
+                    onChange={e => handleFileSelect(e.target.files)}
+                  />
+                </div>
               </div>
-            )}
 
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                onClick={() => void previewUpload()}
-                disabled={isSubmitting || !selectedFile}
-                variant="outline"
-              >
-                Save & Preview
-              </Button>
-              <Button
-                onClick={() => void importStatement(storedStatement)}
-                disabled={isSubmitting || !storedStatement}
-              >
-                Import New Rows
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>CSV/Excel First</CardTitle>
-            <CardDescription>
-              Manual exports are the source of truth. Current-month statements
-              can overlap with later closed statements.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-primary" />
-              <div>
-                <p className="font-medium">CSV Files</p>
-                <p className="text-sm text-muted-foreground">
-                  Bank statements, transaction exports
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-orange-500" />
-              <div>
-                <p className="font-medium">Excel Files</p>
-                <p className="text-sm text-muted-foreground">
-                  .xlsx and .xls spreadsheets
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <ShieldCheck className="h-5 w-5 text-emerald-500" />
-              <div>
-                <p className="font-medium">Overlap Safe</p>
-                <p className="text-sm text-muted-foreground">
-                  Row-level dedup skips previously imported transactions
-                </p>
+              <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
+                <Button
+                  onClick={() => void previewUpload()}
+                  disabled={isSubmitting || !selectedFile}
+                  variant="outline"
+                >
+                  Save & Preview
+                </Button>
+                <Button
+                  onClick={() => void importStatement(storedStatement)}
+                  disabled={isSubmitting || !storedStatement}
+                >
+                  Import New Rows
+                </Button>
               </div>
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
 
       <Card>
         <CardHeader>
-          <CardTitle>Statement Library</CardTitle>
-          <CardDescription>
-            Files are stored locally by account, year, and month for review and
-            re-importing.
-          </CardDescription>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle>Statement Library</CardTitle>
+              <CardDescription>
+                Browse local statements by account, year, and month.
+              </CardDescription>
+            </div>
+            <Button onClick={() => setShowUploadForm(true)}>
+              <CloudUpload className="mr-2 h-4 w-4" />
+              Upload Statement
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid gap-6 lg:grid-cols-[260px_1fr_320px]">
