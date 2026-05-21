@@ -13,6 +13,7 @@ The product goal is Monarch Money quality: clean financial dashboards, fast tran
 - Household sharing for shared accounts and household budgets.
 - User preferences for display, currency, appearance, categories, and account settings.
 - Demo mode for quickly exploring populated data.
+- CSV/Excel statement import with row-level deduplication, preview before commit, and a local statement library organized by account, year, and month.
 
 ## Tech Stack
 
@@ -102,7 +103,7 @@ Primary API endpoints are under `/api/v1/`; many also exist under `/api/` for co
 Key roots:
 
 - `/api/v1/auth/`
-- `/api/v1/accounts/`
+- `/api/v1/accounts/` — includes `/import-statement/` and `/statements/` for CSV/Excel import and the local statement library
 - `/api/v1/transactions/`
 - `/api/v1/budgets/`
 - `/api/v1/asset-dashboard/`
