@@ -16,6 +16,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Pagination } from '@/components/ui/Pagination';
 import { SortableHeader } from '@/components/ui/SortableHeader';
@@ -71,6 +77,7 @@ export function Upload() {
   const [librarySortField, setLibrarySortField] = useState('period');
   const [librarySortDir, setLibrarySortDir] = useState<'asc' | 'desc'>('desc');
   const [previewPage, setPreviewPage] = useState(1);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const loadLibrary = async (filters?: {
     account?: string;
@@ -548,7 +555,7 @@ export function Upload() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-6 lg:grid-cols-[260px_1fr_320px]">
+          <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
             <div className="space-y-3">
               <Button
                 variant={!libraryAccount ? 'default' : 'outline'}
@@ -710,7 +717,10 @@ export function Upload() {
                             ? 'selected'
                             : undefined
                         }
-                        onClick={() => setSelectedStatement(statement)}
+                        onClick={() => {
+                          setSelectedStatement(statement);
+                          setDetailsOpen(true);
+                        }}
                       >
                         <TableCell className="max-w-xs truncate">
                           {statement.original_filename}
@@ -744,20 +754,36 @@ export function Upload() {
                 </TableBody>
               </Table>
             </div>
-
-            <StatementDetailsPanel
-              statement={selectedStatement}
-              accounts={accounts}
-              institutions={institutions}
-              onPreview={previewStoredStatement}
-              onImport={importStatement}
-              onDelete={removeStatement}
-              onUpdate={updateStatement}
-              disabled={isSubmitting}
-            />
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Statement Details</DialogTitle>
+          </DialogHeader>
+          <StatementDetailsPanel
+            statement={selectedStatement}
+            accounts={accounts}
+            institutions={institutions}
+            onPreview={stmt => {
+              previewStoredStatement(stmt);
+              setDetailsOpen(false);
+            }}
+            onImport={stmt => {
+              void importStatement(stmt);
+              setDetailsOpen(false);
+            }}
+            onDelete={stmt => {
+              void removeStatement(stmt);
+              setDetailsOpen(false);
+            }}
+            onUpdate={updateStatement}
+            disabled={isSubmitting}
+          />
+        </DialogContent>
+      </Dialog>
 
       {preview && (
         <Card>
@@ -909,16 +935,10 @@ function StatementDetailsPanel({
     setEditStatus(statement.statement_status);
   }, [statement]);
 
-  if (!statement) {
-    return (
-      <div className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
-        Select a statement to view details.
-      </div>
-    );
-  }
+  if (!statement) return null;
 
   return (
-    <div className="space-y-4 rounded-lg border border-border p-4">
+    <div className="space-y-4">
       <div>
         <p className="text-sm text-muted-foreground">Selected Statement</p>
         <p className="break-words font-medium">{statement.original_filename}</p>
