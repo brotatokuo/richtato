@@ -6,7 +6,6 @@ import {
   LogOut,
   Settings as SettingsIcon,
   SlidersHorizontal,
-  User,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -113,13 +112,12 @@ export function More() {
       </Link>
 
       <Section title="Settings">
-        <MenuRow href="/setup" icon={SlidersHorizontal} label="Setup" />
         <MenuRow href="/preferences" icon={SettingsIcon} label="Preferences" />
+        <MenuRow href="/setup" icon={SlidersHorizontal} label="Setup" />
         <MenuRow href="/formulas" icon={Calculator} label="Formulas" />
       </Section>
 
       <Section title="Account">
-        <MenuRow href="/profile" icon={User} label="Profile" />
         <MenuRow
           onClick={handleLogout}
           icon={LogOut}

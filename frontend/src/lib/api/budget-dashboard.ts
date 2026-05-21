@@ -96,6 +96,7 @@ class BudgetDashboardApiService extends BaseApiClient {
     month?: number | string;
     startDate?: string;
     endDate?: string;
+    scope?: 'personal' | 'household';
   }): Promise<BudgetProgressData> {
     const url = new URL(`${this.baseUrl}/progress/`, window.location.origin);
     if (params?.year) url.searchParams.append('year', String(params.year));
@@ -104,6 +105,8 @@ class BudgetDashboardApiService extends BaseApiClient {
     if (params?.startDate)
       url.searchParams.append('start_date', params.startDate);
     if (params?.endDate) url.searchParams.append('end_date', params.endDate);
+    if (params?.scope && params.scope !== 'personal')
+      url.searchParams.append('scope', params.scope);
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: this.getHeaders(),

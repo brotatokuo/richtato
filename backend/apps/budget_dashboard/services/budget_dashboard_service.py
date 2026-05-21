@@ -108,7 +108,7 @@ class BudgetDashboardService:
             return {"error": "end_date must be on/after start_date"}
 
         # Get active budgets for this period
-        budgets = self.repo.get_active_budgets_for_date_range(user, start_date, end_date)
+        budgets = self.repo.get_active_budgets_for_date_range(user, start_date, end_date, user_ids=user_ids)
 
         results = []
         for budget in budgets:

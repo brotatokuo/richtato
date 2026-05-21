@@ -70,6 +70,8 @@ function InlineEditPopover({
     try {
       await onSave(num);
       setOpen(false);
+    } catch {
+      // Parent surfaces the error toast; keep the popover open for correction.
     } finally {
       setSaving(false);
     }
@@ -80,7 +82,7 @@ function InlineEditPopover({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="p-1 rounded hover:bg-muted-foreground/10 transition-colors opacity-0 group-hover:opacity-100"
+          className="p-1 rounded hover:bg-muted-foreground/10 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
           aria-label={`Edit ${category.name} budget`}
         >
           <Pencil className="h-3 w-3 text-muted-foreground" />

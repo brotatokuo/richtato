@@ -51,6 +51,14 @@ class BudgetSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at", "updated_at"]
 
 
+class BudgetCategoryCreateSerializer(serializers.Serializer):
+    """Serializer for adding categories to budgets."""
+
+    category_id = serializers.IntegerField()
+    allocated_amount = serializers.DecimalField(max_digits=15, decimal_places=2, min_value=0)
+    rollover_enabled = serializers.BooleanField(default=False)
+
+
 class BudgetCreateSerializer(serializers.Serializer):
     """Serializer for creating budgets."""
 
@@ -58,12 +66,10 @@ class BudgetCreateSerializer(serializers.Serializer):
     period_type = serializers.ChoiceField(choices=["monthly", "yearly", "custom"])
     start_date = serializers.DateField()
     end_date = serializers.DateField()
-    categories = serializers.ListField(child=serializers.DictField(), required=False, allow_empty=True)
+    categories = BudgetCategoryCreateSerializer(many=True, required=False, allow_empty=True)
 
-
-class BudgetCategoryCreateSerializer(serializers.Serializer):
-    """Serializer for adding categories to budgets."""
-
-    category_id = serializers.IntegerField()
-    allocated_amount = serializers.DecimalField(max_digits=15, decimal_places=2, min_value=0)
-    rollover_enabled = serializers.BooleanField(default=False)
+    def validate(self, attrs):
+        """Validate budget period bounds."""
+        if attrs["end_date"] < attrs["start_date"]:
+            raise serializers.ValidationError({"end_date": "End date must be on or after start date."})
+        return attrs

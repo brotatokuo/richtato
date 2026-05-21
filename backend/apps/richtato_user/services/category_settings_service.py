@@ -119,6 +119,7 @@ class CategorySettingsService:
         disabled = set(data.get("disabled", []))
         budgets = data.get("budgets", {})
         category_types = data.get("category_types", {})
+        is_household = data.get("scope") == "household"
 
         existing = {c.slug: c for c in TransactionCategory.objects.filter(user=user)}
 
@@ -147,38 +148,55 @@ class CategorySettingsService:
         TransactionCategory.objects.filter(user=user, slug__in=list(disabled)).delete()
 
         if budgets:
-            self._sync_budgets(user, budgets)
+            self._sync_budgets(user, budgets, is_household=is_household)
 
-    def _sync_budgets(self, user, budgets: dict) -> None:
-        today = date.today()
-        start_date = today.replace(day=1)
-        if start_date.month == 12:
-            end_date = start_date.replace(year=start_date.year + 1, month=1, day=1) - timedelta(days=1)
+    def _month_bounds(self, start_date: date | None = None) -> tuple[date, date]:
+        """Return the calendar month bounds for the supplied date or today."""
+        period_start = (start_date or date.today()).replace(day=1)
+        if period_start.month == 12:
+            period_end = period_start.replace(year=period_start.year + 1, month=1, day=1) - timedelta(days=1)
         else:
-            end_date = start_date.replace(month=start_date.month + 1, day=1) - timedelta(days=1)
+            period_end = period_start.replace(month=period_start.month + 1, day=1) - timedelta(days=1)
+        return period_start, period_end
 
-        budget, _ = Budget.objects.get_or_create(
-            user=user,
-            start_date=start_date,
-            end_date=end_date,
-            defaults={
-                "name": f"Monthly Budget - {start_date.strftime('%B %Y')}",
-                "period_type": "monthly",
-                "is_active": True,
-            },
-        )
+    def _parse_budget_period(self, bdata: dict | None) -> tuple[date, date]:
+        """Parse optional budget period fields, falling back to the current month."""
+        if not bdata:
+            return self._month_bounds()
 
+        raw_start = bdata.get("start_date")
+        raw_end = bdata.get("end_date")
+        parsed_start = date.fromisoformat(raw_start) if raw_start else None
+        start_date, default_end = self._month_bounds(parsed_start)
+        end_date = date.fromisoformat(raw_end) if raw_end else default_end
+        return start_date, end_date
+
+    def _sync_budgets(self, user, budgets: dict, is_household: bool = False) -> None:
         cat_map = {c.slug: c for c in TransactionCategory.objects.filter(user=user, slug__in=budgets.keys())}
 
-        existing_bc = {bc.category.slug: bc for bc in BudgetCategory.objects.filter(budget=budget)}
-
         for slug, bdata in budgets.items():
+            start_date, end_date = self._parse_budget_period(bdata)
+            budget, _ = Budget.objects.get_or_create(
+                user=user,
+                start_date=start_date,
+                end_date=end_date,
+                is_household=is_household,
+                defaults={
+                    "name": f"Monthly Budget - {start_date.strftime('%B %Y')}",
+                    "period_type": "monthly",
+                    "is_active": True,
+                },
+            )
+            existing_bc = {bc.category.slug: bc for bc in BudgetCategory.objects.filter(budget=budget)}
+
             if bdata is None:
                 if slug in existing_bc:
                     existing_bc[slug].delete()
             else:
                 amount = bdata.get("amount")
                 if amount is None:
+                    if slug in existing_bc:
+                        existing_bc[slug].delete()
                     continue
 
                 cat = cat_map.get(slug)

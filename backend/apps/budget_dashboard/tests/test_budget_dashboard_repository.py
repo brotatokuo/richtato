@@ -122,13 +122,12 @@ class TestGetExpenseSumByDateRange:
 
 
 class TestGetCategoryExpenseSum:
-    def test_sums_all_transaction_types_for_category(self, repo, user, account, expense_cat):
-        """Documents inconsistency: sums both debits and credits (unlike BudgetCalculationService)."""
+    def test_sums_debit_transactions_for_category(self, repo, user, account, expense_cat):
         _txn(user, account, expense_cat, Decimal("100.00"), date(2024, 1, 10), "debit")
         _txn(user, account, expense_cat, Decimal("25.00"), date(2024, 1, 15), "credit")
 
         result = repo.get_category_expense_sum(user, expense_cat, date(2024, 1, 1), date(2024, 1, 31))
-        assert result == Decimal("125.00")
+        assert result == Decimal("100.00")
 
     def test_returns_zero_when_no_transactions(self, repo, user, expense_cat):
         result = repo.get_category_expense_sum(user, expense_cat, date(2024, 1, 1), date(2024, 1, 31))

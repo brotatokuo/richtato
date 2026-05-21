@@ -97,8 +97,7 @@ class TestBudgetListCreateAPI(BudgetAPITestBase):
         self.assertEqual(data["name"], "March 2024")
         self.assertEqual(data["period_type"], "monthly")
 
-    def test_create_budget_with_categories_fails_due_to_kwarg_mismatch(self):
-        """Documents known bug: serializer uses 'categories' but service expects 'categories_data'."""
+    def test_create_budget_with_categories(self):
         response = self.client.post(
             "/api/v1/budgets/",
             {
@@ -112,7 +111,11 @@ class TestBudgetListCreateAPI(BudgetAPITestBase):
             },
             format="json",
         )
-        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(len(data["budget_categories"]), 1)
+        self.assertEqual(data["budget_categories"][0]["category"], self.category.id)
+        self.assertEqual(Decimal(data["budget_categories"][0]["allocated_amount"]), Decimal("300.00"))
 
     def test_create_budget_validation_error(self):
         response = self.client.post(

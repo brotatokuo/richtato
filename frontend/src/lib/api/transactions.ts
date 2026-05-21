@@ -759,6 +759,7 @@ class TransactionsApiService {
     month?: number | string;
     startDate?: string; // YYYY-MM-DD
     endDate?: string; // YYYY-MM-DD
+    scope?: 'personal' | 'household';
   }): Promise<{
     budgets: Array<{
       category: string;
@@ -779,6 +780,8 @@ class TransactionsApiService {
       url.searchParams.append('month', String(input.month));
     if (input.startDate) url.searchParams.append('start_date', input.startDate);
     if (input.endDate) url.searchParams.append('end_date', input.endDate);
+    if (input.scope && input.scope !== 'personal')
+      url.searchParams.append('scope', input.scope);
 
     const response = await fetch(url.toString(), {
       method: 'GET',

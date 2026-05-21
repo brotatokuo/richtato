@@ -7,7 +7,6 @@ import pytest
 
 from apps.budget.models import Budget, BudgetCategory
 from apps.budget.services.budget_service import BudgetService
-from apps.transaction.models import TransactionCategory
 
 
 @pytest.fixture
@@ -74,7 +73,7 @@ class TestCreateBudget:
         categories_data = [
             {"category_id": 99999, "allocated_amount": Decimal("100.00")},
         ]
-        with pytest.raises(TransactionCategory.DoesNotExist):
+        with pytest.raises(ValueError, match="Category not found"):
             service.create_budget(
                 user=user,
                 name="Bad Category",

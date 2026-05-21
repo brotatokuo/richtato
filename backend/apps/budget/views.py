@@ -54,6 +54,9 @@ class BudgetListCreateAPIView(APIView):
             response_serializer = BudgetSerializer(budget)
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
         except Exception as e:
             logger.error(f"Error creating budget: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

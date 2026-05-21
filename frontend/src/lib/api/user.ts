@@ -36,8 +36,9 @@ export interface CategoryCatalogItem {
 }
 
 export interface CategorySettingsPayload {
-  enabled: string[];
-  disabled: string[];
+  enabled?: string[];
+  disabled?: string[];
+  scope?: 'personal' | 'household';
   budgets?: Record<
     string,
     {

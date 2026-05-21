@@ -59,7 +59,8 @@ class BudgetService:
         period_type: str,
         start_date: date,
         end_date: date,
-        categories_data: list[dict] = None,
+        categories: list[dict] | None = None,
+        categories_data: list[dict] | None = None,
     ) -> Budget:
         """
         Create a new budget.
@@ -70,7 +71,7 @@ class BudgetService:
             period_type: 'monthly', 'yearly', or 'custom'
             start_date: Period start
             end_date: Period end
-            categories_data: List of dicts with category_id and allocated_amount
+            categories: List of dicts with category_id and allocated_amount
 
         Returns:
             Created Budget instance
@@ -83,10 +84,16 @@ class BudgetService:
             end_date=end_date,
         )
 
+        categories = categories if categories is not None else categories_data
+
         # Add categories if provided
-        if categories_data:
-            for cat_data in categories_data:
-                category = TransactionCategory.objects.get(id=cat_data["category_id"])
+        if categories:
+            for cat_data in categories:
+                try:
+                    category = TransactionCategory.objects.get(id=cat_data["category_id"], user=user)
+                except TransactionCategory.DoesNotExist as exc:
+                    raise ValueError("Category not found") from exc
+
                 BudgetCategory.objects.create(
                     budget=budget,
                     category=category,

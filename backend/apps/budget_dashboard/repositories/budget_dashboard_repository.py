@@ -54,10 +54,15 @@ class BudgetDashboardRepository:
     def get_category_expense_sum(
         self, user, category, start_date: date, end_date: date, user_ids: list[int] | None = None
     ) -> Decimal:
-        """Get sum of expenses for a specific category and date range."""
+        """Get sum of debit expenses for a specific category and date range."""
         result = (
             self._tx_base(user, user_ids)
-            .filter(category=category, date__gte=start_date, date__lte=end_date)
+            .filter(
+                category=category,
+                date__gte=start_date,
+                date__lte=end_date,
+                transaction_type="debit",
+            )
             .aggregate(total=Sum("amount"))
         )
         return result["total"] or Decimal("0")
@@ -84,10 +89,26 @@ class BudgetDashboardRepository:
         return [d.year for d in date_list]
 
     # Budget queries (using budget_v2)
-    def get_active_budgets_for_date_range(self, user, start_date: date, end_date: date):
-        """Get budgets active during a date range."""
+    def get_active_budgets_for_date_range(
+        self,
+        user,
+        start_date: date,
+        end_date: date,
+        user_ids: list[int] | None = None,
+    ):
+        """Get active personal or household budgets during a date range."""
+        if user_ids and len(user_ids) > 1:
+            return Budget.objects.filter(
+                user_id__in=user_ids,
+                is_household=True,
+                start_date__lte=end_date,
+                end_date__gte=start_date,
+                is_active=True,
+            ).prefetch_related("budget_categories__category")
+
         return Budget.objects.filter(
             user=user,
+            is_household=False,
             start_date__lte=end_date,
             end_date__gte=start_date,
             is_active=True,

@@ -56,6 +56,8 @@ def expense_categories_data(request):
 @login_required
 def budget_progress(request):
     """Get budget progress for a date range - delegates to service layer."""
+    from apps.household.scope import get_scope_user_ids
+
     today = date.today()
     year_param = request.GET.get("year")
     month_param = request.GET.get("month")
@@ -98,12 +100,15 @@ def budget_progress(request):
         start_date = date(year, month, 1)
         end_date = date(year, month, calendar.monthrange(year, month)[1])
 
+    scope = request.GET.get("scope", "personal")
+    user_ids = get_scope_user_ids(request) if scope == "household" else None
+
     # Inject dependencies and delegate to service
     repo = BudgetDashboardRepository()
     service = BudgetDashboardService(repo)
 
     # Delegate to service
-    result = service.get_budget_progress(request.user, year, month, start_date, end_date)
+    result = service.get_budget_progress(request.user, year, month, start_date, end_date, user_ids=user_ids)
 
     return JsonResponse(result)
 

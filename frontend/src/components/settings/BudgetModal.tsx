@@ -25,6 +25,7 @@ import { CategoryCatalogItem } from '@/lib/api/user';
 import { formatCurrency, getCurrencySymbol } from '@/lib/format';
 import { TrendingUp } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 
 interface BudgetModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ interface BudgetModalProps {
   onRemove?: () => Promise<void>;
   category: CategoryCatalogItem | null;
   loading?: boolean;
+  scope?: 'personal' | 'household';
 }
 
 export function BudgetModal({
@@ -42,6 +44,7 @@ export function BudgetModal({
   onRemove,
   category,
   loading = false,
+  scope = 'personal',
 }: BudgetModalProps) {
   const { preferences } = usePreferences();
   const currencySymbol = getCurrencySymbol(preferences.currency);
@@ -70,7 +73,7 @@ export function BudgetModal({
     setLoadingHistory(true);
 
     budgetDashboardApiService
-      .getBudgetProgressMultiMonth({ months: 6 })
+      .getBudgetProgressMultiMonth({ months: 6, scope })
       .then(data => {
         if (cancelled) return;
         const months = data.monthly_data;
@@ -104,7 +107,7 @@ export function BudgetModal({
     return () => {
       cancelled = true;
     };
-  }, [category, isOpen]);
+  }, [category, isOpen, scope]);
 
   const handleSave = async () => {
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) return;
@@ -112,9 +115,10 @@ export function BudgetModal({
     setSaving(true);
     try {
       await onSave({ amount: Number(amount) });
+      toast.success('Budget saved');
       onClose();
-    } catch {
-      // Error handling is done by parent
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save budget');
     } finally {
       setSaving(false);
     }
@@ -125,9 +129,12 @@ export function BudgetModal({
     setSaving(true);
     try {
       await onRemove();
+      toast.success('Budget removed');
       onClose();
-    } catch {
-      // Error handling is done by parent
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to remove budget'
+      );
     } finally {
       setSaving(false);
       setShowRemoveConfirm(false);

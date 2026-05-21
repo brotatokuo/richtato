@@ -11,12 +11,14 @@ interface ExpenseDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   monthData: MonthlyBudgetData | null;
+  scope: 'personal' | 'household';
 }
 
 export function ExpenseDetailModal({
   isOpen,
   onClose,
   monthData,
+  scope,
 }: ExpenseDetailModalProps) {
   const { preferences } = usePreferences();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -33,11 +35,23 @@ export function ExpenseDetailModal({
       setLoading(true);
       setError(null);
 
-      const { transactions } = await transactionsApiService.getTransactions({
-        startDate: monthData.start_date,
-        endDate: monthData.end_date,
-        type: 'debit',
-      });
+      const transactions: Transaction[] = [];
+      let page = 1;
+      let hasNext = true;
+
+      while (hasNext) {
+        const response = await transactionsApiService.getTransactions({
+          startDate: monthData.start_date,
+          endDate: monthData.end_date,
+          type: 'debit',
+          scope,
+          page,
+          pageSize: 500,
+        });
+        transactions.push(...response.transactions);
+        hasNext = Boolean(response.has_next);
+        page += 1;
+      }
 
       // Sort by date descending
       const txns = [...transactions].sort(
@@ -52,7 +66,7 @@ export function ExpenseDetailModal({
     } finally {
       setLoading(false);
     }
-  }, [monthData]);
+  }, [monthData, scope]);
 
   useEffect(() => {
     if (isOpen && monthData) {

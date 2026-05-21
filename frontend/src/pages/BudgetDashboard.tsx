@@ -16,9 +16,12 @@ import {
   budgetDashboardApiService,
   type MonthlyBudgetData,
 } from '@/lib/api/budget-dashboard';
-import { transactionsApiService } from '@/lib/api/transactions';
+import {
+  transactionsApiService,
+  type Transaction,
+} from '@/lib/api/transactions';
 import { categorySettingsApi } from '@/lib/api/user';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatSignedCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import {
   AlertTriangle,
@@ -32,8 +35,41 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 
 type SortOption = 'default' | 'over-first' | 'name' | 'spent';
+
+function formatLocalDate(date: Date) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
+async function getAllTransactionsForBudgetSummary(input: {
+  startDate: string;
+  endDate: string;
+  type: 'debit' | 'credit';
+  scope: 'personal' | 'household';
+}) {
+  const transactions: Transaction[] = [];
+  let page = 1;
+  let hasNext = true;
+
+  while (hasNext) {
+    const response = await transactionsApiService.getTransactions({
+      ...input,
+      page,
+      pageSize: 500,
+    });
+    transactions.push(...response.transactions);
+    hasNext = Boolean(response.has_next);
+    page += 1;
+  }
+
+  return transactions;
+}
 
 export function Dashboard() {
   return (
@@ -100,18 +136,20 @@ function DashboardContent() {
   // Fetch income for the displayed month
   useEffect(() => {
     if (!displayedMonth) return;
-    transactionsApiService
-      .getTransactions({
-        startDate: displayedMonth.start_date,
-        endDate: displayedMonth.end_date,
-        type: 'credit',
-        scope,
-      })
-      .then(({ transactions }) => {
+    getAllTransactionsForBudgetSummary({
+      startDate: displayedMonth.start_date,
+      endDate: displayedMonth.end_date,
+      type: 'credit',
+      scope,
+    })
+      .then(transactions => {
         const income = transactions.reduce((sum, t) => sum + t.amount, 0);
         setMonthlyIncome(income);
       })
-      .catch(() => setMonthlyIncome(0));
+      .catch(() => {
+        setMonthlyIncome(0);
+        toast.error('Failed to load income for this budget period');
+      });
   }, [displayedMonth, scope]);
 
   useEffect(() => {
@@ -147,6 +185,8 @@ function DashboardContent() {
         startDate: found.start_date,
         endDate: found.end_date,
       });
+    } else {
+      toast.error('Budget data is only loaded for the last 12 months');
     }
   };
 
@@ -157,27 +197,37 @@ function DashboardContent() {
         c.display === categoryName ||
         c.name === categoryName.toLowerCase().replace(/\s+/g, '-')
     );
-    if (!cat) return;
+    if (!cat) {
+      toast.error(`Could not find ${categoryName} in your categories`);
+      return;
+    }
 
-    await categorySettingsApi.updateSettings({
-      enabled: catalogRes.categories.map(c => c.name),
-      disabled: [],
-      budgets: {
-        [cat.name]: {
-          amount: newAmount,
-          start_date:
-            displayedMonth?.start_date ??
-            new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-              .toISOString()
-              .slice(0, 10),
-          end_date: null,
+    try {
+      await categorySettingsApi.updateSettings({
+        scope,
+        budgets: {
+          [cat.name]: {
+            amount: newAmount,
+            start_date:
+              displayedMonth?.start_date ??
+              formatLocalDate(
+                new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+              ),
+            end_date: displayedMonth?.end_date ?? null,
+          },
         },
-      },
-    });
+      });
 
-    // Refresh data
-    lastFetchRef.current = null;
-    await loadDashboardData();
+      // Refresh data
+      lastFetchRef.current = null;
+      await loadDashboardData();
+      toast.success(`${categoryName} budget updated`);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to update budget'
+      );
+      throw err;
+    }
   };
 
   useEffect(() => {
@@ -216,7 +266,11 @@ function DashboardContent() {
   }
 
   // Empty state
-  if (monthlyData.length === 0) {
+  const hasAnyBudget = monthlyData.some(
+    monthData => monthData.total_budget > 0
+  );
+
+  if (monthlyData.length === 0 || !hasAnyBudget) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <div className="text-center max-w-md space-y-4">
@@ -382,7 +436,7 @@ function DashboardContent() {
                   leftToBudget < 0 ? 'text-destructive' : 'text-emerald-600'
                 )}
               >
-                {formatCurrency(leftToBudget, preferences.currency)}
+                {formatSignedCurrency(leftToBudget, preferences.currency)}
               </span>
             </div>
             {isCurrentMonth && (
@@ -453,6 +507,7 @@ function DashboardContent() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         monthData={selectedMonth}
+        scope={scope}
       />
     </div>
   );

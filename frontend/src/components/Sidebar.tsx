@@ -1,5 +1,13 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
@@ -16,10 +24,11 @@ import {
   Settings as SettingsIcon,
   SlidersHorizontal,
   Table,
+  User,
   Wallet,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 interface SidebarProps {
   className?: string;
@@ -38,7 +47,6 @@ export function Sidebar({
 }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { status: syncStatus } = useSyncStatus();
   const { isInHousehold } = useHousehold();
@@ -46,18 +54,13 @@ export function Sidebar({
   const navigationItems: NavItem[] = useMemo(() => {
     const items: NavItem[] = [
       { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
+      { name: 'Transactions', href: '/transactions', icon: Table },
       { name: 'Accounts', href: '/accounts', icon: Landmark },
       { name: 'Budget', href: '/budget', icon: Wallet },
     ];
     if (isInHousehold) {
       items.push({ name: 'Household', href: '/household', icon: Heart });
     }
-    items.push(
-      { name: 'Transactions', href: '/transactions', icon: Table },
-      { name: 'Setup', href: '/setup', icon: SlidersHorizontal },
-      { name: 'Preferences', href: '/preferences', icon: SettingsIcon },
-      { name: 'Formulas', href: '/formulas', icon: Calculator }
-    );
     return items;
   }, [isInHousehold]);
 
@@ -68,14 +71,14 @@ export function Sidebar({
   const handleLogout = async () => {
     try {
       await logout();
-    } catch (error) {
-      console.error('Logout failed:', error);
+    } catch {
+      // Logout failures are surfaced by auth state remaining unchanged.
     }
   };
 
-  const handleProfileClick = () => {
-    navigate('/profile');
-  };
+  const initial = user
+    ? user.first_name?.charAt(0) || user.username.charAt(0).toUpperCase()
+    : 'U';
 
   return (
     <div
@@ -177,41 +180,73 @@ export function Sidebar({
 
       {/* Footer */}
       <div className="border-t border-slate-200/50 dark:border-slate-700/50 p-4">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleProfileClick}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-500 text-white text-xs font-medium shadow-lg hover:bg-slate-600 transition-colors cursor-pointer shrink-0"
-            aria-label="Go to profile"
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className={cn(
+                'flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-slate-800',
+                isCollapsed && 'justify-center'
+              )}
+              aria-label="Open user menu"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-500 text-xs font-medium text-white shadow-lg">
+                {initial}
+              </span>
+              {!isCollapsed && (
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-slate-900 dark:text-white">
+                    {user ? user.username : 'User'}
+                  </span>
+                  <span className="block text-xs text-slate-500 dark:text-slate-400">
+                    Settings and account
+                  </span>
+                </span>
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            side={isCollapsed ? 'right' : 'top'}
+            className="w-56"
           >
-            {user
-              ? user.first_name?.charAt(0) ||
-                user.username.charAt(0).toUpperCase()
-              : 'U'}
-          </button>
-          {!isCollapsed && (
-            <div className="flex-1">
-              <p className="text-sm font-medium text-slate-900 dark:text-white">
-                {user ? user.username : 'User'}
-              </p>
-            </div>
-          )}
-        </div>
-        {!isCollapsed && (
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-2 w-full justify-start gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              aria-label="Logout"
+            <DropdownMenuLabel>
+              {user ? user.username : 'Account'}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link to="/profile" className="gap-2">
+                <User className="h-4 w-4" />
+                Profile
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/preferences" className="gap-2">
+                <SettingsIcon className="h-4 w-4" />
+                Preferences
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/setup" className="gap-2">
+                <SlidersHorizontal className="h-4 w-4" />
+                Setup
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/formulas" className="gap-2">
+                <Calculator className="h-4 w-4" />
+                Formulas
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
               onClick={handleLogout}
+              className="gap-2 text-destructive focus:text-destructive"
             >
               <LogOut className="h-4 w-4" />
               Logout
-            </Button>
-            {/* Footer collapse toggle removed - now in header */}
-          </>
-        )}
-        {/* Collapsed footer toggle removed - now in header */}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

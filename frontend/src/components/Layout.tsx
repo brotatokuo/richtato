@@ -96,16 +96,20 @@ function LayoutInner() {
                   className="h-7 w-7 rounded md:hidden"
                 />
               </Link>
-              <div className="flex items-center gap-2 flex-1">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
                 <IconComponent className="h-5 w-5 md:h-6 md:w-6 text-foreground" />
-                <h1 className="text-lg md:text-2xl font-semibold text-foreground">
+                <h1 className="truncate text-lg md:text-2xl font-semibold text-foreground">
                   {currentPageConfig.title}
                 </h1>
               </div>
-              {headerSlot && (
-                <div className="hidden md:flex items-center">{headerSlot}</div>
-              )}
-              <ScopeToggle />
+              <div className="ml-auto flex shrink-0 items-center gap-2">
+                {headerSlot && (
+                  <div className="hidden md:flex items-center">
+                    {headerSlot}
+                  </div>
+                )}
+                <ScopeToggle className="border border-border/60 bg-muted/50 shadow-sm" />
+              </div>
             </div>
           </div>
         </header>

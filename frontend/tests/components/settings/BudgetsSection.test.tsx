@@ -19,6 +19,12 @@ vi.mock('@/contexts/PreferencesContext', () => ({
   }),
 }));
 
+vi.mock('@/contexts/HouseholdContext', () => ({
+  useHousehold: () => ({
+    scope: 'personal' as const,
+  }),
+}));
+
 const mockGetCatalog = vi.fn();
 const mockGetBudgetDashboard = vi.fn();
 const mockUpdateSettings = vi.fn();
@@ -33,6 +39,15 @@ vi.mock('@/lib/api/user', () => ({
 vi.mock('@/lib/api/transactions', () => ({
   transactionsApiService: {
     getBudgetDashboard: (...args: unknown[]) => mockGetBudgetDashboard(...args),
+  },
+}));
+
+vi.mock('@/lib/api/budget-dashboard', () => ({
+  budgetDashboardApiService: {
+    getBudgetProgressMultiMonth: vi.fn().mockResolvedValue({
+      monthly_data: [],
+      months_requested: 6,
+    }),
   },
 }));
 
