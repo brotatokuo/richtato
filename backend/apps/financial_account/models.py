@@ -2,6 +2,7 @@
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class FinancialInstitution(models.Model):
@@ -129,3 +130,79 @@ class AccountBalanceHistory(models.Model):
 
     def __str__(self):
         return f"{self.account.name} - {self.date}: {self.balance}"
+
+
+class StatementFile(models.Model):
+    """Original statement file stored locally for import history and reprocessing."""
+
+    STATEMENT_STATUS_CHOICES = [
+        ("provisional", "Current/Open Statement"),
+        ("closed", "Closed Statement"),
+    ]
+
+    IMPORT_STATUS_CHOICES = [
+        ("uploaded", "Uploaded"),
+        ("previewed", "Previewed"),
+        ("imported", "Imported"),
+        ("failed", "Failed"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="statement_files",
+    )
+    account = models.ForeignKey(
+        FinancialAccount,
+        on_delete=models.CASCADE,
+        related_name="statement_files",
+    )
+    institution = models.CharField(max_length=80)
+    statement_period = models.CharField(max_length=40, blank=True, default="")
+    statement_year = models.PositiveSmallIntegerField()
+    statement_month = models.PositiveSmallIntegerField()
+    statement_status = models.CharField(
+        max_length=20,
+        choices=STATEMENT_STATUS_CHOICES,
+        default="provisional",
+    )
+    import_status = models.CharField(
+        max_length=20,
+        choices=IMPORT_STATUS_CHOICES,
+        default="uploaded",
+    )
+    original_filename = models.CharField(max_length=255)
+    stored_path = models.CharField(max_length=500)
+    content_type = models.CharField(max_length=120, blank=True, default="")
+    size_bytes = models.PositiveBigIntegerField(default=0)
+    file_hash = models.CharField(max_length=64)
+    parsed_count = models.PositiveIntegerField(default=0)
+    imported_count = models.PositiveIntegerField(default=0)
+    duplicate_count = models.PositiveIntegerField(default=0)
+    invalid_count = models.PositiveIntegerField(default=0)
+    possible_changed_count = models.PositiveIntegerField(default=0)
+    last_import_result = models.JSONField(default=dict, blank=True)
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "statement_file"
+        ordering = ["-statement_year", "-statement_month", "-created_at"]
+        indexes = [
+            models.Index(fields=["user", "is_deleted"]),
+            models.Index(fields=["account", "statement_year", "statement_month"]),
+            models.Index(fields=["institution"]),
+            models.Index(fields=["file_hash"]),
+            models.Index(fields=["import_status"]),
+        ]
+
+    def __str__(self):
+        return f"{self.account.name} {self.statement_period or f'{self.statement_year}-{self.statement_month:02d}'}"
+
+    def soft_delete(self) -> None:
+        """Mark the statement file deleted while keeping import history."""
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=["is_deleted", "deleted_at", "updated_at"])

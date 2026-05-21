@@ -46,4 +46,29 @@ urlpatterns = [
         views.StatementImportAPIView.as_view(),
         name="account-statement-import",
     ),
+    path(
+        "statements/",
+        views.StatementFileListCreateAPIView.as_view(),
+        name="account-statement-file-list-create",
+    ),
+    path(
+        "statements/<int:pk>/",
+        views.StatementFileDetailAPIView.as_view(),
+        name="account-statement-file-detail",
+    ),
+    path(
+        "statements/<int:pk>/download/",
+        views.StatementFileDownloadAPIView.as_view(),
+        name="account-statement-file-download",
+    ),
+    path(
+        "statements/<int:pk>/preview/",
+        views.StatementFilePreviewAPIView.as_view(),
+        name="account-statement-file-preview",
+    ),
+    path(
+        "statements/<int:pk>/import/",
+        views.StatementFileImportAPIView.as_view(),
+        name="account-statement-file-import",
+    ),
 ]

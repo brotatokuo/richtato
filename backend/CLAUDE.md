@@ -161,6 +161,7 @@ Use `TransactionService` for manual transaction flows so categorization and side
 CSV/Excel statement import is the primary no-aggregator ingestion path for new bank data work.
 
 - `apps/financial_account/services/statement_import_service.py` parses CSV/XLS/XLSX statements through institution adapters.
+- `apps/financial_account/services/statement_file_service.py` stores original statement files locally under `local_data/statements/<user>/<account>/<year>/<month>/` and reuses the import service for preview/commit.
 - Statement imports should preview before commit and classify rows as new, duplicate, invalid, or possible changed.
 - Deduplication is row-level so current/open statements can overlap later closed statements.
 - Current/open statement exports are provisional; closed statements are authoritative and should flag changed provisional rows for review.

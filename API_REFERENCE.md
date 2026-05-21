@@ -77,6 +77,14 @@ Common date filters:
 | `POST` | `/import-csv/` | Import statement CSV |
 | `GET` | `/import-statement/` | List supported CSV/Excel statement institutions |
 | `POST` | `/import-statement/` | Preview or commit CSV/Excel statement import |
+| `GET` | `/statements/` | List locally stored statement files and account/year/month tree |
+| `POST` | `/statements/` | Upload a statement file into local account/year/month storage |
+| `GET` | `/statements/{id}/` | Get statement file metadata |
+| `PATCH` | `/statements/{id}/` | Update statement metadata and move folders if account/period changes |
+| `DELETE` | `/statements/{id}/` | Soft-delete statement file metadata |
+| `GET` | `/statements/{id}/download/` | Download the stored original statement file |
+| `POST` | `/statements/{id}/preview/` | Preview import from the stored statement file |
+| `POST` | `/statements/{id}/import/` | Commit import from the stored statement file |
 
 Household-aware account reads may accept `scope=household`.
 
@@ -94,6 +102,8 @@ Card-specific account routes are mounted at `/api/v1/card-accounts/`.
 - `statement_period`: optional label such as `2025-06`.
 
 Statement imports use row-level deduplication. Current/open statement exports are provisional and may overlap later closed statements; duplicates are skipped and changed provisional rows are flagged for review.
+
+Statement files uploaded through `/statements/` are stored locally under `local_data/statements/<user_id>/<account_id>/<year>/<month>/`. The database stores metadata, file hash, account, institution, period, status, and the latest preview/import summary.
 
 ## Transactions (`/api/v1/transactions/`)
 

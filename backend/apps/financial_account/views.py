@@ -17,6 +17,9 @@ from apps.financial_account.services.account_balance_service import (
 )
 from apps.financial_account.services.account_service import AccountService
 from apps.financial_account.services.csv_import_service import CSVImportService
+from apps.financial_account.services.statement_file_service import (
+    StatementFileService,
+)
 from apps.financial_account.services.statement_import_service import (
     StatementImportService,
 )
@@ -597,3 +600,228 @@ class StatementImportAPIView(APIView):
             )
 
         return Response(result.as_dict(), status=status.HTTP_200_OK)
+
+
+class StatementFileListCreateAPIView(APIView):
+    """List statement library files or upload a new local statement file."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.account_service = AccountService()
+        self.statement_file_service = StatementFileService()
+
+    def get(self, request):
+        """List statement files and account/year/month folder tree."""
+        filters = {
+            "account_id": self._int_or_none(request.query_params.get("account")),
+            "year": self._int_or_none(request.query_params.get("year")),
+            "month": self._int_or_none(request.query_params.get("month")),
+            "institution": request.query_params.get("institution") or None,
+            "import_status": request.query_params.get("import_status") or None,
+        }
+        statements = list(self.statement_file_service.list_statements(request.user, **filters))
+        return Response(
+            {
+                "rows": [self.statement_file_service.serialize(statement) for statement in statements],
+                "tree": self.statement_file_service.build_folder_tree(
+                    self.statement_file_service.list_statements(request.user)
+                ),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def post(self, request):
+        """Store an uploaded statement in local account/year/month folders."""
+        statement_file = request.FILES.get("file")
+        if not statement_file:
+            return Response({"error": "Statement file is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        account = self._get_account(request)
+        if isinstance(account, Response):
+            return account
+
+        institution = request.data.get("institution")
+        if not institution:
+            return Response({"error": "institution is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            result = self.statement_file_service.save_upload(
+                user=request.user,
+                account=account,
+                uploaded_file=statement_file,
+                institution=institution,
+                statement_period=request.data.get("statement_period", ""),
+                statement_status=request.data.get("statement_status", "provisional"),
+                statement_year=self._int_or_none(request.data.get("statement_year")),
+                statement_month=self._int_or_none(request.data.get("statement_month")),
+            )
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Statement upload failed: {str(e)}")
+            return Response({"error": f"Upload failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response(
+            {
+                "statement": self.statement_file_service.serialize(result.statement),
+                "created": result.created,
+            },
+            status=status.HTTP_201_CREATED if result.created else status.HTTP_200_OK,
+        )
+
+    def _get_account(self, request):
+        account_id = request.data.get("account")
+        if not account_id:
+            return Response({"error": "account is required"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            account = self.account_service.get_account_by_id(int(account_id), request.user)
+        except (TypeError, ValueError):
+            return Response({"error": "Invalid account"}, status=status.HTTP_400_BAD_REQUEST)
+        if not account:
+            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
+        return account
+
+    def _int_or_none(self, value):
+        if value in (None, ""):
+            return None
+        return int(value)
+
+
+class StatementFileDetailAPIView(APIView):
+    """Retrieve, update, or soft-delete a statement file."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.account_service = AccountService()
+        self.statement_file_service = StatementFileService()
+
+    def get(self, request, pk: int):
+        statement = self.statement_file_service.get_statement(request.user, pk)
+        if not statement:
+            return Response({"error": "Statement not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response(self.statement_file_service.serialize(statement), status=status.HTTP_200_OK)
+
+    def patch(self, request, pk: int):
+        statement = self.statement_file_service.get_statement(request.user, pk)
+        if not statement:
+            return Response({"error": "Statement not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        account = None
+        if "account" in request.data:
+            try:
+                account = self.account_service.get_account_by_id(int(request.data["account"]), request.user)
+            except (TypeError, ValueError):
+                return Response({"error": "Invalid account"}, status=status.HTTP_400_BAD_REQUEST)
+            if not account:
+                return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            updated = self.statement_file_service.update_statement(
+                statement,
+                account=account,
+                institution=request.data.get("institution"),
+                statement_period=request.data.get("statement_period"),
+                statement_status=request.data.get("statement_status"),
+                statement_year=self._int_or_none(request.data.get("statement_year")),
+                statement_month=self._int_or_none(request.data.get("statement_month")),
+            )
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(self.statement_file_service.serialize(updated), status=status.HTTP_200_OK)
+
+    def delete(self, request, pk: int):
+        statement = self.statement_file_service.get_statement(request.user, pk)
+        if not statement:
+            return Response({"error": "Statement not found"}, status=status.HTTP_404_NOT_FOUND)
+        self.statement_file_service.soft_delete_statement(statement)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def _int_or_none(self, value):
+        if value in (None, ""):
+            return None
+        return int(value)
+
+
+class StatementFileDownloadAPIView(APIView):
+    """Download a locally stored statement file."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.statement_file_service = StatementFileService()
+
+    def get(self, request, pk: int):
+        statement = self.statement_file_service.get_statement(request.user, pk)
+        if not statement:
+            return Response({"error": "Statement not found"}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            return self.statement_file_service.download_response(statement)
+        except FileNotFoundError:
+            return Response({"error": "Stored statement file not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class StatementFilePreviewAPIView(APIView):
+    """Preview import from a locally stored statement file."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.statement_file_service = StatementFileService()
+
+    def post(self, request, pk: int):
+        statement = self.statement_file_service.get_statement(request.user, pk)
+        if not statement:
+            return Response({"error": "Statement not found"}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            result = self.statement_file_service.preview_statement(statement)
+        except Exception as e:
+            logger.error(f"Statement preview failed for {pk}: {str(e)}")
+            return Response({"error": f"Preview failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        statement.refresh_from_db()
+        return Response(
+            {
+                "statement": self.statement_file_service.serialize(statement),
+                "result": result.as_dict(),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class StatementFileImportAPIView(APIView):
+    """Commit import from a locally stored statement file."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.statement_file_service = StatementFileService()
+
+    def post(self, request, pk: int):
+        statement = self.statement_file_service.get_statement(request.user, pk)
+        if not statement:
+            return Response({"error": "Statement not found"}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            result = self.statement_file_service.import_statement(statement)
+        except Exception as e:
+            logger.error(f"Statement import failed for {pk}: {str(e)}")
+            return Response({"error": f"Import failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        statement.refresh_from_db()
+        return Response(
+            {
+                "statement": self.statement_file_service.serialize(statement),
+                "result": result.as_dict(),
+            },
+            status=status.HTTP_200_OK,
+        )
