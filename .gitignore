@@ -1,5 +1,17 @@
-# Ignore SQLite database file
+# Ignore SQLite database files
 db.sqlite3
+*.sqlite3
+backend/*.db
+
+# Yarn Berry (node-modules linker)
+**/.yarn/*
+!**/.yarn/patches
+!**/.yarn/plugins
+!**/.yarn/releases
+!**/.yarn/sdks
+!**/.yarn/versions
+.pnp.*
+**/.yarn/install-state.gz
 
 # Ignore compiled Python files
 __pycache__/

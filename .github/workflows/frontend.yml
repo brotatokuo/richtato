@@ -23,7 +23,7 @@ jobs:
           cache: yarn
           cache-dependency-path: frontend/yarn.lock
 
-      - run: yarn install --frozen-lockfile
+      - run: yarn install --immutable
 
       - name: ESLint
         run: yarn lint
@@ -43,7 +43,7 @@ jobs:
           cache: yarn
           cache-dependency-path: frontend/yarn.lock
 
-      - run: yarn install --frozen-lockfile
+      - run: yarn install --immutable
 
       - run: yarn type-check
 
@@ -59,7 +59,7 @@ jobs:
           cache: yarn
           cache-dependency-path: frontend/yarn.lock
 
-      - run: yarn install --frozen-lockfile
+      - run: yarn install --immutable
 
       - run: yarn test:coverage
 
@@ -83,6 +83,6 @@ jobs:
           cache: yarn
           cache-dependency-path: frontend/yarn.lock
 
-      - run: yarn install --frozen-lockfile
+      - run: yarn install --immutable
 
       - run: yarn build

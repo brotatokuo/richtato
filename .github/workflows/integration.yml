@@ -18,7 +18,7 @@ jobs:
       DATABASE_URL: postgres://richtato:richtato@localhost:5432/richtato_test
     services:
       postgres:
-        image: postgres:15
+        image: postgres:17
         env:
           POSTGRES_USER: richtato
           POSTGRES_PASSWORD: richtato

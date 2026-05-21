@@ -3,11 +3,14 @@ FROM node:20-alpine
 # Set working directory
 WORKDIR /app
 
+# Match packageManager in package.json (Yarn Berry)
+RUN corepack enable
+
 # Copy package files
-COPY package.json yarn.lock ./
+COPY package.json yarn.lock .yarnrc.yml ./
 
 # Install dependencies
-RUN yarn install --frozen-lockfile
+RUN yarn install --immutable
 
 # Copy source code
 COPY . .
