@@ -85,31 +85,35 @@ function LayoutInner() {
       <Sidebar className="hidden md:flex" />
       <div className="flex-1 flex flex-col isolate min-w-0">
         {/* Header */}
-        <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-          <div className="mx-auto px-4 md:px-6 py-4">
-            <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-40 h-16 border-b border-border bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+          <div className="flex h-full items-center px-4 md:px-6">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               {/* Mobile: app logo in header */}
-              <Link to="/dashboard">
+              <Link
+                to="/dashboard"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-card shadow-sm md:hidden"
+                aria-label="Go to dashboard"
+              >
                 <img
                   src="/richtato.png"
                   alt="Richtato"
-                  className="h-7 w-7 rounded md:hidden"
+                  className="h-6 w-6 rounded"
                 />
               </Link>
-              <div className="flex min-w-0 flex-1 items-center gap-2">
-                <IconComponent className="h-5 w-5 md:h-6 md:w-6 text-foreground" />
-                <h1 className="truncate text-lg md:text-2xl font-semibold text-foreground">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                <IconComponent className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="truncate text-xl font-semibold tracking-tight text-foreground">
                   {currentPageConfig.title}
                 </h1>
               </div>
-              <div className="ml-auto flex shrink-0 items-center gap-2">
-                {headerSlot && (
-                  <div className="hidden md:flex items-center">
-                    {headerSlot}
-                  </div>
-                )}
-                <ScopeToggle className="border border-border/60 bg-muted/50 shadow-sm" />
-              </div>
+            </div>
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              {headerSlot && (
+                <div className="hidden items-center md:flex">{headerSlot}</div>
+              )}
+              <ScopeToggle className="border border-border/60 bg-muted/50 shadow-sm" />
             </div>
           </div>
         </header>

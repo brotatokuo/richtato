@@ -89,17 +89,29 @@ export function Sidebar({
       )}
     >
       {/* Header */}
-      <div className="flex h-16 items-center justify-between border-b border-slate-200/50 dark:border-slate-700/50 px-4">
-        <Link to="/dashboard" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center">
+      <div
+        className={cn(
+          'relative flex h-16 items-center border-b border-border px-3',
+          isCollapsed ? 'justify-center' : 'justify-between'
+        )}
+      >
+        <Link
+          to="/dashboard"
+          className={cn(
+            'flex min-w-0 items-center rounded-xl transition-colors hover:bg-muted/70',
+            isCollapsed ? 'justify-center p-2' : 'gap-3 py-2 pl-2 pr-3'
+          )}
+          aria-label="Go to dashboard"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-background shadow-sm">
             <img
               src="/richtato.png"
               alt="Richtato Logo"
-              className="h-8 w-8 rounded-lg"
+              className="h-7 w-7 rounded-lg"
             />
           </div>
           {!isCollapsed && (
-            <span className="text-lg font-bold text-slate-900 dark:text-white">
+            <span className="truncate text-base font-semibold tracking-tight text-foreground">
               Richtato
             </span>
           )}
@@ -108,12 +120,17 @@ export function Sidebar({
           <Button
             variant="ghost"
             size="icon"
-            className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-transparent focus:ring-0 focus:outline-none"
+            className={cn(
+              'text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-0',
+              isCollapsed
+                ? 'absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border border-border bg-background shadow-sm'
+                : 'h-9 w-9'
+            )}
             onClick={toggleSidebar}
             aria-label="Toggle sidebar"
           >
             {isCollapsed ? (
-              <ChevronRight className="h-4 w-4 opacity-70" />
+              <ChevronRight className="h-3.5 w-3.5 opacity-70" />
             ) : (
               <ChevronLeft className="h-4 w-4 opacity-70" />
             )}
