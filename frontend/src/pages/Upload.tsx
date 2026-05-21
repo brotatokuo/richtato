@@ -16,6 +16,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { Pagination } from '@/components/ui/Pagination';
+import { SortableHeader } from '@/components/ui/SortableHeader';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { CloudUpload, Download, Folder, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -31,6 +42,8 @@ import {
   type StatementStatus,
 } from '@/lib/api/statementFiles';
 import { transactionsApiService, type Account } from '@/lib/api/transactions';
+
+const PREVIEW_PAGE_SIZE = 25;
 
 export function Upload() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -55,6 +68,9 @@ export function Upload() {
   const [isLibraryLoading, setIsLibraryLoading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
+  const [librarySortField, setLibrarySortField] = useState('period');
+  const [librarySortDir, setLibrarySortDir] = useState<'asc' | 'desc'>('desc');
+  const [previewPage, setPreviewPage] = useState(1);
 
   const loadLibrary = async (filters?: {
     account?: string;
@@ -114,6 +130,49 @@ export function Upload() {
         ?.display_name ?? 'Selected institution',
     [institutions, selectedInstitution]
   );
+
+  const sortedStatementRows = useMemo(() => {
+    return [...statementRows].sort((a, b) => {
+      let aVal: string | number;
+      let bVal: string | number;
+      switch (librarySortField) {
+        case 'original_filename':
+          aVal = a.original_filename;
+          bVal = b.original_filename;
+          break;
+        case 'account_name':
+          aVal = a.account_name;
+          bVal = b.account_name;
+          break;
+        case 'period':
+          aVal = a.statement_year * 100 + a.statement_month;
+          bVal = b.statement_year * 100 + b.statement_month;
+          break;
+        case 'import_status':
+          aVal = a.import_status;
+          bVal = b.import_status;
+          break;
+        case 'parsed_count':
+          aVal = a.parsed_count;
+          bVal = b.parsed_count;
+          break;
+        default:
+          return 0;
+      }
+      if (aVal < bVal) return librarySortDir === 'asc' ? -1 : 1;
+      if (aVal > bVal) return librarySortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [statementRows, librarySortField, librarySortDir]);
+
+  const handleLibrarySort = (field: string) => {
+    if (librarySortField === field) {
+      setLibrarySortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setLibrarySortField(field);
+      setLibrarySortDir('asc');
+    }
+  };
 
   const handleFileSelect = (selectedFiles: FileList | null) => {
     const file = selectedFiles?.[0];
@@ -304,6 +363,10 @@ export function Upload() {
       });
     }
   };
+
+  useEffect(() => {
+    setPreviewPage(1);
+  }, [preview]);
 
   const setLibraryFilters = async (
     account: string,
@@ -567,66 +630,119 @@ export function Upload() {
               ))}
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-medium">File</th>
-                    <th className="px-3 py-2 text-left font-medium">Account</th>
-                    <th className="px-3 py-2 text-left font-medium">Period</th>
-                    <th className="px-3 py-2 text-left font-medium">Status</th>
-                    <th className="px-3 py-2 text-right font-medium">Rows</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {statementRows.map(statement => (
-                    <tr
-                      key={statement.id}
-                      className={`cursor-pointer border-t ${
-                        selectedStatement?.id === statement.id
-                          ? 'bg-muted/60'
-                          : ''
-                      }`}
-                      onClick={() => setSelectedStatement(statement)}
-                    >
-                      <td className="max-w-xs truncate px-3 py-2">
-                        {statement.original_filename}
-                      </td>
-                      <td className="px-3 py-2">{statement.account_name}</td>
-                      <td className="px-3 py-2">
-                        {statement.statement_year}-
-                        {statement.statement_month.toString().padStart(2, '0')}
-                      </td>
-                      <td className="px-3 py-2">
-                        <Badge
-                          variant={
-                            statement.import_status === 'imported'
-                              ? 'default'
-                              : statement.import_status === 'failed'
-                                ? 'destructive'
-                                : 'secondary'
-                          }
-                        >
-                          {statement.import_status}
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        {statement.parsed_count}
-                      </td>
-                    </tr>
-                  ))}
-                  {!isLibraryLoading && statementRows.length === 0 && (
-                    <tr>
-                      <td
+            <div className="rounded-lg border border-border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>
+                      <SortableHeader
+                        label="File"
+                        field="original_filename"
+                        sortField={librarySortField}
+                        sortDirection={librarySortDir}
+                        onSort={handleLibrarySort}
+                      />
+                    </TableHead>
+                    <TableHead>
+                      <SortableHeader
+                        label="Account"
+                        field="account_name"
+                        sortField={librarySortField}
+                        sortDirection={librarySortDir}
+                        onSort={handleLibrarySort}
+                      />
+                    </TableHead>
+                    <TableHead>
+                      <SortableHeader
+                        label="Period"
+                        field="period"
+                        sortField={librarySortField}
+                        sortDirection={librarySortDir}
+                        onSort={handleLibrarySort}
+                      />
+                    </TableHead>
+                    <TableHead>
+                      <SortableHeader
+                        label="Status"
+                        field="import_status"
+                        sortField={librarySortField}
+                        sortDirection={librarySortDir}
+                        onSort={handleLibrarySort}
+                      />
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <SortableHeader
+                        label="Rows"
+                        field="parsed_count"
+                        sortField={librarySortField}
+                        sortDirection={librarySortDir}
+                        onSort={handleLibrarySort}
+                        align="right"
+                      />
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLibraryLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-8 text-center">
+                        <div className="flex items-center justify-center">
+                          <LoadingSpinner />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : sortedStatementRows.length === 0 ? (
+                    <TableRow>
+                      <TableCell
                         colSpan={5}
-                        className="px-3 py-8 text-center text-muted-foreground"
+                        className="py-8 text-center text-muted-foreground"
                       >
                         No statements in this folder yet.
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    sortedStatementRows.map(statement => (
+                      <TableRow
+                        key={statement.id}
+                        className="cursor-pointer"
+                        data-state={
+                          selectedStatement?.id === statement.id
+                            ? 'selected'
+                            : undefined
+                        }
+                        onClick={() => setSelectedStatement(statement)}
+                      >
+                        <TableCell className="max-w-xs truncate">
+                          {statement.original_filename}
+                        </TableCell>
+                        <TableCell>{statement.account_name}</TableCell>
+                        <TableCell>
+                          {statement.statement_year}-
+                          {statement.statement_month
+                            .toString()
+                            .padStart(2, '0')}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              statement.import_status === 'imported'
+                                ? 'default'
+                                : statement.import_status === 'failed'
+                                  ? 'destructive'
+                                  : 'secondary'
+                            }
+                          >
+                            {statement.import_status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {statement.parsed_count}
+                        </TableCell>
+                      </TableRow>
+                    ))
                   )}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
 
             <StatementDetailsPanel
@@ -677,51 +793,60 @@ export function Upload() {
               </div>
             )}
 
-            <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-medium">Status</th>
-                    <th className="px-3 py-2 text-left font-medium">Date</th>
-                    <th className="px-3 py-2 text-left font-medium">
-                      Description
-                    </th>
-                    <th className="px-3 py-2 text-right font-medium">Amount</th>
-                    <th className="px-3 py-2 text-left font-medium">Type</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {preview.rows.slice(0, 50).map(row => (
-                    <tr key={row.source_row_hash} className="border-t">
-                      <td className="px-3 py-2">
-                        <Badge
-                          variant={
-                            row.status === 'new'
-                              ? 'default'
-                              : row.status === 'duplicate'
-                                ? 'secondary'
-                                : 'destructive'
-                          }
-                        >
-                          {row.status.replace('_', ' ')}
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-2">{row.posted_date}</td>
-                      <td className="max-w-md truncate px-3 py-2">
-                        {row.description}
-                      </td>
-                      <td className="px-3 py-2 text-right">{row.amount}</td>
-                      <td className="px-3 py-2">{row.transaction_type}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="rounded-lg border border-border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Type</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {preview.rows
+                    .slice(
+                      (previewPage - 1) * PREVIEW_PAGE_SIZE,
+                      previewPage * PREVIEW_PAGE_SIZE
+                    )
+                    .map(row => (
+                      <TableRow key={row.source_row_hash}>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              row.status === 'new'
+                                ? 'default'
+                                : row.status === 'duplicate'
+                                  ? 'secondary'
+                                  : 'destructive'
+                            }
+                          >
+                            {row.status.replace('_', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{row.posted_date}</TableCell>
+                        <TableCell className="max-w-md truncate">
+                          {row.description}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {row.amount}
+                        </TableCell>
+                        <TableCell>{row.transaction_type}</TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
             </div>
 
-            {preview.rows.length > 50 && (
-              <p className="text-sm text-muted-foreground">
-                Showing first 50 rows of {preview.rows.length}.
-              </p>
+            {preview.rows.length > PREVIEW_PAGE_SIZE && (
+              <Pagination
+                currentPage={previewPage}
+                totalPages={Math.ceil(preview.rows.length / PREVIEW_PAGE_SIZE)}
+                onPageChange={setPreviewPage}
+                totalItems={preview.rows.length}
+                itemsPerPage={PREVIEW_PAGE_SIZE}
+              />
             )}
           </CardContent>
         </Card>
