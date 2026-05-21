@@ -45,7 +45,7 @@ export function Sidebar({
 
   const navigationItems: NavItem[] = useMemo(() => {
     const items: NavItem[] = [
-      { name: 'Dashboard', href: '/report', icon: BarChart3 },
+      { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
       { name: 'Accounts', href: '/accounts', icon: Landmark },
       { name: 'Budget', href: '/budget', icon: Wallet },
     ];
@@ -87,7 +87,7 @@ export function Sidebar({
     >
       {/* Header */}
       <div className="flex h-16 items-center justify-between border-b border-slate-200/50 dark:border-slate-700/50 px-4">
-        <Link to="/report" className="flex items-center gap-3">
+        <Link to="/dashboard" className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center">
             <img
               src="/richtato.png"

@@ -23,7 +23,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const primaryTabs = [
-  { name: 'Dashboard', href: '/report', icon: BarChart3 },
+  { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
   { name: 'Budget', href: '/budget', icon: Wallet },
   { name: 'Accounts', href: '/accounts', icon: PieChart },
 ];

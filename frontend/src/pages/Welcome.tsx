@@ -122,7 +122,7 @@ export function Welcome() {
       setIsLoggingIn(true);
       setLoginError(null);
       await demoLogin();
-      navigate('/report');
+      navigate('/dashboard');
     } catch (error) {
       console.error('Demo login failed:', error);
       setLoginError(

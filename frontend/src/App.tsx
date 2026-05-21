@@ -65,7 +65,7 @@ function App() {
                   </ProtectedRoute>
                 }
               >
-                <Route index element={<Navigate to="/report" replace />} />
+                <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route
                   path="budget"
                   element={
@@ -84,10 +84,10 @@ function App() {
                 />
                 <Route
                   path="cashflow"
-                  element={<Navigate to="/report" replace />}
+                  element={<Navigate to="/dashboard" replace />}
                 />
                 <Route
-                  path="report"
+                  path="dashboard"
                   element={
                     <Suspense fallback={null}>
                       <ReportPage />

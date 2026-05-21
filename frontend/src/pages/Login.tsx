@@ -22,7 +22,7 @@ export function Login() {
 
     try {
       await login(username, password);
-      navigate('/report');
+      navigate('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {

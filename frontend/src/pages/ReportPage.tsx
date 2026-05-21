@@ -601,9 +601,11 @@ export function ReportPage() {
                           >
                             <td className="py-2.5">
                               <div className="flex items-center gap-2">
-                                <span className="text-base shrink-0">
-                                  {category.icon || '📁'}
-                                </span>
+                                {category.icon && (
+                                  <span className="text-base shrink-0">
+                                    {category.icon}
+                                  </span>
+                                )}
                                 <span className="text-sm truncate">
                                   {category.name}
                                 </span>

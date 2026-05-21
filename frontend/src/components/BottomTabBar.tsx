@@ -11,7 +11,7 @@ import {
 import { Link, useLocation } from 'react-router-dom';
 
 const primaryTabs = [
-  { name: 'Dashboard', href: '/report', icon: BarChart3 },
+  { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
   { name: 'Accounts', href: '/accounts', icon: Landmark },
   { name: 'Budget', href: '/budget', icon: Wallet },
   { name: 'Transactions', href: '/transactions', icon: Table },

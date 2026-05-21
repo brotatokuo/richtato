@@ -29,7 +29,7 @@ const routeConfig: Record<
   '/accounts': { title: 'Accounts', icon: Landmark },
   '/budget': { title: 'Budget', icon: Wallet },
   '/transactions': { title: 'Transactions', icon: Table },
-  '/report': { title: 'Dashboard', icon: BarChart3 },
+  '/dashboard': { title: 'Dashboard', icon: BarChart3 },
   '/upload': { title: 'Upload', icon: CloudUpload },
   '/preferences': { title: 'Preferences', icon: Settings },
   '/setup': { title: 'Setup', icon: SlidersHorizontal },
@@ -89,7 +89,7 @@ function LayoutInner() {
           <div className="mx-auto px-4 md:px-6 py-4">
             <div className="flex items-center gap-3">
               {/* Mobile: app logo in header */}
-              <Link to="/report">
+              <Link to="/dashboard">
                 <img
                   src="/richtato.png"
                   alt="Richtato"
@@ -105,7 +105,7 @@ function LayoutInner() {
               {headerSlot && (
                 <div className="hidden md:flex items-center">{headerSlot}</div>
               )}
-              <ScopeToggle className="hidden md:inline-flex" />
+              <ScopeToggle />
             </div>
           </div>
         </header>
