@@ -95,6 +95,8 @@ Current protected routes:
 | `/formulas`     | `Formulas`                                |
 | `/more`         | `More`                                    |
 
+`/upload` is the CSV/Excel statement import workflow. It should use `frontend/src/lib/api/statementImport.ts`, preview rows before commit, and treat row-level duplicate/possible-changed status as user-facing review information.
+
 Redirects:
 
 - `/` -> `/dashboard`

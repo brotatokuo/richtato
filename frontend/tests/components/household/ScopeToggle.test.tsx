@@ -40,9 +40,9 @@ describe('ScopeToggle', () => {
   it('defaults to personal scope', () => {
     const ctx = makeCtx({ isInHousehold: true, scope: 'personal' });
     renderWithCtx(ctx);
-    // Personal button should have the active styling (bg-background class)
+    // Personal button should have the active styling.
     const personalBtn = screen.getByText('Personal').closest('button');
-    expect(personalBtn?.className).toContain('bg-background');
+    expect(personalBtn?.className).toContain('bg-primary');
   });
 
   it('calls setScope on click', () => {

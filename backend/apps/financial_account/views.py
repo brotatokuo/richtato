@@ -17,6 +17,9 @@ from apps.financial_account.services.account_balance_service import (
 )
 from apps.financial_account.services.account_service import AccountService
 from apps.financial_account.services.csv_import_service import CSVImportService
+from apps.financial_account.services.statement_import_service import (
+    StatementImportService,
+)
 
 
 class FinancialAccountListCreateAPIView(APIView):
@@ -513,3 +516,84 @@ class CSVStatementImportAPIView(APIView):
             response_data["adjustment"] = str(result.adjustment_amount)
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+class StatementImportAPIView(APIView):
+    """Preview or import CSV/Excel statements for supported institutions."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.account_service = AccountService()
+        self.statement_service = StatementImportService()
+
+    def get(self, request):
+        """Return supported statement import institutions."""
+        return Response(
+            {"institutions": self.statement_service.get_supported_institutions()},
+            status=status.HTTP_200_OK,
+        )
+
+    def post(self, request):
+        """Preview or commit a CSV/XLS/XLSX statement import."""
+        statement_file = request.FILES.get("file")
+        if not statement_file:
+            return Response({"error": "Statement file is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        account_id = request.data.get("account")
+        if not account_id:
+            return Response({"error": "account is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        institution = request.data.get("institution")
+        if not institution:
+            return Response({"error": "institution is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            account = self.account_service.get_account_by_id(int(account_id), request.user)
+        except (TypeError, ValueError):
+            return Response({"error": "Invalid account"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not account:
+            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        mode = request.data.get("mode", "preview")
+        statement_period = request.data.get("statement_period", "")
+        statement_status = request.data.get("statement_status", "provisional")
+        if statement_status not in {"provisional", "closed"}:
+            return Response(
+                {"error": "statement_status must be provisional or closed"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            if mode == "commit":
+                result = self.statement_service.import_statement(
+                    account=account,
+                    statement_file=statement_file,
+                    institution=institution,
+                    statement_period=statement_period,
+                    statement_status=statement_status,
+                )
+            elif mode == "preview":
+                result = self.statement_service.preview_statement(
+                    account=account,
+                    statement_file=statement_file,
+                    institution=institution,
+                    statement_period=statement_period,
+                    statement_status=statement_status,
+                )
+            else:
+                return Response(
+                    {"error": "mode must be preview or commit"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        except Exception as e:
+            logger.error(f"Statement import failed for account {account_id}: {str(e)}")
+            return Response(
+                {"error": f"Import failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(result.as_dict(), status=status.HTTP_200_OK)

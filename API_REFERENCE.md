@@ -75,10 +75,25 @@ Common date filters:
 | `GET` | `/summary/` | Get account summary |
 | `POST` | `/details/` | Add balance update entry |
 | `POST` | `/import-csv/` | Import statement CSV |
+| `GET` | `/import-statement/` | List supported CSV/Excel statement institutions |
+| `POST` | `/import-statement/` | Preview or commit CSV/Excel statement import |
 
 Household-aware account reads may accept `scope=household`.
 
 Card-specific account routes are mounted at `/api/v1/card-accounts/`.
+
+### Statement Imports
+
+`POST /api/v1/accounts/import-statement/` accepts multipart form data:
+
+- `file`: CSV, XLS, or XLSX statement export.
+- `account`: target account ID.
+- `institution`: one of `bofa`, `marcus`, `amex`, `robinhood_bank`, `fidelity`, `robinhood_investments`, `guideline`, or `chase`.
+- `mode`: `preview` or `commit`.
+- `statement_status`: `provisional` for current/open exports or `closed` for final statements.
+- `statement_period`: optional label such as `2025-06`.
+
+Statement imports use row-level deduplication. Current/open statement exports are provisional and may overlap later closed statements; duplicates are skipped and changed provisional rows are flagged for review.
 
 ## Transactions (`/api/v1/transactions/`)
 

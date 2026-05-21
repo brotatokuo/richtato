@@ -20,8 +20,9 @@ alwaysApply: false
 - Household-aware list and aggregate endpoints should use `apps.household.scope.get_scope_user_ids(request)` and respect shared accounts plus household budgets.
 - Use `apps.core.constants` filters for income, expense, transfer, and investment classification. Do not reimplement category-type logic in aggregations.
 - Transaction saves/deletes trigger balance and history updates through `apps.transaction.signals`; do not manually adjust `FinancialAccount.balance` around normal transaction CRUD.
+- CSV/Excel statement import is the primary no-aggregator ingestion path. Use row-level dedup so current/open statements can overlap later closed statements without duplicate transactions.
 - Categories are soft-deleted with `is_deleted=True` when they may have transactions.
-- Sync is currently Plaid/manual through `SyncConnection`; do not add Teller docs or code paths unless implementing Teller intentionally.
+- Plaid sync code may exist for legacy paths; do not add Teller docs or code paths unless implementing Teller intentionally.
 - Log with `loguru.logger`; avoid `print` or stdlib logging in app code.
 
 ## API And URLs

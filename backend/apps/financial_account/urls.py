@@ -41,4 +41,9 @@ urlpatterns = [
         views.CSVStatementImportAPIView.as_view(),
         name="account-csv-import",
     ),
+    path(
+        "import-statement/",
+        views.StatementImportAPIView.as_view(),
+        name="account-statement-import",
+    ),
 ]

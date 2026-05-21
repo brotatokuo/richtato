@@ -3,10 +3,14 @@
 import io
 from decimal import Decimal
 
+import pandas as pd
 import pytest
 
 from apps.financial_account.models import FinancialAccount
 from apps.financial_account.services.csv_import_service import CSVImportService
+from apps.financial_account.services.statement_import_service import (
+    StatementImportService,
+)
 from apps.richtato_user.models import User
 from apps.transaction.models import Transaction
 
@@ -44,6 +48,20 @@ def service():
 
 def _make_csv(rows_text: str) -> io.StringIO:
     return io.StringIO(rows_text)
+
+
+def _make_named_csv(rows_text: str, name: str = "statement.csv") -> io.BytesIO:
+    csv_file = io.BytesIO(rows_text.encode())
+    csv_file.name = name
+    return csv_file
+
+
+def _make_xlsx(rows: list[dict], name: str = "statement.xlsx") -> io.BytesIO:
+    xlsx_file = io.BytesIO()
+    pd.DataFrame(rows).to_excel(xlsx_file, index=False)
+    xlsx_file.seek(0)
+    xlsx_file.name = name
+    return xlsx_file
 
 
 class TestCSVImportBasic:
@@ -226,3 +244,116 @@ class TestCSVCreditCardImport:
         assert result.discrepancy == Decimal("50.00")
         credit_card_account.refresh_from_db()
         assert credit_card_account.balance == Decimal("-350.00")
+
+
+class TestStatementImportService:
+    """CSV/Excel statement import preview and commit behavior."""
+
+    def test_preview_bank_of_america_csv(self, account):
+        service = StatementImportService()
+        statement = _make_named_csv(
+            "Posted Date,Payee,Amount\n2025-06-01,Coffee Shop,-5.25\n2025-06-02,Payroll,1500.00\n"
+        )
+
+        result = service.preview_statement(account, statement, "bofa", "2025-06")
+
+        assert result.parsed_count == 2
+        assert result.duplicate_count == 0
+        assert result.rows[0].transaction_type == "debit"
+        assert result.rows[1].transaction_type == "credit"
+        assert result.rows[0].source_row_hash
+
+    def test_import_skips_overlapping_statement_rows(self, account):
+        service = StatementImportService()
+        first_statement = _make_named_csv(
+            "Transaction Date,Description,Amount\n2025-06-01,Coffee,-5.00\n",
+            "first.csv",
+        )
+        overlapping_statement = _make_named_csv(
+            "Transaction Date,Description,Amount\n2025-06-01,Coffee,-5.00\n2025-06-02,Dinner,-20.00\n",
+            "second.csv",
+        )
+
+        first_result = service.import_statement(account, first_statement, "chase", "2025-06", "provisional")
+        second_result = service.import_statement(account, overlapping_statement, "chase", "2025-06", "closed")
+
+        assert first_result.imported_count == 1
+        assert second_result.imported_count == 1
+        assert second_result.duplicate_count == 1
+        assert Transaction.objects.filter(account=account, sync_source="csv").count() == 2
+
+    def test_preview_flags_possible_changed_pending_row(self, account):
+        service = StatementImportService()
+        provisional_statement = _make_named_csv(
+            "Transaction Date,Description,Amount\n2025-06-01,Coffee,-5.00\n",
+            "provisional.csv",
+        )
+        closed_statement = _make_named_csv(
+            "Transaction Date,Description,Amount\n2025-06-01,Coffee,-5.75\n",
+            "closed.csv",
+        )
+
+        service.import_statement(account, provisional_statement, "chase", "2025-06", "provisional")
+        result = service.preview_statement(account, closed_statement, "chase", "2025-06", "closed")
+
+        assert result.possible_changed_count == 1
+        assert result.rows[0].status == "possible_changed"
+
+    def test_preview_american_express_xlsx(self, credit_card_account):
+        service = StatementImportService()
+        statement = _make_xlsx(
+            [
+                {
+                    "Date": "2025-06-01",
+                    "Description": "Restaurant",
+                    "Amount": "42.12",
+                }
+            ]
+        )
+
+        result = service.preview_statement(credit_card_account, statement, "amex", "2025-06", "closed")
+
+        assert result.parsed_count == 1
+        assert result.rows[0].transaction_type == "debit"
+        assert result.rows[0].amount == Decimal("42.12")
+
+    @pytest.mark.parametrize(
+        "institution",
+        [
+            "bofa",
+            "marcus",
+            "amex",
+            "robinhood_bank",
+            "fidelity",
+            "robinhood_investments",
+            "guideline",
+            "chase",
+        ],
+    )
+    def test_all_target_institutions_have_csv_adapter(self, account, institution):
+        service = StatementImportService()
+        statement = _make_named_csv("Date,Description,Amount\n2025-06-01,Sample,-1.23\n")
+
+        result = service.preview_statement(account, statement, institution, "2025-06")
+
+        assert result.parsed_count == 1
+        assert result.rows[0].institution == institution
+
+    def test_closed_statement_finalizes_matching_provisional_rows(self, account):
+        service = StatementImportService()
+        provisional_statement = _make_named_csv(
+            "Transaction Date,Description,Amount\n2025-06-01,Coffee,-5.00\n",
+            "provisional.csv",
+        )
+        closed_statement = _make_named_csv(
+            "Transaction Date,Description,Amount\n2025-06-01,Coffee,-5.00\n",
+            "closed.csv",
+        )
+
+        service.import_statement(account, provisional_statement, "chase", "2025-06", "provisional")
+        transaction = Transaction.objects.get(account=account, description="Coffee")
+        assert transaction.status == "pending"
+
+        service.import_statement(account, closed_statement, "chase", "2025-06", "closed")
+        transaction.refresh_from_db()
+        assert transaction.status == "posted"

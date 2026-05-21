@@ -23,3 +23,4 @@ Richtato is an AI-native personal finance app with Monarch Money as the UX north
 - Frontend patterns: `frontend/CLAUDE.md`.
 - Backend patterns: `backend/CLAUDE.md`.
 - HTTP API: `API_REFERENCE.md` and `/api/docs/` Swagger in a running backend.
+- Statement import path: CSV/Excel upload through `/upload` and `/api/v1/accounts/import-statement/`.

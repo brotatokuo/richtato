@@ -24,6 +24,7 @@ Richtato is an AI-native personal finance app for spending, budgets, net worth, 
 - Header titles/icons: `frontend/src/components/Layout.tsx`.
 - Backend URL roots: `backend/richtato/urls.py`.
 - Household scope helper: `backend/apps/household/scope.py`.
+- Statement imports: `backend/apps/financial_account/services/statement_import_service.py`.
 - Transaction balance side effects: `backend/apps/transaction/signals.py`.
 - Frontend API services: `frontend/src/lib/api/`.
 
@@ -34,7 +35,10 @@ Richtato is an AI-native personal finance app for spending, budgets, net worth, 
 - The Vite dev server runs on port `3000`.
 - Budgets use `/api/v1/budgets/`, not `/api/v1/budget/`.
 - User profile, preferences, and category settings live under `/api/v1/auth/`.
-- Sync is currently Plaid/manual through `SyncConnection`; do not document Teller as active unless you implement it.
+- CSV/Excel statement import is the primary no-aggregator ingestion path.
+- Plaid code may exist for legacy sync, but do not make it the default product path for new import work.
+- Do not document Teller as active unless you implement it.
+- Statement imports must be row-level idempotent; current/open statements are provisional and may overlap later closed statements.
 - Household-aware reads should omit `scope` for personal data and send `scope=household` only for household scope.
 - Transaction create/update/delete paths can affect account balances through signals.
 

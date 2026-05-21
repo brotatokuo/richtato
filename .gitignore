@@ -56,3 +56,4 @@ coverage
 certs/
 
 richtato_tep_data/
+local_data/

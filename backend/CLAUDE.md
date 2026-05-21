@@ -158,12 +158,16 @@ Use `TransactionService` for manual transaction flows so categorization and side
 
 ## Sync And Integrations
 
-Sync is currently Plaid/manual through `SyncConnection`.
+CSV/Excel statement import is the primary no-aggregator ingestion path for new bank data work.
 
+- `apps/financial_account/services/statement_import_service.py` parses CSV/XLS/XLSX statements through institution adapters.
+- Statement imports should preview before commit and classify rows as new, duplicate, invalid, or possible changed.
+- Deduplication is row-level so current/open statements can overlap later closed statements.
+- Current/open statement exports are provisional; closed statements are authoritative and should flag changed provisional rows for review.
 - `integrations/base.py` defines normalized banking client behavior.
 - `integrations/plaid/client.py` implements Plaid client behavior.
-- `apps/sync/services/` contains sync orchestration and Plaid-specific logic.
-- Deduplication is based on external IDs plus sync source/user behavior in repositories.
+- `apps/sync/services/` contains legacy sync orchestration and Plaid-specific logic.
+- Plaid code may remain for existing data, but avoid making paid aggregators the default product path for new import features.
 
 Do not document or add Teller code paths unless the task is explicitly to implement Teller.
 
