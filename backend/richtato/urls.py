@@ -77,6 +77,8 @@ urlpatterns = [
     path("api/v1/household/", include("apps.household.urls")),
     # Add sync status endpoint at both /api/sync/ and /api/v1/sync/
     path("api/v1/sync/", include("apps.sync.urls")),
+    # Bank Automation (Chrome-extension-driven CSV download flow)
+    path("api/v1/bank-automation/", include("apps.bank_automation.urls")),
 ]
 
 # Serve static files during development

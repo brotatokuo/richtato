@@ -45,6 +45,9 @@ const HouseholdDashboard = lazy(() =>
 const Formulas = lazy(() =>
   import('./pages/Formulas').then(m => ({ default: m.Formulas }))
 );
+const BankAutomation = lazy(() =>
+  import('./pages/BankAutomation').then(m => ({ default: m.BankAutomation }))
+);
 
 function App() {
   return (
@@ -147,6 +150,14 @@ function App() {
                   element={
                     <Suspense fallback={null}>
                       <Formulas />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="bank-automation"
+                  element={
+                    <Suspense fallback={null}>
+                      <BankAutomation />
                     </Suspense>
                   }
                 />

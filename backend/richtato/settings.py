@@ -36,6 +36,12 @@ CRON_SECRET_KEY = os.getenv("CRON_SECRET_KEY")
 PLAID_SECRET = os.getenv("PLAID_SECRET")
 PLAID_ENV = os.getenv("PLAID_ENV", "sandbox")  # sandbox, development, production
 
+# Bank Automation Encryption Key
+# Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# Required in production. In development we derive a deterministic key from
+# SECRET_KEY when this is unset.
+BANK_AUTOMATION_FERNET_KEY = os.getenv("BANK_AUTOMATION_FERNET_KEY", "")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 
@@ -60,6 +66,7 @@ INSTALLED_APPS = [
     "apps.transaction",
     "apps.categorization",
     "apps.sync",
+    "apps.bank_automation",
     "apps.budget",
     "apps.household",
     "django.contrib.humanize",
@@ -197,6 +204,14 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://frontend:3000",
     "https://richtato.com",
+]
+
+# Allow the Richtato Chrome extension. Each install has a unique
+# chrome-extension://<id> origin, so we match by scheme rather than ID. The
+# extension only calls authenticated endpoints (token / basic auth), so this
+# does not widen the unauthenticated surface.
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^chrome-extension://[a-z0-9]+$",
 ]
 
 CORS_ALLOW_CREDENTIALS = True

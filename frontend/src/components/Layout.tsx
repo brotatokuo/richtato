@@ -2,9 +2,11 @@ import {
   HeaderSlotProvider,
   useHeaderSlot,
 } from '@/contexts/HeaderSlotContext';
+import { useBankAutomationStatus } from '@/hooks/useBankAutomationStatus';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import {
   BarChart3,
+  Building2,
   Calculator,
   CloudUpload,
   Heart,
@@ -15,7 +17,8 @@ import {
   Table,
   Wallet,
 } from 'lucide-react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { BottomTabBar } from './BottomTabBar';
 import { Sidebar } from './Sidebar';
@@ -36,6 +39,7 @@ const routeConfig: Record<
   '/more': { title: 'More', icon: MoreHorizontal },
   '/household': { title: 'Household', icon: Heart },
   '/formulas': { title: 'Formulas', icon: Calculator },
+  '/bank-automation': { title: 'Bank Sync', icon: Building2 },
 };
 
 export function Layout() {
@@ -48,7 +52,10 @@ export function Layout() {
 
 function LayoutInner() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { headerSlot } = useHeaderSlot();
+  const bankAutomationStatus = useBankAutomationStatus();
+  const reauthToastShown = useRef(false);
 
   // Global sync status monitoring for toast notifications
   useSyncStatus({
@@ -69,6 +76,25 @@ function LayoutInner() {
       });
     },
   });
+
+  useEffect(() => {
+    if (
+      !reauthToastShown.current &&
+      bankAutomationStatus.reauthCount > 0 &&
+      location.pathname !== '/bank-automation'
+    ) {
+      reauthToastShown.current = true;
+      const count = bankAutomationStatus.reauthCount;
+      toast.warning('Bank session needs refresh', {
+        description: `${count} connection${count === 1 ? '' : 's'} need a fresh capture from the Chrome extension.`,
+        duration: 10_000,
+        action: {
+          label: 'Open',
+          onClick: () => navigate('/bank-automation'),
+        },
+      });
+    }
+  }, [bankAutomationStatus.reauthCount, location.pathname, navigate]);
 
   // Get the current page config based on the route (supports nested paths)
   const matchedKey = Object.keys(routeConfig).find(

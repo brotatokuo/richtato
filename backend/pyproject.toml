@@ -29,6 +29,7 @@ dependencies = [
     "pytest-django==4.5.2",
     "plaid-python==22.0.0",
     "urllib3<2.0.0",  # needed for plaid-python compatibility
+    "cryptography==43.0.1",
 ]
 
 

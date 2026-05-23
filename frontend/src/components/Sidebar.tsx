@@ -10,10 +10,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useBankAutomationStatus } from '@/hooks/useBankAutomationStatus';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { cn } from '@/lib/utils';
 import {
+  AlertTriangle,
   BarChart3,
+  Building2,
   Calculator,
   ChevronLeft,
   ChevronRight,
@@ -51,6 +54,7 @@ export function Sidebar({
   const { user, logout } = useAuth();
   const { status: syncStatus } = useSyncStatus();
   const { isInHousehold } = useHousehold();
+  const bankAutomationStatus = useBankAutomationStatus();
 
   const navigationItems: NavItem[] = useMemo(() => {
     const items: NavItem[] = [
@@ -59,6 +63,7 @@ export function Sidebar({
       { name: 'Accounts', href: '/accounts', icon: Landmark },
       { name: 'Upload', href: '/upload', icon: CloudUpload },
       { name: 'Budget', href: '/budget', icon: Wallet },
+      { name: 'Bank Sync', href: '/bank-automation', icon: Building2 },
     ];
     if (isInHousehold) {
       items.push({ name: 'Household', href: '/household', icon: Heart });
@@ -154,6 +159,11 @@ export function Sidebar({
               ? syncStatus.new_transaction_count
               : 0;
 
+          const isBankAutomationPage = item.href === '/bank-automation';
+          const reauthCount = isBankAutomationPage
+            ? bankAutomationStatus.reauthCount + bankAutomationStatus.errorCount
+            : 0;
+
           return (
             <Link
               key={item.name}
@@ -187,10 +197,22 @@ export function Sidebar({
                       {newTransactionCount > 99 ? '99+' : newTransactionCount}
                     </Badge>
                   )}
+                  {reauthCount > 0 && (
+                    <Badge
+                      variant="default"
+                      className="ml-2 bg-amber-500 hover:bg-amber-600 text-white text-xs px-1.5 py-0.5 gap-1"
+                    >
+                      <AlertTriangle className="h-3 w-3" />
+                      {reauthCount}
+                    </Badge>
+                  )}
                 </span>
               )}
               {isCollapsed && newTransactionCount > 0 && (
                 <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-emerald-500" />
+              )}
+              {isCollapsed && reauthCount > 0 && (
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-amber-500" />
               )}
             </Link>
           );

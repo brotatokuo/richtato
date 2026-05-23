@@ -1,0 +1,53 @@
+{
+  "_comment": "Schema example for local_data/automation/accounts.json. JSON does not support comments, so this file uses a leading _comment field. Strip any underscored fields when copying into local_data/. Storage state paths are resolved relative to local_data/automation/ unless absolute.",
+
+  "logins": {
+    "bofa_a": { "storage_state": "storage_states/bofa_a.json" },
+    "bofa_b": { "storage_state": "storage_states/bofa_b.json" }
+  },
+
+  "accounts": [
+    {
+      "slug": "bofa_a_checking",
+      "login": "bofa_a",
+      "institution": "bofa",
+      "flow": "deposit",
+      "activity_url": "https://secure.bankofamerica.com/deposit-details/activity/?adx=PASTE_TOKEN_HERE&source=overview&request_locale=en-us"
+    },
+    {
+      "slug": "bofa_a_savings",
+      "login": "bofa_a",
+      "institution": "bofa",
+      "flow": "deposit",
+      "activity_url": "https://secure.bankofamerica.com/deposit-details/activity/?adx=PASTE_TOKEN_HERE&source=overview&request_locale=en-us"
+    },
+    {
+      "slug": "bofa_a_cc",
+      "login": "bofa_a",
+      "institution": "bofa",
+      "flow": "credit_card",
+      "activity_url": "https://secure.bankofamerica.com/credit-card/activity/?adx=PASTE_TOKEN_HERE"
+    },
+    {
+      "slug": "bofa_b_checking",
+      "login": "bofa_b",
+      "institution": "bofa",
+      "flow": "deposit",
+      "activity_url": "https://secure.bankofamerica.com/deposit-details/activity/?adx=PASTE_TOKEN_HERE&source=overview&request_locale=en-us"
+    },
+    {
+      "slug": "bofa_b_savings",
+      "login": "bofa_b",
+      "institution": "bofa",
+      "flow": "deposit",
+      "activity_url": "https://secure.bankofamerica.com/deposit-details/activity/?adx=PASTE_TOKEN_HERE&source=overview&request_locale=en-us"
+    },
+    {
+      "slug": "bofa_b_cc",
+      "login": "bofa_b",
+      "institution": "bofa",
+      "flow": "credit_card",
+      "activity_url": "https://secure.bankofamerica.com/credit-card/activity/?adx=PASTE_TOKEN_HERE"
+    }
+  ]
+}

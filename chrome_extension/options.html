@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Richtato Bank Sync - Settings</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Settings</h1>
+      <p class="muted">
+        These credentials authorize the extension to send your session to
+        your Richtato instance. They are stored locally in this browser
+        profile only.
+      </p>
+    </header>
+
+    <label for="api-base">Richtato API base URL</label>
+    <input id="api-base" placeholder="https://richtato.example.com" />
+
+    <label for="api-token">API token (preferred)</label>
+    <input id="api-token" type="password" autocomplete="off" />
+
+    <p class="muted">Or use Basic auth (less secure, OK for local dev):</p>
+
+    <label for="username">Username</label>
+    <input id="username" autocomplete="username" />
+
+    <label for="password">Password</label>
+    <input id="password" type="password" autocomplete="current-password" />
+
+    <button id="save" class="primary">Save</button>
+    <p id="status" class="status"></p>
+
+    <script src="options.js"></script>
+  </body>
+</html>

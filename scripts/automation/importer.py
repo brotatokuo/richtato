@@ -22,15 +22,22 @@ def submit_statement(
     config: AutomationConfig,
     institution: str,
     file_path: Path,
+    *,
+    account_id: int | None = None,
 ) -> dict:
-    """Upload ``file_path`` for ``institution`` and return the API response payload."""
+    """Upload ``file_path`` for ``institution`` and return the API response payload.
+
+    ``account_id`` overrides the static AUTOMATION_ACCOUNT_IDS mapping; the
+    DB-driven runner passes it explicitly per ``BankAccountLink``.
+    """
 
     if not config.richtato_user or not config.richtato_pass:
         raise ConfigError(
             "RICHTATO_USER and RICHTATO_PASS must be set so the automation can POST to the import API."
         )
 
-    account_id = config.account_ids.get(institution)
+    if account_id is None:
+        account_id = config.account_ids.get(institution)
     if account_id is None:
         raise ConfigError(
             f"No account ID configured for institution {institution!r}. Set AUTOMATION_ACCOUNT_IDS in .env."
