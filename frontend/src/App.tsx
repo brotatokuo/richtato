@@ -151,7 +151,7 @@ function App() {
                 />
                 <Route
                   path="bank-automation"
-                  element={<Navigate to="/setup?tab=accounts" replace />}
+                  element={<Navigate to="/accounts" replace />}
                 />
                 <Route
                   path="settings"

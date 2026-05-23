@@ -242,8 +242,8 @@ class BankSession(models.Model):
 class BankAutomationRun(models.Model):
     """One execution record for a ``BankConnection``.
 
-    Mirrors :class:`apps.sync.models.SyncJob` shape so the frontend run
-    history view follows the same conventions.
+    Captures status, timing, and counts for a single bank-automation run so
+    the frontend run history view can render consistent rows.
     """
 
     STATUS_CHOICES = [

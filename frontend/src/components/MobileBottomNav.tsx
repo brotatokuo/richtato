@@ -1,15 +1,12 @@
-import { Badge } from '@/components/ui/badge';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useAuth } from '@/hooks/useAuth';
-import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { cn } from '@/lib/utils';
 import {
   BarChart3,
-  Loader2,
   LogOut,
   MoreHorizontal,
   PieChart,
@@ -39,11 +36,7 @@ export function MobileBottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { status: syncStatus } = useSyncStatus();
   const [moreOpen, setMoreOpen] = useState(false);
-
-  const newTransactionCount = syncStatus?.new_transaction_count ?? 0;
-  const isSyncing = syncStatus?.is_syncing ?? false;
 
   const isSecondaryActive = secondaryItems.some(
     item =>
@@ -103,9 +96,6 @@ export function MobileBottomNav() {
             >
               <MoreHorizontal className="h-5 w-5" />
               <span>More</span>
-              {(newTransactionCount > 0 || isSyncing) && (
-                <span className="absolute top-2 right-1/4 h-2 w-2 rounded-full bg-emerald-500" />
-              )}
             </button>
           </PopoverTrigger>
           <PopoverContent
@@ -120,7 +110,6 @@ export function MobileBottomNav() {
                   location.pathname === item.href ||
                   location.pathname.startsWith(`${item.href}/`);
                 const Icon = item.icon;
-                const isDataPage = item.href === '/transactions';
 
                 return (
                   <button
@@ -136,20 +125,8 @@ export function MobileBottomNav() {
                         : 'text-foreground hover:bg-muted'
                     )}
                   >
-                    {isDataPage && isSyncing ? (
-                      <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-                    ) : (
-                      <Icon className="h-4 w-4 shrink-0" />
-                    )}
+                    <Icon className="h-4 w-4 shrink-0" />
                     <span className="flex-1 text-left">{item.name}</span>
-                    {isDataPage && newTransactionCount > 0 && (
-                      <Badge
-                        variant="default"
-                        className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs px-1.5 py-0"
-                      >
-                        {newTransactionCount > 99 ? '99+' : newTransactionCount}
-                      </Badge>
-                    )}
                   </button>
                 );
               })}

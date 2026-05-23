@@ -25,7 +25,7 @@ const features = [
     icon: Link2,
     title: 'Bank Sync',
     description:
-      'Connect 12,000+ financial institutions with Plaid. Your accounts sync automatically.',
+      'Automate statement downloads from your banks with the Richtato Chrome extension. No third-party aggregator required.',
     gradient: 'from-emerald-500 to-teal-600',
     delay: 'delay-100',
   },

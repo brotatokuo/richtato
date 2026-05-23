@@ -1,37 +1,32 @@
+import { AccountSyncPanel } from '@/components/accounts/AccountSyncPanel';
+import { BaseChart } from '@/components/asset_dashboard/BaseChart';
 import { AccountDetailModal } from '@/components/settings/AccountDetailModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Modal } from '@/components/ui/Modal';
+import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { bankConnectionsApiService } from '@/lib/api/bankConnections';
+import type { AccountSyncSummary } from '@/hooks/useBankAutomationConnections';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { getEntityLogo } from '@/lib/imageMapping';
 import { cn } from '@/lib/utils';
-import { useHousehold } from '@/contexts/HouseholdContext';
 import {
   ArrowRight,
   ArrowUpDown,
   Edit2,
   Landmark,
-  Loader2,
-  RefreshCw,
   Scale,
   TrendingDown,
   TrendingUp,
-  Unlink,
   Users,
-  Wifi,
-  WifiOff,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { AccountWithBalance } from './AccountsSidebar';
 import { AccountBalanceForm } from './AccountBalanceForm';
-import { BaseChart } from '@/components/asset_dashboard/BaseChart';
-import { DisconnectConfirmModal } from '@/components/settings/DisconnectConfirmModal';
+import { AccountWithBalance } from './AccountsSidebar';
 
 interface TransactionRow {
   id: number;
@@ -48,24 +43,18 @@ interface BalancePoint {
 
 interface AccountDetailPanelProps {
   account: AccountWithBalance | null;
+  sync: AccountSyncSummary | null;
+  knownConnectionIds: number[];
   onAccountUpdated: () => void;
-}
-
-function timeAgo(isoString: string | null | undefined): string {
-  if (!isoString) return '';
-  const diff = Date.now() - new Date(isoString).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  onSyncChange: () => void | Promise<void>;
 }
 
 export function AccountDetailPanel({
   account,
+  sync,
+  knownConnectionIds,
   onAccountUpdated,
+  onSyncChange,
 }: AccountDetailPanelProps) {
   const { preferences } = usePreferences();
   const { isInHousehold } = useHousehold();
@@ -74,11 +63,9 @@ export function AccountDetailPanel({
   const [balanceHistory, setBalanceHistory] = useState<BalancePoint[]>([]);
   const [txLoading, setTxLoading] = useState(false);
   const [chartLoading, setChartLoading] = useState(false);
-  const [syncing, setSyncing] = useState(false);
 
   const [showEdit, setShowEdit] = useState(false);
   const [showSetBalance, setShowSetBalance] = useState(false);
-  const [showDisconnect, setShowDisconnect] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [isShared, setIsShared] = useState(
     account?.shared_with_household ?? false
@@ -90,8 +77,6 @@ export function AccountDetailPanel({
   const [entityOptions, setEntityOptions] = useState<
     Array<{ value: string; label: string }>
   >([]);
-
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     transactionsApiService
@@ -127,12 +112,6 @@ export function AccountDetailPanel({
     setIsShared(account.shared_with_household ?? false);
     fetchData(account.id);
   }, [account, fetchData]);
-
-  useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
 
   const chartData = useMemo(() => {
     if (!balanceHistory.length) return { series: [], dates: [] };
@@ -228,7 +207,6 @@ export function AccountDetailPanel({
     [chartData, preferences.currency]
   );
 
-  // Balance change from history
   const balanceChange = useMemo(() => {
     if (balanceHistory.length < 2) return null;
     const sorted = [...balanceHistory].sort(
@@ -238,38 +216,6 @@ export function AccountDetailPanel({
     const oldest = sorted[sorted.length - 1]?.balance ?? 0;
     return latest - oldest;
   }, [balanceHistory]);
-
-  const handleSync = async () => {
-    if (!account?.connection_id) return;
-    setSyncing(true);
-    try {
-      await bankConnectionsApiService.syncConnection(account.connection_id);
-      toast.info('Sync started', { description: 'Syncing transactions...' });
-      pollRef.current = setInterval(async () => {
-        const progress = await bankConnectionsApiService
-          .getSyncJobProgress(account.connection_id!)
-          .catch(() => null);
-        if (progress && progress.status !== 'running') {
-          if (pollRef.current) clearInterval(pollRef.current);
-          setSyncing(false);
-          if (progress.status === 'completed') {
-            toast.success('Sync completed', {
-              description: `${progress.transactions_synced} transactions synced`,
-            });
-            fetchData(account.id);
-            onAccountUpdated();
-          } else {
-            toast.error('Sync failed', { description: progress.errors?.[0] });
-          }
-        }
-      }, 1500);
-    } catch (e) {
-      toast.error('Sync failed', {
-        description: e instanceof Error ? e.message : undefined,
-      });
-      setSyncing(false);
-    }
-  };
 
   const handleEdit = async (form: {
     name: string;
@@ -323,25 +269,6 @@ export function AccountDetailPanel({
     setShowSetBalance(false);
   };
 
-  const handleDisconnect = async (deleteData: boolean) => {
-    if (!account?.connection_id) return;
-    setEditLoading(true);
-    try {
-      await bankConnectionsApiService.deleteConnection(
-        account.connection_id,
-        deleteData
-      );
-      onAccountUpdated();
-      setShowDisconnect(false);
-    } catch (e) {
-      toast.error('Failed to disconnect', {
-        description: e instanceof Error ? e.message : undefined,
-      });
-    } finally {
-      setEditLoading(false);
-    }
-  };
-
   if (!account) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center px-8">
@@ -359,77 +286,49 @@ export function AccountDetailPanel({
 
   const entityLogo = getEntityLogo(account.entity || '');
   const isLiability = (account.account_type || account.type) === 'credit_card';
-  const hasError = account.connection_status === 'error';
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       {/* Account header */}
       <div className="px-6 pt-5 pb-4 border-b border-border/60">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-              {entityLogo ? (
-                <img
-                  src={entityLogo}
-                  alt={account.institution_name || ''}
-                  className="w-6 h-6 object-contain"
-                />
-              ) : (
-                <Landmark className="h-5 w-5 text-muted-foreground" />
-              )}
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-foreground leading-tight flex items-center gap-2">
-                {account.name}
-                {isShared && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                    <Users className="h-3 w-3" />
-                    Shared
-                  </span>
-                )}
-              </h2>
-              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                <span className="text-sm text-muted-foreground">
-                  {account.institution_name ||
-                    account.entity_display ||
-                    'Manual'}
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+            {entityLogo ? (
+              <img
+                src={entityLogo}
+                alt={account.institution_name || ''}
+                className="w-6 h-6 object-contain"
+              />
+            ) : (
+              <Landmark className="h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-semibold text-foreground leading-tight flex items-center gap-2 flex-wrap">
+              {account.name}
+              {isShared && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                  <Users className="h-3 w-3" />
+                  Shared
                 </span>
-                {account.account_number_last4 && (
-                  <span className="text-sm text-muted-foreground/60 font-mono">
-                    ····{account.account_number_last4}
-                  </span>
-                )}
-                <Badge variant="secondary" className="text-xs h-5">
-                  {account.account_type_display ||
-                    account.type_display ||
-                    'Account'}
-                </Badge>
-              </div>
+              )}
+            </h2>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              <span className="text-sm text-muted-foreground">
+                {account.institution_name || account.entity_display || 'Manual'}
+              </span>
+              {account.account_number_last4 && (
+                <span className="text-sm text-muted-foreground/60 font-mono">
+                  ····{account.account_number_last4}
+                </span>
+              )}
+              <Badge variant="secondary" className="text-xs h-5">
+                {account.account_type_display ||
+                  account.type_display ||
+                  'Account'}
+              </Badge>
             </div>
           </div>
-
-          {/* Sync status chip */}
-          {account.has_connection && (
-            <div
-              className={cn(
-                'flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium flex-shrink-0',
-                hasError
-                  ? 'bg-red-500/10 text-red-500'
-                  : 'bg-green-500/10 text-green-600'
-              )}
-            >
-              {hasError ? (
-                <WifiOff className="h-3 w-3" />
-              ) : (
-                <Wifi className="h-3 w-3" />
-              )}
-              {hasError
-                ? 'Sync error'
-                : account.last_sync
-                  ? `Synced ${timeAgo(account.last_sync)}`
-                  : 'Connected'}
-            </div>
-          )}
         </div>
 
         {/* Hero balance */}
@@ -480,6 +379,18 @@ export function AccountDetailPanel({
             </p>
           )}
         </div>
+      </div>
+
+      {/* Sync panel */}
+      <div className="px-6 py-4 border-b border-border/40">
+        <p className="text-sm font-medium text-muted-foreground mb-3">Sync</p>
+        <AccountSyncPanel
+          accountId={account.id}
+          accountName={account.name}
+          sync={sync}
+          initialConnectionIds={knownConnectionIds}
+          onChange={onSyncChange}
+        />
       </div>
 
       {/* Balance chart */}
@@ -620,33 +531,6 @@ export function AccountDetailPanel({
             {isShared ? 'Shared' : 'Share'}
           </Button>
         )}
-        {account.has_connection && (
-          <>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleSync}
-              disabled={syncing}
-              className="h-8 text-xs"
-            >
-              {syncing ? (
-                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-              ) : (
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-              )}
-              Sync
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowDisconnect(true)}
-              className="h-8 text-xs text-muted-foreground hover:text-red-500 hover:border-red-500/40"
-            >
-              <Unlink className="h-3.5 w-3.5 mr-1.5" />
-              Disconnect
-            </Button>
-          </>
-        )}
       </div>
 
       {/* Edit modal */}
@@ -656,11 +540,6 @@ export function AccountDetailPanel({
         account={account}
         onSubmit={handleEdit}
         onDelete={handleDelete}
-        onSync={handleSync}
-        onDisconnect={() => {
-          setShowEdit(false);
-          setShowDisconnect(true);
-        }}
         accountTypeOptions={accountTypeOptions}
         entityOptions={entityOptions}
         loading={editLoading}
@@ -679,15 +558,6 @@ export function AccountDetailPanel({
           onCancel={() => setShowSetBalance(false)}
         />
       </Modal>
-
-      {/* Disconnect modal */}
-      <DisconnectConfirmModal
-        isOpen={showDisconnect}
-        onClose={() => setShowDisconnect(false)}
-        onConfirm={handleDisconnect}
-        loading={editLoading}
-        accountName={account.name}
-      />
     </div>
   );
 }

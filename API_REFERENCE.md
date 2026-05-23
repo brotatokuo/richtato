@@ -189,26 +189,23 @@ Budget analytics and spending breakdown data.
 
 Common query parameters: `year`, `month`, `start_date`, `end_date`, and optional `scope=household`.
 
-## Sync (`/api/v1/sync/`)
+## Bank Automation (`/api/v1/bank-automation/`)
 
-Sync is currently Plaid/manual through `SyncConnection`.
+Chrome-extension-driven statement download flow. The extension captures a bank session, sends it to Richtato, and the runner downloads statements on a schedule.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/connections/` | List sync connections |
-| `POST` | `/connections/` | Create sync connection |
-| `GET` | `/connections/{id}/` | Get sync connection |
-| `PUT/PATCH` | `/connections/{id}/` | Update sync connection |
-| `DELETE` | `/connections/{id}/` | Disconnect |
-| `POST` | `/connections/{id}/sync/` | Trigger sync |
-| `GET` | `/connections/{id}/jobs/` | List jobs for connection |
-| `GET` | `/connections/{id}/progress/` | Get active job progress |
-| `POST` | `/plaid/link-token/` | Create Plaid Link token |
-| `POST` | `/plaid/exchange-token/` | Exchange Plaid public token |
-| `GET` | `/status/` | Get user sync status |
-| `GET` | `/jobs/` | Get user sync job history |
+| `GET` | `/connections/` | List bank-login connections |
+| `GET` | `/connections/{id}/` | Get connection |
+| `PATCH` | `/connections/{id}/` | Update connection (cadence, run hour, nickname, enabled) |
+| `DELETE` | `/connections/{id}/` | Remove connection (cookies dropped; accounts kept) |
+| `POST` | `/connections/{id}/disable/` | Pause connection |
+| `POST` | `/connections/{id}/run/` | Queue an immediate run |
+| `GET` | `/connections/{id}/runs/` | List recent runs for a connection |
+| `PATCH` | `/account-links/{id}/` | Toggle per-account sync or bind a captured link to a Richtato account |
+| `GET` | `/supported-institutions/` | List institutions supported by the runner |
 
-Cron sync is mounted separately at `/api/cron/sync/`.
+CSV/Excel statement import (under `/api/v1/accounts/import-statement/` and `/api/v1/accounts/statements/`) is the manual ingestion path that complements bank automation.
 
 ## Household (`/api/v1/household/`)
 

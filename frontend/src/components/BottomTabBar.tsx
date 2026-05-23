@@ -1,5 +1,3 @@
-import { Badge } from '@/components/ui/badge';
-import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { cn } from '@/lib/utils';
 import {
   BarChart3,
@@ -31,9 +29,6 @@ const moreRoutes = [
 
 export function BottomTabBar() {
   const location = useLocation();
-  const { status: syncStatus } = useSyncStatus();
-
-  const newTransactionCount = syncStatus?.new_transaction_count ?? 0;
 
   const isMoreActive = moreRoutes.some(r => location.pathname.startsWith(r));
 
@@ -51,8 +46,6 @@ export function BottomTabBar() {
             ? isMoreActive
             : location.pathname === tab.href ||
               location.pathname.startsWith(`${tab.href}/`);
-          const isData = tab.href === '/transactions';
-          const isSyncing = isData && syncStatus?.is_syncing;
 
           return (
             <Link
@@ -66,17 +59,7 @@ export function BottomTabBar() {
               )}
               aria-current={isActive ? 'page' : undefined}
             >
-              <div className="relative">
-                <Icon className={cn('h-5 w-5', isSyncing && 'animate-spin')} />
-                {isData && newTransactionCount > 0 && (
-                  <Badge
-                    variant="default"
-                    className="absolute -top-2 -right-3 min-w-[1.1rem] h-[1.1rem] px-1 py-0 text-[10px] leading-none flex items-center justify-center bg-emerald-500 hover:bg-emerald-500 text-white"
-                  >
-                    {newTransactionCount > 99 ? '99+' : newTransactionCount}
-                  </Badge>
-                )}
-              </div>
+              <Icon className="h-5 w-5" />
               <span>{tab.name}</span>
             </Link>
           );

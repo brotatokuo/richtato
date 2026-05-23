@@ -12,7 +12,7 @@ Richtato is an AI-native personal finance app and Monarch Money competitor. The 
 
 ## Current Stack
 
-- Backend: Django 5.x, Django REST Framework, PostgreSQL, Gunicorn, Loguru, Plaid, OpenAI.
+- Backend: Django 5.x, Django REST Framework, PostgreSQL, Gunicorn, Loguru, OpenAI.
 - Frontend: React 19, TypeScript, Vite 6, React Router 7, Tailwind CSS 3.4, Shadcn/Radix, ECharts, TanStack Table, Sonner.
 - Infrastructure: Docker Compose for local development; production serves the frontend through Django/Nginx-style container flow.
 

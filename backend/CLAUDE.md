@@ -4,7 +4,7 @@ This file documents the current Richtato backend patterns for agents and develop
 
 ## Overview
 
-The backend is a Django 5.x and Django REST Framework API for personal finance data, budgets, dashboards, household sharing, Plaid sync, and AI categorization.
+The backend is a Django 5.x and Django REST Framework API for personal finance data, budgets, dashboards, household sharing, Chrome-extension-driven bank automation, and AI categorization.
 
 ## Stack
 
@@ -13,7 +13,7 @@ The backend is a Django 5.x and Django REST Framework API for personal finance d
 - SQLite test settings for the default pytest path.
 - Gunicorn for production serving.
 - Loguru for logging.
-- Plaid for bank sync.
+- Chrome-extension-driven bank automation for structured bank sync.
 - OpenAI for AI categorization.
 
 ## Commands
@@ -57,14 +57,13 @@ backend/
 │   ├── budget/
 │   ├── budget_dashboard/
 │   ├── asset_dashboard/
-│   ├── sync/
+│   ├── bank_automation/
 │   ├── categorization/
 │   ├── household/
 │   ├── richtato_user/
 │   └── core/
 ├── artificial_intelligence/
 ├── integrations/
-│   └── plaid/
 ├── statement_imports/
 ├── config/
 └── richtato/
@@ -106,9 +105,9 @@ Service errors commonly use `ValueError` for domain issues. Views should catch e
 - `transaction.CategoryKeyword`: keyword rules for categorization.
 - `budget.Budget`: budget period and household flag.
 - `budget.BudgetCategory`: per-category budget amounts.
-- `sync.SyncConnection`: external source connection, currently Plaid/manual.
-- `sync.SyncJob`: sync run tracking.
-- `sync.UserSyncStatus`: frontend polling state.
+- `bank_automation.BankConnection`: per-bank-login automation connection driven by the Chrome extension.
+- `bank_automation.BankAccountLink`: maps a captured bank account to a Richtato `FinancialAccount`.
+- `bank_automation.BankAutomationRun`: run history for a bank connection.
 - `household.Household`: household membership for shared finance views.
 
 ## URLs
@@ -124,7 +123,7 @@ Important roots:
 - `/api/v1/budgets/`
 - `/api/v1/asset-dashboard/`
 - `/api/v1/budget-dashboard/`
-- `/api/v1/sync/`
+- `/api/v1/bank-automation/`
 - `/api/v1/household/`
 
 API docs are exposed at `/api/docs/` and Redoc at `/redoc/` when the backend is running.
@@ -165,12 +164,9 @@ CSV/Excel statement import is the primary no-aggregator ingestion path for new b
 - Statement imports should preview before commit and classify rows as new, duplicate, invalid, or possible changed.
 - Deduplication is row-level so current/open statements can overlap later closed statements.
 - Current/open statement exports are provisional; closed statements are authoritative and should flag changed provisional rows for review.
-- `integrations/base.py` defines normalized banking client behavior.
-- `integrations/plaid/client.py` implements Plaid client behavior.
-- `apps/sync/services/` contains legacy sync orchestration and Plaid-specific logic.
-- Plaid code may remain for existing data, but avoid making paid aggregators the default product path for new import features.
+- `apps/bank_automation/` exposes `/api/v1/bank-automation/` for the Chrome-extension-driven download flow. Connections store encrypted session tokens; the runner downloads statements on a per-connection cadence.
 
-Do not document or add Teller code paths unless the task is explicitly to implement Teller.
+Do not document or add Plaid, Teller, or other third-party aggregator code paths unless the task is explicitly to implement them.
 
 ## AI Categorization
 

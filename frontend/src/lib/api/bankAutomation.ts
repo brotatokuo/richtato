@@ -1,9 +1,9 @@
 /**
  * Bank Automation API service.
  *
- * Talks to the new `/api/v1/bank-automation/` endpoints introduced for the
- * Chrome-extension-driven download flow. Coexists with the existing
- * `bankConnections.ts` service which targets the Plaid-based path.
+ * Talks to the `/api/v1/bank-automation/` endpoints that power the
+ * Chrome-extension-driven statement download flow. This is the only structured
+ * bank sync surface in the app.
  */
 import { BaseApiClient } from './base-client';
 import { csrfService } from './csrf';

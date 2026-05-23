@@ -11,19 +11,16 @@ import {
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useBankAutomationStatus } from '@/hooks/useBankAutomationStatus';
-import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { cn } from '@/lib/utils';
 import {
   AlertTriangle,
   BarChart3,
-  Building2,
   Calculator,
   ChevronLeft,
   ChevronRight,
   CloudUpload,
   Heart,
   Landmark,
-  Loader2,
   LogOut,
   Settings as SettingsIcon,
   SlidersHorizontal,
@@ -52,7 +49,6 @@ export function Sidebar({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { status: syncStatus } = useSyncStatus();
   const { isInHousehold } = useHousehold();
   const bankAutomationStatus = useBankAutomationStatus();
 
@@ -63,7 +59,6 @@ export function Sidebar({
       { name: 'Accounts', href: '/accounts', icon: Landmark },
       { name: 'Upload', href: '/upload', icon: CloudUpload },
       { name: 'Budget', href: '/budget', icon: Wallet },
-      { name: 'Bank Sync', href: '/setup?tab=accounts', icon: Building2 },
     ];
     if (isInHousehold) {
       items.push({ name: 'Household', href: '/household', icon: Heart });
@@ -154,16 +149,8 @@ export function Sidebar({
           const isActive = location.pathname === itemPath;
           const Icon = item.icon;
 
-          // Show sync indicator and badge on Data page
-          const isDataPage = itemPath === '/transactions';
-          const isSyncing = isDataPage && syncStatus?.is_syncing;
-          const newTransactionCount =
-            isDataPage && syncStatus?.new_transaction_count
-              ? syncStatus.new_transaction_count
-              : 0;
-
-          const isBankSyncItem = item.name === 'Bank Sync';
-          const reauthCount = isBankSyncItem
+          const isAccountsItem = itemPath === '/accounts';
+          const reauthCount = isAccountsItem
             ? bankAutomationStatus.reauthCount + bankAutomationStatus.errorCount
             : 0;
 
@@ -179,27 +166,15 @@ export function Sidebar({
                 isCollapsed && 'justify-center px-2'
               )}
             >
-              {isSyncing ? (
-                <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
-              ) : (
-                <Icon
-                  className={cn(
-                    'h-5 w-5 shrink-0 transition-transform group-hover:scale-110',
-                    isActive && 'text-white'
-                  )}
-                />
-              )}
+              <Icon
+                className={cn(
+                  'h-5 w-5 shrink-0 transition-transform group-hover:scale-110',
+                  isActive && 'text-white'
+                )}
+              />
               {!isCollapsed && (
                 <span className="flex-1 flex items-center justify-between">
                   <span>{item.name}</span>
-                  {newTransactionCount > 0 && (
-                    <Badge
-                      variant="default"
-                      className="ml-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs px-1.5 py-0.5"
-                    >
-                      {newTransactionCount > 99 ? '99+' : newTransactionCount}
-                    </Badge>
-                  )}
                   {reauthCount > 0 && (
                     <Badge
                       variant="default"
@@ -210,9 +185,6 @@ export function Sidebar({
                     </Badge>
                   )}
                 </span>
-              )}
-              {isCollapsed && newTransactionCount > 0 && (
-                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-emerald-500" />
               )}
               {isCollapsed && reauthCount > 0 && (
                 <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-amber-500" />

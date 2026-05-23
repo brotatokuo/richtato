@@ -8,8 +8,8 @@ service account already used by :mod:`scripts.automation.importer`.
 Why an HTTP boundary?
 - Lets the automation container ship as a slim Playwright image without
   Django, the postgres driver, or model imports.
-- Mirrors how Plaid-style integrations are usually built: the headless
-  worker only sees decrypted secrets at the moment it needs them.
+- Keeps the runner stateless: it only sees decrypted secrets at the moment
+  it needs them, fetched through an authenticated internal endpoint.
 """
 
 from __future__ import annotations

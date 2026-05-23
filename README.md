@@ -7,7 +7,7 @@ The product goal is Monarch Money quality: clean financial dashboards, fast tran
 ## Features
 
 - Transaction tracking with categories, filters, bulk actions, and AI recategorization.
-- Plaid bank sync with sync status polling and account connection management.
+- CSV/Excel statement imports and a Chrome-extension-driven bank automation flow for hands-off downloads.
 - Net worth and cash flow dashboard with ECharts visualizations.
 - Budget tracking by month, category, and household scope.
 - Household sharing for shared accounts and household budgets.
@@ -23,7 +23,7 @@ The product goal is Monarch Money quality: clean financial dashboards, fast tran
 | Frontend | React 19, TypeScript, Vite 6, React Router 7, Tailwind CSS 3.4 |
 | UI | Shadcn/Radix primitives, Lucide icons, Sonner toasts |
 | Data viz | Apache ECharts, TanStack Table |
-| Integrations | Plaid for bank sync, OpenAI for categorization |
+| Integrations | Chrome-extension bank automation for sync, OpenAI for categorization |
 | Infrastructure | Docker Compose locally, single-container production build |
 
 ## Project Structure
@@ -34,7 +34,7 @@ richtato/
 ├── API_REFERENCE.md          # HTTP API reference
 ├── backend/
 │   ├── apps/                 # Django apps
-│   ├── integrations/         # External clients, currently Plaid
+│   ├── integrations/         # External integrations and helpers
 │   ├── artificial_intelligence/
 │   ├── config/
 │   └── richtato/             # Django settings and root URLs

@@ -2,26 +2,25 @@ import { AccountCreateModal } from '@/components/accounts/AccountCreateModal';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { syncService } from '@/lib/api/sync';
+import type { AccountSyncMap } from '@/hooks/useBankAutomationConnections';
 import { Account, transactionsApiService } from '@/lib/api/transactions';
 import { formatCurrency } from '@/lib/format';
 import { getEntityLogo } from '@/lib/imageMapping';
 import { cn } from '@/lib/utils';
 import {
-  AlertCircle,
+  AlertTriangle,
   Building2,
   ChevronDown,
   ChevronRight,
   CreditCard,
   Landmark,
-  Loader2,
+  PauseCircle,
   Plus,
-  RefreshCw,
   Wallet,
   Wifi,
   WifiOff,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 export interface AccountWithBalance extends Account {
@@ -41,18 +40,7 @@ interface AccountsSidebarProps {
   selectedAccountId: number | null;
   onAccountSelect: (account: AccountWithBalance) => void;
   onAccountsChange?: () => void;
-}
-
-function timeAgo(isoString: string | null | undefined): string {
-  if (!isoString) return '';
-  const diff = Date.now() - new Date(isoString).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  syncMap: AccountSyncMap;
 }
 
 function AccountIcon({ type }: { type: string }) {
@@ -66,15 +54,61 @@ function AccountIcon({ type }: { type: string }) {
 
 const GROUP_ORDER = ['checking', 'savings', 'credit_card'];
 
+function SyncIndicator({
+  syncMap,
+  accountId,
+}: {
+  syncMap: AccountSyncMap;
+  accountId: number;
+}) {
+  const summary = syncMap.get(accountId);
+  if (!summary) return null;
+  const { connection, link } = summary;
+  if (connection.status === 'error') {
+    return (
+      <span
+        title={`Sync error: ${connection.last_failure_reason || 'unknown'}`}
+      >
+        <WifiOff className="h-3 w-3 text-red-500" />
+      </span>
+    );
+  }
+  if (connection.status === 'reauth_required') {
+    return (
+      <span title="Bank session needs refresh">
+        <AlertTriangle className="h-3 w-3 text-amber-500" />
+      </span>
+    );
+  }
+  if (connection.status === 'disabled' || !link.enabled) {
+    return (
+      <span
+        title={
+          connection.status === 'disabled'
+            ? 'Connection paused'
+            : 'Auto-sync off for this account'
+        }
+      >
+        <PauseCircle className="h-3 w-3 text-muted-foreground" />
+      </span>
+    );
+  }
+  return (
+    <span title="Auto-sync on">
+      <Wifi className="h-3 w-3 text-emerald-500" />
+    </span>
+  );
+}
+
 export function AccountsSidebar({
   selectedAccountId,
   onAccountSelect,
   onAccountsChange,
+  syncMap,
 }: AccountsSidebarProps) {
   const { preferences } = usePreferences();
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
   const [loading, setLoading] = useState(true);
-  const [syncingAll, setSyncingAll] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
     new Set()
   );
@@ -86,7 +120,6 @@ export function AccountsSidebar({
     Array<{ value: string; label: string }>
   >([]);
   const [creating, setCreating] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadAccounts = useCallback(async () => {
     try {
@@ -120,12 +153,6 @@ export function AccountsSidebar({
       })
       .catch(() => {});
   }, [loadAccounts]);
-
-  useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
 
   const groups = useMemo<AccountGroup[]>(() => {
     const map: Record<string, AccountWithBalance[]> = {};
@@ -175,35 +202,6 @@ export function AccountsSidebar({
     });
   };
 
-  const handleSyncAll = async () => {
-    setSyncingAll(true);
-    try {
-      const result = await syncService.triggerSyncAll();
-      if (result.status === 'sync_started') {
-        toast.info('Sync started', {
-          description: 'Syncing all connected accounts...',
-        });
-        pollRef.current = setInterval(async () => {
-          await loadAccounts();
-        }, 3000);
-        setTimeout(() => {
-          if (pollRef.current) clearInterval(pollRef.current);
-          setSyncingAll(false);
-          loadAccounts();
-          onAccountsChange?.();
-        }, 15000);
-      } else if (result.status === 'no_connections') {
-        toast.warning('No connected accounts');
-        setSyncingAll(false);
-      } else {
-        setSyncingAll(false);
-      }
-    } catch {
-      toast.error('Sync failed');
-      setSyncingAll(false);
-    }
-  };
-
   const handleCreate = async (form: {
     name: string;
     type: string;
@@ -235,8 +233,6 @@ export function AccountsSidebar({
       </div>
     );
   }
-
-  const hasConnectedAccounts = accounts.some(a => a.has_connection);
 
   return (
     <div className="flex flex-col h-full">
@@ -281,20 +277,6 @@ export function AccountsSidebar({
         >
           <Plus className="h-3.5 w-3.5 mr-1" />
           Add Account
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="flex-1 h-8 text-xs"
-          onClick={handleSyncAll}
-          disabled={syncingAll || !hasConnectedAccounts}
-        >
-          {syncingAll ? (
-            <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-          ) : (
-            <RefreshCw className="h-3.5 w-3.5 mr-1" />
-          )}
-          Sync All
         </Button>
       </div>
 
@@ -352,8 +334,6 @@ export function AccountsSidebar({
                     {group.accounts.map(account => {
                       const isSelected = selectedAccountId === account.id;
                       const entityLogo = getEntityLogo(account.entity || '');
-                      const hasError = account.connection_status === 'error';
-                      const isActive = account.connection_status === 'active';
 
                       return (
                         <button
@@ -408,19 +388,11 @@ export function AccountsSidebar({
                               >
                                 {account.name}
                               </span>
-                              {hasError && (
-                                <AlertCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
-                              )}
                             </div>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               {account.account_number_last4 && (
                                 <span className="text-xs text-muted-foreground/70 font-mono">
                                   ····{account.account_number_last4}
-                                </span>
-                              )}
-                              {account.has_connection && account.last_sync && (
-                                <span className="text-xs text-muted-foreground/60">
-                                  {timeAgo(account.last_sync)}
                                 </span>
                               )}
                             </div>
@@ -447,23 +419,10 @@ export function AccountsSidebar({
                                 0
                               )}
                             </span>
-                            {account.has_connection && (
-                              <span
-                                title={
-                                  hasError
-                                    ? 'Sync error'
-                                    : isActive
-                                      ? 'Connected'
-                                      : 'Disconnected'
-                                }
-                              >
-                                {hasError ? (
-                                  <WifiOff className="h-3 w-3 text-red-500" />
-                                ) : (
-                                  <Wifi className="h-3 w-3 text-green-500" />
-                                )}
-                              </span>
-                            )}
+                            <SyncIndicator
+                              syncMap={syncMap}
+                              accountId={account.id}
+                            />
                           </div>
                         </button>
                       );

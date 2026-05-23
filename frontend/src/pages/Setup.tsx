@@ -1,35 +1,38 @@
 import { HouseholdSettings } from '@/components/household/HouseholdSettings';
-import { BankSyncSection } from '@/components/settings/BankSyncSection';
 import { BudgetsSection } from '@/components/settings/BudgetsSection';
 import { CategoriesSection } from '@/components/settings/CategoriesSection';
-import { SyncHistorySection } from '@/components/settings/SyncHistorySection';
-import { UnifiedAccountsSection } from '@/components/settings/UnifiedAccountsSection';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Landmark, PiggyBank, Tag, Users } from 'lucide-react';
+import { PiggyBank, Tag, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 
-type TabValue = 'accounts' | 'categories' | 'budgets' | 'household';
+type TabValue = 'categories' | 'budgets' | 'household';
 
-const VALID_TABS: TabValue[] = [
-  'accounts',
-  'categories',
-  'budgets',
-  'household',
-];
+const VALID_TABS: TabValue[] = ['categories', 'budgets', 'household'];
 
 export function Setup() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const tabParam = searchParams.get('tab') as TabValue | null;
+  const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState<TabValue>(
-    tabParam && VALID_TABS.includes(tabParam) ? tabParam : 'accounts'
+    tabParam && VALID_TABS.includes(tabParam as TabValue)
+      ? (tabParam as TabValue)
+      : 'categories'
   );
 
   useEffect(() => {
-    if (tabParam && VALID_TABS.includes(tabParam) && tabParam !== activeTab) {
-      setActiveTab(tabParam);
+    if (
+      tabParam &&
+      VALID_TABS.includes(tabParam as TabValue) &&
+      tabParam !== activeTab
+    ) {
+      setActiveTab(tabParam as TabValue);
     }
   }, [tabParam, activeTab]);
+
+  // Legacy /setup?tab=accounts now lives at /accounts.
+  if (tabParam === 'accounts') {
+    return <Navigate to="/accounts" replace />;
+  }
 
   const handleTabChange = (value: string) => {
     const tab = value as TabValue;
@@ -43,11 +46,7 @@ export function Setup() {
       onValueChange={handleTabChange}
       className="space-y-4"
     >
-      <TabsList className="grid w-full grid-cols-4 sm:w-auto sm:inline-grid">
-        <TabsTrigger value="accounts" className="flex items-center gap-2">
-          <Landmark className="h-4 w-4" />
-          <span>Accounts</span>
-        </TabsTrigger>
+      <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-grid">
         <TabsTrigger value="categories" className="flex items-center gap-2">
           <Tag className="h-4 w-4" />
           <span>Categories</span>
@@ -61,12 +60,6 @@ export function Setup() {
           <span>Household</span>
         </TabsTrigger>
       </TabsList>
-
-      <TabsContent value="accounts" className="space-y-6">
-        <UnifiedAccountsSection />
-        <BankSyncSection />
-        <SyncHistorySection />
-      </TabsContent>
 
       <TabsContent value="categories">
         <CategoriesSection />

@@ -55,7 +55,7 @@ frontend/src/
 │   ├── settings/              # Preferences sections
 │   └── household/             # Household controls such as ScopeToggle
 ├── contexts/                  # Auth, Household, Preferences, Theme, HeaderSlot
-├── hooks/                     # useAuth, useSyncStatus, usePlaidLink, usePolling
+├── hooks/                     # useAuth, useBankAutomationStatus, useBankAutomationConnections, usePolling
 ├── lib/
 │   ├── api/                   # API service singletons
 │   ├── echarts.ts             # Tree-shaken ECharts exports

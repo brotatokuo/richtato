@@ -3,7 +3,6 @@ import {
   useHeaderSlot,
 } from '@/contexts/HeaderSlotContext';
 import { useBankAutomationStatus } from '@/hooks/useBankAutomationStatus';
-import { useSyncStatus } from '@/hooks/useSyncStatus';
 import {
   BarChart3,
   Calculator,
@@ -55,35 +54,13 @@ function LayoutInner() {
   const bankAutomationStatus = useBankAutomationStatus();
   const reauthToastShown = useRef(false);
 
-  // Global sync status monitoring for toast notifications
-  useSyncStatus({
-    onSyncComplete: newCount => {
-      if (newCount > 0) {
-        toast.success('Sync complete', {
-          description: `${newCount} new transaction${newCount === 1 ? '' : 's'} synced`,
-        });
-      } else {
-        toast.success('Sync complete', {
-          description: 'All accounts are up to date',
-        });
-      }
-    },
-    onSyncError: error => {
-      toast.error('Sync failed', {
-        description: error || 'An error occurred during sync',
-      });
-    },
-  });
-
-  const onSetupAccountsTab =
-    location.pathname === '/setup' &&
-    new URLSearchParams(location.search).get('tab') === 'accounts';
+  const onAccountsPage = location.pathname === '/accounts';
 
   useEffect(() => {
     if (
       !reauthToastShown.current &&
       bankAutomationStatus.reauthCount > 0 &&
-      !onSetupAccountsTab
+      !onAccountsPage
     ) {
       reauthToastShown.current = true;
       const count = bankAutomationStatus.reauthCount;
@@ -92,11 +69,11 @@ function LayoutInner() {
         duration: 10_000,
         action: {
           label: 'Open',
-          onClick: () => navigate('/setup?tab=accounts'),
+          onClick: () => navigate('/accounts'),
         },
       });
     }
-  }, [bankAutomationStatus.reauthCount, onSetupAccountsTab, navigate]);
+  }, [bankAutomationStatus.reauthCount, onAccountsPage, navigate]);
 
   // Get the current page config based on the route (supports nested paths)
   const matchedKey = Object.keys(routeConfig).find(

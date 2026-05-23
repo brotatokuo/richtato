@@ -3,7 +3,6 @@ import { RecategorizeProgressModal } from '@/components/transactions/Recategoriz
 import { TransactionTable } from '@/components/transactions/TransactionTable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useSyncStatus } from '@/hooks/useSyncStatus';
 import {
   Account,
   Category,
@@ -30,7 +29,6 @@ export function DataTable() {
   const [recategorizeTaskId, setRecategorizeTaskId] = useState<number | null>(
     null
   );
-  const { clearNewCount } = useSyncStatus();
 
   const loadInitialData = useCallback(async () => {
     try {
@@ -90,8 +88,7 @@ export function DataTable() {
 
   useEffect(() => {
     loadInitialData();
-    clearNewCount();
-  }, [loadInitialData, clearNewCount]);
+  }, [loadInitialData]);
 
   const handleRecategorize = async (keepExisting: boolean) => {
     setShowRecategorizeDialog(false);

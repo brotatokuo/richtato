@@ -6,15 +6,27 @@ import {
 import { AccountBreakdownChart } from '@/components/asset_dashboard/AccountBreakdownChart';
 import { MetricCard } from '@/components/asset_dashboard/MetricCard';
 import { NetWorthTrendChart } from '@/components/asset_dashboard/NetWorthTrendChart';
+import { ConnectBankDialog } from '@/components/bank-automation/ConnectBankDialog';
+import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { usePreferences } from '@/contexts/PreferencesContext';
+import { useBankAutomationConnections } from '@/hooks/useBankAutomationConnections';
 import {
   AssetDashboardData,
   assetDashboardApiService,
 } from '@/lib/api/asset-dashboard';
+import { bankAutomationApi } from '@/lib/api/bankAutomation';
 import { formatCurrency, formatPeriodLabel } from '@/lib/format';
-import { PiggyBank, TrendingUp, Wallet } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import {
+  Link2,
+  Loader2,
+  PiggyBank,
+  RefreshCw,
+  TrendingUp,
+  Wallet,
+} from 'lucide-react';
+import { useMemo, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 export function Accounts() {
   const { preferences } = usePreferences();
@@ -26,14 +38,58 @@ export function Accounts() {
   );
   const [metricsLoading, setMetricsLoading] = useState(true);
   const [metricsError, setMetricsError] = useState<string | null>(null);
+  const [showConnect, setShowConnect] = useState(false);
+  const [syncingAll, setSyncingAll] = useState(false);
+
+  const {
+    connections,
+    byAccount: syncMap,
+    refresh: refreshConnections,
+  } = useBankAutomationConnections();
+
+  const knownConnectionIds = useMemo(
+    () => connections.map(c => c.id),
+    [connections]
+  );
+
+  const syncableConnections = useMemo(
+    () =>
+      connections.filter(c => c.status === 'active' || c.status === 'error'),
+    [connections]
+  );
 
   const handleAccountsChange = () => {
     setReloadKey(k => k + 1);
-    // Clear selection if the selected account may have been deleted
   };
 
   const handleAccountUpdated = () => {
     setReloadKey(k => k + 1);
+  };
+
+  const handleSyncChange = async () => {
+    await refreshConnections();
+  };
+
+  const handleSyncAll = async () => {
+    if (syncableConnections.length === 0) return;
+    setSyncingAll(true);
+    try {
+      await Promise.allSettled(
+        syncableConnections.map(c => bankAutomationApi.runConnection(c.id))
+      );
+      toast.success('Sync queued for all connections', {
+        description: `Queued ${syncableConnections.length} connection${
+          syncableConnections.length === 1 ? '' : 's'
+        }. We'll run them on the next poll.`,
+      });
+      await refreshConnections();
+    } catch (err) {
+      toast.error('Failed to queue sync', {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    } finally {
+      setSyncingAll(false);
+    }
   };
 
   useEffect(() => {
@@ -169,6 +225,40 @@ export function Accounts() {
         </>
       ) : null}
 
+      {/* Sync action header */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/40 bg-card/60 px-3 py-2">
+        <div className="text-sm text-muted-foreground">
+          {connections.length === 0
+            ? 'No bank logins connected yet.'
+            : `${connections.length} bank login${connections.length === 1 ? '' : 's'} connected • ${syncMap.size} account${syncMap.size === 1 ? '' : 's'} auto-synced`}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowConnect(true)}
+            className="h-8 gap-1.5 text-xs"
+          >
+            <Link2 className="h-3.5 w-3.5" />
+            Connect bank
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleSyncAll}
+            disabled={syncingAll || syncableConnections.length === 0}
+            className="h-8 gap-1.5 text-xs"
+          >
+            {syncingAll ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+            Sync all
+          </Button>
+        </div>
+      </div>
+
       <div className="flex min-h-[36rem] h-[calc(100vh-32rem)] overflow-hidden rounded-lg border border-border/40 bg-card">
         {/* Left sidebar */}
         <div className="w-72 flex-shrink-0 border-r border-border/60 bg-card/80 overflow-hidden flex flex-col">
@@ -177,6 +267,7 @@ export function Accounts() {
             selectedAccountId={selectedAccount?.id ?? null}
             onAccountSelect={setSelectedAccount}
             onAccountsChange={handleAccountsChange}
+            syncMap={syncMap}
           />
         </div>
 
@@ -184,10 +275,24 @@ export function Accounts() {
         <div className="flex-1 min-w-0 overflow-hidden bg-background">
           <AccountDetailPanel
             account={selectedAccount}
+            sync={
+              selectedAccount ? (syncMap.get(selectedAccount.id) ?? null) : null
+            }
+            knownConnectionIds={knownConnectionIds}
             onAccountUpdated={handleAccountUpdated}
+            onSyncChange={handleSyncChange}
           />
         </div>
       </div>
+
+      <ConnectBankDialog
+        open={showConnect}
+        onOpenChange={setShowConnect}
+        initialConnectionIds={knownConnectionIds}
+        onConnected={async () => {
+          await refreshConnections();
+        }}
+      />
     </div>
   );
 }

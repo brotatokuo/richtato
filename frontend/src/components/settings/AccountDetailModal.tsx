@@ -15,15 +15,7 @@ import {
   AVAILABLE_CARD_IMAGES,
   getAutoDetectedImageKey,
 } from '@/lib/imageMapping';
-import {
-  Check,
-  Cloud,
-  Lock,
-  RefreshCw,
-  Sparkles,
-  Unlink,
-  Users,
-} from 'lucide-react';
+import { Check, Sparkles, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 interface AccountDetailModalProps {
@@ -38,8 +30,6 @@ interface AccountDetailModalProps {
     shared_with_household?: boolean;
   }) => Promise<void>;
   onDelete: () => void;
-  onSync: () => void;
-  onDisconnect: () => void;
   accountTypeOptions: Array<{ value: string; label: string }>;
   entityOptions: Array<{ value: string; label: string }>;
   loading: boolean;
@@ -51,8 +41,6 @@ export function AccountDetailModal({
   account,
   onSubmit,
   onDelete,
-  onSync,
-  onDisconnect,
   accountTypeOptions,
   entityOptions,
   loading,
@@ -68,7 +56,6 @@ export function AccountDetailModal({
 
   // Find the matching entity option value for this account
   const findEntityValue = (account: Account): string => {
-    // First try to match by entity slug
     if (account.entity) {
       const matchBySlug = entityOptions.find(
         e =>
@@ -78,7 +65,6 @@ export function AccountDetailModal({
       if (matchBySlug) return matchBySlug.value;
     }
 
-    // Try to match by institution name
     if (account.institution_name) {
       const matchByName = entityOptions.find(
         e => e.label.toLowerCase() === account.institution_name?.toLowerCase()
@@ -86,7 +72,6 @@ export function AccountDetailModal({
       if (matchByName) return matchByName.value;
     }
 
-    // Try to match by entity_display
     if (account.entity_display) {
       const matchByDisplay = entityOptions.find(
         e => e.label === account.entity_display
@@ -111,7 +96,6 @@ export function AccountDetailModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account, entityOptions]);
 
-  // Compute auto-detected image key based on current name (for credit cards)
   const autoDetectedImageKey = useMemo(
     () => getAutoDetectedImageKey(form.name),
     [form.name]
@@ -140,44 +124,6 @@ export function AccountDetailModal({
     setForm(prev => ({ ...prev, imageKey: key }));
   };
 
-  const formatLastSync = (lastSync: string | null | undefined) => {
-    if (!lastSync) return 'Never';
-    try {
-      const date = new Date(lastSync);
-      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-    } catch {
-      return 'Unknown';
-    }
-  };
-
-  const statusColors: Record<string, string> = {
-    active: 'text-green-600',
-    error: 'text-red-600',
-    disconnected: 'text-gray-500',
-  };
-
-  const isConnected = account?.has_connection;
-
-  // Format provider name for display (e.g., "plaid" -> "Plaid")
-  const getProviderDisplayName = () => {
-    const source = account?.sync_source;
-    if (!source) return 'Bank';
-    return source.charAt(0).toUpperCase() + source.slice(1);
-  };
-
-  // Get display values for locked fields
-  const getTypeDisplayValue = () => {
-    const option = accountTypeOptions.find(t => t.value === form.type);
-    return option?.label || form.type;
-  };
-
-  const getEntityDisplayValue = () => {
-    if (account?.institution_name) return account.institution_name;
-    if (account?.entity_display) return account.entity_display;
-    const option = entityOptions.find(e => e.value === form.entity);
-    return option?.label || form.entity || 'Unknown';
-  };
-
   return (
     <Modal
       isOpen={isOpen && !!account}
@@ -186,54 +132,7 @@ export function AccountDetailModal({
     >
       {account && (
         <div className="space-y-6">
-          {/* Sync Status Section */}
-          {isConnected && (
-            <div className="p-4 bg-muted/50 rounded-lg space-y-3">
-              <div className="flex items-center gap-2">
-                <Cloud
-                  className={`h-5 w-5 ${statusColors[account.connection_status || 'active']}`}
-                />
-                <span className="font-medium">
-                  Connected via {getProviderDisplayName()}
-                </span>
-                <span
-                  className={`text-sm ${statusColors[account.connection_status || 'active']}`}
-                >
-                  ({account.connection_status || 'active'})
-                </span>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Last synced: {formatLastSync(account.last_sync)}
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onSync}
-                  disabled={
-                    loading || account.connection_status === 'disconnected'
-                  }
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Sync Now
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onDisconnect}
-                  disabled={loading}
-                  className="text-orange-600 hover:text-orange-700"
-                >
-                  <Unlink className="h-4 w-4 mr-2" />
-                  Disconnect
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Account Form Fields */}
           <div className="space-y-4">
-            {/* Name - Always Editable */}
             <div>
               <Label htmlFor="detail-acc-name">Name</Label>
               <Input
@@ -244,77 +143,49 @@ export function AccountDetailModal({
               />
             </div>
 
-            {/* Type - Locked for connected accounts */}
             <div>
               <Label htmlFor="detail-acc-type">Type</Label>
-              {isConnected ? (
-                <div
-                  className="flex items-center justify-between h-10 w-full rounded-md border border-input bg-muted/50 px-3 py-2 text-sm cursor-not-allowed"
-                  title={`This field cannot be edited because the account is synced via ${getProviderDisplayName()}`}
-                >
-                  <span className="text-muted-foreground">
-                    {getTypeDisplayValue()}
-                  </span>
-                  <Lock className="h-4 w-4 text-muted-foreground" />
-                </div>
-              ) : (
-                <Select
-                  value={form.type}
-                  onValueChange={v => handleFieldChange('type', v)}
-                >
-                  <SelectTrigger id="detail-acc-type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {accountTypeOptions.map(t => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <Select
+                value={form.type}
+                onValueChange={v => handleFieldChange('type', v)}
+              >
+                <SelectTrigger id="detail-acc-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {accountTypeOptions.map(t => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Entity - Locked for connected accounts */}
             <div>
               <Label htmlFor="detail-acc-entity">Bank/Entity</Label>
-              {isConnected ? (
-                <div
-                  className="flex items-center justify-between h-10 w-full rounded-md border border-input bg-muted/50 px-3 py-2 text-sm cursor-not-allowed"
-                  title={`This field cannot be edited because the account is synced via ${getProviderDisplayName()}`}
-                >
-                  <span className="text-muted-foreground">
-                    {getEntityDisplayValue()}
-                  </span>
-                  <Lock className="h-4 w-4 text-muted-foreground" />
-                </div>
-              ) : (
-                <Select
-                  value={form.entity}
-                  onValueChange={v => handleFieldChange('entity', v)}
-                >
-                  <SelectTrigger id="detail-acc-entity">
-                    <SelectValue placeholder="Select a bank" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {entityOptions.map(e => (
-                      <SelectItem key={e.value} value={String(e.value)}>
-                        {e.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <Select
+                value={form.entity}
+                onValueChange={v => handleFieldChange('entity', v)}
+              >
+                <SelectTrigger id="detail-acc-entity">
+                  <SelectValue placeholder="Select a bank" />
+                </SelectTrigger>
+                <SelectContent>
+                  {entityOptions.map(e => (
+                    <SelectItem key={e.value} value={String(e.value)}>
+                      {e.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          {/* Card Image Picker (for credit cards only) */}
           {isCreditCard && (
             <div>
               <Label className="mb-2 block">Card Background</Label>
               <div className="grid grid-cols-4 gap-2">
-                {/* Auto-detect option */}
                 <button
                   type="button"
                   onClick={() => handleImageSelect(null)}
@@ -336,7 +207,6 @@ export function AccountDetailModal({
                   )}
                 </button>
 
-                {/* Card image options */}
                 {AVAILABLE_CARD_IMAGES.map(img => {
                   const isSelected = form.imageKey === img.key;
                   const isAutoDetected =
@@ -389,7 +259,6 @@ export function AccountDetailModal({
             </div>
           )}
 
-          {/* Account Info */}
           {account.account_number_last4 && (
             <div className="text-sm text-muted-foreground">
               Account ending in:{' '}
@@ -399,7 +268,6 @@ export function AccountDetailModal({
             </div>
           )}
 
-          {/* Household Sharing Toggle */}
           {isInHousehold && (
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="flex items-center gap-2">
@@ -434,7 +302,6 @@ export function AccountDetailModal({
             </div>
           )}
 
-          {/* Actions */}
           <div className="flex justify-between gap-2 pt-4 border-t">
             <Button
               variant="destructive"
