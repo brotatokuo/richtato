@@ -7,7 +7,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Modal } from '@/components/ui/Modal';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import type { AccountSyncSummary } from '@/hooks/useBankAutomationConnections';
+import type { AccountSyncSummary } from '@/hooks/useBankSyncLogins';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { getEntityLogo } from '@/lib/imageMapping';
@@ -44,7 +44,6 @@ interface BalancePoint {
 interface AccountDetailPanelProps {
   account: AccountWithBalance | null;
   sync: AccountSyncSummary | null;
-  knownConnectionIds: number[];
   onAccountUpdated: () => void;
   onSyncChange: () => void | Promise<void>;
 }
@@ -52,7 +51,6 @@ interface AccountDetailPanelProps {
 export function AccountDetailPanel({
   account,
   sync,
-  knownConnectionIds,
   onAccountUpdated,
   onSyncChange,
 }: AccountDetailPanelProps) {
@@ -387,8 +385,8 @@ export function AccountDetailPanel({
         <AccountSyncPanel
           accountId={account.id}
           accountName={account.name}
+          syncMode={account.sync_mode || 'manual'}
           sync={sync}
-          initialConnectionIds={knownConnectionIds}
           onChange={onSyncChange}
         />
       </div>

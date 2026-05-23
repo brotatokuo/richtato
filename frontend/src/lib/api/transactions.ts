@@ -65,6 +65,9 @@ export interface Account {
   shared_with_household?: boolean;
   // Sync source: 'manual' or 'csv'
   sync_source?: string;
+  // Sync mode controls how the account receives transactions: auto (bank-sync
+  // agent), upload (statement file upload), or manual (typed entries).
+  sync_mode?: 'auto' | 'upload' | 'manual';
 }
 
 export interface Category {

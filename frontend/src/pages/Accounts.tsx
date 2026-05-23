@@ -6,16 +6,16 @@ import {
 import { AccountBreakdownChart } from '@/components/asset_dashboard/AccountBreakdownChart';
 import { MetricCard } from '@/components/asset_dashboard/MetricCard';
 import { NetWorthTrendChart } from '@/components/asset_dashboard/NetWorthTrendChart';
-import { ConnectBankDialog } from '@/components/bank-automation/ConnectBankDialog';
+import { ConnectBankWizard } from '@/components/bank-sync/ConnectBankWizard';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { useBankAutomationConnections } from '@/hooks/useBankAutomationConnections';
+import { useBankSyncLogins } from '@/hooks/useBankSyncLogins';
 import {
   AssetDashboardData,
   assetDashboardApiService,
 } from '@/lib/api/asset-dashboard';
-import { bankAutomationApi } from '@/lib/api/bankAutomation';
+import { bankSyncApi } from '@/lib/api/bankSync';
 import { formatCurrency, formatPeriodLabel } from '@/lib/format';
 import {
   Link2,
@@ -42,20 +42,14 @@ export function Accounts() {
   const [syncingAll, setSyncingAll] = useState(false);
 
   const {
-    connections,
+    logins,
     byAccount: syncMap,
-    refresh: refreshConnections,
-  } = useBankAutomationConnections();
+    refresh: refreshLogins,
+  } = useBankSyncLogins();
 
-  const knownConnectionIds = useMemo(
-    () => connections.map(c => c.id),
-    [connections]
-  );
-
-  const syncableConnections = useMemo(
-    () =>
-      connections.filter(c => c.status === 'active' || c.status === 'error'),
-    [connections]
+  const syncableLogins = useMemo(
+    () => logins.filter(l => l.status === 'active'),
+    [logins]
   );
 
   const handleAccountsChange = () => {
@@ -67,22 +61,22 @@ export function Accounts() {
   };
 
   const handleSyncChange = async () => {
-    await refreshConnections();
+    await refreshLogins();
   };
 
   const handleSyncAll = async () => {
-    if (syncableConnections.length === 0) return;
+    if (syncableLogins.length === 0) return;
     setSyncingAll(true);
     try {
       await Promise.allSettled(
-        syncableConnections.map(c => bankAutomationApi.runConnection(c.id))
+        syncableLogins.map(l => bankSyncApi.syncNow(l.id))
       );
-      toast.success('Sync queued for all connections', {
-        description: `Queued ${syncableConnections.length} connection${
-          syncableConnections.length === 1 ? '' : 's'
+      toast.success('Sync queued for all bank logins', {
+        description: `Queued ${syncableLogins.length} login${
+          syncableLogins.length === 1 ? '' : 's'
         }. We'll run them on the next poll.`,
       });
-      await refreshConnections();
+      await refreshLogins();
     } catch (err) {
       toast.error('Failed to queue sync', {
         description: err instanceof Error ? err.message : undefined,
@@ -228,9 +222,9 @@ export function Accounts() {
       {/* Sync action header */}
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/40 bg-card/60 px-3 py-2">
         <div className="text-sm text-muted-foreground">
-          {connections.length === 0
+          {logins.length === 0
             ? 'No bank logins connected yet.'
-            : `${connections.length} bank login${connections.length === 1 ? '' : 's'} connected • ${syncMap.size} account${syncMap.size === 1 ? '' : 's'} auto-synced`}
+            : `${logins.length} bank login${logins.length === 1 ? '' : 's'} connected • ${syncMap.size} account${syncMap.size === 1 ? '' : 's'} auto-synced`}
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -246,7 +240,7 @@ export function Accounts() {
             size="sm"
             variant="outline"
             onClick={handleSyncAll}
-            disabled={syncingAll || syncableConnections.length === 0}
+            disabled={syncingAll || syncableLogins.length === 0}
             className="h-8 gap-1.5 text-xs"
           >
             {syncingAll ? (
@@ -278,19 +272,17 @@ export function Accounts() {
             sync={
               selectedAccount ? (syncMap.get(selectedAccount.id) ?? null) : null
             }
-            knownConnectionIds={knownConnectionIds}
             onAccountUpdated={handleAccountUpdated}
             onSyncChange={handleSyncChange}
           />
         </div>
       </div>
 
-      <ConnectBankDialog
+      <ConnectBankWizard
         open={showConnect}
         onOpenChange={setShowConnect}
-        initialConnectionIds={knownConnectionIds}
         onConnected={async () => {
-          await refreshConnections();
+          await refreshLogins();
         }}
       />
     </div>

@@ -1,17 +1,21 @@
 /**
  * Inline per-account sync panel rendered in the Accounts detail view.
  *
- * Drives the bank-automation flow for the currently-selected account:
- * - status chip + per-account Sync Now and Enabled toggle
+ * Drives the cookie-only bank-sync flow for the currently-selected
+ * account:
+ * - sync mode badge (auto | upload | manual)
+ * - status chip + per-account sync toggle and Sync Now
  * - last/next run timestamps
- * - "Shared connection settings" subsection (cadence, hour, pause/resume,
- *   remove) that applies to every account under the same bank login
+ * - "Shared login settings" subsection (cadence, hour, pause/resume,
+ *   re-sign-in, remove) that applies to every account under the same
+ *   bank login
  *
- * When the account isn't bound to any bank-automation connection yet,
- * renders a CTA that opens the Chrome-extension connect dialog.
+ * When the account isn't bound to any bank-sync login yet, renders a CTA
+ * that opens the Connect-bank wizard. The wizard handles the headed
+ * Chromium sign-in flow; we never collect a password here.
  */
-import { ConnectBankDialog } from '@/components/bank-automation/ConnectBankDialog';
-import { RunHistory } from '@/components/bank-automation/RunHistory';
+import { ConnectBankWizard } from '@/components/bank-sync/ConnectBankWizard';
+import { RunHistory } from '@/components/bank-sync/RunHistory';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -23,12 +27,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import type { AccountSyncSummary } from '@/hooks/useBankSyncLogins';
 import {
-  bankAutomationApi,
-  type BankAutomationCadence,
-  type BankAutomationConnection,
-} from '@/lib/api/bankAutomation';
-import type { AccountSyncSummary } from '@/hooks/useBankAutomationConnections';
+  bankSyncApi,
+  type BankLogin,
+  type BankSyncCadence,
+} from '@/lib/api/bankSync';
 import { cn } from '@/lib/utils';
 import {
   AlertTriangle,
@@ -36,8 +40,9 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
-  Loader2,
+  Globe,
   Link2,
+  Loader2,
   PauseCircle,
   PlayCircle,
   RefreshCw,
@@ -50,16 +55,15 @@ import { toast } from 'sonner';
 interface AccountSyncPanelProps {
   accountId: number;
   accountName: string;
+  syncMode?: string;
   sync: AccountSyncSummary | null;
-  initialConnectionIds: number[];
   onChange: () => void | Promise<void>;
 }
 
-const CADENCES: { value: BankAutomationCadence; label: string }[] = [
+const CADENCES: { value: BankSyncCadence; label: string }[] = [
   { value: 'manual', label: 'Manual only' },
   { value: 'daily', label: 'Daily' },
   { value: 'weekly', label: 'Weekly' },
-  { value: 'biweekly', label: 'Every 2 weeks' },
   { value: 'monthly', label: 'Monthly' },
 ];
 
@@ -85,13 +89,15 @@ function StatusChip({
   status,
   statusDisplay,
 }: {
-  status: BankAutomationConnection['status'];
+  status: BankLogin['status'];
   statusDisplay: string;
 }) {
   const statusColor: Record<typeof status, string> = {
+    pending_login:
+      'bg-blue-500/10 text-blue-600 dark:text-blue-300 border-blue-500/30',
     active:
       'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30',
-    reauth_required:
+    needs_reauth:
       'bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30',
     disabled: 'bg-muted text-muted-foreground border-border',
     error: 'bg-destructive/10 text-destructive border-destructive/30',
@@ -99,11 +105,13 @@ function StatusChip({
   const Icon =
     status === 'active'
       ? CheckCircle2
-      : status === 'reauth_required'
+      : status === 'needs_reauth'
         ? AlertTriangle
         : status === 'disabled'
           ? PauseCircle
-          : WifiOff;
+          : status === 'pending_login'
+            ? Globe
+            : WifiOff;
 
   return (
     <Badge
@@ -119,11 +127,36 @@ function StatusChip({
   );
 }
 
+function SyncModeBadge({ syncMode }: { syncMode: string }) {
+  const map: Record<string, { label: string; className: string }> = {
+    auto: {
+      label: 'Auto sync',
+      className:
+        'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30',
+    },
+    upload: {
+      label: 'Upload statements',
+      className:
+        'bg-blue-500/10 text-blue-600 dark:text-blue-300 border-blue-500/30',
+    },
+    manual: {
+      label: 'Manual entry',
+      className: 'bg-muted text-muted-foreground border-border',
+    },
+  };
+  const entry = map[syncMode] || map.manual;
+  return (
+    <Badge variant="outline" className={cn('text-[10px]', entry.className)}>
+      {entry.label}
+    </Badge>
+  );
+}
+
 export function AccountSyncPanel({
   accountId,
   accountName,
+  syncMode = 'manual',
   sync,
-  initialConnectionIds,
   onChange,
 }: AccountSyncPanelProps) {
   const [showConnect, setShowConnect] = useState(false);
@@ -133,23 +166,20 @@ export function AccountSyncPanel({
   const [savingCadence, setSavingCadence] = useState(false);
   const [savingHour, setSavingHour] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [reLoggingIn, setReLoggingIn] = useState(false);
 
   useEffect(() => {
-    // Reset collapse + busy state when the selected account changes.
     setShowSettings(false);
     setRunning(false);
     setTogglingLink(false);
     setSavingCadence(false);
     setSavingHour(false);
     setRemoving(false);
+    setReLoggingIn(false);
   }, [accountId]);
 
   const siblingCount = useMemo(
-    () =>
-      sync
-        ? sync.connection.account_links.filter(l => l.financial_account != null)
-            .length
-        : 0,
+    () => (sync ? (sync.login.synced_accounts || []).length : 0),
     [sync]
   );
 
@@ -163,12 +193,15 @@ export function AccountSyncPanel({
                 <Link2 className="h-4 w-4" />
               </div>
               <div>
-                <p className="text-sm font-medium text-foreground">
-                  Not connected
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-foreground">
+                    Not auto-synced
+                  </p>
+                  <SyncModeBadge syncMode={syncMode} />
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Connect to a bank login through the Chrome extension to sync
-                  statements automatically.
+                  Sign in to a supported bank in a real browser window and the
+                  agent will keep statements up to date.
                 </p>
               </div>
             </div>
@@ -178,16 +211,15 @@ export function AccountSyncPanel({
               onClick={() => setShowConnect(true)}
               className="gap-2"
             >
-              <Link2 className="h-3.5 w-3.5" />
+              <Globe className="h-3.5 w-3.5" />
               Connect bank
             </Button>
           </div>
         </div>
 
-        <ConnectBankDialog
+        <ConnectBankWizard
           open={showConnect}
           onOpenChange={setShowConnect}
-          initialConnectionIds={initialConnectionIds}
           onConnected={async () => {
             await onChange();
           }}
@@ -196,15 +228,15 @@ export function AccountSyncPanel({
     );
   }
 
-  const { link, connection } = sync;
-  const status = connection.status;
+  const { syncedAccount, login } = sync;
+  const status = login.status;
   const isPaused = status === 'disabled';
-  const isReauthRequired = status === 'reauth_required';
+  const isReauthRequired = status === 'needs_reauth';
 
   const handleSyncNow = async () => {
     setRunning(true);
     try {
-      await bankAutomationApi.runConnection(connection.id);
+      await bankSyncApi.syncNow(login.id);
       toast.success('Sync queued', {
         description:
           "We'll run it on the next poll (typically under a minute).",
@@ -220,7 +252,7 @@ export function AccountSyncPanel({
   const handleToggleLink = async (enabled: boolean) => {
     setTogglingLink(true);
     try {
-      await bankAutomationApi.updateAccountLink(link.id, { enabled });
+      await bankSyncApi.updateSyncedAccount(syncedAccount.id, { enabled });
       toast.success(enabled ? 'Sync enabled' : 'Sync paused for this account');
       await onChange();
     } catch (err) {
@@ -233,8 +265,8 @@ export function AccountSyncPanel({
   const handleCadenceChange = async (value: string) => {
     setSavingCadence(true);
     try {
-      await bankAutomationApi.updateConnection(connection.id, {
-        cadence: value as BankAutomationCadence,
+      await bankSyncApi.updateLogin(login.id, {
+        cadence: value as BankSyncCadence,
       });
       toast.success('Schedule updated');
       await onChange();
@@ -250,7 +282,7 @@ export function AccountSyncPanel({
   const handleHourChange = async (value: string) => {
     setSavingHour(true);
     try {
-      await bankAutomationApi.updateConnection(connection.id, {
+      await bankSyncApi.updateLogin(login.id, {
         preferred_run_hour_local: Number(value),
       });
       toast.success('Run time updated');
@@ -266,23 +298,39 @@ export function AccountSyncPanel({
 
   const handlePauseResume = async () => {
     try {
-      await bankAutomationApi.updateConnection(connection.id, {
-        enabled: isPaused,
-      });
-      toast.success(isPaused ? 'Connection resumed' : 'Connection paused');
+      await bankSyncApi.updateLogin(login.id, { enabled: isPaused });
+      toast.success(isPaused ? 'Login resumed' : 'Login paused');
       await onChange();
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : 'Failed to update connection'
+        err instanceof Error ? err.message : 'Failed to update login'
       );
+    }
+  };
+
+  const handleReLogin = async () => {
+    setReLoggingIn(true);
+    try {
+      await bankSyncApi.beginLogin(login.id);
+      toast.success('Sign-in queued', {
+        description:
+          'Watch your desktop for a Chromium window to finish sign-in.',
+      });
+      await onChange();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to queue the sign-in task.'
+      );
+    } finally {
+      setReLoggingIn(false);
     }
   };
 
   const handleRemove = async () => {
     if (
       !window.confirm(
-        `Remove the "${connection.nickname || connection.institution_name}" connection?\n\n` +
-          `Saved cookies will be deleted. ${siblingCount > 1 ? `All ${siblingCount} accounts under this login will stop syncing. ` : ''}` +
+        `Remove the "${login.nickname || login.institution_name}" bank login?\n\n` +
+          `Stored cookies will be deleted. ${siblingCount > 1 ? `All ${siblingCount} accounts under this login will stop syncing. ` : ''}` +
           'Account balances and history stay intact.'
       )
     ) {
@@ -290,12 +338,12 @@ export function AccountSyncPanel({
     }
     setRemoving(true);
     try {
-      await bankAutomationApi.deleteConnection(connection.id);
-      toast.success('Connection removed');
+      await bankSyncApi.deleteLogin(login.id);
+      toast.success('Bank login removed');
       await onChange();
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : 'Failed to remove connection'
+        err instanceof Error ? err.message : 'Failed to remove login'
       );
       setRemoving(false);
     }
@@ -304,16 +352,31 @@ export function AccountSyncPanel({
   return (
     <div className="space-y-3">
       {isReauthRequired && (
-        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
-          Your bank session expired. Sign back into{' '}
-          {connection.institution_name} in Chrome and click the Richtato
-          extension to refresh cookies.
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+          <span>
+            Your {login.institution_name} session expired. Sign in again so the
+            agent can keep syncing.
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleReLogin}
+            disabled={reLoggingIn}
+            className="gap-2"
+          >
+            {reLoggingIn ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Globe className="h-3.5 w-3.5" />
+            )}
+            Sign in again
+          </Button>
         </div>
       )}
 
-      {connection.last_failure_reason && status === 'error' && (
+      {login.last_failure_reason && status === 'error' && (
         <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-          Last failure: {connection.last_failure_reason}
+          Last failure: {login.last_failure_reason}
         </div>
       )}
 
@@ -321,24 +384,25 @@ export function AccountSyncPanel({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <StatusChip
-              status={connection.status}
-              statusDisplay={connection.status_display}
+              status={login.status}
+              statusDisplay={login.status_display}
             />
+            <SyncModeBadge syncMode={syncMode} />
             <span className="text-xs text-muted-foreground">
-              via {connection.institution_name}
+              via {login.institution_name}
             </span>
           </div>
           <div className="flex items-center gap-2">
             <Switch
-              checked={link.enabled && !isPaused}
+              checked={syncedAccount.enabled && !isPaused}
               disabled={togglingLink || isPaused}
               onCheckedChange={handleToggleLink}
-              aria-label={`${link.enabled ? 'Disable' : 'Enable'} sync for ${accountName}`}
+              aria-label={`${syncedAccount.enabled ? 'Disable' : 'Enable'} sync for ${accountName}`}
             />
             <span className="text-xs text-muted-foreground">
               {isPaused
-                ? 'Connection paused'
-                : link.enabled
+                ? 'Login paused'
+                : syncedAccount.enabled
                   ? 'Auto-sync on'
                   : 'Auto-sync off'}
             </span>
@@ -346,7 +410,7 @@ export function AccountSyncPanel({
               size="sm"
               variant="outline"
               onClick={handleSyncNow}
-              disabled={running || isReauthRequired}
+              disabled={running || isReauthRequired || isPaused}
               className="h-8 gap-1.5 text-xs"
             >
               {running ? (
@@ -365,7 +429,7 @@ export function AccountSyncPanel({
             <span>
               Last run:{' '}
               <span className="text-foreground">
-                {formatDateTime(connection.last_run_at)}
+                {formatDateTime(login.last_run_at)}
               </span>
             </span>
           </div>
@@ -374,7 +438,7 @@ export function AccountSyncPanel({
             <span>
               Last success:{' '}
               <span className="text-foreground">
-                {formatDateTime(connection.last_success_at)}
+                {formatDateTime(login.last_success_at)}
               </span>
             </span>
           </div>
@@ -383,7 +447,7 @@ export function AccountSyncPanel({
             <span>
               Next run:{' '}
               <span className="text-foreground">
-                {formatDateTime(connection.next_run_at)}
+                {formatDateTime(login.next_run_at)}
               </span>
             </span>
           </div>
@@ -402,7 +466,7 @@ export function AccountSyncPanel({
           ) : (
             <ChevronRight className="h-3.5 w-3.5" />
           )}
-          Shared connection settings
+          Shared bank login settings
           {siblingCount > 1 && (
             <span className="text-muted-foreground/70">
               ({siblingCount} accounts under this login)
@@ -417,7 +481,7 @@ export function AccountSyncPanel({
             <p className="text-xs text-muted-foreground">
               These settings apply to all {siblingCount} accounts under{' '}
               <span className="font-medium text-foreground">
-                {connection.nickname || connection.institution_name}
+                {login.nickname || login.institution_name}
               </span>
               .
             </p>
@@ -427,7 +491,7 @@ export function AccountSyncPanel({
             <div className="space-y-1.5">
               <Label className="text-xs">Cadence</Label>
               <Select
-                value={connection.cadence}
+                value={login.cadence}
                 onValueChange={handleCadenceChange}
                 disabled={savingCadence}
               >
@@ -447,9 +511,9 @@ export function AccountSyncPanel({
             <div className="space-y-1.5">
               <Label className="text-xs">Preferred run time</Label>
               <Select
-                value={String(connection.preferred_run_hour_local)}
+                value={String(login.preferred_run_hour_local)}
                 onValueChange={handleHourChange}
-                disabled={savingHour || connection.cadence === 'manual'}
+                disabled={savingHour || login.cadence === 'manual'}
               >
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="Select hour" />
@@ -477,7 +541,21 @@ export function AccountSyncPanel({
               ) : (
                 <PauseCircle className="h-3.5 w-3.5" />
               )}
-              {isPaused ? 'Resume connection' : 'Pause connection'}
+              {isPaused ? 'Resume login' : 'Pause login'}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleReLogin}
+              disabled={reLoggingIn}
+              className="h-8 gap-1.5 text-xs"
+            >
+              {reLoggingIn ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Globe className="h-3.5 w-3.5" />
+              )}
+              Sign in again
             </Button>
             <Button
               size="sm"
@@ -487,11 +565,11 @@ export function AccountSyncPanel({
               className="ml-auto h-8 gap-1.5 text-xs text-destructive hover:text-destructive"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              Remove connection
+              Remove login
             </Button>
           </div>
 
-          <RunHistory connectionId={connection.id} />
+          <RunHistory bankLoginId={login.id} />
         </div>
       )}
     </div>

@@ -54,7 +54,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     # Automation service account — grants cross-user access to runner endpoints
     is_automation_runner = models.BooleanField(
         default=False,
-        help_text="Grants this account privileged access to the bank automation runner endpoints for all users.",
+        help_text="Grants this account privileged access to the bank sync runner endpoints for all users.",
     )
 
     # Demo user fields - for temporary trial accounts

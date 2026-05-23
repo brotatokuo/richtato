@@ -49,6 +49,7 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
             "currency",
             "is_active",
             "sync_source",
+            "sync_mode",
             "image_key",
             "shared_with_household",
             "created_at",

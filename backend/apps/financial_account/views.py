@@ -589,6 +589,13 @@ class StatementImportAPIView(APIView):
                     statement_period=statement_period,
                     statement_status=statement_status,
                 )
+                # Reflect the user's actual ingestion path in the account's
+                # sync_mode so the UI badge stays accurate. Agent-driven
+                # imports leave the existing mode (typically "auto") alone;
+                # user-driven uploads bump a manual account into "upload".
+                if not getattr(request.user, "is_automation_runner", False) and account.sync_mode == "manual":
+                    account.sync_mode = "upload"
+                    account.save(update_fields=["sync_mode", "updated_at"])
             elif mode == "preview":
                 result = self.statement_service.preview_statement(
                     account=account,

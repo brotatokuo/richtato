@@ -4,7 +4,7 @@ This file documents the current Richtato backend patterns for agents and develop
 
 ## Overview
 
-The backend is a Django 5.x and Django REST Framework API for personal finance data, budgets, dashboards, household sharing, Chrome-extension-driven bank automation, and AI categorization.
+The backend is a Django 5.x and Django REST Framework API for personal finance data, budgets, dashboards, household sharing, Playwright cookie-only bank sync, and AI categorization.
 
 ## Stack
 
@@ -13,7 +13,7 @@ The backend is a Django 5.x and Django REST Framework API for personal finance d
 - SQLite test settings for the default pytest path.
 - Gunicorn for production serving.
 - Loguru for logging.
-- Chrome-extension-driven bank automation for structured bank sync.
+- Playwright cookie-only agent for automated bank statement sync.
 - OpenAI for AI categorization.
 
 ## Commands
@@ -57,7 +57,7 @@ backend/
 │   ├── budget/
 │   ├── budget_dashboard/
 │   ├── asset_dashboard/
-│   ├── bank_automation/
+│   ├── bank_sync/
 │   ├── categorization/
 │   ├── household/
 │   ├── richtato_user/
@@ -105,9 +105,9 @@ Service errors commonly use `ValueError` for domain issues. Views should catch e
 - `transaction.CategoryKeyword`: keyword rules for categorization.
 - `budget.Budget`: budget period and household flag.
 - `budget.BudgetCategory`: per-category budget amounts.
-- `bank_automation.BankConnection`: per-bank-login automation connection driven by the Chrome extension.
-- `bank_automation.BankAccountLink`: maps a captured bank account to a Richtato `FinancialAccount`.
-- `bank_automation.BankAutomationRun`: run history for a bank connection.
+- `bank_sync.BankLogin`: per-bank login owned by one user; stores the encrypted Playwright storage_state and cadence.
+- `bank_sync.SyncedAccount`: maps a Richtato `FinancialAccount` to a bank-side account on a `BankLogin`, with encrypted activity URL and external token.
+- `bank_sync.SyncRun`: run history covering both interactive_login and scheduled_download tasks.
 - `household.Household`: household membership for shared finance views.
 
 ## URLs
@@ -123,7 +123,7 @@ Important roots:
 - `/api/v1/budgets/`
 - `/api/v1/asset-dashboard/`
 - `/api/v1/budget-dashboard/`
-- `/api/v1/bank-automation/`
+- `/api/v1/bank-sync/`
 - `/api/v1/household/`
 
 API docs are exposed at `/api/docs/` and Redoc at `/redoc/` when the backend is running.
@@ -164,7 +164,7 @@ CSV/Excel statement import is the primary no-aggregator ingestion path for new b
 - Statement imports should preview before commit and classify rows as new, duplicate, invalid, or possible changed.
 - Deduplication is row-level so current/open statements can overlap later closed statements.
 - Current/open statement exports are provisional; closed statements are authoritative and should flag changed provisional rows for review.
-- `apps/bank_automation/` exposes `/api/v1/bank-automation/` for the Chrome-extension-driven download flow. Connections store encrypted session tokens; the runner downloads statements on a per-connection cadence.
+- `apps/bank_sync/` exposes `/api/v1/bank-sync/` for the Playwright cookie-only flow. `BankLogin` rows store encrypted Playwright storage_state; the agent reuses the cookies headlessly on a per-login cadence and pops a headed browser only for first sign-in or re-auth. Bank passwords are never stored.
 
 Do not document or add Plaid, Teller, or other third-party aggregator code paths unless the task is explicitly to implement them.
 

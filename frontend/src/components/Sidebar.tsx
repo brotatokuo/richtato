@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { useAuth } from '@/hooks/useAuth';
-import { useBankAutomationStatus } from '@/hooks/useBankAutomationStatus';
+import { useBankSyncStatus } from '@/hooks/useBankSyncStatus';
 import { cn } from '@/lib/utils';
 import {
   AlertTriangle,
@@ -50,7 +50,7 @@ export function Sidebar({
   const location = useLocation();
   const { user, logout } = useAuth();
   const { isInHousehold } = useHousehold();
-  const bankAutomationStatus = useBankAutomationStatus();
+  const bankSyncStatus = useBankSyncStatus();
 
   const navigationItems: NavItem[] = useMemo(() => {
     const items: NavItem[] = [
@@ -151,7 +151,7 @@ export function Sidebar({
 
           const isAccountsItem = itemPath === '/accounts';
           const reauthCount = isAccountsItem
-            ? bankAutomationStatus.reauthCount + bankAutomationStatus.errorCount
+            ? bankSyncStatus.reauthCount + bankSyncStatus.errorCount
             : 0;
 
           return (

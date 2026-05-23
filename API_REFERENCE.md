@@ -189,23 +189,37 @@ Budget analytics and spending breakdown data.
 
 Common query parameters: `year`, `month`, `start_date`, `end_date`, and optional `scope=household`.
 
-## Bank Automation (`/api/v1/bank-automation/`)
+## Bank Sync (`/api/v1/bank-sync/`)
 
-Chrome-extension-driven statement download flow. The extension captures a bank session, sends it to Richtato, and the runner downloads statements on a schedule.
+Cookie-only Playwright agent. The user opens a headed Chromium window from the Connect-bank wizard, signs in to their bank directly, and the agent captures only the resulting browser cookies (no passwords). Headless scheduled runs reuse the cookies to download statements.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/connections/` | List bank-login connections |
-| `GET` | `/connections/{id}/` | Get connection |
-| `PATCH` | `/connections/{id}/` | Update connection (cadence, run hour, nickname, enabled) |
-| `DELETE` | `/connections/{id}/` | Remove connection (cookies dropped; accounts kept) |
-| `POST` | `/connections/{id}/disable/` | Pause connection |
-| `POST` | `/connections/{id}/run/` | Queue an immediate run |
-| `GET` | `/connections/{id}/runs/` | List recent runs for a connection |
-| `PATCH` | `/account-links/{id}/` | Toggle per-account sync or bind a captured link to a Richtato account |
-| `GET` | `/supported-institutions/` | List institutions supported by the runner |
+| `GET` | `/logins/` | List the user's bank logins |
+| `POST` | `/logins/` | Create a `pending_login` row (institution + cadence) |
+| `GET` | `/logins/{id}/` | Get one login with its synced accounts |
+| `PATCH` | `/logins/{id}/` | Update cadence, run hour, nickname, enabled |
+| `DELETE` | `/logins/{id}/` | Remove a login and its stored cookies |
+| `POST` | `/logins/{id}/begin-login/` | Queue an interactive_login (agent pops a headed browser) |
+| `POST` | `/logins/{id}/sync-now/` | Queue an immediate headless download |
+| `POST` | `/logins/{id}/disable/` | Pause automation without dropping cookies |
+| `GET` | `/logins/{id}/runs/` | Recent SyncRun history for a login |
+| `GET` | `/synced-accounts/` | List per-Richtato-account sync bindings |
+| `PATCH` | `/synced-accounts/{id}/` | Toggle `enabled` or change `flow` |
+| `DELETE` | `/synced-accounts/{id}/` | Unbind one account |
+| `POST` | `/synced-accounts/bulk-bind/` | Wizard step 3: bind discovered accounts to Richtato accounts |
+| `GET` | `/supported-institutions/` | List institutions with a Playwright adapter (BoFA, Chase) |
+| `GET` | `/bindable-accounts/` | List Richtato accounts a user can bind for a given institution slug |
 
-CSV/Excel statement import (under `/api/v1/accounts/import-statement/` and `/api/v1/accounts/statements/`) is the manual ingestion path that complements bank automation.
+Agent-only endpoints (Token auth, `automation_runner` service account):
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/runner/due-tasks/` | Lease all queued tasks; returns decrypted storage_state + activity URLs |
+| `POST` | `/runner/runs/{id}/captured-session/` | Report a successful interactive_login (storage_state + discovered accounts) |
+| `POST` | `/runner/runs/{id}/outcome/` | Report final success or failure (failure_kind drives status transitions) |
+
+CSV/Excel statement import (under `/api/v1/accounts/import-statement/` and `/api/v1/accounts/statements/`) is the manual ingestion path that complements automated bank sync. Accounts can pick `auto` (bank-sync agent), `upload` (statement file upload), or `manual` (typed entries) via the `sync_mode` field on `FinancialAccount`.
 
 ## Household (`/api/v1/household/`)
 

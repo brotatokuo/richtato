@@ -2,7 +2,7 @@ import { AccountCreateModal } from '@/components/accounts/AccountCreateModal';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import type { AccountSyncMap } from '@/hooks/useBankAutomationConnections';
+import type { AccountSyncMap } from '@/hooks/useBankSyncLogins';
 import { Account, transactionsApiService } from '@/lib/api/transactions';
 import { formatCurrency } from '@/lib/format';
 import { getEntityLogo } from '@/lib/imageMapping';
@@ -63,29 +63,27 @@ function SyncIndicator({
 }) {
   const summary = syncMap.get(accountId);
   if (!summary) return null;
-  const { connection, link } = summary;
-  if (connection.status === 'error') {
+  const { login, syncedAccount } = summary;
+  if (login.status === 'error') {
     return (
-      <span
-        title={`Sync error: ${connection.last_failure_reason || 'unknown'}`}
-      >
+      <span title={`Sync error: ${login.last_failure_reason || 'unknown'}`}>
         <WifiOff className="h-3 w-3 text-red-500" />
       </span>
     );
   }
-  if (connection.status === 'reauth_required') {
+  if (login.status === 'needs_reauth') {
     return (
-      <span title="Bank session needs refresh">
+      <span title="Bank session needs sign-in">
         <AlertTriangle className="h-3 w-3 text-amber-500" />
       </span>
     );
   }
-  if (connection.status === 'disabled' || !link.enabled) {
+  if (login.status === 'disabled' || !syncedAccount.enabled) {
     return (
       <span
         title={
-          connection.status === 'disabled'
-            ? 'Connection paused'
+          login.status === 'disabled'
+            ? 'Bank login paused'
             : 'Auto-sync off for this account'
         }
       >

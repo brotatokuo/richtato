@@ -2,7 +2,7 @@ import {
   HeaderSlotProvider,
   useHeaderSlot,
 } from '@/contexts/HeaderSlotContext';
-import { useBankAutomationStatus } from '@/hooks/useBankAutomationStatus';
+import { useBankSyncStatus } from '@/hooks/useBankSyncStatus';
 import {
   BarChart3,
   Calculator,
@@ -51,7 +51,7 @@ function LayoutInner() {
   const location = useLocation();
   const navigate = useNavigate();
   const { headerSlot } = useHeaderSlot();
-  const bankAutomationStatus = useBankAutomationStatus();
+  const bankSyncStatus = useBankSyncStatus();
   const reauthToastShown = useRef(false);
 
   const onAccountsPage = location.pathname === '/accounts';
@@ -59,13 +59,13 @@ function LayoutInner() {
   useEffect(() => {
     if (
       !reauthToastShown.current &&
-      bankAutomationStatus.reauthCount > 0 &&
+      bankSyncStatus.reauthCount > 0 &&
       !onAccountsPage
     ) {
       reauthToastShown.current = true;
-      const count = bankAutomationStatus.reauthCount;
-      toast.warning('Bank session needs refresh', {
-        description: `${count} connection${count === 1 ? '' : 's'} need a fresh capture from the Chrome extension.`,
+      const count = bankSyncStatus.reauthCount;
+      toast.warning('Bank sign-in needed', {
+        description: `${count} bank login${count === 1 ? '' : 's'} need you to sign in again so we can refresh cookies.`,
         duration: 10_000,
         action: {
           label: 'Open',
@@ -73,7 +73,7 @@ function LayoutInner() {
         },
       });
     }
-  }, [bankAutomationStatus.reauthCount, onAccountsPage, navigate]);
+  }, [bankSyncStatus.reauthCount, onAccountsPage, navigate]);
 
   // Get the current page config based on the route (supports nested paths)
   const matchedKey = Object.keys(routeConfig).find(

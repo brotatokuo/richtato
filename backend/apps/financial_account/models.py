@@ -37,6 +37,12 @@ class FinancialAccount(models.Model):
         ("csv", "CSV Import"),
     ]
 
+    SYNC_MODE_CHOICES = [
+        ("auto", "Auto Sync via Bank Login"),
+        ("upload", "Statement Upload"),
+        ("manual", "Manual Entry"),
+    ]
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -67,6 +73,15 @@ class FinancialAccount(models.Model):
         help_text="True for credit cards and other liability accounts. Balance stored as negative.",
     )
     sync_source = models.CharField(max_length=20, choices=SYNC_SOURCE_CHOICES, default="manual")
+    sync_mode = models.CharField(
+        max_length=16,
+        choices=SYNC_MODE_CHOICES,
+        default="manual",
+        help_text=(
+            "How this account receives transactions: auto (Playwright bank sync), "
+            "upload (statement file upload), or manual (typed entries)."
+        ),
+    )
 
     # Household sharing
     shared_with_household = models.BooleanField(
