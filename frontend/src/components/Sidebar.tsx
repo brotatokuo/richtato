@@ -63,13 +63,15 @@ export function Sidebar({
       { name: 'Accounts', href: '/accounts', icon: Landmark },
       { name: 'Upload', href: '/upload', icon: CloudUpload },
       { name: 'Budget', href: '/budget', icon: Wallet },
-      { name: 'Bank Sync', href: '/bank-automation', icon: Building2 },
+      { name: 'Bank Sync', href: '/setup?tab=accounts', icon: Building2 },
     ];
     if (isInHousehold) {
       items.push({ name: 'Household', href: '/household', icon: Heart });
     }
     return items;
   }, [isInHousehold]);
+
+  const pathOf = (href: string): string => href.split('?')[0] ?? href;
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
@@ -148,19 +150,20 @@ export function Sidebar({
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-3" role="navigation">
         {navigationItems.map(item => {
-          const isActive = location.pathname === item.href;
+          const itemPath = pathOf(item.href);
+          const isActive = location.pathname === itemPath;
           const Icon = item.icon;
 
           // Show sync indicator and badge on Data page
-          const isDataPage = item.href === '/transactions';
+          const isDataPage = itemPath === '/transactions';
           const isSyncing = isDataPage && syncStatus?.is_syncing;
           const newTransactionCount =
             isDataPage && syncStatus?.new_transaction_count
               ? syncStatus.new_transaction_count
               : 0;
 
-          const isBankAutomationPage = item.href === '/bank-automation';
-          const reauthCount = isBankAutomationPage
+          const isBankSyncItem = item.name === 'Bank Sync';
+          const reauthCount = isBankSyncItem
             ? bankAutomationStatus.reauthCount + bankAutomationStatus.errorCount
             : 0;
 

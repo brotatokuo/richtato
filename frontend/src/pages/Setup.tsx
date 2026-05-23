@@ -1,4 +1,5 @@
 import { HouseholdSettings } from '@/components/household/HouseholdSettings';
+import { BankSyncSection } from '@/components/settings/BankSyncSection';
 import { BudgetsSection } from '@/components/settings/BudgetsSection';
 import { CategoriesSection } from '@/components/settings/CategoriesSection';
 import { SyncHistorySection } from '@/components/settings/SyncHistorySection';
@@ -63,6 +64,7 @@ export function Setup() {
 
       <TabsContent value="accounts" className="space-y-6">
         <UnifiedAccountsSection />
+        <BankSyncSection />
         <SyncHistorySection />
       </TabsContent>
 

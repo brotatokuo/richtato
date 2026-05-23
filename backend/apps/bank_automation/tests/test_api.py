@@ -20,16 +20,20 @@ def user(db):
 
 @pytest.fixture
 def institution(db):
-    """Reuse the data-migration BofA row if present, else create one."""
+    """Reuse the data-migration BofA row if present, else create one.
+
+    The seed migration ships ``Bank of America`` with slug
+    ``bank_of_america``, while the bank-automation runner expects ``bofa``.
+    Realign the slug so test data agrees with the runner adapter naming.
+    """
 
     inst = FinancialInstitution.objects.filter(slug="bofa").first()
     if inst:
         return inst
     inst = FinancialInstitution.objects.filter(name="Bank of America").first()
     if inst:
-        if not inst.slug:
-            inst.slug = "bofa"
-            inst.save(update_fields=["slug"])
+        inst.slug = "bofa"
+        inst.save(update_fields=["slug"])
         return inst
     return FinancialInstitution.objects.create(name="Bank of America", slug="bofa")
 

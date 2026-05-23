@@ -6,7 +6,6 @@ import { useBankAutomationStatus } from '@/hooks/useBankAutomationStatus';
 import { useSyncStatus } from '@/hooks/useSyncStatus';
 import {
   BarChart3,
-  Building2,
   Calculator,
   CloudUpload,
   Heart,
@@ -39,7 +38,6 @@ const routeConfig: Record<
   '/more': { title: 'More', icon: MoreHorizontal },
   '/household': { title: 'Household', icon: Heart },
   '/formulas': { title: 'Formulas', icon: Calculator },
-  '/bank-automation': { title: 'Bank Sync', icon: Building2 },
 };
 
 export function Layout() {
@@ -77,11 +75,15 @@ function LayoutInner() {
     },
   });
 
+  const onSetupAccountsTab =
+    location.pathname === '/setup' &&
+    new URLSearchParams(location.search).get('tab') === 'accounts';
+
   useEffect(() => {
     if (
       !reauthToastShown.current &&
       bankAutomationStatus.reauthCount > 0 &&
-      location.pathname !== '/bank-automation'
+      !onSetupAccountsTab
     ) {
       reauthToastShown.current = true;
       const count = bankAutomationStatus.reauthCount;
@@ -90,11 +92,11 @@ function LayoutInner() {
         duration: 10_000,
         action: {
           label: 'Open',
-          onClick: () => navigate('/bank-automation'),
+          onClick: () => navigate('/setup?tab=accounts'),
         },
       });
     }
-  }, [bankAutomationStatus.reauthCount, location.pathname, navigate]);
+  }, [bankAutomationStatus.reauthCount, onSetupAccountsTab, navigate]);
 
   // Get the current page config based on the route (supports nested paths)
   const matchedKey = Object.keys(routeConfig).find(
