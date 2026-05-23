@@ -37,7 +37,7 @@ Richtato is an AI-native personal finance app for spending, budgets, net worth, 
 - Budgets use `/api/v1/budgets/`, not `/api/v1/budget/`.
 - User profile, preferences, and category settings live under `/api/v1/auth/`.
 - CSV/Excel statement import is the primary no-aggregator ingestion path.
-- Automated bank sync uses a cookie-only Playwright agent under `/api/v1/bank-sync/`. Configure connections on the `/accounts` page. The agent runs headless by default; for headed first-sign-in / re-auth on Docker Desktop, run `./scripts/bank_sync/start-headed.sh` (TCP X11 bridge + compose overlay). Native Linux Docker can use the same script or mount `/tmp/.X11-unix` directly.
+- Automated bank sync uses a cookie-only Playwright agent under `/api/v1/bank-sync/`. Configure connections on the `/accounts` page. The full app stack is Docker-only (`db`, `backend`, `frontend`); bank automation is a separate host runtime started with `./scripts/bank_sync/start-headed.sh` and handles both headed sign-in and statement downloads.
 - Do not document Plaid, Teller, or other paid aggregators as active unless you implement them.
 - Statement imports must be row-level idempotent; current/open statements are provisional and may overlap later closed statements.
 - Original statement files are stored locally under ignored `local_data/statements/<user>/<account>/<year>/<month>/` when using the statement library.

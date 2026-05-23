@@ -50,35 +50,6 @@ services:
       - backend
     command: yarn dev --host 0.0.0.0
 
-  # Bank-sync Playwright agent.
-  #
-  # Two modes share one container:
-  #   * Headless statement downloads (scheduled_download / manual_download)
-  #     run with no display.
-  #   * Headed interactive_login tasks pop a Chromium window on the host
-  #     desktop via X11 forwarding.
-  #
-  # X11 forwarding is opt-in via docker-compose.x11.yml so `docker compose
-  # up` works out of the box on Docker Desktop (where /tmp/.X11-unix isn't
-  # a shared path by default). Enable headed mode with:
-  #
-  #   docker compose -f docker-compose.yml -f docker-compose.x11.yml up -d automation
-  #
-  # See scripts/bank_sync/README.md for the full setup.
-  automation:
-    build:
-      context: .
-      dockerfile: ./scripts/bank_sync/Dockerfile
-    env_file:
-      - .env
-    volumes:
-      - ./local_data:/app/local_data
-      - ./scripts/bank_sync:/app/scripts/bank_sync
-    depends_on:
-      backend:
-        condition: service_started
-    restart: unless-stopped
-
 volumes:
   postgres_data:
   static_volume:

@@ -62,11 +62,19 @@ class APIClient:
     def _url(self, path: str) -> str:
         return f"{self.cfg.base_url}{path}"
 
-    def fetch_due_tasks(self) -> list[dict[str, Any]]:
-        """Lease all due tasks; returns an empty list when nothing is queued."""
+    def fetch_due_tasks(
+        self,
+        *,
+        task_kinds: tuple[str, ...] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Lease due tasks; returns an empty list when nothing is queued."""
 
+        params: dict[str, str] = {}
+        if task_kinds:
+            params["task_kinds"] = ",".join(task_kinds)
         resp = self.session.get(
             self._url("/api/v1/bank-sync/runner/due-tasks/"),
+            params=params or None,
             timeout=DEFAULT_TIMEOUT,
         )
         resp.raise_for_status()

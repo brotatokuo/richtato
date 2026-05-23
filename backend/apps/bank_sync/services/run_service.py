@@ -47,7 +47,11 @@ def queue_manual_download(login: BankLogin) -> SyncRun:
     return run
 
 
-def lease_due_tasks(*, limit: int = 25) -> list[SyncRun]:
+def lease_due_tasks(
+    *,
+    limit: int = 25,
+    task_kinds: tuple[str, ...] | None = None,
+) -> list[SyncRun]:
     """Return queued tasks that are due, atomically marking them ``running``.
 
     Two kinds of "due":
@@ -56,39 +60,46 @@ def lease_due_tasks(*, limit: int = 25) -> list[SyncRun]:
     * ``scheduled_download`` / ``manual_download``: due when the parent
       ``BankLogin`` has ``status=active`` and ``next_run_at`` is past.
 
-    To cover schedule-driven runs we also lazily create a
-    ``scheduled_download`` row for any active login whose ``next_run_at``
-    has passed with no queued run already pending.
+    ``task_kinds`` optionally restricts which queued rows this caller may
+    lease. The Docker download agent passes download kinds only; the host
+    interactive runner passes ``interactive_login`` so headed sign-in runs
+    on the user's desktop instead of inside Docker Desktop.
     """
+
+    download_kinds = ("scheduled_download", "manual_download")
+    lease_downloads = task_kinds is None or any(k in task_kinds for k in download_kinds)
 
     now = timezone.now()
     leased: list[SyncRun] = []
     with transaction.atomic():
-        # Promote due logins into scheduled_download rows if not already queued.
-        due_logins = BankLogin.objects.select_for_update(skip_locked=True).filter(
-            status="active",
-            next_run_at__lte=now,
-        )
-        for login in due_logins:
-            has_queued = SyncRun.objects.filter(
-                bank_login=login,
-                task_kind__in=("scheduled_download", "manual_download"),
-                status="queued",
-            ).exists()
-            if not has_queued:
-                SyncRun.objects.create(
+        if lease_downloads:
+            # Promote due logins into scheduled_download rows if not already queued.
+            due_logins = BankLogin.objects.select_for_update(skip_locked=True).filter(
+                status="active",
+                next_run_at__lte=now,
+            )
+            for login in due_logins:
+                has_queued = SyncRun.objects.filter(
                     bank_login=login,
-                    task_kind="scheduled_download",
-                    triggered_by="scheduler",
-                )
+                    task_kind__in=download_kinds,
+                    status="queued",
+                ).exists()
+                if not has_queued:
+                    SyncRun.objects.create(
+                        bank_login=login,
+                        task_kind="scheduled_download",
+                        triggered_by="scheduler",
+                    )
 
-        queued = (
+        queued_qs = (
             SyncRun.objects.select_for_update(skip_locked=True)
             .filter(status="queued")
             .select_related("bank_login__institution")
-            .order_by("queued_at")[:limit]
+            .order_by("queued_at")
         )
-        for run in queued:
+        if task_kinds is not None:
+            queued_qs = queued_qs.filter(task_kind__in=task_kinds)
+        for run in queued_qs[:limit]:
             run.status = "running"
             run.leased_at = now
             run.save(update_fields=["status", "leased_at"])

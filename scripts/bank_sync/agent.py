@@ -1,8 +1,10 @@
-"""Bank-sync Playwright agent: single poll loop, two task kinds.
+"""Bank-sync Playwright agent: single host-side poll loop.
 
-The agent runs forever inside the ``automation`` Docker container, polling
+The agent runs as a separate local process on the user's desktop, polling
 ``/api/v1/bank-sync/runner/due-tasks/`` every ``BANK_SYNC_POLL_SECONDS``
-seconds. Each leased task is dispatched on ``task_kind``:
+seconds. It is intentionally not part of the Docker Compose full stack:
+Docker Desktop + Wayland/X11 forwarding is too fragile for headed Chromium.
+Each leased task is dispatched on ``task_kind``:
 
 * ``interactive_login`` — spawn a headed Chromium window so the user can
   sign in to their bank. The cookie ``storage_state`` is captured along
@@ -44,27 +46,24 @@ def _configure_logging() -> None:
     logger.add(sys.stderr, level=os.getenv("BANK_SYNC_LOG_LEVEL", "INFO"))
 
 
+# Keep the visible browser quiet and predictable when launched on the host.
+HEADED_CHROMIUM_ARGS = [
+    "--no-first-run",
+    "--no-default-browser-check",
+]
+
+HEADED_LAUNCH_TIMEOUT_MS = 60_000
+
 _X11_HINT = (
-    "Headed Chromium needs an X server. On Docker Desktop, run the TCP "
-    "bridge on the host, then restart automation with the X11 overlay:\n"
-    "  xhost +local:\n"
-    "  cp \"$XAUTHORITY\" local_data/.xauthority\n"
-    "  python3 scripts/bank_sync/x11_bridge.py\n"
-    "  docker compose -f docker-compose.yml -f docker-compose.x11.yml up -d automation"
+    "Headed sign-in runs in the local bank agent. Start it with:\n"
+    "  ./scripts/bank_sync/start-headed.sh"
 )
 
 
 def _x11_available() -> bool:
-    """Return True if the container looks ready to launch a headed browser."""
+    """Return True if the host process has a display available."""
 
-    display = os.environ.get("DISPLAY", "")
-    if not display:
-        return False
-    # TCP mode (Docker Desktop): host.docker.internal:N with a mounted cookie.
-    if "host.docker.internal" in display or not display.startswith(":"):
-        return Path(os.environ.get("XAUTHORITY", "/tmp/.xauthority")).exists()
-    # Unix-socket mode (native Linux Docker): /tmp/.X11-unix must be mounted.
-    return Path("/tmp/.X11-unix").exists()
+    return bool(os.environ.get("DISPLAY"))
 
 
 async def _run_interactive_login(
@@ -97,7 +96,11 @@ async def _run_interactive_login(
         return
 
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=False)
+        browser = await pw.chromium.launch(
+            headless=False,
+            args=HEADED_CHROMIUM_ARGS,
+            timeout=HEADED_LAUNCH_TIMEOUT_MS,
+        )
         try:
             context = await browser.new_context(
                 accept_downloads=True,

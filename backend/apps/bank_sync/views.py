@@ -425,7 +425,11 @@ class RunnerDueTasksAPIView(_RunnerAuthMixin, APIView):
     """Agent fetches queued + due tasks and marks them ``running``."""
 
     def get(self, request):
-        leased = run_service.lease_due_tasks()
+        kinds_raw = (request.query_params.get("task_kinds") or "").strip()
+        task_kinds = None
+        if kinds_raw:
+            task_kinds = tuple(k.strip() for k in kinds_raw.split(",") if k.strip())
+        leased = run_service.lease_due_tasks(task_kinds=task_kinds)
         payloads = []
         for run in leased:
             payloads.append(session_service.serialize_runner_task(run))

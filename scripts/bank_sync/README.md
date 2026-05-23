@@ -12,6 +12,18 @@ leased task:
   `storage_state` headless to download per-account statements and posts
   them to `/api/v1/accounts/import-statement/`.
 
+## Runtime Shape
+
+Richtato's full stack and the bank automation runtime are separate:
+
+- `docker compose up -d` runs the app: Postgres, Django, and Vite.
+- `./scripts/bank_sync/start-headed.sh` runs the local Playwright bank agent
+  on your desktop. It handles both visible sign-in and headless statement
+  downloads.
+
+The bank agent talks to Django over `/api/v1/bank-sync/runner/*` with the
+`RICHTATO_RUNNER_TOKEN` service account. It is not a Docker Compose service.
+
 ## Setup
 
 1. Provision the agent's service account token:
@@ -31,45 +43,22 @@ leased task:
    Set it as `BANK_SYNC_FERNET_KEY` in `.env`. Required in production; dev
    falls back to a `SECRET_KEY`-derived key.
 
-3. Start the agent in headless-only mode (works on every platform). The
-   base `automation` service polls for tasks and runs `scheduled_download`
-   / `manual_download` runs without a display:
+3. Start the Richtato app stack:
 
    ```bash
-   docker compose up -d --build automation
-   docker compose logs -f automation
+   docker compose up -d
    ```
 
-4. Enable headed Chromium so `interactive_login` tasks can pop a real
-   browser window. **Docker Desktop on Linux cannot mount
-   `/tmp/.X11-unix`** without manual file-sharing setup, so we use a
-   TCP bridge on the host instead:
+4. Start the local bank agent before using **Connect bank → Open browser to
+   sign in** or scheduled statement downloads:
 
    ```bash
    ./scripts/bank_sync/start-headed.sh
    ```
 
-   Or step by step:
-
-   ```bash
-   xhost +local:
-   cp "$XAUTHORITY" local_data/.xauthority
-   python3 scripts/bank_sync/x11_bridge.py   # leave running
-   docker compose -f docker-compose.yml -f docker-compose.x11.yml up -d automation
-   ```
-
-   Platform notes:
-
-   - **Linux + Docker Desktop** (recommended path above): the bridge
-     listens on `0.0.0.0:6000` and the container uses
-     `DISPLAY=host.docker.internal:0` with the copied X authority cookie.
-   - **Linux + native Docker**: you can mount the unix socket directly by
-     setting `BANK_SYNC_X11_DISPLAY=:0` and bind-mounting
-     `/tmp/.X11-unix:/tmp/.X11-unix:rw` in a local override, or use the
-     same TCP bridge script.
-   - **macOS / Windows**: install XQuartz (macOS) or VcXsrv (Windows),
-     allow network clients, and set `BANK_SYNC_X11_DISPLAY=host.docker.internal:0`
-     in `.env`.
+   Run this after every reboot. It creates `scripts/bank_sync/.venv` on
+   first use (downloads Chromium once) and writes logs to
+   `local_data/bank-sync-agent.log`.
 
 ## Adding a new bank
 

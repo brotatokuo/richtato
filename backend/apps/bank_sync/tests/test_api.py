@@ -251,6 +251,28 @@ def test_bindable_accounts_filters_by_institution(alice_client, alice, bofa_inst
     assert by_name["Other"]["matches_institution"] is False
 
 
+def test_runner_due_tasks_filters_by_task_kind(alice_client, runner_client, bofa_institution):
+    create = alice_client.post(
+        reverse("bank-sync-login-list"),
+        {"institution": bofa_institution.id, "cadence": "daily"},
+        format="json",
+    )
+    login_id = create.data["id"]
+    alice_client.post(reverse("bank-sync-login-begin-login", args=[login_id]))
+
+    interactive = runner_client.get(
+        reverse("bank-sync-runner-due-tasks"),
+        {"task_kinds": "interactive_login"},
+    ).data["tasks"]
+    downloads = runner_client.get(
+        reverse("bank-sync-runner-due-tasks"),
+        {"task_kinds": "scheduled_download,manual_download"},
+    ).data["tasks"]
+
+    assert interactive and all(t["task_kind"] == "interactive_login" for t in interactive)
+    assert not downloads
+
+
 def test_end_user_cannot_hit_runner_endpoints(alice_client):
     response = alice_client.get(reverse("bank-sync-runner-due-tasks"))
     assert response.status_code in (401, 403)

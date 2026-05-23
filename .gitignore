@@ -16,6 +16,7 @@ backend/*.db
 # Ignore compiled Python files
 __pycache__/
 *.py[cod]
+scripts/bank_sync/.venv/
 
 .DS_Store
 
