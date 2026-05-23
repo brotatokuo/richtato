@@ -103,9 +103,11 @@ export function ConnectBankDialog({
               1
             </span>
             <span>
-              Install the{' '}
-              <span className="font-medium">Richtato Bank Sync</span> Chrome
-              extension and configure it with your Richtato URL.
+              Make sure each account you want synced exists in{' '}
+              <a className="underline" href="/accounts">
+                Richtato Accounts
+              </a>
+              . Just the name and type are needed.
             </span>
           </li>
           <li className="flex gap-3">
@@ -113,8 +115,10 @@ export function ConnectBankDialog({
               2
             </span>
             <span>
-              In Chrome, open your bank in a new tab and sign in normally (with
-              MFA if enabled).
+              Install the{' '}
+              <span className="font-medium">Richtato Bank Sync</span> Chrome
+              extension and configure it with your Richtato URL plus an API
+              token (or username + password).
             </span>
           </li>
           <li className="flex gap-3">
@@ -122,9 +126,10 @@ export function ConnectBankDialog({
               3
             </span>
             <span>
-              Open the activity page for the account you want to sync, then
-              click the Richtato extension icon and press{' '}
-              <span className="font-medium">Sync this account</span>.
+              Sign in to your bank in Chrome. Click the Richtato extension; it
+              will list your matching Richtato accounts. Tick the ones to sync
+              from this login and press{' '}
+              <span className="font-medium">Sync N accounts</span>.
             </span>
           </li>
           <li className="flex gap-3">

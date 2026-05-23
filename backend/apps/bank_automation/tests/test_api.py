@@ -219,6 +219,67 @@ def test_supported_institutions(authed_client, institution):
     assert "bofa" in slugs
 
 
+def test_bindable_accounts_filters_and_flags(authed_client, user, institution, financial_account):
+    """The bindable-accounts endpoint surfaces matching accounts first and
+    flags ones that are already bound to a connection."""
+
+    chase, _ = FinancialInstitution.objects.get_or_create(slug="chase", defaults={"name": "Chase"})
+    other_account = FinancialAccount.objects.create(
+        user=user,
+        name="Chase Sapphire",
+        institution=chase,
+        account_type="credit_card",
+        is_liability=True,
+        balance=0,
+    )
+
+    seed = {
+        "institution_slug": "bofa",
+        "login_id": "bofa_bind",
+        "storage_state": {},
+        "accounts": [
+            {
+                "flow": "deposit",
+                "activity_url": "https://example.com",
+                "financial_account_id": financial_account.id,
+            }
+        ],
+    }
+    authed_client.post(
+        "/api/v1/bank-automation/sessions/",
+        data=json.dumps(seed),
+        content_type="application/json",
+    )
+
+    response = authed_client.get("/api/v1/bank-automation/bindable-accounts/?institution_slug=bofa")
+    assert response.status_code == 200, response.data
+    accounts = response.data["accounts"]
+    by_id = {a["id"]: a for a in accounts}
+
+    bofa_entry = by_id[financial_account.id]
+    assert bofa_entry["matches_institution"] is True
+    assert bofa_entry["already_bound"] is True
+    assert bofa_entry["flow"] == "deposit"
+
+    chase_entry = by_id[other_account.id]
+    assert chase_entry["matches_institution"] is False
+    assert chase_entry["already_bound"] is False
+    assert chase_entry["flow"] == "credit_card"
+
+    # Matching institution should sort ahead of non-matching even though it
+    # is "already_bound" — the popup needs to show every option.
+    assert accounts[0]["matches_institution"] is True
+
+
+def test_bindable_accounts_unknown_institution_returns_all(authed_client, financial_account):
+    response = authed_client.get("/api/v1/bank-automation/bindable-accounts/?institution_slug=does-not-exist")
+    assert response.status_code == 200
+    accounts = response.data["accounts"]
+    assert any(a["id"] == financial_account.id for a in accounts)
+    # No slug match, so no entry should be flagged matches_institution.
+    assert all(a["matches_institution"] is False for a in accounts)
+
+
 def test_capture_session_unauthenticated_rejected():
     client = APIClient()
     response = client.post(
