@@ -24,6 +24,47 @@ Richtato's full stack and the bank automation runtime are separate:
 The bank agent talks to Django over `/api/v1/bank-sync/runner/*` with the
 `RICHTATO_RUNNER_TOKEN` service account. It is not a Docker Compose service.
 
+## Quick config from Richtato
+
+Richtato can generate the structural agent config from active accounts whose
+`sync_mode` is `auto`. The agent upserts that config into its local vault
+without touching stored cookies or activity URLs:
+
+```bash
+python -m scripts.bank_sync.agent sync-config \
+  --api-base http://127.0.0.1:8000/api/v1 \
+  --token "$RICHTATO_API_TOKEN"
+```
+
+For debugging, export the same config as YAML from Django:
+
+```bash
+docker compose exec backend python manage.py export_bank_agent_config --user-id 1
+```
+
+Use `--all-supported` on either command to include all active supported bank
+accounts instead of only `sync_mode=auto` accounts.
+
+## Debug config with YAML
+
+`scripts/bank_sync/bank_sync.yml` remains supported as a human-readable
+debug/emergency format. Prefer generating it from Richtato so account IDs and
+storage paths do not drift. Apply a YAML file with:
+
+```bash
+python -m scripts.bank_sync.agent apply
+# or point at a different file:
+python -m scripts.bank_sync.agent apply /path/to/my_config.yml
+```
+
+`apply` upserts logins and accounts into the encrypted SQLite vault. It never
+touches cookies or activity URLs, so it is safe to re-run at any time. After
+applying, sign in to any newly added logins:
+
+```bash
+python -m scripts.bank_sync.agent login signin <login_id>
+```
+
 ## Setup
 
 1. Provision the agent's service account token:

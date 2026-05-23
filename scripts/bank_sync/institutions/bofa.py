@@ -18,12 +18,31 @@ from scripts.bank_sync.errors import NeedsReauthError, NoDownloadError
 from scripts.bank_sync.institutions.base import BaseInstitutionAdapter, DiscoveredAccount
 from scripts.bank_sync.playwright_helpers import (
     DOWNLOAD_TIMEOUT_MS,
-    download_to_dir,
     wait_for_user_login,
 )
 
 _HOME = "https://www.bankofamerica.com/"
 _LOGGED_IN_URLS = ("/myaccountdetails/", "/myaccounts", "/myaccountoverview")
+_DOWNLOAD_FORM_URL = (
+    "https://secure.bankofamerica.com/ogateway/addapi/v1/download/form/transaction"
+)
+_DEFAULT_TXN_PERIOD = "Current transactions"
+_DEFAULT_FILE_TYPE = "csv"
+
+
+def _account_token_from_url(activity_url: str) -> str:
+    match = re.search(r"[?&]adx=([^&#]+)", activity_url)
+    if not match:
+        raise NoDownloadError("Activity URL missing adx account token.")
+    return match.group(1)
+
+
+def _filename_from_response_headers(headers: dict[str, str]) -> str:
+    disposition = headers.get("content-disposition", "")
+    match = re.search(r'filename="?([^";]+)"?', disposition, re.I)
+    if match:
+        return match.group(1).strip()
+    return "statement.csv"
 
 
 class BofaAdapter(BaseInstitutionAdapter):
@@ -96,6 +115,103 @@ class BofaAdapter(BaseInstitutionAdapter):
         logger.info("BoFA discovery surfaced {} account(s)", len(accounts))
         return accounts
 
+    async def _open_download_form(self, page: Page) -> None:
+        """Reveal BoFA's ``#downloadTxnForm`` download panel if needed."""
+        form = page.locator("#downloadTxnForm")
+        try:
+            await form.wait_for(state="visible", timeout=5_000)
+            return
+        except Exception:
+            pass
+
+        await page.get_by_role("button", name=re.compile(r"download", re.I)).first.click()
+        await form.wait_for(state="visible", timeout=DOWNLOAD_TIMEOUT_MS)
+
+    async def _select_download_options(self, page: Page) -> None:
+        """Fill the transaction period + file type dropdowns on the download form."""
+        period_select = page.locator("#select_txnPeriod")
+        await period_select.wait_for(state="visible", timeout=DOWNLOAD_TIMEOUT_MS)
+
+        period_value = "Current transactions"
+        if await period_select.locator(f'option[value="{period_value}"]').count() == 0:
+            # Fall back to the newest closed statement period when "Current
+            # transactions" is not offered for this account type.
+            period_value = await period_select.evaluate(
+                """select => {
+                    const option = [...select.options].find(
+                        o => o.value && o.value !== 'custom range'
+                    );
+                    return option ? option.value : '';
+                }"""
+            )
+            if not period_value:
+                raise NoDownloadError("BoFA download form has no selectable transaction period.")
+
+        await period_select.select_option(value=period_value)
+        await page.locator("#select_fileType").select_option(value="csv")
+
+    async def _click_download_submit(self, page: Page) -> None:
+        submit = page.locator(
+            "form#downloadTxnForm button[type='submit'], "
+            "button[form='downloadTxnForm'][type='submit']"
+        )
+        if await submit.count():
+            await submit.first.click()
+            return
+        await page.get_by_role("button", name=re.compile(r"download", re.I)).last.click()
+
+    async def _download_via_form_post(
+        self,
+        page: Page,
+        *,
+        activity_url: str,
+        download_dir: Path,
+    ) -> Path:
+        """POST BoFA's download form using the authenticated browser session."""
+        response = await page.context.request.post(
+            _DOWNLOAD_FORM_URL,
+            form={
+                "payload.accountToken": _account_token_from_url(activity_url),
+                "payload.locale": "en-us",
+                "payload.txnSearchCriteria.txnPeriod": _DEFAULT_TXN_PERIOD,
+                "payload.txnSearchCriteria.fileType": _DEFAULT_FILE_TYPE,
+            },
+            headers={"Referer": activity_url},
+            timeout=DOWNLOAD_TIMEOUT_MS,
+        )
+        if not response.ok:
+            raise NoDownloadError(f"BoFA download POST failed: HTTP {response.status}")
+
+        body = await response.body()
+        if not body:
+            raise NoDownloadError("BoFA download POST returned an empty body.")
+
+        content_type = response.headers.get("content-type", "")
+        if "text/html" in content_type.lower() and b"<html" in body[:1000].lower():
+            raise NoDownloadError("BoFA download POST returned an HTML error page.")
+
+        filename = _filename_from_response_headers(response.headers)
+        target = download_dir / filename
+        target.write_bytes(body)
+        return target
+
+    async def _download_via_ui(self, page: Page, *, download_dir: Path) -> Path:
+        """Fill the on-page download modal and capture the popup download."""
+        await self._open_download_form(page)
+        await self._select_download_options(page)
+
+        async with page.expect_popup(timeout=DOWNLOAD_TIMEOUT_MS) as popup_info:
+            await self._click_download_submit(page)
+        popup = await popup_info.value
+        try:
+            download = await popup.wait_for_event("download", timeout=DOWNLOAD_TIMEOUT_MS)
+            suggested = download.suggested_filename or "statement.csv"
+            target = download_dir / suggested
+            await download.save_as(str(target))
+            return target
+        finally:
+            await popup.close()
+
     async def download_account(
         self,
         page: Page,
@@ -109,15 +225,26 @@ class BofaAdapter(BaseInstitutionAdapter):
         if "signin" in url or "login" in url:
             raise NeedsReauthError(f"BoFA redirected to sign-in: {url}")
 
-        async def trigger() -> None:
-            # BoFA's download CTA: a "Download" button followed by a
-            # "Comma-Delimited (.csv)" radio + "Download" submit. We use
-            # text/role selectors so DOM tweaks don't fully break the flow.
-            await page.get_by_role("button", name=re.compile(r"download", re.I)).first.click()
-            await page.get_by_label(re.compile(r"comma.+delimited", re.I)).check()
-            await page.get_by_role("button", name=re.compile(r"download", re.I)).last.click()
+        download_dir.mkdir(parents=True, exist_ok=True)
+        errors: list[str] = []
 
-        try:
-            return await download_to_dir(page, download_dir=download_dir, trigger=trigger)
-        except Exception as exc:
-            raise NoDownloadError(f"BoFA download did not produce a file: {exc}") from exc
+        for attempt in (
+            lambda: self._download_via_form_post(
+                page, activity_url=activity_url, download_dir=download_dir
+            ),
+            lambda: self._download_via_ui(page, download_dir=download_dir),
+        ):
+            try:
+                target = await attempt()
+            except NoDownloadError as exc:
+                errors.append(str(exc))
+                continue
+            except Exception as exc:
+                errors.append(str(exc))
+                logger.debug("BoFA download attempt failed: {}", exc)
+                continue
+            else:
+                logger.info("Downloaded {}", target)
+                return target
+
+        raise NoDownloadError("; ".join(errors) or "BoFA download did not produce a file.")

@@ -16,6 +16,7 @@ from apps.financial_account.services.account_balance_service import (
     AccountBalanceService,
 )
 from apps.financial_account.services.account_service import AccountService
+from apps.financial_account.services.bank_agent_config_service import BankAgentConfigOptions, BankAgentConfigService
 from apps.financial_account.services.csv_import_service import CSVImportService
 from apps.financial_account.services.statement_file_service import (
     StatementFileService,
@@ -211,6 +212,38 @@ class AccountFieldChoicesAPIView(APIView):
             entity_choices.append(other_choice)
 
         return Response({"type": type_choices, "entity": entity_choices})
+
+
+class BankAgentConfigAPIView(APIView):
+    """Return generated host bank-agent config for the authenticated user's accounts."""
+
+    authentication_classes = [TokenAuthentication, SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.config_service = BankAgentConfigService()
+
+    def get(self, request):
+        try:
+            options = BankAgentConfigOptions(
+                cadence=request.query_params.get("cadence", "daily"),
+                hour=int(request.query_params.get("hour", "6")),
+                nickname=request.query_params.get("nickname", "personal"),
+                include_all_supported=request.query_params.get("include") == "all-supported",
+            )
+        except ValueError:
+            return Response({"error": "hour must be an integer from 0 to 23"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if options.hour < 0 or options.hour > 23:
+            return Response({"error": "hour must be an integer from 0 to 23"}, status=status.HTTP_400_BAD_REQUEST)
+        if options.cadence not in {"manual", "daily", "weekly", "monthly"}:
+            return Response(
+                {"error": "cadence must be manual, daily, weekly, or monthly"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(self.config_service.build_for_user(request.user, options), status=status.HTTP_200_OK)
 
 
 class AccountTransactionsAPIView(APIView):

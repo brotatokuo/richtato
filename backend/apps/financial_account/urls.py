@@ -16,6 +16,11 @@ urlpatterns = [
         name="account-field-choices",
     ),
     path(
+        "bank-agent-config/",
+        views.BankAgentConfigAPIView.as_view(),
+        name="account-bank-agent-config",
+    ),
+    path(
         "<int:pk>/",
         views.FinancialAccountDetailAPIView.as_view(),
         name="account-detail",

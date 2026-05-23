@@ -300,7 +300,7 @@ class StatementImportService:
         result.file_hash = hashlib.sha256(content).hexdigest()
 
         try:
-            frame = self._read_frame(content, extension)
+            frame = self._read_frame(content, extension, institution=institution)
         except Exception as exc:
             result.errors.append(f"Failed to parse statement file: {exc}")
             return result
@@ -330,13 +330,50 @@ class StatementImportService:
             result.errors.append("No valid statement rows found")
         return result
 
-    def _read_frame(self, content: bytes, extension: str) -> pd.DataFrame:
+    def _read_frame(self, content: bytes, extension: str, *, institution: str = "") -> pd.DataFrame:
         if extension == ".csv":
+            csv_content = content
+            if institution == "bofa":
+                csv_content = self._extract_bofa_transaction_csv(content)
             try:
-                return pd.read_csv(io.BytesIO(content), dtype=str).dropna(how="all")
+                return pd.read_csv(io.BytesIO(csv_content), dtype=str).dropna(how="all")
             except UnicodeDecodeError:
-                return pd.read_csv(io.BytesIO(content), dtype=str, encoding="latin-1").dropna(how="all")
+                return pd.read_csv(
+                    io.BytesIO(csv_content),
+                    dtype=str,
+                    encoding="latin-1",
+                ).dropna(how="all")
         return pd.read_excel(io.BytesIO(content), dtype=str).dropna(how="all")
+
+    def _extract_bofa_transaction_csv(self, content: bytes) -> bytes:
+        """Skip BoFA's summary preamble and return only the transaction table CSV.
+
+        Bank-agent downloads often begin with a summary block::
+
+            Description,,Summary Amt.
+            Beginning balance as of ...
+            ...
+            Date,Description,Amount,Running Bal.
+            05/13/2026,...
+
+        Pandas cannot parse the mixed column counts unless we start at the
+        ``Date,Description,Amount`` header row.
+        """
+        text = content.decode("utf-8", errors="replace")
+        lines = text.splitlines()
+        header_idx = None
+        for index, line in enumerate(lines):
+            normalized = line.strip().lower()
+            if not normalized.startswith("date,"):
+                continue
+            if "description" in normalized and "amount" in normalized:
+                header_idx = index
+                break
+
+        if header_idx is None:
+            return content
+
+        return "\n".join(lines[header_idx:]).encode("utf-8")
 
     def _normalize_row(
         self,

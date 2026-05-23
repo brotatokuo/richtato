@@ -25,6 +25,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - ./local_data:/local_data
       - static_volume:/app/staticfiles
       - media_volume:/app/media
       - ./.cursor:/app/.cursor_logs

@@ -10,10 +10,9 @@
 # Setup (once):
 #   1. Generate a Fernet key and add it to .env:
 #        BANK_AGENT_FERNET_KEY="$(python -m scripts.bank_sync.agent generate-key)"
-#   2. Add bank logins / accounts via the CLI:
-#        python -m scripts.bank_sync.agent login add bofa --nickname personal
-#        python -m scripts.bank_sync.agent login signin 1
-#        python -m scripts.bank_sync.agent account add 1 --storage-uri "file:///..." --activity-url "https://..."
+#   2. Edit scripts/bank_sync/bank_sync.yml with your logins and accounts, then:
+#        python -m scripts.bank_sync.agent apply
+#        python -m scripts.bank_sync.agent login signin <login_id>
 #
 # Run after every reboot to start the polling daemon:
 #   ./scripts/bank_sync/start-headed.sh

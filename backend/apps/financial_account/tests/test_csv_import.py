@@ -264,6 +264,34 @@ class TestStatementImportService:
         assert result.rows[1].transaction_type == "credit"
         assert result.rows[0].source_row_hash
 
+    def test_preview_bank_of_america_download_csv_with_summary_preamble(self, account):
+        service = StatementImportService()
+        statement = _make_named_csv(
+            "Description,,Summary Amt.\n"
+            'Beginning balance as of 05/13/2026,,"723.98"\n'
+            'Total credits,,"547.74"\n'
+            'Total debits,,"-821.00"\n'
+            'Ending balance as of 05/23/2026,,"450.72"\n'
+            "\n"
+            "Date,Description,Amount,Running Bal.\n"
+            '05/13/2026,Beginning balance as of 05/13/2026,,"723.98"\n'
+            '05/13/2026,"Monthly Maintenance Fee","-12.00","711.98"\n'
+            '05/15/2026,"VENMO DES:CASHOUT","447.74","1,159.72"\n'
+            '05/18/2026,"VENMO DES:PAYMENT","-809.00","450.72"\n'
+        )
+
+        result = service.preview_statement(account, statement, "bofa", "2026-05")
+
+        assert result.errors == []
+        assert result.parsed_count == 3
+        assert result.rows[0].description == "Monthly Maintenance Fee"
+        assert result.rows[0].amount == Decimal("12.00")
+        assert result.rows[0].transaction_type == "debit"
+        assert result.rows[1].amount == Decimal("447.74")
+        assert result.rows[1].transaction_type == "credit"
+        assert result.rows[2].amount == Decimal("809.00")
+        assert result.rows[2].transaction_type == "debit"
+
     def test_import_skips_overlapping_statement_rows(self, account):
         service = StatementImportService()
         first_statement = _make_named_csv(

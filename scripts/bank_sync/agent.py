@@ -38,6 +38,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Sequence
+from urllib.parse import urljoin
 
 from loguru import logger
 
@@ -301,6 +302,209 @@ def cmd_run(args: argparse.Namespace) -> int:
 # ============================ key + import/export =====================
 
 
+def cmd_apply(args: argparse.Namespace) -> int:
+    """Upsert logins and accounts from a YAML config file into the vault.
+
+    Secrets (cookies, activity URLs) are never read or overwritten here.
+    Only structural config — institution, nickname, cadence, hour, storage_uri,
+    flow, and name — is synced. Run ``login signin`` afterward to capture
+    cookies for any newly added logins.
+    """
+    try:
+        import yaml  # type: ignore[import-untyped]
+    except ModuleNotFoundError:
+        print(
+            "PyYAML is not installed. Run: pip install PyYAML",
+            file=sys.stderr,
+        )
+        return 3
+
+    config_path = Path(args.config)
+    if not config_path.exists():
+        print(f"Config file not found: {config_path}", file=sys.stderr)
+        return 1
+
+    try:
+        raw = yaml.safe_load(config_path.read_text())
+    except yaml.YAMLError as exc:
+        print(f"Failed to parse YAML: {exc}", file=sys.stderr)
+        return 1
+
+    if not isinstance(raw, dict) or "logins" not in raw:
+        print("Config must have a top-level 'logins' list.", file=sys.stderr)
+        return 1
+
+    store = _store(args)
+    return _apply_config_payload(raw, store)
+
+
+def _apply_config_payload(raw: dict, store: AgentStore) -> int:
+    """Upsert generated/YAML config into the local vault.
+
+    This intentionally preserves stored cookies and activity URLs. The config
+    owns only structural fields: login schedule plus account name/flow/storage.
+    """
+
+    logins_added = logins_updated = accounts_added = accounts_updated = 0
+
+    for login_cfg in raw.get("logins") or []:
+        institution = login_cfg.get("institution", "").strip()
+        if not institution:
+            print("Skipping login entry with no 'institution'.", file=sys.stderr)
+            continue
+
+        nickname = str(login_cfg.get("nickname", "") or "")
+        cadence = str(login_cfg.get("cadence", "daily"))
+        hour = int(login_cfg.get("hour", 6))
+
+        existing_login = next(
+            (
+                lo
+                for lo in store.list_logins()
+                if lo.institution_slug == institution and lo.nickname == nickname
+            ),
+            None,
+        )
+
+        if existing_login is None:
+            login = store.add_login(
+                institution_slug=institution,
+                nickname=nickname,
+                cadence=cadence,
+                preferred_run_hour_local=hour,
+            )
+            logins_added += 1
+            print(
+                f"  + login #{login.id} [{institution}]"
+                + (f" ({nickname})" if nickname else "")
+                + f"  cadence={cadence}@{hour:02d}"
+            )
+        else:
+            login = existing_login
+            schedule_changed = (
+                login.cadence != cadence or login.preferred_run_hour_local != hour
+            )
+            if schedule_changed:
+                store.update_login_schedule(
+                    login.id, cadence=cadence, preferred_run_hour_local=hour
+                )
+                logins_updated += 1
+                print(
+                    f"  ~ login #{login.id} [{institution}]"
+                    + (f" ({nickname})" if nickname else "")
+                    + f"  cadence={cadence}@{hour:02d} (updated)"
+                )
+            else:
+                print(
+                    f"  = login #{login.id} [{institution}]"
+                    + (f" ({nickname})" if nickname else "")
+                    + "  (unchanged)"
+                )
+
+        existing_accounts = {
+            acc.storage_uri: acc for acc in store.list_accounts(login.id)
+        }
+
+        for acc_cfg in login_cfg.get("accounts") or []:
+            storage_uri = str(acc_cfg.get("storage_uri", "") or "").strip()
+            if not storage_uri:
+                print("  Skipping account entry with no 'storage_uri'.", file=sys.stderr)
+                continue
+
+            name = str(acc_cfg.get("name", "") or "")
+            flow = str(acc_cfg.get("flow", "deposit"))
+
+            if storage_uri not in existing_accounts:
+                account = store.add_account(
+                    login_id=login.id,
+                    storage_uri=storage_uri,
+                    flow=flow,
+                    detected_account_name=name,
+                )
+                accounts_added += 1
+                print(f"    + account #{account.id} {name!r} flow={flow}")
+                print(f"      storage_uri: {storage_uri}")
+            else:
+                account = existing_accounts[storage_uri]
+                changed = account.detected_account_name != name or account.flow != flow
+                if changed:
+                    store.update_account(
+                        account.id,
+                        detected_account_name=name,
+                        flow=flow,
+                    )
+                    accounts_updated += 1
+                    print(f"    ~ account #{account.id} {name!r} flow={flow} (updated)")
+                else:
+                    print(f"    = account #{account.id} {name!r} (unchanged)")
+
+    print(
+        f"\nDone: {logins_added} login(s) added, {logins_updated} updated, "
+        f"{accounts_added} account(s) added, {accounts_updated} updated."
+    )
+    pending = [lo for lo in store.list_logins() if lo.status == "pending_login"]
+    if pending:
+        print("\nLogins awaiting sign-in:")
+        for lo in pending:
+            label = f"[{lo.institution_slug}]" + (f" ({lo.nickname})" if lo.nickname else "")
+            print(f"  bank-agent login signin {lo.id}   # {label}")
+    return 0
+
+
+def cmd_sync_config(args: argparse.Namespace) -> int:
+    """Fetch generated config from Richtato and upsert it into the local vault."""
+
+    try:
+        import requests
+    except ModuleNotFoundError:
+        print("requests is not installed. Run: pip install requests", file=sys.stderr)
+        return 3
+
+    token = args.token or os.environ.get("RICHTATO_API_TOKEN", "")
+    if not token:
+        print("Missing API token. Pass --token or set RICHTATO_API_TOKEN.", file=sys.stderr)
+        return 2
+
+    base_url = (args.api_base or os.environ.get("RICHTATO_API_BASE_URL") or "http://127.0.0.1:8000/api/v1").rstrip(
+        "/"
+    )
+    endpoint = urljoin(base_url + "/", "accounts/bank-agent-config/")
+    params = {
+        "cadence": args.cadence,
+        "hour": str(args.hour),
+        "nickname": args.nickname,
+    }
+    if args.all_supported:
+        params["include"] = "all-supported"
+
+    try:
+        response = requests.get(
+            endpoint,
+            headers={"Authorization": f"Token {token}"},
+            params=params,
+            timeout=20,
+        )
+    except requests.RequestException as exc:
+        print(f"Failed to fetch Richtato config: {exc}", file=sys.stderr)
+        return 1
+
+    if response.status_code != 200:
+        print(f"Richtato config fetch failed: HTTP {response.status_code} {response.text[:500]}", file=sys.stderr)
+        return 1
+
+    try:
+        raw = response.json()
+    except ValueError as exc:
+        print(f"Richtato returned invalid JSON: {exc}", file=sys.stderr)
+        return 1
+
+    if not isinstance(raw, dict) or "logins" not in raw:
+        print("Richtato config response must have a top-level 'logins' list.", file=sys.stderr)
+        return 1
+
+    return _apply_config_payload(raw, _store(args))
+
+
 def cmd_generate_key(args: argparse.Namespace) -> int:
     print(generate_key())
     return 0
@@ -437,6 +641,38 @@ def build_parser() -> argparse.ArgumentParser:
         help="Seconds between schedule checks (default 60).",
     )
     p_run.set_defaults(func=cmd_run)
+
+    p_apply = sub.add_parser(
+        "apply",
+        help="Upsert logins and accounts from a YAML config file",
+    )
+    p_apply.add_argument(
+        "config",
+        nargs="?",
+        default="scripts/bank_sync/bank_sync.yml",
+        help="Path to YAML config (default: scripts/bank_sync/bank_sync.yml).",
+    )
+    p_apply.set_defaults(func=cmd_apply)
+
+    p_sync_config = sub.add_parser(
+        "sync-config",
+        help="Fetch generated config from Richtato and upsert it into the local vault",
+    )
+    p_sync_config.add_argument(
+        "--api-base",
+        default=None,
+        help="Richtato API base URL (default: RICHTATO_API_BASE_URL or http://127.0.0.1:8000/api/v1).",
+    )
+    p_sync_config.add_argument("--token", default=None, help="DRF token (default: RICHTATO_API_TOKEN).")
+    p_sync_config.add_argument("--cadence", default="daily", choices=store_mod.CADENCES)
+    p_sync_config.add_argument("--hour", type=int, default=6, help="Preferred local run hour (0-23).")
+    p_sync_config.add_argument("--nickname", default="personal")
+    p_sync_config.add_argument(
+        "--all-supported",
+        action="store_true",
+        help="Include all active supported accounts, not just sync_mode=auto.",
+    )
+    p_sync_config.set_defaults(func=cmd_sync_config)
 
     p_genkey = sub.add_parser("generate-key", help="Print a fresh BANK_AGENT_FERNET_KEY value")
     p_genkey.set_defaults(func=cmd_generate_key)
