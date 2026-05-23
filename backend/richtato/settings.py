@@ -28,13 +28,8 @@ load_dotenv(_PROJECT_ROOT / ".env")
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-only-change-me-in-production")
 
-# Plaid API Configuration
-PLAID_CLIENT_ID = os.getenv("PLAID_CLIENT_ID")
-
 # Cron Job Security
 CRON_SECRET_KEY = os.getenv("CRON_SECRET_KEY")
-PLAID_SECRET = os.getenv("PLAID_SECRET")
-PLAID_ENV = os.getenv("PLAID_ENV", "sandbox")  # sandbox, development, production
 
 # Bank Automation Encryption Key
 # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
@@ -65,7 +60,6 @@ INSTALLED_APPS = [
     "apps.financial_account",
     "apps.transaction",
     "apps.categorization",
-    "apps.sync",
     "apps.bank_automation",
     "apps.budget",
     "apps.household",
@@ -93,7 +87,6 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.richtato_user.middleware.CleanupDemoUsersMiddleware",
     "apps.richtato_user.middleware.ResetDemoUserMiddleware",
-    "apps.sync.middleware.AutoSyncMiddleware",
     "apps.core.middleware.SelfPingMiddleware",
 ]
 

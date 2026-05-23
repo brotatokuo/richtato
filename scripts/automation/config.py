@@ -80,8 +80,7 @@ class AutomationConfig:
     accounts_file: Path
 
     richtato_base_url: str
-    richtato_user: str
-    richtato_pass: str
+    richtato_runner_token: str
 
     gmail_user: str
     gmail_app_password: str
@@ -308,8 +307,7 @@ def load_config(repo_root: Path | None = None) -> AutomationConfig:
         richtato_base_url=os.getenv("RICHTATO_BASE_URL", "http://backend:8000").rstrip(
             "/"
         ),
-        richtato_user=os.getenv("RICHTATO_USER", ""),
-        richtato_pass=os.getenv("RICHTATO_PASS", ""),
+        richtato_runner_token=os.getenv("RICHTATO_RUNNER_TOKEN", ""),
         gmail_user=os.getenv("GMAIL_USER", ""),
         gmail_app_password=os.getenv("GMAIL_APP_PASSWORD", ""),
         alert_to=os.getenv("ALERT_TO", ""),

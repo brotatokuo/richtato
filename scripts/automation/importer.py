@@ -1,7 +1,9 @@
 """Submit a downloaded statement to the Richtato import API.
 
-Uses HTTP Basic Auth against the docker-compose `backend` service. The Django
-view accepts session or basic auth and an institution slug + account ID.
+Uses DRF Token Auth against the docker-compose ``backend`` service. The
+``RICHTATO_RUNNER_TOKEN`` must belong to a Django user with
+``is_automation_runner=True`` so the import view allows cross-user account
+lookups.
 """
 
 from __future__ import annotations
@@ -31,9 +33,9 @@ def submit_statement(
     DB-driven runner passes it explicitly per ``BankAccountLink``.
     """
 
-    if not config.richtato_user or not config.richtato_pass:
+    if not config.richtato_runner_token:
         raise ConfigError(
-            "RICHTATO_USER and RICHTATO_PASS must be set so the automation can POST to the import API."
+            "RICHTATO_RUNNER_TOKEN must be set so the automation can POST to the import API."
         )
 
     if account_id is None:
@@ -60,7 +62,7 @@ def submit_statement(
                     "mode": "commit",
                     "statement_status": "provisional",
                 },
-                auth=(config.richtato_user, config.richtato_pass),
+                headers={"Authorization": f"Token {config.richtato_runner_token}"},
                 timeout=REQUEST_TIMEOUT_SECONDS,
             )
         except requests.RequestException as exc:

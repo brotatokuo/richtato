@@ -92,12 +92,12 @@ class DBConnection:
             self._materialized_path = None
 
 
-def _auth(config: AutomationConfig) -> tuple[str, str]:
-    if not config.richtato_user or not config.richtato_pass:
+def _auth_headers(config: AutomationConfig) -> dict[str, str]:
+    if not config.richtato_runner_token:
         raise ConfigError(
-            "RICHTATO_USER and RICHTATO_PASS must be set so the automation can call the runner API."
+            "RICHTATO_RUNNER_TOKEN must be set so the automation can call the runner API."
         )
-    return (config.richtato_user, config.richtato_pass)
+    return {"Authorization": f"Token {config.richtato_runner_token}"}
 
 
 def _coerce_accounts(raw_accounts) -> tuple[DBAccount, ...]:
@@ -137,7 +137,7 @@ def fetch_due_connections(
         response = requests.get(
             url,
             params=params,
-            auth=_auth(config),
+            headers=_auth_headers(config),
             timeout=REQUEST_TIMEOUT_SECONDS,
         )
     except requests.RequestException as exc:
@@ -204,7 +204,7 @@ def post_run_outcome(
         response = requests.post(
             url,
             json=payload,
-            auth=_auth(config),
+            headers=_auth_headers(config),
             timeout=REQUEST_TIMEOUT_SECONDS,
         )
     except requests.RequestException as exc:

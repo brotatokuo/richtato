@@ -10,7 +10,7 @@ from rest_framework.authentication import (
     SessionAuthentication,
     TokenAuthentication,
 )
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
@@ -60,6 +60,20 @@ class _ManualRunThrottle(UserRateThrottle):
 
     def get_rate(self):
         return "30/hour"
+
+
+class IsAutomationRunner(BasePermission):
+    """Grants access only to accounts with ``is_automation_runner=True``.
+
+    Used alongside ``IsAuthenticated`` on the internal runner endpoints so the
+    automation container can query and act on connections across all users,
+    while regular users are still rejected.
+    """
+
+    def has_permission(self, request, view):
+        return bool(
+            request.user and request.user.is_authenticated and getattr(request.user, "is_automation_runner", False)
+        )
 
 
 # Slugs of institutions for which a Playwright adapter exists today. Keep in
@@ -451,23 +465,30 @@ class _RunnerPayloadMixin:
 
 
 class RunnerDueConnectionsAPIView(_AuthMixin, _RunnerPayloadMixin, APIView):
-    """Internal endpoint: fetch and lease the user's due connections.
+    """Internal endpoint: fetch and lease due connections.
 
     Called by the automation container's scheduler every ~15 min. Returns
     decrypted ``storage_state`` and ``activity_url`` for every active
     connection whose ``next_run_at`` is in the past, and atomically opens a
     ``BankAutomationRun`` row so the runner can post the outcome back.
+
+    When the caller has ``is_automation_runner=True`` the query spans all
+    users, enabling one container to service a multi-tenant deployment.
+    Regular authenticated users only see their own connections.
     """
+
+    permission_classes = [IsAuthenticated | IsAutomationRunner]
 
     def get(self, request):
         now = timezone.now()
         force_all = str(request.query_params.get("all", "")).lower() in {"1", "true", "yes"}
 
-        queryset = (
-            BankConnection.objects.filter(user=request.user, status="active")
-            .select_related("institution", "session")
-            .prefetch_related("account_links__financial_account")
-        )
+        if getattr(request.user, "is_automation_runner", False):
+            base_qs = BankConnection.objects.filter(status="active")
+        else:
+            base_qs = BankConnection.objects.filter(user=request.user, status="active")
+
+        queryset = base_qs.select_related("institution", "session").prefetch_related("account_links__financial_account")
         if not force_all:
             queryset = queryset.filter(next_run_at__lte=now)
 
@@ -492,14 +513,24 @@ class RunnerDueConnectionsAPIView(_AuthMixin, _RunnerPayloadMixin, APIView):
 
 
 class RunnerRunOutcomeAPIView(_AuthMixin, APIView):
-    """Internal endpoint: the runner records the outcome of a run."""
+    """Internal endpoint: the runner records the outcome of a run.
+
+    When the caller has ``is_automation_runner=True`` the run is looked up by
+    ``pk`` only, allowing the runner to report outcomes for any user's run.
+    Regular users are restricted to runs belonging to their own connections.
+    """
+
+    permission_classes = [IsAuthenticated | IsAutomationRunner]
 
     def post(self, request, run_id: int):
-        run = (
-            BankAutomationRun.objects.filter(connection__user=request.user, pk=run_id)
-            .select_related("connection")
-            .first()
-        )
+        if getattr(request.user, "is_automation_runner", False):
+            run = BankAutomationRun.objects.filter(pk=run_id).select_related("connection").first()
+        else:
+            run = (
+                BankAutomationRun.objects.filter(connection__user=request.user, pk=run_id)
+                .select_related("connection")
+                .first()
+            )
         if run is None:
             return Response({"error": "Not found"}, status=status.HTTP_404_NOT_FOUND)
 

@@ -2,7 +2,7 @@
 
 from loguru import logger
 from rest_framework import status
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -524,7 +524,7 @@ class CSVStatementImportAPIView(APIView):
 class StatementImportAPIView(APIView):
     """Preview or import CSV/Excel statements for supported institutions."""
 
-    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    authentication_classes = [SessionAuthentication, TokenAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
 
     def __init__(self, **kwargs):
@@ -554,9 +554,19 @@ class StatementImportAPIView(APIView):
             return Response({"error": "institution is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            account = self.account_service.get_account_by_id(int(account_id), request.user)
+            raw_account_id = int(account_id)
         except (TypeError, ValueError):
             return Response({"error": "Invalid account"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if getattr(request.user, "is_automation_runner", False):
+            # Automation runner acts on behalf of any user; trust the account_id
+            # supplied by the DB-backed runner payload (already validated by the
+            # BankAccountLink row on the backend side).
+            from apps.financial_account.models import FinancialAccount
+
+            account = FinancialAccount.objects.filter(id=raw_account_id, is_active=True).first()
+        else:
+            account = self.account_service.get_account_by_id(raw_account_id, request.user)
 
         if not account:
             return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)

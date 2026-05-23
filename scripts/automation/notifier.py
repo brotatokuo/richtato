@@ -47,7 +47,7 @@ REMEDY_BY_KIND: dict[ErrorKind, str] = {
         "configured account ID for this institution in AUTOMATION_ACCOUNT_IDS."
     ),
     ErrorKind.CONFIG: (
-        "Configuration error - check the automation environment variables (AUTOMATION_ACCOUNT_IDS, RICHTATO_USER, etc.)."
+        "Configuration error - check the automation environment variables (AUTOMATION_ACCOUNT_IDS, RICHTATO_RUNNER_TOKEN, etc.)."
     ),
     ErrorKind.UNKNOWN: ("Unexpected failure - see traceback below."),
 }

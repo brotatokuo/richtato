@@ -33,7 +33,6 @@ class FinancialAccount(models.Model):
     ]
 
     SYNC_SOURCE_CHOICES = [
-        ("plaid", "Plaid"),
         ("manual", "Manual Entry"),
         ("csv", "CSV Import"),
     ]
@@ -111,7 +110,6 @@ class AccountBalanceHistory(models.Model):
         ("transaction", "Transaction"),
         ("manual", "Manual"),
         ("csv_import", "CSV Import"),
-        ("plaid_sync", "Plaid Sync"),
     ]
 
     account = models.ForeignKey(FinancialAccount, on_delete=models.CASCADE, related_name="balance_history")

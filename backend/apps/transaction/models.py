@@ -164,7 +164,6 @@ class Transaction(models.Model):
     ]
 
     SYNC_SOURCE_CHOICES = [
-        ("plaid", "Plaid"),
         ("manual", "Manual Entry"),
         ("csv", "CSV Import"),
     ]
@@ -206,7 +205,7 @@ class Transaction(models.Model):
     external_id = models.CharField(
         max_length=255,
         blank=True,
-        help_text="External ID from sync source (e.g., Plaid transaction ID)",
+        help_text="External ID from sync source",
     )
     raw_data = models.JSONField(null=True, blank=True, help_text="Raw transaction data from external source")
     categorization_status = models.CharField(

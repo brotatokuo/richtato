@@ -63,12 +63,8 @@ export interface Account {
   image_key?: string | null;
   // Household sharing
   shared_with_household?: boolean;
-  // Sync connection fields
+  // Sync source: 'manual' or 'csv'
   sync_source?: string;
-  has_connection?: boolean;
-  connection_id?: number | null;
-  connection_status?: 'active' | 'disconnected' | 'error' | null;
-  last_sync?: string | null;
 }
 
 export interface Category {
