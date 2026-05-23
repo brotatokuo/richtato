@@ -74,11 +74,18 @@ Common date filters:
 | `GET` | `/{id}/transactions/` | List account transactions |
 | `GET` | `/summary/` | Get account summary |
 | `POST` | `/details/` | Add balance update entry |
+| `GET` | `/drive/status/` | Get Google Drive statement storage status |
+| `POST` | `/drive/oauth/start/` | Start Google Drive OAuth |
+| `GET` | `/drive/oauth/callback/` | Complete Google Drive OAuth callback |
+| `GET` | `/drive/picker-token/` | Get short-lived token/config for Google Drive Picker |
+| `POST` | `/drive/activate/` | Activate an empty Drive folder and create account folders |
+| `POST` | `/drive/disconnect/` | Disconnect inactive Drive OAuth credentials |
+| `POST` | `/agent-statements/` | Agent upload endpoint for Drive-backed statement downloads |
 | `POST` | `/import-csv/` | Import statement CSV |
 | `GET` | `/import-statement/` | List supported CSV/Excel statement institutions |
 | `POST` | `/import-statement/` | Preview or commit CSV/Excel statement import |
-| `GET` | `/statements/` | List locally stored statement files and account/year/month tree |
-| `POST` | `/statements/` | Upload a statement file into local account/year/month storage |
+| `GET` | `/statements/` | List stored statement records and folder summary |
+| `POST` | `/statements/` | Legacy statement file upload into the configured account storage |
 | `GET` | `/statements/{id}/` | Get statement file metadata |
 | `PATCH` | `/statements/{id}/` | Update statement metadata and move folders if account/period changes |
 | `DELETE` | `/statements/{id}/` | Soft-delete statement file metadata |
@@ -103,7 +110,7 @@ Card-specific account routes are mounted at `/api/v1/card-accounts/`.
 
 Statement imports use row-level deduplication. Current/open statement exports are provisional and may overlap later closed statements; duplicates are skipped and changed provisional rows are flagged for review.
 
-Statement files uploaded through `/statements/` are stored locally under `local_data/statements/<user_id>/<account_id>/<year>/<month>/`. The database stores metadata, file hash, account, institution, period, status, and the latest preview/import summary.
+Google Drive statement storage is configured from `/preferences`. The user connects Google Drive, selects an empty root folder, and Richtato creates one flat folder per active account. Statement records still store metadata, file hash, account, institution, period, status, and the latest preview/import summary. Local `local_data/statements/<user_id>/<account_id>/<year>/<month>/` storage remains as the pre-activation/legacy path.
 
 ## Transactions (`/api/v1/transactions/`)
 

@@ -5,7 +5,6 @@ import {
 import {
   BarChart3,
   Calculator,
-  CloudUpload,
   Heart,
   Landmark,
   MoreHorizontal,
@@ -27,7 +26,6 @@ const routeConfig: Record<
   '/budget': { title: 'Budget', icon: Wallet },
   '/transactions': { title: 'Transactions', icon: Table },
   '/dashboard': { title: 'Dashboard', icon: BarChart3 },
-  '/upload': { title: 'Upload', icon: CloudUpload },
   '/preferences': { title: 'Preferences', icon: Settings },
   '/setup': { title: 'Setup', icon: SlidersHorizontal },
   '/settings': { title: 'Settings', icon: Settings },

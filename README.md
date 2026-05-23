@@ -7,13 +7,13 @@ The product goal is Monarch Money quality: clean financial dashboards, fast tran
 ## Features
 
 - Transaction tracking with categories, filters, bulk actions, and AI recategorization.
-- CSV/Excel statement imports and a Chrome-extension-driven bank automation flow for hands-off downloads.
+- Google Drive statement storage and a Chrome-extension-driven bank automation flow for hands-off downloads.
 - Net worth and cash flow dashboard with ECharts visualizations.
 - Budget tracking by month, category, and household scope.
 - Household sharing for shared accounts and household budgets.
 - User preferences for display, currency, appearance, categories, and account settings.
 - Demo mode for quickly exploring populated data.
-- CSV/Excel statement import with row-level deduplication, preview before commit, and a local statement library organized by account, year, and month.
+- Statement import with row-level deduplication and Drive-backed original file retention, organized as one flat folder per account.
 
 ## Tech Stack
 
@@ -93,7 +93,7 @@ yarn dev
 ## Current App Routes
 
 - Public: `/welcome`, `/login`, `/register`.
-- Protected: `/dashboard`, `/accounts`, `/budget`, `/transactions`, `/setup`, `/preferences`, `/profile`, `/upload`, `/household`, `/formulas`, `/more`.
+- Protected: `/dashboard`, `/accounts`, `/budget`, `/transactions`, `/setup`, `/preferences`, `/profile`, `/household`, `/formulas`, `/more`.
 - Redirects: `/` to `/dashboard`, `/cashflow` to `/dashboard`, `/settings` to `/preferences`.
 
 ## API Documentation
@@ -103,7 +103,7 @@ Primary API endpoints are under `/api/v1/`; many also exist under `/api/` for co
 Key roots:
 
 - `/api/v1/auth/`
-- `/api/v1/accounts/` — includes `/import-statement/` and `/statements/` for CSV/Excel import and the local statement library
+- `/api/v1/accounts/` — includes Drive statement storage, agent uploads, and statement record APIs
 - `/api/v1/transactions/`
 - `/api/v1/budgets/`
 - `/api/v1/asset-dashboard/`

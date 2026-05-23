@@ -37,6 +37,14 @@ CRON_SECRET_KEY = os.getenv("CRON_SECRET_KEY")
 # SECRET_KEY when this is unset.
 BANK_SYNC_FERNET_KEY = os.getenv("BANK_SYNC_FERNET_KEY", "")
 
+# Google Drive statement storage
+GOOGLE_DRIVE_CLIENT_ID = os.getenv("GOOGLE_DRIVE_CLIENT_ID", "")
+GOOGLE_DRIVE_CLIENT_SECRET = os.getenv("GOOGLE_DRIVE_CLIENT_SECRET", "")
+GOOGLE_DRIVE_REDIRECT_URI = os.getenv("GOOGLE_DRIVE_REDIRECT_URI", "")
+GOOGLE_DRIVE_PICKER_API_KEY = os.getenv("GOOGLE_DRIVE_PICKER_API_KEY", "")
+GOOGLE_DRIVE_PICKER_APP_ID = os.getenv("GOOGLE_DRIVE_PICKER_APP_ID", "")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 

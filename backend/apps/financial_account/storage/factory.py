@@ -5,6 +5,7 @@ from __future__ import annotations
 from urllib.parse import urlparse
 
 from apps.financial_account.storage.base import StatementStorage, UnknownStorageScheme
+from apps.financial_account.storage.gdrive import GoogleDriveStatementStorage
 from apps.financial_account.storage.local import LocalStatementStorage
 
 
@@ -12,7 +13,7 @@ def get_storage(uri: str) -> StatementStorage:
     """Resolve a ``StatementStorage`` for the given URI scheme.
 
     ``file://`` and bare absolute paths route to :class:`LocalStatementStorage`.
-    ``gdrive://`` is reserved; raises ``NotImplementedError`` for now.
+    ``gdrive://`` routes to :class:`GoogleDriveStatementStorage`.
     Unknown schemes raise :class:`UnknownStorageScheme`.
     """
     if not uri:
@@ -23,9 +24,6 @@ def get_storage(uri: str) -> StatementStorage:
 
     scheme = urlparse(uri).scheme
     if scheme == "gdrive":
-        raise NotImplementedError(
-            "gdrive:// storage backend is not implemented yet. "
-            "Implement GoogleDriveStatementStorage and wire it in here."
-        )
+        return GoogleDriveStatementStorage()
 
     raise UnknownStorageScheme(f"No storage backend registered for scheme: {scheme!r} (uri={uri!r})")

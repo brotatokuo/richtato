@@ -19,9 +19,6 @@ const DataTable = lazy(() =>
 const ReportPage = lazy(() =>
   import('./pages/ReportPage').then(m => ({ default: m.ReportPage }))
 );
-const Upload = lazy(() =>
-  import('./pages/Upload').then(m => ({ default: m.Upload }))
-);
 const Profile = lazy(() =>
   import('./pages/Profile').then(m => ({ default: m.Profile }))
 );
@@ -90,14 +87,6 @@ function App() {
                   element={
                     <Suspense fallback={null}>
                       <ReportPage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="upload"
-                  element={
-                    <Suspense fallback={null}>
-                      <Upload />
                     </Suspense>
                   }
                 />

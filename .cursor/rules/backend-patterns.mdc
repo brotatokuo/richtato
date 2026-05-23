@@ -20,9 +20,9 @@ alwaysApply: false
 - Household-aware list and aggregate endpoints should use `apps.household.scope.get_scope_user_ids(request)` and respect shared accounts plus household budgets.
 - Use `apps.core.constants` filters for income, expense, transfer, and investment classification. Do not reimplement category-type logic in aggregations.
 - Transaction saves/deletes trigger balance and history updates through `apps.transaction.signals`; do not manually adjust `FinancialAccount.balance` around normal transaction CRUD.
-- CSV/Excel statement import is the primary no-aggregator ingestion path. Use row-level dedup so current/open statements can overlap later closed statements without duplicate transactions. Store original statement files locally through `StatementFileService`, not ad hoc file writes.
+- Google Drive statement storage plus the Playwright bank-agent is the primary no-aggregator ingestion path. Use row-level dedup so current/open statements can overlap later closed statements without duplicate transactions. Store original statement records through `StatementFileService`, not ad hoc file writes.
 - Categories are soft-deleted with `is_deleted=True` when they may have transactions.
-- Bank automation (Chrome-extension-driven) and CSV/Excel statement imports are the only sync paths; do not add Teller, Plaid, or other aggregator docs/code unless explicitly implementing them.
+- Bank automation (Chrome-extension-driven) and Drive-backed statement imports are the only sync paths; do not add Teller, Plaid, or other aggregator docs/code unless explicitly implementing them.
 - Log with `loguru.logger`; avoid `print` or stdlib logging in app code.
 
 ## API And URLs

@@ -1,15 +1,15 @@
 /**
  * Storage location surface for an account's statement-file directory.
  *
- * Shows the resolved ``storage_uri`` (where the host bank-agent drops
- * downloaded CSV/XLSX files and where manual uploads land) and the
+ * Shows the resolved ``storage_uri`` (where statement files are synced,
+ * locally or through Google Drive) and the
  * most recent ``StatementFile`` rows the backend scanner has discovered
  * for the account, with their source (manual vs agent drop) and import
  * status.
  *
  * This component is read-only today. The agent and scanner orchestration
- * happens out-of-band: the user runs the host ``bank-agent`` CLI, and a
- * cron / management command picks up dropped files.
+ * happens out-of-band: the user runs the host ``bank-agent`` CLI, and
+ * Drive-backed accounts upload through the backend for immediate import.
  */
 import { Badge } from '@/components/ui/badge';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -122,6 +122,7 @@ export function StorageLocationPanel({
 
   const isOverride = Boolean(storageUri);
   const displayUri = resolvedStorageUri || storageUri || '';
+  const isDrive = displayUri.startsWith('gdrive://');
 
   return (
     <div className="space-y-3">
@@ -135,7 +136,15 @@ export function StorageLocationPanel({
               <p className="text-xs font-medium text-foreground">
                 Statement storage
               </p>
-              {isOverride && (
+              {isDrive && (
+                <Badge
+                  variant="outline"
+                  className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30"
+                >
+                  Google Drive
+                </Badge>
+              )}
+              {isOverride && !isDrive && (
                 <Badge
                   variant="outline"
                   className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30"
@@ -151,8 +160,9 @@ export function StorageLocationPanel({
               {displayUri || 'Not configured'}
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground/70">
-              The host bank-agent writes downloads here. Files are auto-imported
-              when the backend scanner runs.
+              {isDrive
+                ? 'Statements sync to this account folder in Google Drive.'
+                : 'The host bank-agent writes downloads here. Files are auto-imported when the backend scanner runs.'}
             </p>
           </div>
         </div>

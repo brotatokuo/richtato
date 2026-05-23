@@ -4,6 +4,8 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from apps.bank_sync.encryption import decrypt_text, encrypt_text
+
 
 class FinancialInstitution(models.Model):
     """Bank or credit card issuer reference data."""
@@ -266,3 +268,72 @@ class StatementFile(models.Model):
         self.is_deleted = True
         self.deleted_at = timezone.now()
         self.save(update_fields=["is_deleted", "deleted_at", "updated_at"])
+
+
+class GoogleDriveConnection(models.Model):
+    """Per-user Google Drive connection for statement storage."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="google_drive_connection",
+    )
+    google_account_email = models.EmailField(blank=True, default="")
+    refresh_token_encrypted = models.TextField(blank=True, default="")
+    root_folder_id = models.CharField(max_length=255, blank=True, default="")
+    root_folder_name = models.CharField(max_length=255, blank=True, default="")
+    is_active = models.BooleanField(default=False)
+    connected_at = models.DateTimeField(null=True, blank=True)
+    activated_at = models.DateTimeField(null=True, blank=True)
+    disconnected_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "google_drive_connection"
+        indexes = [
+            models.Index(fields=["user", "is_active"]),
+            models.Index(fields=["root_folder_id"]),
+        ]
+
+    def __str__(self):
+        label = self.google_account_email or "Google Drive"
+        return f"{self.user} - {label}"
+
+    @property
+    def refresh_token(self) -> str:
+        """Decrypt and return the OAuth refresh token."""
+        return decrypt_text(self.refresh_token_encrypted, user_id=self.user_id)
+
+    def set_refresh_token(self, refresh_token: str) -> None:
+        """Encrypt and store the OAuth refresh token."""
+        self.refresh_token_encrypted = encrypt_text(refresh_token or "", user_id=self.user_id)
+
+
+class GoogleDriveAccountFolder(models.Model):
+    """Google Drive folder assigned to one Richtato account's statements."""
+
+    connection = models.ForeignKey(
+        GoogleDriveConnection,
+        on_delete=models.CASCADE,
+        related_name="account_folders",
+    )
+    account = models.OneToOneField(
+        FinancialAccount,
+        on_delete=models.CASCADE,
+        related_name="google_drive_folder",
+    )
+    folder_id = models.CharField(max_length=255, unique=True)
+    folder_name = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "google_drive_account_folder"
+        indexes = [
+            models.Index(fields=["connection", "account"]),
+        ]
+
+    def __str__(self):
+        return f"{self.account.name} -> {self.folder_name}"

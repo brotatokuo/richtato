@@ -14,9 +14,11 @@ from apps.financial_account.storage.base import (
     UnknownStorageScheme,
 )
 from apps.financial_account.storage.factory import get_storage
+from apps.financial_account.storage.gdrive import GoogleDriveStatementStorage
 from apps.financial_account.storage.local import LocalStatementStorage
 
 __all__ = [
+    "GoogleDriveStatementStorage",
     "LocalStatementStorage",
     "StatementStorage",
     "StoredFile",

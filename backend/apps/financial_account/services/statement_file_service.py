@@ -106,7 +106,7 @@ class StatementFileService:
 
         storage_uri = account.resolved_storage_uri()
         storage = get_storage(storage_uri)
-        relative_path = self._build_relative_path(year, month, file_hash, filename)
+        relative_path = self._build_relative_path(storage_uri, year, month, file_hash, filename)
         stored = storage.write_file(storage_uri, relative_path, content)
 
         statement = StatementFile.objects.create(
@@ -168,6 +168,7 @@ class StatementFileService:
 
         new_storage_uri = new_account.resolved_storage_uri()
         new_relative = self._build_relative_path(
+            new_storage_uri,
             year,
             month,
             statement.file_hash,
@@ -369,13 +370,16 @@ class StatementFileService:
 
     def _build_relative_path(
         self,
+        storage_uri: str,
         year: int,
         month: int,
         file_hash: str,
         filename: str,
     ) -> str:
-        """Build the storage-backend-relative ``<year>/<month>/<hash>-<file>`` path."""
+        """Build storage-backend-relative path for a statement file."""
         safe_filename = get_valid_filename(filename)
+        if storage_uri.startswith("gdrive://"):
+            return f"{file_hash[:12]}-{safe_filename}"
         return f"{year}/{month:02d}/{file_hash[:12]}-{safe_filename}"
 
     def _stored_path_from_storage(self, storage_uri: str, relative_path: str) -> str:

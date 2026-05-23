@@ -20,6 +20,16 @@ urlpatterns = [
         views.BankAgentConfigAPIView.as_view(),
         name="account-bank-agent-config",
     ),
+    path("drive/status/", views.GoogleDriveStatusAPIView.as_view(), name="account-drive-status"),
+    path("drive/oauth/start/", views.GoogleDriveOAuthStartAPIView.as_view(), name="account-drive-oauth-start"),
+    path(
+        "drive/oauth/callback/",
+        views.GoogleDriveOAuthCallbackAPIView.as_view(),
+        name="account-drive-oauth-callback",
+    ),
+    path("drive/picker-token/", views.GoogleDrivePickerTokenAPIView.as_view(), name="account-drive-picker-token"),
+    path("drive/activate/", views.GoogleDriveActivateAPIView.as_view(), name="account-drive-activate"),
+    path("drive/disconnect/", views.GoogleDriveDisconnectAPIView.as_view(), name="account-drive-disconnect"),
     path(
         "<int:pk>/",
         views.FinancialAccountDetailAPIView.as_view(),
@@ -50,6 +60,11 @@ urlpatterns = [
         "import-statement/",
         views.StatementImportAPIView.as_view(),
         name="account-statement-import",
+    ),
+    path(
+        "agent-statements/",
+        views.AgentStatementUploadAPIView.as_view(),
+        name="account-agent-statement-upload",
     ),
     path(
         "statements/",

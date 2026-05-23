@@ -24,10 +24,10 @@ Richtato is an AI-native personal finance app and Monarch Money competitor. The 
 
 ## Current Routes And APIs
 
-- Frontend routes use `/dashboard`, `/transactions`, `/accounts`, `/budget`, `/setup`, `/preferences`, `/household`, `/formulas`, `/profile`, `/upload`, and `/more`.
+- Frontend routes use `/dashboard`, `/transactions`, `/accounts`, `/budget`, `/setup`, `/preferences`, `/household`, `/formulas`, `/profile`, and `/more`.
 - `/cashflow` redirects to `/dashboard`; `/settings` redirects to `/preferences`.
 - API base is `/api/v1/`; budgets are under `/api/v1/budgets/`; auth, profile, preferences, and category settings are under `/api/v1/auth/`.
-- CSV/Excel statement imports use `/api/v1/accounts/import-statement/` and are the primary no-aggregator ingestion path. Stored original statements use `/api/v1/accounts/statements/` and local `local_data/statements/` account/year/month folders.
+- Google Drive statement storage plus the Playwright bank-agent is the primary no-aggregator ingestion path. Legacy CSV/Excel statement imports use `/api/v1/accounts/import-statement/`; stored originals use `/api/v1/accounts/statements/` and local `local_data/statements/` only before Drive activation.
 - Household APIs are under `/api/v1/household/`; household-aware reads use `scope=household` only when the household scope is selected.
 
 ## Coding Standards
