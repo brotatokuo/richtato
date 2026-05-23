@@ -558,15 +558,7 @@ class StatementImportAPIView(APIView):
         except (TypeError, ValueError):
             return Response({"error": "Invalid account"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if getattr(request.user, "is_automation_runner", False):
-            # Automation runner acts on behalf of any user; trust the account_id
-            # supplied by the DB-backed runner payload (already validated by the
-            # BankAccountLink row on the backend side).
-            from apps.financial_account.models import FinancialAccount
-
-            account = FinancialAccount.objects.filter(id=raw_account_id, is_active=True).first()
-        else:
-            account = self.account_service.get_account_by_id(raw_account_id, request.user)
+        account = self.account_service.get_account_by_id(raw_account_id, request.user)
 
         if not account:
             return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -589,11 +581,9 @@ class StatementImportAPIView(APIView):
                     statement_period=statement_period,
                     statement_status=statement_status,
                 )
-                # Reflect the user's actual ingestion path in the account's
-                # sync_mode so the UI badge stays accurate. Agent-driven
-                # imports leave the existing mode (typically "auto") alone;
-                # user-driven uploads bump a manual account into "upload".
-                if not getattr(request.user, "is_automation_runner", False) and account.sync_mode == "manual":
+                # User-driven uploads of statement files bump a manual account
+                # into the "upload" sync mode so the UI badge stays accurate.
+                if account.sync_mode == "manual":
                     account.sync_mode = "upload"
                     account.save(update_fields=["sync_mode", "updated_at"])
             elif mode == "preview":

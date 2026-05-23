@@ -1,14 +1,16 @@
-"""Bank-sync Playwright agent.
+"""Standalone host-side bank-agent.
 
-The agent polls Richtato's ``/api/v1/bank-sync/runner/due-tasks/`` endpoint
-on a fixed interval. Each leased task is dispatched on its ``task_kind``:
+The agent has no runtime dependency on the Richtato Docker stack. It
+keeps its own Fernet-encrypted SQLite vault under
+``local_data/bank-agent/agent.db`` for bank logins, per-account
+activity URLs, and a poll schedule; downloaded statements are written
+directly into each account's configured ``storage_uri`` directory.
 
-* ``interactive_login`` — pops a headed Chromium window so the user can
-  sign in. The agent captures the resulting ``storage_state`` plus a list
-  of discovered bank-side accounts and posts both back.
-* ``scheduled_download`` / ``manual_download`` — reuses the stored
-  ``storage_state`` headless to download per-account statements, then
-  POSTs them to ``/api/v1/accounts/import-statement/``.
+The Richtato backend independently scans those directories via
+``python manage.py scan_statement_storage`` to discover and import the
+files.
 
-Bank passwords never enter this code path.
+Bank passwords never enter this code path: sign-in always happens in a
+headed Chromium window that the user drives manually, and only
+Playwright ``storage_state`` is captured.
 """

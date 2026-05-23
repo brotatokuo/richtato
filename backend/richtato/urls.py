@@ -71,8 +71,6 @@ urlpatterns = [
     path("demo-login/", user_views.demo_login, name="demo_login"),
     # Household endpoints
     path("api/v1/household/", include("apps.household.urls")),
-    # Bank Sync (Playwright-driven cookie capture + headless statement download)
-    path("api/v1/bank-sync/", include("apps.bank_sync.urls")),
 ]
 
 # Serve static files during development

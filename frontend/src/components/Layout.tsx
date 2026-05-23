@@ -2,7 +2,6 @@ import {
   HeaderSlotProvider,
   useHeaderSlot,
 } from '@/contexts/HeaderSlotContext';
-import { useBankSyncStatus } from '@/hooks/useBankSyncStatus';
 import {
   BarChart3,
   Calculator,
@@ -15,9 +14,7 @@ import {
   Table,
   Wallet,
 } from 'lucide-react';
-import { useEffect, useRef } from 'react';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { BottomTabBar } from './BottomTabBar';
 import { Sidebar } from './Sidebar';
 
@@ -49,31 +46,7 @@ export function Layout() {
 
 function LayoutInner() {
   const location = useLocation();
-  const navigate = useNavigate();
   const { headerSlot } = useHeaderSlot();
-  const bankSyncStatus = useBankSyncStatus();
-  const reauthToastShown = useRef(false);
-
-  const onAccountsPage = location.pathname === '/accounts';
-
-  useEffect(() => {
-    if (
-      !reauthToastShown.current &&
-      bankSyncStatus.reauthCount > 0 &&
-      !onAccountsPage
-    ) {
-      reauthToastShown.current = true;
-      const count = bankSyncStatus.reauthCount;
-      toast.warning('Bank sign-in needed', {
-        description: `${count} bank login${count === 1 ? '' : 's'} need you to sign in again so we can refresh cookies.`,
-        duration: 10_000,
-        action: {
-          label: 'Open',
-          onClick: () => navigate('/accounts'),
-        },
-      });
-    }
-  }, [bankSyncStatus.reauthCount, onAccountsPage, navigate]);
 
   // Get the current page config based on the route (supports nested paths)
   const matchedKey = Object.keys(routeConfig).find(

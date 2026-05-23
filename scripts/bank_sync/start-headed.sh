@@ -1,11 +1,21 @@
 #!/usr/bin/env bash
-# Start the local bank-sync agent on the host.
+# Start the standalone bank-agent on the host in daemon mode.
 #
-# The main Richtato stack stays in Docker (db/backend/frontend). Browser
-# automation runs here on the desktop so headed sign-in can use the native
-# display and scheduled downloads can reuse the same Playwright runtime.
+# The agent is fully independent of the Richtato Docker stack. It owns
+# its own SQLite vault under local_data/bank-agent/ and writes downloaded
+# statement files directly into each account's storage_uri directory.
+# The Richtato backend scanner (`python manage.py scan_statement_storage`)
+# picks them up later and imports them.
 #
-# Run after every reboot, before connecting a bank:
+# Setup (once):
+#   1. Generate a Fernet key and add it to .env:
+#        BANK_AGENT_FERNET_KEY="$(python -m scripts.bank_sync.agent generate-key)"
+#   2. Add bank logins / accounts via the CLI:
+#        python -m scripts.bank_sync.agent login add bofa --nickname personal
+#        python -m scripts.bank_sync.agent login signin 1
+#        python -m scripts.bank_sync.agent account add 1 --storage-uri "file:///..." --activity-url "https://..."
+#
+# Run after every reboot to start the polling daemon:
 #   ./scripts/bank_sync/start-headed.sh
 set -euo pipefail
 
@@ -18,23 +28,21 @@ if [[ -z "${XAUTHORITY:-}" || ! -f "$XAUTHORITY" ]]; then
 fi
 
 if [[ ! -f .env ]]; then
-  echo "Missing .env (need RICHTATO_RUNNER_TOKEN)." >&2
+  echo "Missing .env (need BANK_AGENT_FERNET_KEY)." >&2
   exit 1
 fi
 
-# Load runner token without sourcing the whole .env (SECRET_KEY has spaces).
-RICHTATO_RUNNER_TOKEN="$(
-  grep -E '^RICHTATO_RUNNER_TOKEN=' .env | head -1 | cut -d= -f2- | tr -d "'\" "
+BANK_AGENT_FERNET_KEY="$(
+  grep -E '^BANK_AGENT_FERNET_KEY=' .env | head -1 | cut -d= -f2- | tr -d "'\" "
 )"
-if [[ -z "$RICHTATO_RUNNER_TOKEN" ]]; then
-  echo "RICHTATO_RUNNER_TOKEN missing from .env" >&2
+if [[ -z "$BANK_AGENT_FERNET_KEY" ]]; then
+  echo "BANK_AGENT_FERNET_KEY missing from .env." >&2
+  echo "Generate one with:  python -m scripts.bank_sync.agent generate-key" >&2
   exit 1
 fi
-export RICHTATO_RUNNER_TOKEN
-export RICHTATO_BASE_URL="${RICHTATO_BASE_URL_HOST:-http://localhost:8000}"
+export BANK_AGENT_FERNET_KEY
 export PYTHONPATH="$ROOT"
-export BANK_SYNC_POLL_SECONDS="${BANK_SYNC_POLL_SECONDS:-30}"
-export BANK_SYNC_DOWNLOAD_ROOT="$ROOT/local_data/bank_sync_downloads"
+export BANK_AGENT_POLL_SECONDS="${BANK_AGENT_POLL_SECONDS:-60}"
 
 VENV="$ROOT/scripts/bank_sync/.venv"
 if [[ ! -x "$VENV/bin/python" ]]; then
@@ -46,12 +54,15 @@ fi
 
 xhost +local: >/dev/null
 
-pkill -f "scripts.bank_sync.agent" 2>/dev/null || true
+pkill -f "scripts.bank_sync.agent run" 2>/dev/null || true
 sleep 0.5
-nohup "$VENV/bin/python" -m scripts.bank_sync.agent \
-  >local_data/bank-sync-agent.log 2>&1 &
-sleep 1
-echo "Bank-sync agent started (log: local_data/bank-sync-agent.log)"
 
-echo "Main app stays in Docker: docker compose up -d"
-echo "Open Accounts -> Connect bank -> Open browser to sign in."
+mkdir -p local_data
+nohup "$VENV/bin/python" -m scripts.bank_sync.agent run \
+  >local_data/bank-agent.log 2>&1 &
+sleep 1
+echo "bank-agent daemon started (log: local_data/bank-agent.log)"
+echo ""
+echo "Status:  python -m scripts.bank_sync.agent status"
+echo "Sync:    python -m scripts.bank_sync.agent sync <login_id>"
+echo "Signin:  python -m scripts.bank_sync.agent login signin <login_id>"

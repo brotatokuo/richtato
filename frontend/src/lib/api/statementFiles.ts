@@ -9,6 +9,7 @@ export type StatementFileImportStatus =
   | 'previewed'
   | 'imported'
   | 'failed';
+export type StatementFileSource = 'manual_upload' | 'agent_drop' | 'unknown';
 
 export interface StatementFileRecord {
   id: number;
@@ -30,6 +31,7 @@ export interface StatementFileRecord {
   invalid_count: number;
   possible_changed_count: number;
   last_import_result: StatementImportResult | Record<string, never>;
+  source: StatementFileSource;
   created_at: string;
   updated_at: string;
 }

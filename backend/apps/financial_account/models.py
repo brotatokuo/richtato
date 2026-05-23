@@ -97,6 +97,22 @@ class FinancialAccount(models.Model):
         help_text="Key for custom card image. When null, auto-detect from card name.",
     )
 
+    # File storage for downloaded/uploaded statements (CSV/XLSX). The host
+    # bank-agent drops files here; the backend scanner discovers and imports
+    # them. Empty string falls back to a convention-based local path under
+    # ``local_data/statements/<user_id>/<account_id>/``. Future schemes:
+    # ``gdrive://<folder_id>``.
+    storage_uri = models.CharField(
+        max_length=512,
+        blank=True,
+        default="",
+        help_text=(
+            "Storage URI for this account's statement files. Empty defaults to "
+            "file:///<repo>/local_data/statements/<user_id>/<account_id>/. "
+            "Supports file:// today; gdrive:// later."
+        ),
+    )
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -116,6 +132,21 @@ class FinancialAccount(models.Model):
     def institution_name(self):
         """Get institution name or return 'Manual' for manually entered accounts."""
         return self.institution.name if self.institution else "Manual"
+
+    def resolved_storage_uri(self) -> str:
+        """Return the effective storage URI for this account's statement files.
+
+        If ``storage_uri`` is explicitly set, return it verbatim. Otherwise
+        derive a ``file://`` URI under
+        ``<repo>/local_data/statements/<user_id>/<account_id>/``.
+        """
+        if self.storage_uri:
+            return self.storage_uri
+
+        from django.conf import settings
+
+        base = settings.BASE_DIR.parent / "local_data" / "statements" / str(self.user_id) / str(self.id)
+        return f"file://{base}"
 
 
 class AccountBalanceHistory(models.Model):
@@ -160,6 +191,12 @@ class StatementFile(models.Model):
         ("failed", "Failed"),
     ]
 
+    SOURCE_CHOICES = [
+        ("manual_upload", "Manual Upload"),
+        ("agent_drop", "Agent Drop"),
+        ("unknown", "Unknown"),
+    ]
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -195,6 +232,16 @@ class StatementFile(models.Model):
     invalid_count = models.PositiveIntegerField(default=0)
     possible_changed_count = models.PositiveIntegerField(default=0)
     last_import_result = models.JSONField(default=dict, blank=True)
+    source = models.CharField(
+        max_length=20,
+        choices=SOURCE_CHOICES,
+        default="manual_upload",
+        help_text=(
+            "How this statement entered the library: manual_upload via the "
+            "UI, agent_drop via the host bank-agent + storage scanner, or "
+            "unknown."
+        ),
+    )
     is_deleted = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

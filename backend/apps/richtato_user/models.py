@@ -51,12 +51,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         help_text="Directory path for CSV data imports",
     )
 
-    # Automation service account — grants cross-user access to runner endpoints
-    is_automation_runner = models.BooleanField(
-        default=False,
-        help_text="Grants this account privileged access to the bank sync runner endpoints for all users.",
-    )
-
     # Demo user fields - for temporary trial accounts
     is_demo = models.BooleanField(default=False, help_text="Whether this is a temporary demo account")
     demo_expires_at = models.DateTimeField(null=True, blank=True, help_text="Expiration timestamp for demo accounts")

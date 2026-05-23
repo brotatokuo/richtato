@@ -363,9 +363,15 @@ class TestStatementImportService:
 class TestStatementFileService:
     """Local statement file library behavior."""
 
+    def _isolated_account(self, account, tmp_path):
+        """Point the account at a tmp_path storage URI for test isolation."""
+        account.storage_uri = f"file://{tmp_path / 'statements' / str(account.id)}"
+        account.save(update_fields=["storage_uri"])
+        return account
+
     def test_upload_stores_statement_by_account_year_month(self, account, tmp_path):
         service = StatementFileService()
-        service.storage_root = tmp_path / "statements"
+        self._isolated_account(account, tmp_path)
         statement = _make_named_csv(
             "Transaction Date,Description,Amount\n2025-06-01,Coffee,-5.00\n",
             "june.csv",
@@ -383,12 +389,12 @@ class TestStatementFileService:
         assert result.created is True
         assert result.statement.statement_year == 2025
         assert result.statement.statement_month == 6
-        assert str(account.id) in result.statement.stored_path
+        assert "2025/06" in result.statement.stored_path
         assert service._absolute_path(result.statement.stored_path).exists()
 
     def test_duplicate_upload_returns_existing_record(self, account, tmp_path):
         service = StatementFileService()
-        service.storage_root = tmp_path / "statements"
+        self._isolated_account(account, tmp_path)
         csv_text = "Transaction Date,Description,Amount\n2025-06-01,Coffee,-5.00\n"
 
         first = service.save_upload(account.user, account, _make_named_csv(csv_text), "chase", "2025-06")
@@ -400,7 +406,7 @@ class TestStatementFileService:
 
     def test_preview_and_import_update_statement_summary(self, account, tmp_path):
         service = StatementFileService()
-        service.storage_root = tmp_path / "statements"
+        self._isolated_account(account, tmp_path)
         upload = service.save_upload(
             account.user,
             account,
@@ -425,7 +431,7 @@ class TestStatementFileService:
 
     def test_update_statement_moves_file_to_new_period(self, account, tmp_path):
         service = StatementFileService()
-        service.storage_root = tmp_path / "statements"
+        self._isolated_account(account, tmp_path)
         upload = service.save_upload(
             account.user,
             account,

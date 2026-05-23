@@ -68,6 +68,11 @@ export interface Account {
   // Sync mode controls how the account receives transactions: auto (bank-sync
   // agent), upload (statement file upload), or manual (typed entries).
   sync_mode?: 'auto' | 'upload' | 'manual';
+  // Storage URI for statement files this account ingests. The host bank-agent
+  // writes downloads here; the backend scanner imports from here. Empty
+  // means convention default (file:// under local_data/statements/...).
+  storage_uri?: string;
+  resolved_storage_uri?: string;
 }
 
 export interface Category {

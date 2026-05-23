@@ -1,4 +1,4 @@
-import { AccountSyncPanel } from '@/components/accounts/AccountSyncPanel';
+import { StorageLocationPanel } from '@/components/accounts/StorageLocationPanel';
 import { BaseChart } from '@/components/asset_dashboard/BaseChart';
 import { AccountDetailModal } from '@/components/settings/AccountDetailModal';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +7,6 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Modal } from '@/components/ui/Modal';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import type { AccountSyncSummary } from '@/hooks/useBankSyncLogins';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { getEntityLogo } from '@/lib/imageMapping';
@@ -43,16 +42,12 @@ interface BalancePoint {
 
 interface AccountDetailPanelProps {
   account: AccountWithBalance | null;
-  sync: AccountSyncSummary | null;
   onAccountUpdated: () => void;
-  onSyncChange: () => void | Promise<void>;
 }
 
 export function AccountDetailPanel({
   account,
-  sync,
   onAccountUpdated,
-  onSyncChange,
 }: AccountDetailPanelProps) {
   const { preferences } = usePreferences();
   const { isInHousehold } = useHousehold();
@@ -379,15 +374,15 @@ export function AccountDetailPanel({
         </div>
       </div>
 
-      {/* Sync panel */}
+      {/* Storage location + recent files */}
       <div className="px-6 py-4 border-b border-border/40">
-        <p className="text-sm font-medium text-muted-foreground mb-3">Sync</p>
-        <AccountSyncPanel
+        <p className="text-sm font-medium text-muted-foreground mb-3">
+          Storage
+        </p>
+        <StorageLocationPanel
           accountId={account.id}
-          accountName={account.name}
-          syncMode={account.sync_mode || 'manual'}
-          sync={sync}
-          onChange={onSyncChange}
+          storageUri={account.storage_uri}
+          resolvedStorageUri={account.resolved_storage_uri}
         />
       </div>
 

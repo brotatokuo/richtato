@@ -1,4 +1,3 @@
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -10,10 +9,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { useAuth } from '@/hooks/useAuth';
-import { useBankSyncStatus } from '@/hooks/useBankSyncStatus';
 import { cn } from '@/lib/utils';
 import {
-  AlertTriangle,
   BarChart3,
   Calculator,
   ChevronLeft,
@@ -50,7 +47,6 @@ export function Sidebar({
   const location = useLocation();
   const { user, logout } = useAuth();
   const { isInHousehold } = useHousehold();
-  const bankSyncStatus = useBankSyncStatus();
 
   const navigationItems: NavItem[] = useMemo(() => {
     const items: NavItem[] = [
@@ -149,11 +145,6 @@ export function Sidebar({
           const isActive = location.pathname === itemPath;
           const Icon = item.icon;
 
-          const isAccountsItem = itemPath === '/accounts';
-          const reauthCount = isAccountsItem
-            ? bankSyncStatus.reauthCount + bankSyncStatus.errorCount
-            : 0;
-
           return (
             <Link
               key={item.name}
@@ -175,19 +166,7 @@ export function Sidebar({
               {!isCollapsed && (
                 <span className="flex-1 flex items-center justify-between">
                   <span>{item.name}</span>
-                  {reauthCount > 0 && (
-                    <Badge
-                      variant="default"
-                      className="ml-2 bg-amber-500 hover:bg-amber-600 text-white text-xs px-1.5 py-0.5 gap-1"
-                    >
-                      <AlertTriangle className="h-3 w-3" />
-                      {reauthCount}
-                    </Badge>
-                  )}
                 </span>
-              )}
-              {isCollapsed && reauthCount > 0 && (
-                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-amber-500" />
               )}
             </Link>
           );

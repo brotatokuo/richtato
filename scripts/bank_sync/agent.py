@@ -1,373 +1,467 @@
-"""Bank-sync Playwright agent: single host-side poll loop.
+"""``bank-agent`` host CLI: independent of the Richtato app.
 
-The agent runs as a separate local process on the user's desktop, polling
-``/api/v1/bank-sync/runner/due-tasks/`` every ``BANK_SYNC_POLL_SECONDS``
-seconds. It is intentionally not part of the Docker Compose full stack:
-Docker Desktop + Wayland/X11 forwarding is too fragile for headed Chromium.
-Each leased task is dispatched on ``task_kind``:
+The agent keeps its own Fernet-encrypted SQLite vault under
+``local_data/bank-agent/agent.db`` for bank logins, per-account
+activity URLs, and a poll schedule. It writes downloaded statements
+into each account's configured ``storage_uri``; the Richtato backend
+scanner picks them up and creates the corresponding transactions.
 
-* ``interactive_login`` — spawn a headed Chromium window so the user can
-  sign in to their bank. The cookie ``storage_state`` is captured along
-  with a list of discovered accounts and posted back.
-* ``scheduled_download`` / ``manual_download`` — replay the stored
-  ``storage_state`` headless, navigate each per-account ``activity_url``,
-  and download a statement. Downloaded files are POSTed to
-  ``/api/v1/accounts/import-statement/``.
+Run ``python -m scripts.bank_sync.agent --help`` for the full command
+surface. Common usage:
 
-Bank passwords never touch this process.
+.. code-block:: bash
+
+    # one-time setup
+    export BANK_AGENT_FERNET_KEY="$(python -m scripts.bank_sync.agent generate-key)"
+
+    bank-agent login add bofa --nickname personal --cadence daily --hour 6
+    bank-agent login signin 1
+
+    bank-agent account add 1 \\
+        --activity-url "https://bofa.test/activity?adx=ABC" \\
+        --storage-uri "file:///home/alan/richtato/local_data/statements/1/42/" \\
+        --flow deposit
+
+    bank-agent status
+    bank-agent sync 1
+    bank-agent run            # daemon loop
 """
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import json
 import os
 import signal
 import sys
+import time
 from pathlib import Path
-from typing import Any
+from typing import Sequence
 
 from loguru import logger
-from playwright.async_api import async_playwright
 
-from scripts.bank_sync.api_client import APIClient, AgentConfig
-from scripts.bank_sync.errors import (
-    LoginCancelledError,
-    NeedsReauthError,
-    NoDownloadError,
+from scripts.bank_sync import agent_store as store_mod
+from scripts.bank_sync.agent_store import (
+    AgentStore,
+    Login,
+    dumps as agent_dumps,
+    export_to_dict,
+    import_from_dict,
 )
-from scripts.bank_sync.institutions import get_adapter
-from scripts.bank_sync.institutions.base import BaseInstitutionAdapter
-from scripts.bank_sync.playwright_helpers import capture_storage_state
+from scripts.bank_sync.encryption import MissingAgentKey, generate_key
+
+
+def _lazy_worker():
+    """Import the Playwright worker module on demand.
+
+    Pulling Playwright in eagerly slows down (and can break) commands
+    like ``status`` / ``account list`` on machines without it installed.
+    """
+    from scripts.bank_sync import worker
+
+    return worker
 
 
 def _configure_logging() -> None:
     logger.remove()
-    logger.add(sys.stderr, level=os.getenv("BANK_SYNC_LOG_LEVEL", "INFO"))
+    logger.add(sys.stderr, level=os.getenv("BANK_AGENT_LOG_LEVEL", "INFO"))
 
 
-# Keep the visible browser quiet and predictable when launched on the host.
-HEADED_CHROMIUM_ARGS = [
-    "--no-first-run",
-    "--no-default-browser-check",
-]
-
-HEADED_LAUNCH_TIMEOUT_MS = 60_000
-
-_X11_HINT = (
-    "Headed sign-in runs in the local bank agent. Start it with:\n"
-    "  ./scripts/bank_sync/start-headed.sh"
-)
+def _store(args: argparse.Namespace) -> AgentStore:
+    """Build an AgentStore from CLI args (``--db`` override or default)."""
+    db_path = getattr(args, "db", None)
+    return AgentStore(db_path=db_path)
 
 
-def _x11_available() -> bool:
-    """Return True if the host process has a display available."""
-
-    return bool(os.environ.get("DISPLAY"))
-
-
-async def _run_interactive_login(
-    api: APIClient,
-    adapter: BaseInstitutionAdapter,
-    task: dict[str, Any],
-) -> None:
-    """Pop a headed browser, capture storage_state, report back."""
-
-    run_id = task["run_id"]
-    user_id = task["user_id"]
-    bank_login_id = task["bank_login_id"]
-
-    logger.info(
-        "[run={}] Interactive login: institution={} user_id={} login_id={}",
-        run_id,
-        adapter.slug,
-        user_id,
-        bank_login_id,
+def _print_login(login: Login, accounts_count: int) -> None:
+    print(
+        f"#{login.id} [{login.institution_slug}] {login.nickname or '(default)'}"
+        f"  status={login.status} cadence={login.cadence}@{login.preferred_run_hour_local:02d}"
+        f"  next_run={login.next_run_at or '-'}  last_success={login.last_success_at or '-'}"
+        f"  accounts={accounts_count}"
     )
+    if login.last_failure_reason:
+        print(f"     last_failure: {login.last_failure_reason}")
 
-    if not _x11_available():
-        logger.warning("[run={}] X11 not available; failing interactive_login", run_id)
-        api.post_run_outcome(
-            run_id,
-            succeeded=False,
-            failure_kind="config",
-            failure_reason=_X11_HINT,
-        )
-        return
 
-    async with async_playwright() as pw:
-        browser = await pw.chromium.launch(
-            headless=False,
-            args=HEADED_CHROMIUM_ARGS,
-            timeout=HEADED_LAUNCH_TIMEOUT_MS,
-        )
-        try:
-            context = await browser.new_context(
-                accept_downloads=True,
-                viewport={"width": 1280, "height": 900},
-            )
-            page = await context.new_page()
-            try:
-                discovered = await adapter.interactive_login(context, page)
-            except Exception as exc:
-                logger.exception("Adapter interactive_login crashed")
-                api.post_run_outcome(
-                    run_id,
-                    succeeded=False,
-                    failure_kind="dom_broken",
-                    failure_reason=str(exc)[:500],
-                )
-                return
+# ============================= login commands ==========================
 
-            if page.is_closed():
-                # User closed the window without finishing sign-in.
-                api.post_run_outcome(
-                    run_id,
-                    succeeded=False,
-                    failure_kind="login_cancelled",
-                    failure_reason="User closed the browser before sign-in completed.",
-                )
-                return
 
-            storage_state = await capture_storage_state(context)
-        finally:
-            await browser.close()
-
+def cmd_login_add(args: argparse.Namespace) -> int:
+    store = _store(args)
     try:
-        api.post_captured_session(
-            run_id,
-            storage_state=storage_state,
-            discovered_accounts=[d.as_payload() for d in discovered],
+        login = store.add_login(
+            institution_slug=args.institution,
+            nickname=args.nickname,
+            cadence=args.cadence,
+            preferred_run_hour_local=args.hour,
         )
     except Exception as exc:
-        logger.exception("captured-session POST failed")
-        api.post_run_outcome(
-            run_id,
-            succeeded=False,
-            failure_kind="config",
-            failure_reason=f"captured-session POST failed: {exc}",
+        print(f"Error adding login: {exc}", file=sys.stderr)
+        return 2
+    print(f"Created login {login.id} ({login.institution_slug}/{login.nickname or 'default'}).")
+    print("Next step: bank-agent login signin", login.id)
+    return 0
+
+
+def cmd_login_list(args: argparse.Namespace) -> int:
+    store = _store(args)
+    logins = store.list_logins()
+    if not logins:
+        print("No logins configured yet. Use `bank-agent login add` to start.")
+        return 0
+    for login in logins:
+        accounts = store.list_accounts(login.id)
+        _print_login(login, len(accounts))
+    return 0
+
+
+def cmd_login_signin(args: argparse.Namespace) -> int:
+    store = _store(args)
+    worker = _lazy_worker()
+    succeeded, message = asyncio.run(worker.interactive_login(store, args.login_id))
+    print(message)
+    return 0 if succeeded else 2
+
+
+def cmd_login_remove(args: argparse.Namespace) -> int:
+    store = _store(args)
+    login = store.get_login(args.login_id)
+    if login is None:
+        print(f"Login {args.login_id} not found.", file=sys.stderr)
+        return 1
+    if not args.yes:
+        print(
+            f"Refusing to delete login {login.id} ({login.institution_slug}) without --yes.",
+            file=sys.stderr,
         )
-        return
+        return 1
+    store.delete_login(args.login_id)
+    print(f"Deleted login {args.login_id} and its accounts.")
+    return 0
 
-    api.post_run_outcome(
-        run_id,
-        succeeded=True,
-        accounts_attempted=len(discovered),
-        accounts_succeeded=len(discovered),
-        statements_imported=0,
+
+def cmd_login_schedule(args: argparse.Namespace) -> int:
+    store = _store(args)
+    if store.get_login(args.login_id) is None:
+        print(f"Login {args.login_id} not found.", file=sys.stderr)
+        return 1
+    store.update_login_schedule(
+        args.login_id,
+        cadence=args.cadence,
+        preferred_run_hour_local=args.hour,
     )
-    logger.info("[run={}] Interactive login complete: discovered={}", run_id, len(discovered))
+    print("Schedule updated.")
+    return 0
 
 
-async def _run_download(
-    api: APIClient,
-    adapter: BaseInstitutionAdapter,
-    task: dict[str, Any],
-    *,
-    download_root: Path,
-) -> None:
-    """Headlessly download each enabled account's statement, then post outcomes."""
-
-    run_id = task["run_id"]
-    accounts = task.get("accounts") or []
-    storage_state_raw = task.get("storage_state") or ""
-    if not storage_state_raw:
-        api.post_run_outcome(
-            run_id,
-            succeeded=False,
-            failure_kind="needs_reauth",
-            failure_reason="No stored session; user must sign in again.",
-        )
-        return
-    storage_state = json.loads(storage_state_raw) if isinstance(storage_state_raw, str) else storage_state_raw
-
-    eligible = [a for a in accounts if a.get("activity_url") and a.get("financial_account_id")]
-    if not eligible:
-        api.post_run_outcome(
-            run_id,
-            succeeded=True,
-            accounts_attempted=0,
-            accounts_succeeded=0,
-            statements_imported=0,
-        )
-        logger.info("[run={}] No bound accounts with activity_url; nothing to download", run_id)
-        return
-
-    institution_name = task.get("institution_name", "")
-    download_dir = download_root / str(task["user_id"]) / str(task["bank_login_id"]) / str(run_id)
-    download_dir.mkdir(parents=True, exist_ok=True)
-
-    succeeded = 0
-    imported = 0
-    failure_kind = ""
-    failure_reason = ""
-
-    async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=True)
-        try:
-            context = await browser.new_context(
-                storage_state=storage_state,
-                accept_downloads=True,
-                viewport={"width": 1280, "height": 900},
-            )
-            page = await context.new_page()
-            for account in eligible:
-                try:
-                    file_path = await adapter.download_account(
-                        page,
-                        activity_url=account["activity_url"],
-                        flow=account.get("flow", "deposit"),
-                        download_dir=download_dir,
-                    )
-                except NeedsReauthError as exc:
-                    failure_kind = "needs_reauth"
-                    failure_reason = str(exc)
-                    logger.warning(
-                        "[run={}] needs_reauth on account {}: {}",
-                        run_id,
-                        account.get("financial_account_id"),
-                        exc,
-                    )
-                    break
-                except NoDownloadError as exc:
-                    logger.warning(
-                        "[run={}] no_download on account {}: {}",
-                        run_id,
-                        account.get("financial_account_id"),
-                        exc,
-                    )
-                    continue
-                except Exception as exc:
-                    logger.exception("[run={}] Unexpected error downloading account", run_id)
-                    failure_kind = failure_kind or "dom_broken"
-                    failure_reason = failure_reason or str(exc)
-                    continue
-
-                try:
-                    api.import_statement(
-                        account_id=account["financial_account_id"],
-                        institution=institution_name,
-                        file_path=str(file_path),
-                    )
-                    imported += 1
-                except Exception as exc:
-                    logger.exception("[run={}] import-statement failed", run_id)
-                    failure_kind = failure_kind or "import_rejected"
-                    failure_reason = failure_reason or str(exc)
-                    continue
-
-                succeeded += 1
-        finally:
-            await browser.close()
-
-    api.post_run_outcome(
-        run_id,
-        succeeded=failure_kind == "",
-        failure_kind=failure_kind,
-        failure_reason=failure_reason[:500],
-        accounts_attempted=len(eligible),
-        accounts_succeeded=succeeded,
-        statements_imported=imported,
-    )
-    logger.info(
-        "[run={}] Download complete: attempted={} succeeded={} imported={} kind={}",
-        run_id,
-        len(eligible),
-        succeeded,
-        imported,
-        failure_kind or "ok",
-    )
+# ============================ account commands =========================
 
 
-async def _dispatch(api: APIClient, task: dict[str, Any], *, download_root: Path) -> None:
-    """Route one leased task to the correct handler based on ``task_kind``."""
-
-    slug = task.get("institution_slug", "")
+def cmd_account_add(args: argparse.Namespace) -> int:
+    store = _store(args)
+    if store.get_login(args.login_id) is None:
+        print(f"Login {args.login_id} not found.", file=sys.stderr)
+        return 1
     try:
-        adapter = get_adapter(slug)
-    except KeyError:
-        api.post_run_outcome(
-            task["run_id"],
-            succeeded=False,
-            failure_kind="config",
-            failure_reason=f"No adapter installed for institution {slug!r}.",
+        account = store.add_account(
+            login_id=args.login_id,
+            storage_uri=args.storage_uri,
+            activity_url=args.activity_url,
+            flow=args.flow,
+            detected_account_name=args.name,
         )
-        return
+    except Exception as exc:
+        print(f"Error adding account: {exc}", file=sys.stderr)
+        return 2
+    print(f"Created account {account.id} under login {account.login_id}.")
+    print(f"  storage_uri: {account.storage_uri}")
+    return 0
 
-    kind = task.get("task_kind", "")
-    if kind == "interactive_login":
-        await _run_interactive_login(api, adapter, task)
-    elif kind in ("scheduled_download", "manual_download"):
-        await _run_download(api, adapter, task, download_root=download_root)
-    else:
-        api.post_run_outcome(
-            task["run_id"],
-            succeeded=False,
-            failure_kind="config",
-            failure_reason=f"Unknown task_kind {kind!r}",
+
+def cmd_account_list(args: argparse.Namespace) -> int:
+    store = _store(args)
+    accounts = store.list_accounts(args.login_id)
+    if not accounts:
+        print("No accounts configured.")
+        return 0
+    for account in accounts:
+        enabled = "on" if account.enabled else "off"
+        print(
+            f"#{account.id} login={account.login_id} flow={account.flow} enabled={enabled} "
+            f"last_success={account.last_success_at or '-'}"
         )
+        print(f"     name: {account.detected_account_name or '(unset)'}")
+        print(f"     storage_uri: {account.storage_uri}")
+    return 0
 
 
-async def _poll_loop(api: APIClient) -> None:
-    """Forever-loop that leases and runs due tasks."""
+def cmd_account_update(args: argparse.Namespace) -> int:
+    store = _store(args)
+    if store.get_account(args.account_id) is None:
+        print(f"Account {args.account_id} not found.", file=sys.stderr)
+        return 1
+    store.update_account(
+        args.account_id,
+        activity_url=args.activity_url,
+        flow=args.flow,
+        storage_uri=args.storage_uri,
+        detected_account_name=args.name,
+        enabled=args.enabled,
+    )
+    print(f"Updated account {args.account_id}.")
+    return 0
 
-    download_root = Path(api.cfg.storage_root)
-    download_root.mkdir(parents=True, exist_ok=True)
 
-    stop = asyncio.Event()
+def cmd_account_remove(args: argparse.Namespace) -> int:
+    store = _store(args)
+    if store.get_account(args.account_id) is None:
+        print(f"Account {args.account_id} not found.", file=sys.stderr)
+        return 1
+    store.delete_account(args.account_id)
+    print(f"Deleted account {args.account_id}.")
+    return 0
 
-    def _shutdown(*_: Any) -> None:
-        logger.info("Shutdown signal received; stopping after current task")
-        stop.set()
+
+# ============================ sync commands ============================
+
+
+def cmd_sync(args: argparse.Namespace) -> int:
+    store = _store(args)
+    worker = _lazy_worker()
+    outcome = asyncio.run(worker.download_login(store, args.login_id, kind="manual_download"))
+    print(
+        f"Attempted={outcome.attempted} succeeded={outcome.succeeded} "
+        f"files={outcome.files_downloaded}"
+    )
+    if outcome.failure_reason:
+        print(f"Failure: {outcome.failure_reason}", file=sys.stderr)
+    if outcome.needs_reauth:
+        print("Login needs re-auth; run `bank-agent login signin` to refresh cookies.", file=sys.stderr)
+        return 2
+    return 0 if not outcome.failure_reason else 2
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    store = _store(args)
+    logins = store.list_logins()
+    if not logins:
+        print("No logins configured.")
+        return 0
+    for login in logins:
+        accounts = store.list_accounts(login.id)
+        _print_login(login, len(accounts))
+        for account in accounts:
+            enabled = "on" if account.enabled else "off"
+            print(
+                f"     account #{account.id} {account.detected_account_name or '(unset)'} "
+                f"flow={account.flow} enabled={enabled}"
+            )
+            print(f"        storage_uri: {account.storage_uri}")
+    return 0
+
+
+def cmd_run(args: argparse.Namespace) -> int:
+    store = _store(args)
+    worker = _lazy_worker()
+    poll_seconds = args.poll_seconds
+    logger.info("bank-agent run loop online; polling every {}s", poll_seconds)
+
+    stop = {"flag": False}
+
+    def _shutdown(*_):
+        logger.info("Shutdown signal received; stopping after current task.")
+        stop["flag"] = True
 
     for sig in (signal.SIGTERM, signal.SIGINT):
         try:
             signal.signal(sig, _shutdown)
-        except ValueError:  # pragma: no cover - non-main thread
+        except ValueError:
             pass
 
-    logger.info("Bank-sync agent online; polling every {}s", api.cfg.poll_seconds)
-    while not stop.is_set():
-        try:
-            tasks = api.fetch_due_tasks()
-        except Exception:
-            logger.exception("Failed to fetch due tasks; sleeping before retry")
-            tasks = []
-
-        for task in tasks:
-            if stop.is_set():
+    while not stop["flag"]:
+        due = store.due_logins()
+        for login in due:
+            if stop["flag"]:
                 break
+            logger.info("Running scheduled download for login {} ({})", login.id, login.institution_slug)
             try:
-                await _dispatch(api, task, download_root=download_root)
-            except Exception as exc:
-                logger.exception("Unhandled task error; reporting failure")
-                try:
-                    api.post_run_outcome(
-                        task["run_id"],
-                        succeeded=False,
-                        failure_kind="unknown",
-                        failure_reason=str(exc)[:500],
-                    )
-                except Exception:
-                    logger.exception("Failed to post failure outcome")
-
-        if stop.is_set():
+                asyncio.run(worker.download_login(store, login.id, kind="scheduled_download"))
+            except Exception:
+                logger.exception("Unhandled error during scheduled download for login {}", login.id)
+        if stop["flag"]:
             break
-        try:
-            await asyncio.wait_for(asyncio.sleep(api.cfg.poll_seconds), timeout=api.cfg.poll_seconds + 1)
-        except Exception:
-            pass
+        time.sleep(poll_seconds)
+
+    logger.info("bank-agent run loop stopped.")
+    return 0
 
 
-def main() -> None:
+# ============================ key + import/export =====================
+
+
+def cmd_generate_key(args: argparse.Namespace) -> int:
+    print(generate_key())
+    return 0
+
+
+def cmd_export(args: argparse.Namespace) -> int:
+    store = _store(args)
+    payload = export_to_dict(store)
+    text = agent_dumps(payload)
+    if args.output:
+        Path(args.output).write_text(text)
+        print(f"Wrote export to {args.output}")
+    else:
+        print(text)
+    return 0
+
+
+def cmd_import(args: argparse.Namespace) -> int:
+    store = _store(args)
+    path = Path(args.input)
+    if not path.exists():
+        print(f"Input file not found: {path}", file=sys.stderr)
+        return 1
+    payload = json.loads(path.read_text())
+    logins, accounts = import_from_dict(store, payload)
+    print(f"Imported {logins} login(s) and {accounts} account(s).")
+    return 0
+
+
+# ============================ parser ===================================
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="bank-agent",
+        description="Standalone bank-data polling agent for Richtato.",
+    )
+    parser.add_argument(
+        "--db",
+        type=str,
+        default=None,
+        help=f"SQLite path (default: {store_mod.DEFAULT_DB_PATH}).",
+    )
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    # ---- login subcommands ----------------------------------------------
+    p_login = sub.add_parser("login", help="Manage bank logins")
+    login_sub = p_login.add_subparsers(dest="action", required=True)
+
+    p_login_add = login_sub.add_parser("add", help="Create a new bank login")
+    p_login_add.add_argument("institution", help="Institution slug (e.g. bofa, chase).")
+    p_login_add.add_argument("--nickname", default="", help="Optional nickname (e.g. 'Personal').")
+    p_login_add.add_argument("--cadence", default="daily", choices=store_mod.CADENCES)
+    p_login_add.add_argument("--hour", type=int, default=6, help="Preferred local run hour 0-23.")
+    p_login_add.set_defaults(func=cmd_login_add)
+
+    p_login_list = login_sub.add_parser("list", help="List configured logins")
+    p_login_list.set_defaults(func=cmd_login_list)
+
+    p_login_signin = login_sub.add_parser("signin", help="Open headed Chromium to sign in / re-auth")
+    p_login_signin.add_argument("login_id", type=int)
+    p_login_signin.set_defaults(func=cmd_login_signin)
+
+    p_login_remove = login_sub.add_parser("remove", help="Delete a login and all its accounts")
+    p_login_remove.add_argument("login_id", type=int)
+    p_login_remove.add_argument("--yes", action="store_true", help="Confirm deletion")
+    p_login_remove.set_defaults(func=cmd_login_remove)
+
+    p_login_schedule = login_sub.add_parser("schedule", help="Update cadence and preferred hour")
+    p_login_schedule.add_argument("login_id", type=int)
+    p_login_schedule.add_argument("--cadence", choices=store_mod.CADENCES)
+    p_login_schedule.add_argument("--hour", type=int)
+    p_login_schedule.set_defaults(func=cmd_login_schedule)
+
+    # ---- account subcommands --------------------------------------------
+    p_account = sub.add_parser("account", help="Manage per-bank-account bindings")
+    account_sub = p_account.add_subparsers(dest="action", required=True)
+
+    p_account_add = account_sub.add_parser("add", help="Add an account under a login")
+    p_account_add.add_argument("login_id", type=int)
+    p_account_add.add_argument(
+        "--storage-uri",
+        required=True,
+        help="Destination URI (file:///... today; gdrive://... later).",
+    )
+    p_account_add.add_argument("--activity-url", default="", help="Bank-side download URL (encrypted at rest).")
+    p_account_add.add_argument("--flow", default="deposit", choices=store_mod.ACCOUNT_FLOWS)
+    p_account_add.add_argument("--name", default="", help="Detected/account display name.")
+    p_account_add.set_defaults(func=cmd_account_add)
+
+    p_account_list = account_sub.add_parser("list", help="List bank-side accounts")
+    p_account_list.add_argument("--login-id", type=int, default=None)
+    p_account_list.set_defaults(func=cmd_account_list)
+
+    p_account_update = account_sub.add_parser("update", help="Update an account")
+    p_account_update.add_argument("account_id", type=int)
+    p_account_update.add_argument("--storage-uri")
+    p_account_update.add_argument("--activity-url")
+    p_account_update.add_argument("--flow", choices=store_mod.ACCOUNT_FLOWS)
+    p_account_update.add_argument("--name")
+    enabled_group = p_account_update.add_mutually_exclusive_group()
+    enabled_group.add_argument(
+        "--enable",
+        dest="enabled",
+        action="store_const",
+        const=True,
+        default=None,
+    )
+    enabled_group.add_argument(
+        "--disable",
+        dest="enabled",
+        action="store_const",
+        const=False,
+    )
+    p_account_update.set_defaults(func=cmd_account_update)
+
+    p_account_remove = account_sub.add_parser("remove", help="Delete an account binding")
+    p_account_remove.add_argument("account_id", type=int)
+    p_account_remove.set_defaults(func=cmd_account_remove)
+
+    # ---- top-level commands ---------------------------------------------
+    p_sync = sub.add_parser("sync", help="Run one manual download for a login")
+    p_sync.add_argument("login_id", type=int)
+    p_sync.set_defaults(func=cmd_sync)
+
+    p_status = sub.add_parser("status", help="Show all logins, accounts, and schedule state")
+    p_status.set_defaults(func=cmd_status)
+
+    p_run = sub.add_parser("run", help="Daemon loop: poll due logins and download")
+    p_run.add_argument(
+        "--poll-seconds",
+        type=int,
+        default=int(os.environ.get("BANK_AGENT_POLL_SECONDS", "60")),
+        help="Seconds between schedule checks (default 60).",
+    )
+    p_run.set_defaults(func=cmd_run)
+
+    p_genkey = sub.add_parser("generate-key", help="Print a fresh BANK_AGENT_FERNET_KEY value")
+    p_genkey.set_defaults(func=cmd_generate_key)
+
+    p_export = sub.add_parser("export", help="Dump the agent vault to JSON (encrypted blobs included)")
+    p_export.add_argument("--output", type=str, default=None)
+    p_export.set_defaults(func=cmd_export)
+
+    p_import = sub.add_parser("import", help="Restore the agent vault from a JSON export")
+    p_import.add_argument("input", type=str, help="Path to a previously exported JSON file")
+    p_import.set_defaults(func=cmd_import)
+
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
     _configure_logging()
-    cfg = AgentConfig.from_env()
-    api = APIClient(cfg)
+    parser = build_parser()
+    args = parser.parse_args(argv)
     try:
-        asyncio.run(_poll_loop(api))
-    except KeyboardInterrupt:
-        pass
+        return args.func(args)
+    except MissingAgentKey as exc:
+        print(str(exc), file=sys.stderr)
+        return 3
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

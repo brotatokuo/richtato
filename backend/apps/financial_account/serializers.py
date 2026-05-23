@@ -34,6 +34,7 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
     entity = serializers.SerializerMethodField()
     entity_display = serializers.CharField(source="institution.name", read_only=True)
     date = serializers.SerializerMethodField()
+    resolved_storage_uri = serializers.SerializerMethodField()
 
     class Meta:
         model = FinancialAccount
@@ -50,6 +51,8 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
             "is_active",
             "sync_source",
             "sync_mode",
+            "storage_uri",
+            "resolved_storage_uri",
             "image_key",
             "shared_with_household",
             "created_at",
@@ -61,7 +64,11 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
             "entity_display",
             "date",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "sync_source"]
+        read_only_fields = ["id", "created_at", "updated_at", "sync_source", "resolved_storage_uri"]
+
+    def get_resolved_storage_uri(self, obj):
+        """Return the effective storage URI (override or convention default)."""
+        return obj.resolved_storage_uri()
 
     def get_date(self, obj):
         """Return the most recent balance history date, falling back to updated_at."""
@@ -108,3 +115,4 @@ class FinancialAccountUpdateSerializer(serializers.Serializer):
     is_active = serializers.BooleanField(required=False)
     image_key = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
     shared_with_household = serializers.BooleanField(required=False)
+    storage_uri = serializers.CharField(max_length=512, required=False, allow_blank=True)

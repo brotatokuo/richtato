@@ -2,23 +2,18 @@ import { AccountCreateModal } from '@/components/accounts/AccountCreateModal';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import type { AccountSyncMap } from '@/hooks/useBankSyncLogins';
 import { Account, transactionsApiService } from '@/lib/api/transactions';
 import { formatCurrency } from '@/lib/format';
 import { getEntityLogo } from '@/lib/imageMapping';
 import { cn } from '@/lib/utils';
 import {
-  AlertTriangle,
   Building2,
   ChevronDown,
   ChevronRight,
   CreditCard,
   Landmark,
-  PauseCircle,
   Plus,
   Wallet,
-  Wifi,
-  WifiOff,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -40,7 +35,6 @@ interface AccountsSidebarProps {
   selectedAccountId: number | null;
   onAccountSelect: (account: AccountWithBalance) => void;
   onAccountsChange?: () => void;
-  syncMap: AccountSyncMap;
 }
 
 function AccountIcon({ type }: { type: string }) {
@@ -54,55 +48,10 @@ function AccountIcon({ type }: { type: string }) {
 
 const GROUP_ORDER = ['checking', 'savings', 'credit_card'];
 
-function SyncIndicator({
-  syncMap,
-  accountId,
-}: {
-  syncMap: AccountSyncMap;
-  accountId: number;
-}) {
-  const summary = syncMap.get(accountId);
-  if (!summary) return null;
-  const { login, syncedAccount } = summary;
-  if (login.status === 'error') {
-    return (
-      <span title={`Sync error: ${login.last_failure_reason || 'unknown'}`}>
-        <WifiOff className="h-3 w-3 text-red-500" />
-      </span>
-    );
-  }
-  if (login.status === 'needs_reauth') {
-    return (
-      <span title="Bank session needs sign-in">
-        <AlertTriangle className="h-3 w-3 text-amber-500" />
-      </span>
-    );
-  }
-  if (login.status === 'disabled' || !syncedAccount.enabled) {
-    return (
-      <span
-        title={
-          login.status === 'disabled'
-            ? 'Bank login paused'
-            : 'Auto-sync off for this account'
-        }
-      >
-        <PauseCircle className="h-3 w-3 text-muted-foreground" />
-      </span>
-    );
-  }
-  return (
-    <span title="Auto-sync on">
-      <Wifi className="h-3 w-3 text-emerald-500" />
-    </span>
-  );
-}
-
 export function AccountsSidebar({
   selectedAccountId,
   onAccountSelect,
   onAccountsChange,
-  syncMap,
 }: AccountsSidebarProps) {
   const { preferences } = usePreferences();
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
@@ -396,7 +345,7 @@ export function AccountsSidebar({
                             </div>
                           </div>
 
-                          {/* Balance + sync dot */}
+                          {/* Balance */}
                           <div className="flex-shrink-0 flex flex-col items-end gap-1">
                             <span
                               className={cn(
@@ -417,10 +366,6 @@ export function AccountsSidebar({
                                 0
                               )}
                             </span>
-                            <SyncIndicator
-                              syncMap={syncMap}
-                              accountId={account.id}
-                            />
                           </div>
                         </button>
                       );

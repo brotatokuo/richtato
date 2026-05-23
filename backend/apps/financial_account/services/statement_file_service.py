@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import hashlib
 import re
-import shutil
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from django.conf import settings
 from django.core.files.base import File
@@ -18,6 +18,7 @@ from loguru import logger
 
 from apps.financial_account.models import FinancialAccount, StatementFile
 from apps.financial_account.services.statement_import_service import StatementImportResult, StatementImportService
+from apps.financial_account.storage import get_storage
 from apps.richtato_user.models import User
 
 
@@ -36,7 +37,6 @@ class StatementFileService:
 
     def __init__(self):
         self.import_service = StatementImportService()
-        self.storage_root = settings.BASE_DIR.parent / "local_data" / "statements"
 
     def list_statements(
         self,
@@ -77,8 +77,9 @@ class StatementFileService:
         statement_status: str = "provisional",
         statement_year: int | None = None,
         statement_month: int | None = None,
+        source: str = "manual_upload",
     ) -> StatementUploadResult:
-        """Save an uploaded statement into the account/year/month local folder."""
+        """Save an uploaded statement into the account's storage URI."""
         filename = get_valid_filename(Path(uploaded_file.name).name)
         extension = Path(filename).suffix.lower()
         if extension not in self.SUPPORTED_EXTENSIONS:
@@ -103,9 +104,10 @@ class StatementFileService:
         if existing:
             return StatementUploadResult(statement=existing, created=False)
 
-        target_path = self._build_storage_path(user.id, account.id, year, month, file_hash, filename)
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        target_path.write_bytes(content)
+        storage_uri = account.resolved_storage_uri()
+        storage = get_storage(storage_uri)
+        relative_path = self._build_relative_path(year, month, file_hash, filename)
+        stored = storage.write_file(storage_uri, relative_path, content)
 
         statement = StatementFile.objects.create(
             user=user,
@@ -117,10 +119,11 @@ class StatementFileService:
             statement_status=statement_status,
             import_status="uploaded",
             original_filename=filename,
-            stored_path=self._relative_path(target_path),
+            stored_path=self._stored_path_from_storage(storage_uri, stored.relative_path),
             content_type=getattr(uploaded_file, "content_type", "") or "",
             size_bytes=len(content),
             file_hash=file_hash,
+            source=source,
         )
         logger.info("Stored statement file", statement_id=statement.id, account_id=account.id)
         return StatementUploadResult(statement=statement, created=True)
@@ -135,8 +138,10 @@ class StatementFileService:
         statement_year: int | None = None,
         statement_month: int | None = None,
     ) -> StatementFile:
-        """Update metadata and move the local file when account/period changes."""
-        old_path = self._absolute_path(statement.stored_path)
+        """Update metadata and move the stored file when account/period changes."""
+        old_account = statement.account
+        old_storage_uri = old_account.resolved_storage_uri()
+        old_relative = self._stored_relative_path(statement.stored_path, old_storage_uri)
         new_account = account or statement.account
         new_period = statement.statement_period if statement_period is None else statement_period
         year_override = statement_year
@@ -161,19 +166,32 @@ class StatementFileService:
         statement.statement_year = year
         statement.statement_month = month
 
-        new_path = self._build_storage_path(
-            statement.user_id,
-            new_account.id,
+        new_storage_uri = new_account.resolved_storage_uri()
+        new_relative = self._build_relative_path(
             year,
             month,
             statement.file_hash,
             statement.original_filename,
         )
-        if old_path != new_path:
-            new_path.parent.mkdir(parents=True, exist_ok=True)
-            if old_path.exists():
-                shutil.move(str(old_path), str(new_path))
-            statement.stored_path = self._relative_path(new_path)
+
+        if new_storage_uri == old_storage_uri:
+            if old_relative != new_relative:
+                storage = get_storage(new_storage_uri)
+                storage.move_file(new_storage_uri, old_relative, new_relative)
+                statement.stored_path = self._stored_path_from_storage(new_storage_uri, new_relative)
+        else:
+            # Cross-account or cross-backend move: read bytes from the old
+            # location, write to the new location, then delete the source.
+            old_storage = get_storage(old_storage_uri)
+            with old_storage.open_file(old_storage_uri, old_relative) as handle:
+                content = handle.read()
+            new_storage = get_storage(new_storage_uri)
+            new_storage.write_file(new_storage_uri, new_relative, content)
+            try:
+                old_storage.delete_file(old_storage_uri, old_relative)
+            except Exception:
+                logger.exception("Failed to remove statement file after move")
+            statement.stored_path = self._stored_path_from_storage(new_storage_uri, new_relative)
 
         statement.save()
         return statement
@@ -184,11 +202,9 @@ class StatementFileService:
 
     def download_response(self, statement: StatementFile) -> FileResponse:
         """Return a file response for a stored statement."""
-        path = self._absolute_path(statement.stored_path)
-        if not path.exists():
-            raise FileNotFoundError("Stored statement file not found")
+        handle = self._open_stored_file(statement)
         return FileResponse(
-            path.open("rb"),
+            handle,
             as_attachment=True,
             filename=statement.original_filename,
             content_type=statement.content_type or "application/octet-stream",
@@ -231,6 +247,7 @@ class StatementFileService:
             "invalid_count": statement.invalid_count,
             "possible_changed_count": statement.possible_changed_count,
             "last_import_result": statement.last_import_result,
+            "source": statement.source,
             "created_at": statement.created_at.isoformat(),
             "updated_at": statement.updated_at.isoformat(),
         }
@@ -269,11 +286,21 @@ class StatementFileService:
             tree.append({**account_node, "years": years})
         return sorted(tree, key=lambda item: item["account_name"].lower())
 
+    def _open_stored_file(self, statement: StatementFile):
+        """Return an open ``BinaryIO`` for a stored statement, via storage layer or legacy path."""
+        storage_uri = statement.account.resolved_storage_uri()
+        try:
+            relative = self._stored_relative_path(statement.stored_path, storage_uri)
+            storage = get_storage(storage_uri)
+            return storage.open_file(storage_uri, relative)
+        except (FileNotFoundError, ValueError):
+            path = self._absolute_path(statement.stored_path)
+            if not path.exists():
+                raise FileNotFoundError("Stored statement file not found")
+            return path.open("rb")
+
     def _run_import(self, statement: StatementFile, commit: bool) -> StatementImportResult:
-        path = self._absolute_path(statement.stored_path)
-        if not path.exists():
-            raise FileNotFoundError("Stored statement file not found")
-        with path.open("rb") as stored_file:
+        with self._open_stored_file(statement) as stored_file:
             django_file = File(stored_file, name=statement.original_filename)
             if commit:
                 return self.import_service.import_statement(
@@ -340,30 +367,56 @@ class StatementFileService:
         if month < 1 or month > 12:
             raise ValueError("statement_month must be between 1 and 12")
 
-    def _build_storage_path(
+    def _build_relative_path(
         self,
-        user_id: int,
-        account_id: int,
         year: int,
         month: int,
         file_hash: str,
         filename: str,
-    ) -> Path:
+    ) -> str:
+        """Build the storage-backend-relative ``<year>/<month>/<hash>-<file>`` path."""
         safe_filename = get_valid_filename(filename)
-        return (
-            self.storage_root
-            / str(user_id)
-            / str(account_id)
-            / str(year)
-            / f"{month:02d}"
-            / f"{file_hash[:12]}-{safe_filename}"
-        )
+        return f"{year}/{month:02d}/{file_hash[:12]}-{safe_filename}"
 
-    def _relative_path(self, path: Path) -> str:
-        try:
-            return str(path.relative_to(settings.BASE_DIR.parent))
-        except ValueError:
-            return str(path)
+    def _stored_path_from_storage(self, storage_uri: str, relative_path: str) -> str:
+        """Compose a ``StatementFile.stored_path`` value from a storage URI + relative path.
+
+        For ``file://`` URIs we keep storing a repo-relative POSIX path so
+        existing tooling (and old rows) still resolves. For non-file URIs
+        we round-trip the full URI (e.g. ``gdrive://folder/2026/05/...``).
+        """
+        if storage_uri.startswith("file://"):
+            full = Path(urlparse(storage_uri).path) / relative_path
+            try:
+                return str(full.relative_to(settings.BASE_DIR.parent))
+            except ValueError:
+                return str(full)
+        if storage_uri.startswith("/"):
+            full = Path(storage_uri) / relative_path
+            try:
+                return str(full.relative_to(settings.BASE_DIR.parent))
+            except ValueError:
+                return str(full)
+        return f"{storage_uri.rstrip('/')}/{relative_path}"
+
+    def _stored_relative_path(self, stored_path: str, storage_uri: str) -> str:
+        """Compute the storage-backend-relative path from a stored row.
+
+        Falls back to a best-effort derivation when older rows recorded a
+        path that doesn't share the current storage root (e.g. account was
+        moved or storage_uri was overridden after upload).
+        """
+        if storage_uri.startswith("file://") or storage_uri.startswith("/"):
+            absolute = self._absolute_path(stored_path)
+            root = Path(urlparse(storage_uri).path) if storage_uri.startswith("file://") else Path(storage_uri)
+            try:
+                return absolute.relative_to(root).as_posix()
+            except ValueError:
+                return absolute.name
+        prefix = storage_uri.rstrip("/") + "/"
+        if stored_path.startswith(prefix):
+            return stored_path[len(prefix) :]
+        return Path(stored_path).name
 
     def _absolute_path(self, stored_path: str) -> Path:
         path = Path(stored_path)
