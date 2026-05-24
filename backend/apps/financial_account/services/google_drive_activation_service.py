@@ -30,6 +30,16 @@ class DriveActivationResult:
     errors: list[str] = field(default_factory=list)
 
 
+@dataclass
+class DriveDeactivationResult:
+    """Summary of unlinking an active Drive statement root."""
+
+    connection: GoogleDriveConnection
+    account_folders_removed: int = 0
+    statements_migrated: int = 0
+    errors: list[str] = field(default_factory=list)
+
+
 class GoogleDriveActivationService:
     """Create account folders, migrate tracked files, and switch accounts to Drive."""
 
@@ -114,12 +124,64 @@ class GoogleDriveActivationService:
             ],
         }
 
+    def deactivate(self, user: User) -> DriveDeactivationResult:
+        """Unlink the active Drive root, migrate statements back to local storage."""
+        connection = (
+            GoogleDriveConnection.objects.filter(user=user).prefetch_related("account_folders__account").first()
+        )
+        if not connection or not connection.is_active:
+            raise GoogleDriveError("Drive statement storage is not active.")
+
+        accounts = list(FinancialAccount.objects.filter(user=user, is_active=True).select_related("user"))
+        folders_by_account = {
+            folder.account_id: folder for folder in connection.account_folders.select_related("account").all()
+        }
+        result = DriveDeactivationResult(connection=connection)
+
+        with transaction.atomic():
+            for account in accounts:
+                folder = folders_by_account.get(account.id)
+                if not folder and not account.storage_uri.startswith("gdrive://"):
+                    continue
+
+                old_storage_uri = account.resolved_storage_uri()
+                new_storage_uri = self._default_local_storage_uri(account)
+                migrated, errors = self._migrate_account_statements_between(
+                    account,
+                    old_storage_uri=old_storage_uri,
+                    new_storage_uri=new_storage_uri,
+                    destination_label="local storage",
+                )
+                result.statements_migrated += migrated
+                result.errors.extend(errors)
+                account.storage_uri = ""
+                account.save(update_fields=["storage_uri", "updated_at"])
+                if folder:
+                    result.account_folders_removed += 1
+
+            connection.account_folders.all().delete()
+            connection.root_folder_id = ""
+            connection.root_folder_name = ""
+            connection.is_active = False
+            connection.last_error = "\n".join(result.errors[:10]) if result.errors else ""
+            connection.save(
+                update_fields=[
+                    "root_folder_id",
+                    "root_folder_name",
+                    "is_active",
+                    "last_error",
+                    "updated_at",
+                ]
+            )
+
+        return result
+
     def disconnect_if_inactive(self, user: User) -> None:
         connection = GoogleDriveConnection.objects.filter(user=user).first()
         if not connection:
             return
         if connection.is_active:
-            raise GoogleDriveError("Drive statement storage is active and cannot be disconnected.")
+            raise GoogleDriveError("Drive statement storage is active. Unlink the folder before disconnecting.")
         connection.set_refresh_token("")
         connection.google_account_email = ""
         connection.disconnected_at = timezone.now()
@@ -151,9 +213,22 @@ class GoogleDriveActivationService:
         account: FinancialAccount,
         account_folder: GoogleDriveAccountFolder,
     ) -> tuple[int, list[str]]:
+        return self._migrate_account_statements_between(
+            account,
+            old_storage_uri=account.resolved_storage_uri(),
+            new_storage_uri=f"gdrive://{account_folder.folder_id}",
+            destination_label="Drive",
+        )
+
+    def _migrate_account_statements_between(
+        self,
+        account: FinancialAccount,
+        *,
+        old_storage_uri: str,
+        new_storage_uri: str,
+        destination_label: str,
+    ) -> tuple[int, list[str]]:
         statements = list(StatementFile.objects.filter(account=account, is_deleted=False))
-        old_storage_uri = account.resolved_storage_uri()
-        new_storage_uri = f"gdrive://{account_folder.folder_id}"
         if old_storage_uri == new_storage_uri:
             return 0, []
 
@@ -182,10 +257,16 @@ class GoogleDriveActivationService:
                 statement.save(update_fields=["stored_path", "updated_at"])
                 migrated += 1
             except Exception as exc:
-                logger.exception("Failed to migrate statement {} to Drive", statement.id)
+                logger.exception("Failed to migrate statement {} to {}", statement.id, destination_label)
                 errors.append(f"{account.name}: {statement.original_filename}: {exc}")
 
         return migrated, errors
+
+    def _default_local_storage_uri(self, account: FinancialAccount) -> str:
+        from django.conf import settings
+
+        base = settings.BASE_DIR.parent / "local_data" / "statements" / str(account.user_id) / str(account.id)
+        return f"file://{base}"
 
     def _settings_configured(self) -> bool:
         from django.conf import settings

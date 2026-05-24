@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Heart,
   LogOut,
-  Settings as SettingsIcon,
   SlidersHorizontal,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -99,7 +98,7 @@ export function More() {
     <div className="pb-4">
       {/* Profile row */}
       <Link
-        to="/profile"
+        to="/preferences"
         className="flex items-center gap-3 px-4 py-4 mb-6 transition-colors hover:bg-muted/50 active:bg-muted"
       >
         <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-500 text-white text-sm font-semibold shrink-0 shadow">
@@ -109,7 +108,7 @@ export function More() {
           <p className="text-sm font-semibold text-foreground">
             {user ? user.username : 'User'}
           </p>
-          <p className="text-xs text-muted-foreground">View profile</p>
+          <p className="text-xs text-muted-foreground">Profile and settings</p>
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
       </Link>
@@ -121,7 +120,6 @@ export function More() {
       )}
 
       <Section title="Settings">
-        <MenuRow href="/preferences" icon={SettingsIcon} label="Preferences" />
         <MenuRow href="/setup" icon={SlidersHorizontal} label="Setup" />
         <MenuRow href="/formulas" icon={Calculator} label="Formulas" />
       </Section>

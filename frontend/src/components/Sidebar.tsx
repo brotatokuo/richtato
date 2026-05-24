@@ -21,7 +21,6 @@ import {
   Settings as SettingsIcon,
   SlidersHorizontal,
   Table,
-  User,
   Wallet,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -207,15 +206,9 @@ export function Sidebar({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link to="/profile" className="gap-2">
-                <User className="h-4 w-4" />
-                Profile
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
               <Link to="/preferences" className="gap-2">
                 <SettingsIcon className="h-4 w-4" />
-                Preferences
+                Settings
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

@@ -26,7 +26,7 @@ const routeConfig: Record<
   '/budget': { title: 'Budget', icon: Wallet },
   '/transactions': { title: 'Transactions', icon: Table },
   '/dashboard': { title: 'Dashboard', icon: BarChart3 },
-  '/preferences': { title: 'Preferences', icon: Settings },
+  '/preferences': { title: 'Settings', icon: Settings },
   '/setup': { title: 'Setup', icon: SlidersHorizontal },
   '/settings': { title: 'Settings', icon: Settings },
   '/more': { title: 'More', icon: MoreHorizontal },

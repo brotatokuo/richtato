@@ -72,6 +72,19 @@ class DriveStatementsApi {
     return this.handleResponse(response);
   }
 
+  async deactivate(): Promise<{
+    status: DriveStatus;
+    account_folders_removed: number;
+    statements_migrated: number;
+    errors: string[];
+  }> {
+    const response = await csrfService.fetchWithCsrf(
+      `${API_BASE}/accounts/drive/deactivate/`,
+      { method: 'POST' }
+    );
+    return this.handleResponse(response);
+  }
+
   async disconnect(): Promise<DriveStatus> {
     const response = await csrfService.fetchWithCsrf(
       `${API_BASE}/accounts/drive/disconnect/`,

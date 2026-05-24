@@ -79,6 +79,7 @@ Common date filters:
 | `GET` | `/drive/oauth/callback/` | Complete Google Drive OAuth callback |
 | `GET` | `/drive/picker-token/` | Get short-lived token/config for Google Drive Picker |
 | `POST` | `/drive/activate/` | Activate an empty Drive folder and create account folders |
+| `POST` | `/drive/deactivate/` | Unlink an active Drive folder and migrate statements back to local storage |
 | `POST` | `/drive/disconnect/` | Disconnect inactive Drive OAuth credentials |
 | `POST` | `/agent-statements/` | Agent upload endpoint for Drive-backed statement downloads |
 | `POST` | `/import-csv/` | Import statement CSV |
@@ -110,7 +111,7 @@ Card-specific account routes are mounted at `/api/v1/card-accounts/`.
 
 Statement imports use row-level deduplication. Current/open statement exports are provisional and may overlap later closed statements; duplicates are skipped and changed provisional rows are flagged for review.
 
-Google Drive statement storage is configured from `/preferences`. The user connects Google Drive, selects an empty root folder, and Richtato creates one flat folder per active account. Statement records still store metadata, file hash, account, institution, period, status, and the latest preview/import summary. Local `local_data/statements/<user_id>/<account_id>/<year>/<month>/` storage remains as the pre-activation/legacy path.
+Google Drive statement storage is configured from **Setup → Statements** (`/setup?tab=statements`). The user connects Google Drive, selects an empty root folder, and Richtato creates one flat folder per active account. Statement records still store metadata, file hash, account, institution, period, status, and the latest preview/import summary. Local `local_data/statements/<user_id>/<account_id>/<year>/<month>/` storage remains as the pre-activation/legacy path.
 
 ## Transactions (`/api/v1/transactions/`)
 

@@ -19,9 +19,6 @@ const DataTable = lazy(() =>
 const ReportPage = lazy(() =>
   import('./pages/ReportPage').then(m => ({ default: m.ReportPage }))
 );
-const Profile = lazy(() =>
-  import('./pages/Profile').then(m => ({ default: m.Profile }))
-);
 const Preferences = lazy(() =>
   import('./pages/Preferences').then(m => ({ default: m.Preferences }))
 );
@@ -92,11 +89,7 @@ function App() {
                 />
                 <Route
                   path="profile"
-                  element={
-                    <Suspense fallback={null}>
-                      <Profile />
-                    </Suspense>
-                  }
+                  element={<Navigate to="/preferences" replace />}
                 />
                 <Route
                   path="preferences"

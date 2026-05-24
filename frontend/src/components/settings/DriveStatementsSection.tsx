@@ -8,11 +8,28 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   driveStatementsApi,
   type DriveStatus,
   type PickerTokenResponse,
 } from '@/lib/api/driveStatements';
-import { CheckCircle2, Cloud, FolderOpen, Loader2, Unplug } from 'lucide-react';
+import {
+  CheckCircle2,
+  Cloud,
+  FolderOpen,
+  Loader2,
+  Unlink,
+  Unplug,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -61,6 +78,7 @@ export function DriveStatementsSection() {
   const [status, setStatus] = useState<DriveStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const loadStatus = async () => {
@@ -165,6 +183,30 @@ export function DriveStatementsSection() {
     }
   };
 
+  const unlinkFolder = async () => {
+    setBusy(true);
+    try {
+      const response = await driveStatementsApi.deactivate();
+      setStatus(response.status);
+      setShowUnlinkConfirm(false);
+      toast.success('Google Drive folder unlinked', {
+        description: `${response.statements_migrated} statements moved back to local storage.`,
+      });
+      if (response.errors.length > 0) {
+        toast.warning('Some statements could not be migrated', {
+          description: response.errors[0],
+        });
+      }
+    } catch (error) {
+      toast.error('Unable to unlink Drive folder', {
+        description:
+          error instanceof Error ? error.message : 'Please try again.',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const isConnected = Boolean(status?.connected);
   const isActive = Boolean(status?.active);
 
@@ -249,7 +291,47 @@ export function DriveStatementsSection() {
                   Disconnect
                 </Button>
               )}
+              {isActive && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowUnlinkConfirm(true)}
+                  disabled={busy}
+                >
+                  <Unlink className="mr-2 h-4 w-4" />
+                  Unlink Folder
+                </Button>
+              )}
             </div>
+            <AlertDialog
+              open={showUnlinkConfirm}
+              onOpenChange={setShowUnlinkConfirm}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    Unlink Google Drive folder?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Statement files will move back to local storage and accounts
+                    will stop syncing to Drive. Your Google account stays
+                    connected so you can choose a different folder later.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={event => {
+                      event.preventDefault();
+                      void unlinkFolder();
+                    }}
+                    disabled={busy}
+                  >
+                    {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Unlink Folder
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </>
         )}
       </CardContent>

@@ -20,7 +20,6 @@ const moreRoutes = [
   '/household',
   '/setup',
   '/preferences',
-  '/profile',
   '/formulas',
   '/more',
 ];

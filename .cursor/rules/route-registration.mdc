@@ -10,8 +10,8 @@ Every new route in this app requires updates in the router, header config, and d
 
 ## Current Routes
 
-- Primary app routes: `/dashboard`, `/accounts`, `/budget`, `/transactions`, `/setup`, `/preferences`, `/profile`, `/household`, `/formulas`, `/more`.
-- Redirects: `/` -> `/dashboard`, `/cashflow` -> `/dashboard`, `/settings` -> `/preferences`.
+- Primary app routes: `/dashboard`, `/accounts`, `/budget`, `/transactions`, `/setup`, `/preferences`, `/household`, `/formulas`, `/more`.
+- Redirects: `/` -> `/dashboard`, `/cashflow` -> `/dashboard`, `/settings` -> `/preferences`, `/profile` -> `/preferences`.
 - Public routes: `/welcome`, `/login`, `/register`.
 
 ## Required Places

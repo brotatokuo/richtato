@@ -13,7 +13,6 @@ import {
   Settings as SettingsIcon,
   SlidersHorizontal,
   Table,
-  User,
   Wallet,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -28,8 +27,7 @@ const primaryTabs = [
 const secondaryItems = [
   { name: 'Transactions', href: '/transactions', icon: Table },
   { name: 'Setup', href: '/setup', icon: SlidersHorizontal },
-  { name: 'Preferences', href: '/preferences', icon: SettingsIcon },
-  { name: 'Profile', href: '/profile', icon: User },
+  { name: 'Settings', href: '/preferences', icon: SettingsIcon },
 ];
 
 export function MobileBottomNav() {

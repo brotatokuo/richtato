@@ -288,7 +288,7 @@ class GoogleDriveOAuthStartAPIView(APIView):
 
 
 class GoogleDriveOAuthCallbackAPIView(APIView):
-    """Handle Google OAuth callback and redirect back to preferences."""
+    """Handle Google OAuth callback and redirect back to setup."""
 
     authentication_classes = [SessionAuthentication, TokenAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
@@ -298,24 +298,25 @@ class GoogleDriveOAuthCallbackAPIView(APIView):
         self.drive_service = GoogleDriveService()
 
     def get(self, request):
-        frontend_url = settings.FRONTEND_URL.rstrip("/") + "/preferences"
+        frontend_url = settings.FRONTEND_URL.rstrip("/") + "/setup"
+        callback_params = {"tab": "statements"}
         expected_state = request.session.get("google_drive_oauth_state")
         received_state = request.query_params.get("state")
         if expected_state and received_state != expected_state:
-            return redirect(f"{frontend_url}?{urlencode({'drive_error': 'Invalid OAuth state'})}")
+            return redirect(f"{frontend_url}?{urlencode({**callback_params, 'drive_error': 'Invalid OAuth state'})}")
 
         code = request.query_params.get("code")
         if not code:
             message = request.query_params.get("error") or "Missing OAuth code"
-            return redirect(f"{frontend_url}?{urlencode({'drive_error': message})}")
+            return redirect(f"{frontend_url}?{urlencode({**callback_params, 'drive_error': message})}")
 
         try:
             self.drive_service.exchange_code(user=request.user, code=code, request=request)
         except GoogleDriveError as exc:
-            return redirect(f"{frontend_url}?{urlencode({'drive_error': str(exc)})}")
+            return redirect(f"{frontend_url}?{urlencode({**callback_params, 'drive_error': str(exc)})}")
 
         request.session.pop("google_drive_oauth_state", None)
-        return redirect(f"{frontend_url}?drive=connected")
+        return redirect(f"{frontend_url}?{urlencode({**callback_params, 'drive': 'connected'})}")
 
 
 class GoogleDrivePickerTokenAPIView(APIView):
@@ -365,6 +366,33 @@ class GoogleDriveActivateAPIView(APIView):
             {
                 "status": self.activation_service.status(request.user),
                 "account_folders_created": result.account_folders_created,
+                "statements_migrated": result.statements_migrated,
+                "errors": result.errors,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class GoogleDriveDeactivateAPIView(APIView):
+    """Unlink an active Drive statement root and revert accounts to local storage."""
+
+    authentication_classes = [SessionAuthentication, TokenAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.activation_service = GoogleDriveActivationService()
+
+    def post(self, request):
+        try:
+            result = self.activation_service.deactivate(request.user)
+        except GoogleDriveError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "status": self.activation_service.status(request.user),
+                "account_folders_removed": result.account_folders_removed,
                 "statements_migrated": result.statements_migrated,
                 "errors": result.errors,
             },

@@ -94,7 +94,7 @@ Current protected routes:
 | `/formulas`     | `Formulas`                                |
 | `/more`         | `More`                                    |
 
-Statement storage is configured from `/preferences` through the Google Drive statements section. `/upload` has been removed; statement records still use `frontend/src/lib/api/statementFiles.ts` for account-level recent file display and backend statement actions.
+Statement storage is configured from **Setup → Statements** (`/setup?tab=statements`) through the Google Drive statements section. `/upload` has been removed; statement records still use `frontend/src/lib/api/statementFiles.ts` for account-level recent file display and backend statement actions.
 
 Redirects:
 
