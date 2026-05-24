@@ -1,4 +1,6 @@
+import { AccountBreakdownChart } from '@/components/asset_dashboard/AccountBreakdownChart';
 import { IncomeExpenseChart } from '@/components/asset_dashboard/IncomeExpenseChart';
+import { NetWorthTrendChart } from '@/components/asset_dashboard/NetWorthTrendChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
@@ -9,6 +11,10 @@ import {
   type CategoryBreakdown,
   type IncomeSource,
 } from '@/lib/api/annual-analysis';
+import {
+  assetDashboardApiService,
+  type AssetDashboardData,
+} from '@/lib/api/asset-dashboard';
 import { transactionsApiService } from '@/lib/api/transactions';
 import { formatCurrency } from '@/lib/format';
 import echarts, { type ECharts, type EChartsOption } from '@/lib/echarts';
@@ -56,6 +62,12 @@ export function ReportPage() {
   const [scope, setScope] = useState<TimeScope>('month');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [assetMetrics, setAssetMetrics] = useState<AssetDashboardData | null>(
+    null
+  );
+  const [assetMetricsError, setAssetMetricsError] = useState<string | null>(
+    null
+  );
 
   // Month mode state
   const now = new Date();
@@ -170,16 +182,30 @@ export function ReportPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedYear]);
 
+  const loadAssetMetrics = useCallback(async () => {
+    try {
+      setAssetMetricsError(null);
+      const metrics = await assetDashboardApiService.getDashboardMetrics({
+        period: scope === 'year' ? '1y' : '30d',
+      });
+      setAssetMetrics(metrics);
+    } catch (err) {
+      setAssetMetrics(null);
+      setAssetMetricsError(
+        err instanceof Error ? err.message : 'Failed to load asset metrics'
+      );
+    }
+  }, [scope]);
+
   useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
         setError(null);
-        if (scope === 'month') {
-          await loadMonthData();
-        } else {
-          await loadYearData();
-        }
+        await Promise.all([
+          scope === 'month' ? loadMonthData() : loadYearData(),
+          loadAssetMetrics(),
+        ]);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
       } finally {
@@ -187,7 +213,7 @@ export function ReportPage() {
       }
     };
     load();
-  }, [scope, loadMonthData, loadYearData]);
+  }, [scope, loadMonthData, loadYearData, loadAssetMetrics]);
 
   // Sankey chart
   useEffect(() => {
@@ -530,6 +556,96 @@ export function ReportPage() {
         </Card>
       </div>
 
+      {/* Asset Snapshot */}
+      {assetMetricsError ? (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardContent className="flex items-center justify-center p-4 text-sm text-destructive">
+            {assetMetricsError}
+          </CardContent>
+        </Card>
+      ) : assetMetrics ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <Card className="border-border bg-card xl:col-span-1">
+            <CardContent className="p-4">
+              <p className="text-sm text-muted-foreground">Net Worth</p>
+              <p
+                className={cn(
+                  'mt-1 text-2xl font-bold tabular-nums',
+                  assetMetrics.networth >= 0 ? 'text-green-500' : 'text-red-500'
+                )}
+              >
+                {formatCurrency(assetMetrics.networth, preferences.currency, 0)}
+              </p>
+              {assetMetrics.networth_growth &&
+                assetMetrics.networth_growth !== 'N/A' && (
+                  <p
+                    className={cn(
+                      'mt-1 text-xs',
+                      assetMetrics.networth_growth_class === 'positive'
+                        ? 'text-green-500'
+                        : assetMetrics.networth_growth_class === 'negative'
+                          ? 'text-red-500'
+                          : 'text-muted-foreground'
+                    )}
+                  >
+                    {assetMetrics.networth_growth} over recent history
+                  </p>
+                )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border bg-card">
+            <CardContent className="p-4">
+              <p className="text-sm text-muted-foreground">Total Assets</p>
+              <p className="mt-1 text-2xl font-bold text-green-500 tabular-nums">
+                {formatCurrency(
+                  assetMetrics.total_assets,
+                  preferences.currency,
+                  0
+                )}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Cash, savings, investments, and other assets
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border bg-card">
+            <CardContent className="p-4">
+              <p className="text-sm text-muted-foreground">Total Liabilities</p>
+              <p className="mt-1 text-2xl font-bold text-red-500 tabular-nums">
+                {formatCurrency(
+                  assetMetrics.total_liabilities,
+                  preferences.currency,
+                  0
+                )}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Credit cards, loans, and other debt
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border bg-card">
+            <CardContent className="p-4">
+              <p className="text-sm text-muted-foreground">Asset Coverage</p>
+              <p className="mt-1 text-2xl font-bold tabular-nums">
+                {assetMetrics.total_liabilities > 0
+                  ? `${(
+                      assetMetrics.total_assets / assetMetrics.total_liabilities
+                    ).toFixed(1)}x`
+                  : 'No debt'}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Assets compared with liabilities
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+
+      <NetWorthTrendChart />
+
       {/* Money Flow Sankey */}
       <Card className="border-border bg-card">
         <CardHeader>
@@ -564,10 +680,15 @@ export function ReportPage() {
         </CardContent>
       </Card>
 
-      {/* Category Breakdown + Income vs Expenses */}
+      {/* Asset Breakdown + Cashflow Details */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <AccountBreakdownChart />
+
+        {/* Income vs Expenses over time */}
+        <IncomeExpenseChart />
+
         {/* Category Breakdown Table */}
-        <Card className="border-border bg-card">
+        <Card className="border-border bg-card lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-lg">Category Breakdown</CardTitle>
           </CardHeader>
@@ -629,9 +750,6 @@ export function ReportPage() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Income vs Expenses over time */}
-        <IncomeExpenseChart />
       </div>
     </div>
   );
