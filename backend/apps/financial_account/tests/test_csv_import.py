@@ -898,3 +898,55 @@ class TestStatementFileService:
         assert fake_drive_storage.files_by_folder["test-folder"] == {}
         upload.statement.refresh_from_db()
         assert upload.statement.is_deleted is True
+
+
+class TestStatementFileUploadAPI:
+    """HTTP upload endpoint derives institution from account when omitted."""
+
+    def test_upload_derives_institution_from_account(self, user, fake_drive_storage, monkeypatch):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from rest_framework.test import APIClient
+
+        from apps.financial_account.models import FinancialInstitution
+
+        monkeypatch.setattr(
+            "apps.financial_account.storage.factory.GoogleDriveStatementStorage",
+            lambda: fake_drive_storage,
+        )
+
+        institution, _ = FinancialInstitution.objects.get_or_create(
+            slug="chase",
+            defaults={"name": "Chase"},
+        )
+        account = FinancialAccount.objects.create(
+            user=user,
+            name="API Chase Checking",
+            account_type="checking",
+            balance=Decimal("1000.00"),
+            institution=institution,
+            storage_uri="gdrive://api-chase-folder",
+        )
+
+        csv_content = b"Transaction Date,Description,Amount\n2025-06-01,Coffee,-5.00\n"
+        uploaded = SimpleUploadedFile("june.csv", csv_content, content_type="text/csv")
+
+        client = APIClient()
+        client.force_authenticate(user=user)
+        response = client.post(
+            "/api/v1/accounts/statements/",
+            {
+                "file": uploaded,
+                "account": account.id,
+                "statement_period": "2025-06",
+                "statement_status": "provisional",
+                "statement_year": 2025,
+                "statement_month": 6,
+            },
+            format="multipart",
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["created"] is True
+        assert data["statement"]["institution"] == "chase"
+        assert data["statement"]["statement_period"] == "2025-06"

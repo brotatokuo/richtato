@@ -70,7 +70,7 @@ export interface StatementFileActionResponse {
 export interface StatementFileUploadInput {
   file: File;
   account: number;
-  institution: string;
+  institution?: string;
   statementPeriod?: string;
   statementStatus: StatementStatus;
   statementYear?: number;
@@ -111,7 +111,7 @@ class StatementFileService {
     const formData = new FormData();
     formData.append('file', input.file);
     formData.append('account', String(input.account));
-    formData.append('institution', input.institution);
+    if (input.institution) formData.append('institution', input.institution);
     formData.append('statement_period', input.statementPeriod ?? '');
     formData.append('statement_status', input.statementStatus);
     if (input.statementYear)

@@ -52,7 +52,6 @@ import { toast } from 'sonner';
 interface StorageLocationPanelProps {
   accountId: number;
   accountName: string;
-  institutionSlug?: string;
   storageUri?: string;
   resolvedStorageUri?: string;
   onUploadComplete?: () => void;
@@ -75,7 +74,6 @@ function formatDate(value: string): string {
 export function StorageLocationPanel({
   accountId,
   accountName,
-  institutionSlug,
   storageUri,
   resolvedStorageUri,
   onUploadComplete,
@@ -484,7 +482,6 @@ export function StorageLocationPanel({
         onOpenChange={setUploadOpen}
         accountId={accountId}
         accountName={accountName}
-        defaultInstitutionSlug={institutionSlug}
         onComplete={() => {
           loadFiles();
           onUploadComplete?.();

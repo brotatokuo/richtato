@@ -28,10 +28,12 @@ from apps.financial_account.services.statement_file_service import (
     StatementFileService,
 )
 from apps.financial_account.services.statement_import_service import (
-    SUPPORTED_INSTITUTIONS,
     StatementImportService,
 )
-from apps.financial_account.services.storage_scanner_service import INSTITUTION_SLUG_TO_PARSER, StorageScannerService
+from apps.financial_account.services.storage_scanner_service import (
+    StorageScannerService,
+    parser_key_for_account,
+)
 
 
 class FinancialAccountListCreateAPIView(APIView):
@@ -946,7 +948,7 @@ class AgentStatementUploadAPIView(APIView):
         if not account:
             return Response({"error": "Account not found for storage_uri"}, status=status.HTTP_404_NOT_FOUND)
 
-        institution = self._parser_key_for_account(account)
+        institution = parser_key_for_account(account)
         if not institution:
             return Response({"error": "No statement parser configured for account"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -983,16 +985,6 @@ class AgentStatementUploadAPIView(APIView):
             },
             status=status.HTTP_201_CREATED if upload.created else status.HTTP_200_OK,
         )
-
-    def _parser_key_for_account(self, account) -> str | None:
-        if not account.institution:
-            return None
-        slug = (account.institution.slug or "").lower()
-        if slug in INSTITUTION_SLUG_TO_PARSER:
-            return INSTITUTION_SLUG_TO_PARSER[slug]
-        if slug in SUPPORTED_INSTITUTIONS:
-            return slug
-        return None
 
     def _int_or_none(self, value):
         if value in (None, ""):
@@ -1041,9 +1033,9 @@ class StatementFileListCreateAPIView(APIView):
         if isinstance(account, Response):
             return account
 
-        institution = request.data.get("institution")
+        institution = request.data.get("institution") or parser_key_for_account(account)
         if not institution:
-            return Response({"error": "institution is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "No statement parser configured for account"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             result = self.statement_file_service.save_upload(
@@ -1071,6 +1063,8 @@ class StatementFileListCreateAPIView(APIView):
         )
 
     def _get_account(self, request):
+        from apps.financial_account.models import FinancialAccount
+
         account_id = request.data.get("account")
         if not account_id:
             return Response({"error": "account is required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -1080,7 +1074,7 @@ class StatementFileListCreateAPIView(APIView):
             return Response({"error": "Invalid account"}, status=status.HTTP_400_BAD_REQUEST)
         if not account:
             return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
-        return account
+        return FinancialAccount.objects.select_related("institution").get(pk=account.pk)
 
     def _int_or_none(self, value):
         if value in (None, ""):

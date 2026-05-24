@@ -15,6 +15,47 @@ export function formatStatementPeriodFromRange(from: Date, to: Date): string {
   return `${formatIsoDate(from)} to ${formatIsoDate(to)}`;
 }
 
+export function parseIsoDateString(value: string): Date | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(year, month - 1, day);
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+  return parsed;
+}
+
+export function validateCustomDateRange(
+  start: string,
+  end: string
+): string | null {
+  if (!start.trim() || !end.trim()) {
+    return 'Start and end dates are required';
+  }
+  const startDate = parseIsoDateString(start);
+  const endDate = parseIsoDateString(end);
+  if (!startDate || !endDate) {
+    return 'Enter valid dates in YYYY-MM-DD format';
+  }
+  if (startDate > endDate) {
+    return 'Start date must be on or before end date';
+  }
+  const label = formatStatementPeriodFromRange(startDate, endDate);
+  if (label.length > STATEMENT_PERIOD_MAX_LENGTH) {
+    return `Date range label must be ${STATEMENT_PERIOD_MAX_LENGTH} characters or fewer`;
+  }
+  return null;
+}
+
 export function resolveFilingMonth(to: Date): { year: number; month: number } {
   return {
     year: to.getFullYear(),

@@ -7,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
@@ -24,50 +23,25 @@ import {
   type StatementFileRecord,
   type StatementStatus,
 } from '@/lib/api/statementFiles';
-import {
-  statementImportService,
-  type StatementImportResult,
-  type StatementInstitution,
-} from '@/lib/api/statementImport';
+import type { StatementImportResult } from '@/lib/api/statementImport';
 import { StatementReconciliationSummary } from '@/components/accounts/StatementReconciliationSummary';
 import { needsOpeningBalanceConfirmation } from '@/components/accounts/statementReconciliation';
 import {
   formatSingleMonthPeriod,
   formatStatementPeriodFromRange,
+  parseIsoDateString,
   resolveFilingMonth,
-  STATEMENT_PERIOD_MAX_LENGTH,
-  validateStatementPeriod,
+  validateCustomDateRange,
 } from '@/lib/formatStatementPeriod';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { Check, FileUp, Loader2, Upload } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { DateRange } from 'react-day-picker';
+import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 type PeriodMode = 'single' | 'custom';
 
 const SUPPORTED_EXTENSIONS = ['.csv', '.xls', '.xlsx'];
-
-const INSTITUTION_SLUG_TO_PARSER: Record<string, string> = {
-  bank_of_america: 'bofa',
-  robinhood: 'robinhood_bank',
-  robinhood_investments: 'robinhood_investments',
-  robinhood_bank: 'robinhood_bank',
-};
-
-function resolveParserInstitution(
-  slug: string | undefined,
-  institutions: StatementInstitution[]
-): string {
-  if (institutions.length === 0) return '';
-  if (!slug) return institutions[0].id;
-
-  const mapped = INSTITUTION_SLUG_TO_PARSER[slug] ?? slug;
-  if (institutions.some(item => item.id === mapped)) return mapped;
-  if (institutions.some(item => item.id === slug)) return slug;
-  return institutions[0].id;
-}
 
 function isSupportedFile(file: File): boolean {
   const name = file.name.toLowerCase();
@@ -79,7 +53,6 @@ interface StatementUploadDialogProps {
   onOpenChange: (open: boolean) => void;
   accountId: number;
   accountName: string;
-  defaultInstitutionSlug?: string;
   onComplete?: () => void;
 }
 
@@ -88,26 +61,19 @@ export function StatementUploadDialog({
   onOpenChange,
   accountId,
   accountName,
-  defaultInstitutionSlug,
   onComplete,
 }: StatementUploadDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const today = new Date();
 
-  const [institutions, setInstitutions] = useState<StatementInstitution[]>([]);
-  const [loadingInstitutions, setLoadingInstitutions] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [institution, setInstitution] = useState('');
   const [statementStatus, setStatementStatus] =
     useState<StatementStatus>('provisional');
   const [periodMode, setPeriodMode] = useState<PeriodMode>('single');
   const [statementYear, setStatementYear] = useState(today.getFullYear());
   const [statementMonth, setStatementMonth] = useState(today.getMonth() + 1);
-  const [customDateRange, setCustomDateRange] = useState<
-    DateRange | undefined
-  >();
-  const [customLabel, setCustomLabel] = useState('');
-  const [customLabelTouched, setCustomLabelTouched] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [dragActive, setDragActive] = useState(false);
   const [busy, setBusy] = useState(false);
   const [statement, setStatement] = useState<StatementFileRecord | null>(null);
@@ -118,11 +84,6 @@ export function StatementUploadDialog({
     if (!preview) return 0;
     return preview.rows.filter(row => row.status === 'new').length;
   }, [preview]);
-
-  const customLabelError = useMemo(
-    () => validateStatementPeriod(customLabel),
-    [customLabel]
-  );
 
   const openingBalanceAction = preview?.reconciliation?.opening_balance_action;
   const showOpeningBalanceConfirmation =
@@ -135,60 +96,14 @@ export function StatementUploadDialog({
     return formatCurrency(parsed);
   };
 
-  useEffect(() => {
-    if (
-      periodMode !== 'custom' ||
-      customLabelTouched ||
-      !customDateRange?.from ||
-      !customDateRange.to
-    ) {
-      return;
-    }
-
-    setCustomLabel(
-      formatStatementPeriodFromRange(customDateRange.from, customDateRange.to)
-    );
-  }, [customDateRange, customLabelTouched, periodMode]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    let cancelled = false;
-    setLoadingInstitutions(true);
-    statementImportService
-      .getInstitutions()
-      .then(data => {
-        if (cancelled) return;
-        setInstitutions(data);
-        setInstitution(resolveParserInstitution(defaultInstitutionSlug, data));
-      })
-      .catch(err => {
-        if (cancelled) return;
-        toast.error('Unable to load statement parsers', {
-          description: err instanceof Error ? err.message : undefined,
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingInstitutions(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, defaultInstitutionSlug]);
-
   const reset = () => {
     setSelectedFile(null);
-    setInstitution(
-      resolveParserInstitution(defaultInstitutionSlug, institutions)
-    );
     setStatementStatus('provisional');
     setPeriodMode('single');
     setStatementYear(today.getFullYear());
     setStatementMonth(today.getMonth() + 1);
-    setCustomDateRange(undefined);
-    setCustomLabel('');
-    setCustomLabelTouched(false);
+    setCustomStartDate('');
+    setCustomEndDate('');
     setStatement(null);
     setPreview(null);
     setApplyOpeningBalance(false);
@@ -231,22 +146,17 @@ export function StatementUploadDialog({
       };
     }
 
-    if (!customDateRange?.from || !customDateRange.to) {
-      toast.error('Choose a statement date range');
+    const rangeError = validateCustomDateRange(customStartDate, customEndDate);
+    if (rangeError) {
+      toast.error('Invalid date range', { description: rangeError });
       return null;
     }
 
-    const labelError = validateStatementPeriod(customLabel);
-    if (labelError) {
-      toast.error('Invalid statement period label', {
-        description: labelError,
-      });
-      return null;
-    }
-
-    const filing = resolveFilingMonth(customDateRange.to);
+    const startDate = parseIsoDateString(customStartDate)!;
+    const endDate = parseIsoDateString(customEndDate)!;
+    const filing = resolveFilingMonth(endDate);
     return {
-      statementPeriod: customLabel.trim(),
+      statementPeriod: formatStatementPeriodFromRange(startDate, endDate),
       statementYear: filing.year,
       statementMonth: filing.month,
     };
@@ -255,10 +165,6 @@ export function StatementUploadDialog({
   const handleUploadAndPreview = async () => {
     if (!selectedFile) {
       toast.error('Choose a statement file first');
-      return;
-    }
-    if (!institution) {
-      toast.error('Choose an institution parser');
       return;
     }
 
@@ -270,7 +176,6 @@ export function StatementUploadDialog({
       const uploadResult = await statementFileService.upload({
         file: selectedFile,
         account: accountId,
-        institution,
         statementStatus,
         statementYear: period.statementYear,
         statementMonth: period.statementMonth,
@@ -290,9 +195,15 @@ export function StatementUploadDialog({
       setPreview(previewResult.result);
       setStatement(previewResult.statement);
     } catch (err) {
-      toast.error('Upload failed', {
-        description: err instanceof Error ? err.message : 'Please try again.',
-      });
+      const message = err instanceof Error ? err.message : 'Please try again.';
+      if (message.includes('No statement parser configured')) {
+        toast.error('No statement parser for this account', {
+          description:
+            'Set the account institution to a supported bank before uploading.',
+        });
+      } else {
+        toast.error('Upload failed', { description: message });
+      }
     } finally {
       setBusy(false);
     }
@@ -402,29 +313,7 @@ export function StatementUploadDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="statement-institution">Institution parser</Label>
-              <Select
-                value={institution}
-                onValueChange={setInstitution}
-                disabled={
-                  loadingInstitutions || busy || institutions.length === 0
-                }
-              >
-                <SelectTrigger id="statement-institution">
-                  <SelectValue placeholder="Select institution" />
-                </SelectTrigger>
-                <SelectContent>
-                  {institutions.map(item => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.display_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2 sm:col-span-2">
-              <Label>Statement period</Label>
+              <Label>Statement label</Label>
               <Tabs
                 value={periodMode}
                 onValueChange={value => setPeriodMode(value as PeriodMode)}
@@ -434,7 +323,7 @@ export function StatementUploadDialog({
                     Single month
                   </TabsTrigger>
                   <TabsTrigger value="custom" disabled={busy}>
-                    Custom range
+                    Date range
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="single" className="mt-3 space-y-2">
@@ -448,59 +337,46 @@ export function StatementUploadDialog({
                   />
                 </TabsContent>
                 <TabsContent value="custom" className="mt-3 space-y-3">
-                  <DateRangePicker
-                    dateRange={customDateRange}
-                    onDateRangeChange={range => {
-                      setCustomDateRange(range);
-                      if (!customLabelTouched && range?.from && range.to) {
-                        setCustomLabel(
-                          formatStatementPeriodFromRange(range.from, range.to)
-                        );
-                      }
-                    }}
-                    disabled={busy}
-                  />
-                  <div className="space-y-2">
-                    <Label htmlFor="statement-period-label">Period label</Label>
-                    <Input
-                      id="statement-period-label"
-                      value={customLabel}
-                      placeholder="Oct 2025–Jan 2026"
-                      maxLength={STATEMENT_PERIOD_MAX_LENGTH}
-                      disabled={busy}
-                      onChange={event => {
-                        setCustomLabelTouched(true);
-                        setCustomLabel(event.target.value);
-                      }}
-                    />
-                    {customLabelError && (
-                      <p className="text-xs text-destructive">
-                        {customLabelError}
-                      </p>
-                    )}
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="statement-start-date">Start date</Label>
+                      <Input
+                        id="statement-start-date"
+                        type="date"
+                        value={customStartDate}
+                        disabled={busy}
+                        onChange={event =>
+                          setCustomStartDate(event.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="statement-end-date">End date</Label>
+                      <Input
+                        id="statement-end-date"
+                        type="date"
+                        value={customEndDate}
+                        disabled={busy}
+                        onChange={event => setCustomEndDate(event.target.value)}
+                      />
+                    </div>
                   </div>
                 </TabsContent>
               </Tabs>
-              <div className="space-y-1 text-[11px] text-muted-foreground/80">
-                <p>
-                  <span className="font-medium text-muted-foreground">
-                    Naming only.
-                  </span>{' '}
-                  This label helps you find the statement later. It does not
-                  filter transactions, affect deduplication, or change how rows
-                  are imported.
-                </p>
+              <p className="text-[11px] text-muted-foreground/80">
+                For naming and library sorting only — does not filter imported
+                transactions.
                 {periodMode === 'custom' && (
-                  <p>
-                    Library sorting uses the range{' '}
+                  <>
+                    {' '}
+                    Library sorting uses the{' '}
                     <span className="font-medium text-muted-foreground">
                       end date
-                    </span>{' '}
-                    (for example, a period ending Jan 14, 2026 appears under Jan
-                    2026).
-                  </p>
+                    </span>
+                    .
+                  </>
                 )}
-              </div>
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -643,7 +519,7 @@ export function StatementUploadDialog({
             <Button
               type="button"
               onClick={handleUploadAndPreview}
-              disabled={busy || !selectedFile || !institution}
+              disabled={busy || !selectedFile}
             >
               {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Upload & preview

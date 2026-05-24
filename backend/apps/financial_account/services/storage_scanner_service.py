@@ -32,6 +32,23 @@ INSTITUTION_SLUG_TO_PARSER = {
 }
 
 
+def parser_key_for_account(account: FinancialAccount) -> str | None:
+    """Map an account's institution slug to a StatementImportService parser key."""
+    institution = account.institution
+    if institution is None:
+        return None
+    slug = (institution.slug or "").lower()
+    if not slug:
+        return None
+    if slug in INSTITUTION_SLUG_TO_PARSER:
+        return INSTITUTION_SLUG_TO_PARSER[slug]
+    from apps.financial_account.services.statement_import_service import SUPPORTED_INSTITUTIONS
+
+    if slug in SUPPORTED_INSTITUTIONS:
+        return slug
+    return None
+
+
 @dataclass
 class ScanFileOutcome:
     """Per-file scan outcome (one entry per file inspected)."""
@@ -315,20 +332,7 @@ class StorageScannerService:
         )
 
     def _parser_key_for_account(self, account: FinancialAccount) -> str | None:
-        """Map an account's institution slug to a StatementImportService parser key."""
-        institution = account.institution
-        if institution is None:
-            return None
-        slug = (institution.slug or "").lower()
-        if not slug:
-            return None
-        if slug in INSTITUTION_SLUG_TO_PARSER:
-            return INSTITUTION_SLUG_TO_PARSER[slug]
-        from apps.financial_account.services.statement_import_service import SUPPORTED_INSTITUTIONS
-
-        if slug in SUPPORTED_INSTITUTIONS:
-            return slug
-        return None
+        return parser_key_for_account(account)
 
     def _year_month_from_path(self, relative_path: str) -> tuple[int, int]:
         """Pull ``year`` / ``month`` from ``<year>/<month>/...`` paths; fall back to today."""
