@@ -31,6 +31,7 @@ urlpatterns = [
     path("drive/activate/", views.GoogleDriveActivateAPIView.as_view(), name="account-drive-activate"),
     path("drive/deactivate/", views.GoogleDriveDeactivateAPIView.as_view(), name="account-drive-deactivate"),
     path("drive/disconnect/", views.GoogleDriveDisconnectAPIView.as_view(), name="account-drive-disconnect"),
+    path("drive/sync-folders/", views.GoogleDriveSyncFoldersAPIView.as_view(), name="account-drive-sync-folders"),
     path(
         "<int:pk>/",
         views.FinancialAccountDetailAPIView.as_view(),

@@ -102,6 +102,9 @@ class GoogleDriveActivationService:
                 "active": False,
                 "account_folders": [],
             }
+        folder_account_ids = {folder.account_id for folder in connection.account_folders.all()}
+        total_active = FinancialAccount.objects.filter(user=user, is_active=True).count()
+        missing_folder_count = max(0, total_active - len(folder_account_ids)) if connection.is_active else 0
         return {
             "configured": self._settings_configured(),
             "connected": bool(connection.refresh_token_encrypted),
@@ -112,6 +115,7 @@ class GoogleDriveActivationService:
             "connected_at": connection.connected_at.isoformat() if connection.connected_at else None,
             "activated_at": connection.activated_at.isoformat() if connection.activated_at else None,
             "last_error": connection.last_error,
+            "missing_folder_count": missing_folder_count,
             "account_folders": [
                 {
                     "account": folder.account_id,
@@ -173,6 +177,43 @@ class GoogleDriveActivationService:
                     "updated_at",
                 ]
             )
+
+        return result
+
+    def sync_missing_folders(self, user: User) -> DriveActivationResult:
+        """Create Drive folders for any active accounts that don't have one yet.
+
+        Safe to call at any time while Drive is active — already-provisioned
+        accounts are skipped.
+        """
+        connection = GoogleDriveConnection.objects.filter(user=user, is_active=True).first()
+        if not connection:
+            raise GoogleDriveError("Drive statement storage is not active.")
+
+        result = DriveActivationResult(connection=connection)
+        existing_account_ids = set(connection.account_folders.values_list("account_id", flat=True))
+        accounts = list(
+            FinancialAccount.objects.filter(user=user, is_active=True)
+            .exclude(id__in=existing_account_ids)
+            .select_related("user")
+        )
+
+        with transaction.atomic():
+            for account in accounts:
+                try:
+                    account_folder = self._create_account_folder(connection, account)
+                    result.account_folders_created += 1
+                    account.storage_uri = f"gdrive://{account_folder.folder_id}"
+                    account.save(update_fields=["storage_uri", "updated_at"])
+                    logger.info("Synced missing Drive folder {} for account {}", account_folder.folder_id, account.id)
+                except Exception as exc:
+                    msg = f"{account.name}: {exc}"
+                    result.errors.append(msg)
+                    logger.exception("Failed to create Drive folder for account {} during sync", account.id)
+
+            if result.errors:
+                connection.last_error = "\n".join(result.errors[:10])
+                connection.save(update_fields=["last_error", "updated_at"])
 
         return result
 

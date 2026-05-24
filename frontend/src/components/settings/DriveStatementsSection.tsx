@@ -26,6 +26,7 @@ import {
   CheckCircle2,
   Cloud,
   FolderOpen,
+  FolderSync,
   Loader2,
   Unlink,
   Unplug,
@@ -193,8 +194,32 @@ export function DriveStatementsSection() {
     }
   };
 
+  const syncFolders = async () => {
+    setBusy(true);
+    try {
+      const response = await driveStatementsApi.syncMissingFolders();
+      await refreshDriveStatus();
+      toast.success(
+        `${response.account_folders_created} folder${response.account_folders_created === 1 ? '' : 's'} synced to Google Drive`
+      );
+      if (response.errors.length > 0) {
+        toast.warning('Some folders could not be created', {
+          description: response.errors[0],
+        });
+      }
+    } catch (error) {
+      toast.error('Unable to sync Drive folders', {
+        description:
+          error instanceof Error ? error.message : 'Please try again.',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const isConnected = Boolean(status?.connected);
   const isActive = Boolean(status?.active);
+  const missingFolderCount = status?.missing_folder_count ?? 0;
 
   return (
     <Card>
@@ -245,6 +270,13 @@ export function DriveStatementsSection() {
                     managed in Drive.
                   </p>
                 )}
+                {isActive && missingFolderCount > 0 && (
+                  <p className="text-amber-500">
+                    {missingFolderCount} account
+                    {missingFolderCount === 1 ? '' : 's'} missing a Drive
+                    folder.
+                  </p>
+                )}
                 {status?.last_error && (
                   <p className="text-destructive">{status.last_error}</p>
                 )}
@@ -275,6 +307,16 @@ export function DriveStatementsSection() {
                 <Button variant="outline" onClick={disconnect} disabled={busy}>
                   <Unplug className="mr-2 h-4 w-4" />
                   Disconnect
+                </Button>
+              )}
+              {isActive && missingFolderCount > 0 && (
+                <Button onClick={syncFolders} disabled={busy}>
+                  {busy ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FolderSync className="mr-2 h-4 w-4" />
+                  )}
+                  Sync Missing Folders ({missingFolderCount})
                 </Button>
               )}
               {isActive && (

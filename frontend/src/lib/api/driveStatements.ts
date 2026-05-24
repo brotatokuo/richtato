@@ -20,6 +20,7 @@ export interface DriveStatus {
   connected_at?: string | null;
   activated_at?: string | null;
   last_error?: string;
+  missing_folder_count?: number;
   account_folders: DriveAccountFolder[];
 }
 
@@ -88,6 +89,18 @@ class DriveStatementsApi {
   async disconnect(): Promise<DriveStatus> {
     const response = await csrfService.fetchWithCsrf(
       `${API_BASE}/accounts/drive/disconnect/`,
+      { method: 'POST' }
+    );
+    return this.handleResponse(response);
+  }
+
+  async syncMissingFolders(): Promise<{
+    status: DriveStatus;
+    account_folders_created: number;
+    errors: string[];
+  }> {
+    const response = await csrfService.fetchWithCsrf(
+      `${API_BASE}/accounts/drive/sync-folders/`,
       { method: 'POST' }
     );
     return this.handleResponse(response);

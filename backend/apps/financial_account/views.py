@@ -418,6 +418,31 @@ class GoogleDriveDisconnectAPIView(APIView):
         return Response(self.activation_service.status(request.user), status=status.HTTP_200_OK)
 
 
+class GoogleDriveSyncFoldersAPIView(APIView):
+    """Create Drive folders for any active accounts that are missing one."""
+
+    authentication_classes = [SessionAuthentication, TokenAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.activation_service = GoogleDriveActivationService()
+
+    def post(self, request):
+        try:
+            result = self.activation_service.sync_missing_folders(request.user)
+        except GoogleDriveError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "status": self.activation_service.status(request.user),
+                "account_folders_created": result.account_folders_created,
+                "errors": result.errors,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
 class AccountTransactionsAPIView(APIView):
     """Get transactions for a specific account."""
 
