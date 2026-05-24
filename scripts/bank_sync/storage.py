@@ -1,4 +1,4 @@
-"""Agent-side storage writer used to deposit downloaded statement files."""
+"""Agent-side storage writer used to upload downloaded statement files."""
 
 from __future__ import annotations
 
@@ -6,7 +6,6 @@ import hashlib
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import unquote, urlparse
 
 import requests
 
@@ -29,12 +28,11 @@ def write_statement(
     filename: str,
     content: bytes,
 ) -> WrittenFile:
-    """Write ``content`` into the account's storage URI.
-
-    Local ``file://`` storage uses ``<year>/<month>/<hash12>-<filename>``.
-    Drive-backed storage is uploaded through Richtato so the backend can use
-    the user's stored Google OAuth token and import the statement immediately.
-    """
+    """Upload ``content`` to the account's Google Drive folder through Richtato."""
+    if not storage_uri.startswith("gdrive://"):
+        raise ValueError(
+            f"Unsupported storage URI: {storage_uri!r}. Configure Google Drive statement storage first."
+        )
     if not (1 <= month <= 12):
         raise ValueError(f"month must be between 1 and 12, got {month}")
     if not filename:
@@ -42,26 +40,13 @@ def write_statement(
 
     safe_name = _sanitize_filename(filename)
     file_hash = hashlib.sha256(content).hexdigest()
-    if storage_uri.startswith("gdrive://"):
-        return _write_statement_to_backend(
-            storage_uri,
-            year=year,
-            month=month,
-            filename=safe_name,
-            content=content,
-            file_hash=file_hash,
-        )
-
-    relative = f"{year}/{month:02d}/{file_hash[:12]}-{safe_name}"
-    root = _uri_to_path(storage_uri)
-    target = root / relative
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(content)
-    return WrittenFile(
-        absolute_path=target,
-        relative_path=relative,
-        size_bytes=len(content),
-        sha256=file_hash,
+    return _write_statement_to_backend(
+        storage_uri,
+        year=year,
+        month=month,
+        filename=safe_name,
+        content=content,
+        file_hash=file_hash,
     )
 
 
@@ -77,7 +62,7 @@ def _write_statement_to_backend(
     api_base = os.environ.get("RICHTATO_API_BASE_URL", "http://127.0.0.1:8000/api/v1").rstrip("/")
     token = os.environ.get("RICHTATO_API_TOKEN", "")
     if not token:
-        raise ValueError("RICHTATO_API_TOKEN is required for gdrive:// statement uploads.")
+        raise ValueError("RICHTATO_API_TOKEN is required for Google Drive statement uploads.")
 
     response = requests.post(
         f"{api_base}/accounts/agent-statements/",
@@ -104,27 +89,8 @@ def _write_statement_to_backend(
     )
 
 
-def _uri_to_path(uri: str) -> Path:
-    """Resolve a ``file://`` URI (or bare absolute path) to a ``Path``."""
-    if not uri:
-        raise ValueError("storage_uri must not be empty")
-    if uri.startswith("file://"):
-        parsed = urlparse(uri)
-        return Path(unquote(parsed.path))
-    if uri.startswith("/"):
-        return Path(uri)
-    raise ValueError(
-        f"Unsupported storage URI scheme: {uri!r}. Supported schemes are file:// and gdrive://."
-    )
-
-
 def _sanitize_filename(filename: str) -> str:
-    """Match the backend's ``get_valid_filename`` behavior closely enough.
-
-    Replaces whitespace with underscores and drops characters that would
-    create cross-OS issues. The exact mapping is not critical — the file
-    hash prefix already disambiguates collisions.
-    """
+    """Match the backend's ``get_valid_filename`` behavior closely enough."""
     cleaned = []
     for char in filename.strip():
         if char in {" ", "\t", "\n"}:

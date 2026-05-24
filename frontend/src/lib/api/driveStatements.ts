@@ -57,7 +57,6 @@ class DriveStatementsApi {
   async activate(input: { folderId: string; folderName: string }): Promise<{
     status: DriveStatus;
     account_folders_created: number;
-    statements_migrated: number;
     errors: string[];
   }> {
     const response = await csrfService.fetchWithCsrf(
@@ -76,7 +75,6 @@ class DriveStatementsApi {
   async deactivate(): Promise<{
     status: DriveStatus;
     account_folders_removed: number;
-    statements_migrated: number;
     errors: string[];
   }> {
     const response = await csrfService.fetchWithCsrf(

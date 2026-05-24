@@ -1,14 +1,24 @@
-"""Tests for the storage scanner that auto-imports dropped statement files."""
+"""Tests for the storage scanner that auto-imports Google Drive statement files."""
 
 from decimal import Decimal
-from pathlib import Path
 
 import pytest
 
 from apps.financial_account.models import FinancialAccount, FinancialInstitution, StatementFile
 from apps.financial_account.services.storage_scanner_service import StorageScannerService
+from apps.financial_account.tests.fake_gdrive_storage import FakeGoogleDriveStorage
 from apps.richtato_user.models import User
 from apps.transaction.models import Transaction
+
+
+@pytest.fixture
+def fake_drive_storage(monkeypatch):
+    storage = FakeGoogleDriveStorage()
+    monkeypatch.setattr(
+        "apps.financial_account.storage.factory.GoogleDriveStatementStorage",
+        lambda: storage,
+    )
+    return storage
 
 
 @pytest.fixture
@@ -32,41 +42,34 @@ def bofa_institution(db):
 
 
 @pytest.fixture
-def chase_account(user, chase_institution, tmp_path):
+def chase_account(user, chase_institution):
     account = FinancialAccount.objects.create(
         user=user,
         name="Scan Chase Checking",
         account_type="checking",
         balance=Decimal("1000.00"),
         institution=chase_institution,
+        storage_uri="gdrive://chase-folder",
     )
-    account.storage_uri = f"file://{tmp_path / 'chase' / str(account.id)}"
-    account.save(update_fields=["storage_uri"])
     return account
 
 
 @pytest.fixture
-def bofa_account(user, bofa_institution, tmp_path):
+def bofa_account(user, bofa_institution):
     account = FinancialAccount.objects.create(
         user=user,
         name="Scan BoFA Checking",
         account_type="checking",
         balance=Decimal("500.00"),
         institution=bofa_institution,
+        storage_uri="gdrive://bofa-folder",
     )
-    account.storage_uri = f"file://{tmp_path / 'bofa' / str(account.id)}"
-    account.save(update_fields=["storage_uri"])
     return account
 
 
-def _write_drop(account: FinancialAccount, year: int, month: int, filename: str, content: bytes) -> Path:
-    from urllib.parse import urlparse
-
-    root = Path(urlparse(account.storage_uri).path) / f"{year}" / f"{month:02d}"
-    root.mkdir(parents=True, exist_ok=True)
-    path = root / filename
-    path.write_bytes(content)
-    return path
+def _write_drop(fake_drive_storage: FakeGoogleDriveStorage, account: FinancialAccount, filename: str, content: bytes):
+    folder_id = account.storage_uri.replace("gdrive://", "")
+    fake_drive_storage.files_by_folder.setdefault(folder_id, {})[filename] = content
 
 
 CHASE_CSV = b"Transaction Date,Description,Amount\n2025-06-01,Coffee Shop,-5.00\n2025-06-02,Paycheck,1500.00\n"
@@ -75,8 +78,8 @@ BOFA_CSV = b"Posted Date,Payee,Amount\n2025-06-01,Grocery,-25.00\n2025-06-02,Ref
 
 
 class TestStorageScannerService:
-    def test_scan_imports_dropped_chase_csv(self, chase_account):
-        _write_drop(chase_account, 2025, 6, "june.csv", CHASE_CSV)
+    def test_scan_imports_dropped_chase_csv(self, chase_account, fake_drive_storage):
+        _write_drop(fake_drive_storage, chase_account, "june.csv", CHASE_CSV)
         service = StorageScannerService()
 
         result = service.scan_account(chase_account.id)
@@ -90,15 +93,13 @@ class TestStorageScannerService:
         statement = StatementFile.objects.get(account=chase_account)
         assert statement.source == "agent_drop"
         assert statement.institution == "chase"
-        assert statement.statement_year == 2025
-        assert statement.statement_month == 6
         assert statement.import_status == "imported"
         assert statement.imported_count == 2
 
         assert Transaction.objects.filter(account=chase_account, sync_source="csv").count() == 2
 
-    def test_scan_maps_bank_of_america_slug_to_bofa_parser(self, bofa_account):
-        _write_drop(bofa_account, 2025, 6, "june.csv", BOFA_CSV)
+    def test_scan_maps_bank_of_america_slug_to_bofa_parser(self, bofa_account, fake_drive_storage):
+        _write_drop(fake_drive_storage, bofa_account, "june.csv", BOFA_CSV)
         service = StorageScannerService()
 
         result = service.scan_account(bofa_account.id)
@@ -109,8 +110,8 @@ class TestStorageScannerService:
         assert statement.import_status == "imported"
         assert Transaction.objects.filter(account=bofa_account, sync_source="csv").count() == 2
 
-    def test_rescan_is_idempotent(self, chase_account):
-        _write_drop(chase_account, 2025, 6, "june.csv", CHASE_CSV)
+    def test_rescan_is_idempotent(self, chase_account, fake_drive_storage):
+        _write_drop(fake_drive_storage, chase_account, "june.csv", CHASE_CSV)
         service = StorageScannerService()
 
         first = service.scan_account(chase_account.id)
@@ -122,8 +123,8 @@ class TestStorageScannerService:
         assert StatementFile.objects.filter(account=chase_account).count() == 1
         assert Transaction.objects.filter(account=chase_account, sync_source="csv").count() == 2
 
-    def test_dry_run_does_not_create_statement_or_transactions(self, chase_account):
-        _write_drop(chase_account, 2025, 6, "june.csv", CHASE_CSV)
+    def test_dry_run_does_not_create_statement_or_transactions(self, chase_account, fake_drive_storage):
+        _write_drop(fake_drive_storage, chase_account, "june.csv", CHASE_CSV)
         service = StorageScannerService()
 
         result = service.scan_account(chase_account.id, dry_run=True)
@@ -134,16 +135,15 @@ class TestStorageScannerService:
         assert Transaction.objects.filter(account=chase_account, sync_source="csv").count() == 0
         assert any(outcome.status == "discovered" for outcome in result.outcomes)
 
-    def test_account_without_institution_is_skipped_gracefully(self, user, tmp_path):
+    def test_account_without_institution_is_skipped_gracefully(self, user, fake_drive_storage):
         manual_account = FinancialAccount.objects.create(
             user=user,
             name="Manual",
             account_type="checking",
             balance=Decimal("0"),
+            storage_uri="gdrive://manual-folder",
         )
-        manual_account.storage_uri = f"file://{tmp_path / 'manual' / str(manual_account.id)}"
-        manual_account.save(update_fields=["storage_uri"])
-        _write_drop(manual_account, 2025, 6, "june.csv", CHASE_CSV)
+        _write_drop(fake_drive_storage, manual_account, "june.csv", CHASE_CSV)
 
         result = StorageScannerService().scan_account(manual_account.id)
 
@@ -151,8 +151,19 @@ class TestStorageScannerService:
         assert result.files_imported == 0
         assert StatementFile.objects.filter(account=manual_account).count() == 0
 
-    def test_scan_skips_unsupported_extension(self, chase_account):
-        _write_drop(chase_account, 2025, 6, "notes.txt", b"hello")
+    def test_scan_skips_unsupported_extension(self, chase_account, fake_drive_storage):
+        _write_drop(fake_drive_storage, chase_account, "notes.txt", b"hello")
         result = StorageScannerService().scan_account(chase_account.id)
-        # Unsupported extensions are filtered by the storage layer; nothing seen.
         assert result.files_seen == 0
+
+    def test_scan_skips_account_without_drive_storage(self, user, chase_institution):
+        account = FinancialAccount.objects.create(
+            user=user,
+            name="No Drive",
+            account_type="checking",
+            balance=Decimal("0"),
+            institution=chase_institution,
+        )
+        result = StorageScannerService().scan_account(account.id)
+        assert result.files_seen == 0
+        assert result.files_imported == 0

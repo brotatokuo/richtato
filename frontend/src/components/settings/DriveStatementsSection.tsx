@@ -129,7 +129,7 @@ export function DriveStatementsSection() {
           });
           await refreshDriveStatus();
           toast.success('Google Drive statement storage activated', {
-            description: `${response.account_folders_created} account folders created, ${response.statements_migrated} statements migrated.`,
+            description: `${response.account_folders_created} account folders created.`,
           });
           if (response.errors.length > 0) {
             toast.warning('Some statements could not be migrated', {
@@ -177,7 +177,7 @@ export function DriveStatementsSection() {
       await refreshDriveStatus();
       setShowUnlinkConfirm(false);
       toast.success('Google Drive folder unlinked', {
-        description: `${response.statements_migrated} statements moved back to local storage.`,
+        description: `${response.account_folders_removed} account folders unlinked.`,
       });
       if (response.errors.length > 0) {
         toast.warning('Some statements could not be migrated', {
@@ -340,9 +340,9 @@ export function DriveStatementsSection() {
                     Unlink Google Drive folder?
                   </AlertDialogTitle>
                   <AlertDialogDescription>
-                    Statement files will move back to local storage and accounts
-                    will stop syncing to Drive. Your Google account stays
-                    connected so you can choose a different folder later.
+                    Accounts will stop syncing new statements to Drive. Files
+                    already in Google Drive stay there. Your Google account
+                    stays connected so you can choose a different folder later.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

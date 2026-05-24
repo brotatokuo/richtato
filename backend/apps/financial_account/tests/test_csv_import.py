@@ -389,17 +389,20 @@ class TestStatementImportService:
 
 
 class TestStatementFileService:
-    """Local statement file library behavior."""
+    """Google Drive statement file library behavior."""
 
-    def _isolated_account(self, account, tmp_path):
-        """Point the account at a tmp_path storage URI for test isolation."""
-        account.storage_uri = f"file://{tmp_path / 'statements' / str(account.id)}"
+    def _drive_account(self, account, folder_id="test-folder"):
+        account.storage_uri = f"gdrive://{folder_id}"
         account.save(update_fields=["storage_uri"])
         return account
 
-    def test_upload_stores_statement_by_account_year_month(self, account, tmp_path):
+    def test_upload_stores_statement_in_drive(self, account, fake_drive_storage, monkeypatch):
+        monkeypatch.setattr(
+            "apps.financial_account.storage.factory.GoogleDriveStatementStorage",
+            lambda: fake_drive_storage,
+        )
         service = StatementFileService()
-        self._isolated_account(account, tmp_path)
+        self._drive_account(account)
         statement = _make_named_csv(
             "Transaction Date,Description,Amount\n2025-06-01,Coffee,-5.00\n",
             "june.csv",
@@ -417,12 +420,16 @@ class TestStatementFileService:
         assert result.created is True
         assert result.statement.statement_year == 2025
         assert result.statement.statement_month == 6
-        assert "2025/06" in result.statement.stored_path
-        assert service._absolute_path(result.statement.stored_path).exists()
+        assert result.statement.stored_path.startswith("gdrive://test-folder/")
+        assert fake_drive_storage.files_by_folder["test-folder"]
 
-    def test_duplicate_upload_returns_existing_record(self, account, tmp_path):
+    def test_duplicate_upload_returns_existing_record(self, account, fake_drive_storage, monkeypatch):
+        monkeypatch.setattr(
+            "apps.financial_account.storage.factory.GoogleDriveStatementStorage",
+            lambda: fake_drive_storage,
+        )
         service = StatementFileService()
-        self._isolated_account(account, tmp_path)
+        self._drive_account(account)
         csv_text = "Transaction Date,Description,Amount\n2025-06-01,Coffee,-5.00\n"
 
         first = service.save_upload(account.user, account, _make_named_csv(csv_text), "chase", "2025-06")
@@ -432,9 +439,13 @@ class TestStatementFileService:
         assert second.created is False
         assert second.statement.id == first.statement.id
 
-    def test_preview_and_import_update_statement_summary(self, account, tmp_path):
+    def test_preview_and_import_update_statement_summary(self, account, fake_drive_storage, monkeypatch):
+        monkeypatch.setattr(
+            "apps.financial_account.storage.factory.GoogleDriveStatementStorage",
+            lambda: fake_drive_storage,
+        )
         service = StatementFileService()
-        self._isolated_account(account, tmp_path)
+        self._drive_account(account)
         upload = service.save_upload(
             account.user,
             account,
@@ -457,9 +468,13 @@ class TestStatementFileService:
         assert upload.statement.imported_count == 1
         assert Transaction.objects.filter(account=account, sync_source="csv").count() == 1
 
-    def test_update_statement_moves_file_to_new_period(self, account, tmp_path):
+    def test_update_statement_keeps_drive_file_when_period_changes(self, account, fake_drive_storage, monkeypatch):
+        monkeypatch.setattr(
+            "apps.financial_account.storage.factory.GoogleDriveStatementStorage",
+            lambda: fake_drive_storage,
+        )
         service = StatementFileService()
-        self._isolated_account(account, tmp_path)
+        self._drive_account(account)
         upload = service.save_upload(
             account.user,
             account,
@@ -467,11 +482,10 @@ class TestStatementFileService:
             "chase",
             "2025-06",
         )
-        old_path = service._absolute_path(upload.statement.stored_path)
+        stored_path = upload.statement.stored_path
 
         updated = service.update_statement(upload.statement, statement_period="2025-07")
-        new_path = service._absolute_path(updated.stored_path)
 
         assert updated.statement_month == 7
-        assert not old_path.exists()
-        assert new_path.exists()
+        assert updated.stored_path == stored_path
+        assert fake_drive_storage.files_by_folder["test-folder"]

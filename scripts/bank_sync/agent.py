@@ -2,9 +2,8 @@
 
 The agent keeps its own Fernet-encrypted SQLite vault under
 ``local_data/bank-agent/agent.db`` for bank logins, per-account
-activity URLs, and a poll schedule. It writes downloaded statements
-into each account's configured ``storage_uri``; the Richtato backend
-scanner picks them up and creates the corresponding transactions.
+activity URLs, and a poll schedule. It uploads downloaded statements
+to each account's Google Drive folder through the Richtato backend.
 
 Run ``python -m scripts.bank_sync.agent --help`` for the full command
 surface. Common usage:
@@ -19,7 +18,7 @@ surface. Common usage:
 
     bank-agent account add 1 \\
         --activity-url "https://bofa.test/activity?adx=ABC" \\
-        --storage-uri "file:///home/alan/richtato/local_data/statements/1/42/" \\
+        --storage-uri "gdrive://<account_folder_id>" \\
         --flow deposit
 
     bank-agent status
@@ -588,7 +587,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_account_add.add_argument(
         "--storage-uri",
         required=True,
-        help="Destination URI (file:///... today; gdrive://... later).",
+        help="Google Drive folder URI (gdrive://<folder_id>) from Richtato account config.",
     )
     p_account_add.add_argument("--activity-url", default="", help="Bank-side download URL (encrypted at rest).")
     p_account_add.add_argument("--flow", default="deposit", choices=store_mod.ACCOUNT_FLOWS)

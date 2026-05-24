@@ -112,8 +112,6 @@ class TestGoogleDriveActivationService:
         account.save(update_fields=["storage_uri"])
 
         service = GoogleDriveActivationService()
-        service._migrate_account_statements_between = lambda *args, **kwargs: (0, [])
-
         result = service.deactivate(user)
 
         account.refresh_from_db()
@@ -173,7 +171,7 @@ class TestAccountServiceDriveProvisioning:
         assert account.storage_uri == f"gdrive://{drive_folder.folder_id}"
         assert drive_folder.folder_id.startswith("folder-")
 
-    def test_create_account_without_active_drive_leaves_local_storage(self, user):
+    def test_create_account_without_active_drive_leaves_storage_unconfigured(self, user):
         service = AccountService()
         account = service.create_manual_account(
             user=user,

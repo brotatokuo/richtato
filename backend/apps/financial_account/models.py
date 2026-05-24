@@ -99,20 +99,14 @@ class FinancialAccount(models.Model):
         help_text="Key for custom card image. When null, auto-detect from card name.",
     )
 
-    # File storage for downloaded/uploaded statements (CSV/XLSX). The host
-    # bank-agent drops files here; the backend scanner discovers and imports
-    # them. Empty string falls back to a convention-based local path under
-    # ``local_data/statements/<user_id>/<account_id>/``. Future schemes:
-    # ``gdrive://<folder_id>``.
+    # Google Drive folder for this account's statement files.
+    # Set during Drive activation or when a new account is created while Drive
+    # is active. Format: ``gdrive://<folder_id>``.
     storage_uri = models.CharField(
         max_length=512,
         blank=True,
         default="",
-        help_text=(
-            "Storage URI for this account's statement files. Empty defaults to "
-            "file:///<repo>/local_data/statements/<user_id>/<account_id>/. "
-            "Supports file:// today; gdrive:// later."
-        ),
+        help_text="Google Drive folder URI for this account's statement files (gdrive://<folder_id>).",
     )
 
     # Metadata
@@ -136,19 +130,21 @@ class FinancialAccount(models.Model):
         return self.institution.name if self.institution else "Manual"
 
     def resolved_storage_uri(self) -> str:
-        """Return the effective storage URI for this account's statement files.
+        """Return the account's Google Drive storage URI, or empty if unset."""
+        uri = (self.storage_uri or "").strip()
+        if uri.startswith("gdrive://"):
+            return uri
+        return ""
 
-        If ``storage_uri`` is explicitly set, return it verbatim. Otherwise
-        derive a ``file://`` URI under
-        ``<repo>/local_data/statements/<user_id>/<account_id>/``.
-        """
-        if self.storage_uri:
-            return self.storage_uri
-
-        from django.conf import settings
-
-        base = settings.BASE_DIR.parent / "local_data" / "statements" / str(self.user_id) / str(self.id)
-        return f"file://{base}"
+    def ensure_storage_uri(self) -> str:
+        """Return the Drive URI or raise when statement storage is not configured."""
+        uri = self.resolved_storage_uri()
+        if not uri:
+            raise ValueError(
+                "Google Drive statement storage is not configured for this account. "
+                "Activate Drive in Setup → Statements."
+            )
+        return uri
 
 
 class AccountBalanceHistory(models.Model):
@@ -179,7 +175,7 @@ class AccountBalanceHistory(models.Model):
 
 
 class StatementFile(models.Model):
-    """Original statement file stored locally for import history and reprocessing."""
+    """Original statement file stored in Google Drive for import history and reprocessing."""
 
     STATEMENT_STATUS_CHOICES = [
         ("provisional", "Current/Open Statement"),

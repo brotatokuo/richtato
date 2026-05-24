@@ -142,7 +142,7 @@ class AccountService:
             )
         except Exception:
             logger.exception(
-                "Failed to create Drive folder for account {}; falling back to local storage",
+                "Failed to create Drive folder for account {}",
                 account.id,
             )
 

@@ -406,8 +406,11 @@ export function AccountDetailPanel({
         </p>
         <StorageLocationPanel
           accountId={account.id}
+          accountName={account.name}
+          institutionSlug={account.entity}
           storageUri={account.storage_uri}
           resolvedStorageUri={account.resolved_storage_uri}
+          onUploadComplete={onAccountUpdated}
         />
       </div>
 

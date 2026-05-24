@@ -1,11 +1,8 @@
-"""Discover and auto-import statement files dropped into account storage.
+"""Discover and auto-import statement files in Google Drive account folders.
 
-Walks each ``FinancialAccount``'s ``storage_uri`` looking for files that
-are not yet tracked in ``StatementFile``. New files become ``agent_drop``
-rows and are auto-imported via :class:`StatementImportService`.
-
-This is the bridge between the host bank-agent (which only writes files
-to disk) and the Richtato app (which owns transactions and balances).
+Walks each account's ``gdrive://`` storage URI looking for files that are
+not yet tracked in ``StatementFile``. New files become ``agent_drop`` rows
+and are auto-imported via :class:`StatementImportService`.
 """
 
 from __future__ import annotations
@@ -15,9 +12,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
-from urllib.parse import urlparse
 
-from django.conf import settings
 from django.core.files.base import ContentFile
 from loguru import logger
 
@@ -100,6 +95,13 @@ class StorageScannerService:
 
     def _scan_account(self, account: FinancialAccount, result: ScanResult, *, dry_run: bool) -> None:
         storage_uri = account.resolved_storage_uri()
+        if not storage_uri:
+            logger.warning(
+                "Skipping account {} ({}): Google Drive storage is not configured",
+                account.id,
+                account.name,
+            )
+            return
         try:
             storage = get_storage(storage_uri)
         except (NotImplementedError, UnknownStorageScheme, ValueError) as exc:
@@ -111,8 +113,28 @@ class StorageScannerService:
             )
             return
 
+        try:
+            stored_files = list(storage.list_files(storage_uri))
+        except ValueError as exc:
+            logger.warning(
+                "Skipping account {} ({}): could not list storage files: {}",
+                account.id,
+                storage_uri,
+                exc,
+            )
+            result.files_failed += 1
+            result.outcomes.append(
+                ScanFileOutcome(
+                    account_id=account.id,
+                    relative_path="",
+                    status="failed",
+                    detail=str(exc),
+                )
+            )
+            return
+
         parser_key = self._parser_key_for_account(account)
-        for stored in storage.list_files(storage_uri):
+        for stored in stored_files:
             result.files_seen += 1
             if Path(stored.filename).suffix.lower() not in self.SUPPORTED_EXTENSIONS:
                 result.files_skipped += 1
@@ -305,17 +327,5 @@ class StorageScannerService:
         return today.year, today.month
 
     def _stored_path_from_storage(self, storage_uri: str, relative_path: str) -> str:
-        """Compose a StatementFile.stored_path that round-trips through storage."""
-        if storage_uri.startswith("file://"):
-            full = Path(urlparse(storage_uri).path) / relative_path
-            try:
-                return str(full.relative_to(settings.BASE_DIR.parent))
-            except ValueError:
-                return str(full)
-        if storage_uri.startswith("/"):
-            full = Path(storage_uri) / relative_path
-            try:
-                return str(full.relative_to(settings.BASE_DIR.parent))
-            except ValueError:
-                return str(full)
+        """Compose a StatementFile.stored_path that round-trips through Drive."""
         return f"{storage_uri.rstrip('/')}/{relative_path}"

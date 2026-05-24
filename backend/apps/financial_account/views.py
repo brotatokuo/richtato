@@ -366,7 +366,6 @@ class GoogleDriveActivateAPIView(APIView):
             {
                 "status": self.activation_service.status(request.user),
                 "account_folders_created": result.account_folders_created,
-                "statements_migrated": result.statements_migrated,
                 "errors": result.errors,
             },
             status=status.HTTP_200_OK,
@@ -374,7 +373,7 @@ class GoogleDriveActivateAPIView(APIView):
 
 
 class GoogleDriveDeactivateAPIView(APIView):
-    """Unlink an active Drive statement root and revert accounts to local storage."""
+    """Unlink an active Drive statement root and clear account storage URIs."""
 
     authentication_classes = [SessionAuthentication, TokenAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
@@ -393,7 +392,6 @@ class GoogleDriveDeactivateAPIView(APIView):
             {
                 "status": self.activation_service.status(request.user),
                 "account_folders_removed": result.account_folders_removed,
-                "statements_migrated": result.statements_migrated,
                 "errors": result.errors,
             },
             status=status.HTTP_200_OK,
@@ -965,7 +963,7 @@ class AgentStatementUploadAPIView(APIView):
 
 
 class StatementFileListCreateAPIView(APIView):
-    """List statement library files or upload a new local statement file."""
+    """List statement library files or upload a new Google Drive statement file."""
 
     authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
@@ -996,7 +994,7 @@ class StatementFileListCreateAPIView(APIView):
         )
 
     def post(self, request):
-        """Store an uploaded statement in local account/year/month folders."""
+        """Store an uploaded statement in the account's Google Drive folder."""
         statement_file = request.FILES.get("file")
         if not statement_file:
             return Response({"error": "Statement file is required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -1112,7 +1110,7 @@ class StatementFileDetailAPIView(APIView):
 
 
 class StatementFileDownloadAPIView(APIView):
-    """Download a locally stored statement file."""
+    """Download a stored Google Drive statement file."""
 
     authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
@@ -1132,7 +1130,7 @@ class StatementFileDownloadAPIView(APIView):
 
 
 class StatementFilePreviewAPIView(APIView):
-    """Preview import from a locally stored statement file."""
+    """Preview import from a stored Google Drive statement file."""
 
     authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
@@ -1161,7 +1159,7 @@ class StatementFilePreviewAPIView(APIView):
 
 
 class StatementFileImportAPIView(APIView):
-    """Commit import from a locally stored statement file."""
+    """Commit import from a stored Google Drive statement file."""
 
     authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]

@@ -7,10 +7,10 @@
  * for the account, with their source (manual vs agent drop) and import
  * status.
  *
- * This component is read-only today. The agent and scanner orchestration
- * happens out-of-band: the user runs the host ``bank-agent`` CLI, and
- * Drive-backed accounts upload through the backend for immediate import.
+ * Users can upload statements in-app; the agent and scanner orchestration
+ * also runs out-of-band via the host ``bank-agent`` CLI.
  */
+import { StatementUploadDialog } from '@/components/accounts/StatementUploadDialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -23,10 +23,10 @@ import { cn } from '@/lib/utils';
 import {
   Bot,
   CheckCircle2,
+  Cloud,
   ExternalLink,
   FileWarning,
   FolderOpen,
-  HardDrive,
   Loader2,
   RefreshCw,
   Upload,
@@ -36,8 +36,11 @@ import { toast } from 'sonner';
 
 interface StorageLocationPanelProps {
   accountId: number;
+  accountName: string;
+  institutionSlug?: string;
   storageUri?: string;
   resolvedStorageUri?: string;
+  onUploadComplete?: () => void;
 }
 
 function SourceBadge({ source }: { source: StatementFileSource }) {
@@ -96,12 +99,16 @@ function formatDate(value: string): string {
 
 export function StorageLocationPanel({
   accountId,
+  accountName,
+  institutionSlug,
   storageUri,
   resolvedStorageUri,
+  onUploadComplete,
 }: StorageLocationPanelProps) {
   const [files, setFiles] = useState<StatementFileRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadFiles = () => {
@@ -135,7 +142,14 @@ export function StorageLocationPanel({
     setScanning(true);
     try {
       const result = await statementFileService.scanAccount(accountId);
-      if (result.files_imported > 0) {
+      const storageError =
+        result.files_seen === 0 && result.files_failed > 0
+          ? result.outcomes?.find(o => o.status === 'failed')?.detail
+          : null;
+
+      if (storageError) {
+        toast.error('Could not access storage', { description: storageError });
+      } else if (result.files_imported > 0) {
         toast.success(
           `${result.files_imported} file${result.files_imported === 1 ? '' : 's'} imported`,
           {
@@ -150,7 +164,7 @@ export function StorageLocationPanel({
           `${result.files_seen} file${result.files_seen === 1 ? '' : 's'} found — all already imported`
         );
       }
-      if (result.files_failed > 0) {
+      if (!storageError && result.files_failed > 0) {
         toast.warning(
           `${result.files_failed} file${result.files_failed === 1 ? '' : 's'} failed to import`
         );
@@ -164,7 +178,6 @@ export function StorageLocationPanel({
     }
   };
 
-  const isOverride = Boolean(storageUri);
   const displayUri = resolvedStorageUri || storageUri || '';
   const isDrive = displayUri.startsWith('gdrive://');
   const driveFolderId = isDrive
@@ -173,33 +186,30 @@ export function StorageLocationPanel({
   const driveUrl = driveFolderId
     ? `https://drive.google.com/drive/folders/${driveFolderId}`
     : null;
+  const storageReady = isDrive;
 
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-border bg-muted/20 p-3">
         <div className="flex items-start gap-3">
           <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            <HardDrive className="h-3.5 w-3.5" />
+            <Cloud className="h-3.5 w-3.5" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <p className="text-xs font-medium text-foreground">
                 Statement storage
               </p>
-              {isDrive && (
+              {isDrive ? (
                 <Badge
                   variant="outline"
                   className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30"
                 >
                   Google Drive
                 </Badge>
-              )}
-              {isOverride && !isDrive && (
-                <Badge
-                  variant="outline"
-                  className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30"
-                >
-                  Overridden
+              ) : (
+                <Badge variant="outline" className="text-[10px]">
+                  Not configured
                 </Badge>
               )}
             </div>
@@ -207,12 +217,12 @@ export function StorageLocationPanel({
               className="mt-0.5 break-all font-mono text-[11px] text-muted-foreground"
               title={displayUri}
             >
-              {displayUri || 'Not configured'}
+              {displayUri || 'Activate Google Drive in Setup → Statements'}
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground/70">
-              {isDrive
-                ? 'Statements sync to this account folder in Google Drive.'
-                : 'The host bank-agent writes downloads here. Files are auto-imported when the backend scanner runs.'}
+              {storageReady
+                ? 'Upload here or let the bank agent sync statements into this Google Drive folder.'
+                : 'Statement storage requires Google Drive. Connect and activate it in Setup → Statements.'}
             </p>
             {driveUrl && (
               <a
@@ -230,24 +240,36 @@ export function StorageLocationPanel({
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-2 gap-2">
           <p className="text-xs font-medium text-muted-foreground">
             Recent files
           </p>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-6 px-2 text-[11px]"
-            onClick={handleScan}
-            disabled={scanning}
-          >
-            {scanning ? (
-              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-1 h-3 w-3" />
-            )}
-            Scan for new files
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 px-2 text-[11px]"
+              onClick={() => setUploadOpen(true)}
+              disabled={!storageReady}
+            >
+              <Upload className="mr-1 h-3 w-3" />
+              Upload
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 px-2 text-[11px]"
+              onClick={handleScan}
+              disabled={scanning || !storageReady}
+            >
+              {scanning ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-1 h-3 w-3" />
+              )}
+              Scan
+            </Button>
+          </div>
         </div>
 
         {loading ? (
@@ -300,6 +322,18 @@ export function StorageLocationPanel({
           </ul>
         )}
       </div>
+
+      <StatementUploadDialog
+        open={uploadOpen}
+        onOpenChange={setUploadOpen}
+        accountId={accountId}
+        accountName={accountName}
+        defaultInstitutionSlug={institutionSlug}
+        onComplete={() => {
+          loadFiles();
+          onUploadComplete?.();
+        }}
+      />
     </div>
   );
 }

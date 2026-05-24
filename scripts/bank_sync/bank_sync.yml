@@ -16,9 +16,9 @@
 # encrypted SQLite vault at local_data/bank-agent/agent.db and are captured
 # via `bank-agent login signin <id>` after the first apply.
 #
-# storage_uri must match the statement directory for the corresponding
-# Richtato account. Use the account ID path format:
-#   file:///absolute/path/to/local_data/statements/<user_id>/<account_id>/
+# storage_uri must match the Google Drive folder for the corresponding
+# Richtato account (from sync-config or export_bank_agent_config):
+#   gdrive://<folder_id>
 #
 # Supported institution slugs: bofa, bank_of_america, chase, jpmorgan_chase
 # Cadence options: manual, daily, weekly, monthly
@@ -31,11 +31,11 @@ logins:
     accounts:
       - name: "Advantage SafeBalance Checking"
         flow: deposit
-        storage_uri: "file:///home/alan/richtato/local_data/statements/1/232/"
+        storage_uri: "gdrive://REPLACE_WITH_ACCOUNT_FOLDER_ID"
 
       - name: "Advantage Savings"
         flow: deposit
-        storage_uri: "file:///home/alan/richtato/local_data/statements/1/212/"
+        storage_uri: "gdrive://REPLACE_WITH_ACCOUNT_FOLDER_ID"
 
   # Uncomment and fill in to add a Chase login:
   # - institution: chase
@@ -45,4 +45,4 @@ logins:
   #   accounts:
   #     - name: "Sapphire Preferred"
   #       flow: credit_card
-  #       storage_uri: "file:///home/alan/richtato/local_data/statements/1/999/"
+  #       storage_uri: "gdrive://REPLACE_WITH_ACCOUNT_FOLDER_ID"

@@ -158,7 +158,7 @@ Use `TransactionService` for manual transaction flows so categorization and side
 Google Drive statement storage plus the Playwright bank-agent is the primary no-aggregator ingestion path for new bank data work.
 
 - `apps/financial_account/services/statement_import_service.py` parses CSV/XLS/XLSX statements through institution adapters.
-- `apps/financial_account/services/statement_file_service.py` stores original statement files through the `StatementStorage` abstraction (`apps/financial_account/storage/`). Google Drive activation sets each account to a `gdrive://<folder_id>` folder with a flat file list; the default local backend writes under `local_data/statements/<user>/<account>/<year>/<month>/` before activation.
+- `apps/financial_account/services/statement_file_service.py` stores original statement files in Google Drive through the `StatementStorage` abstraction (`apps/financial_account/storage/`). Google Drive activation sets each account to a `gdrive://<folder_id>` folder with a flat file list.
 - `apps/financial_account/services/storage_scanner_service.py` plus the `scan_statement_storage` management command discovers files dropped into an account's `storage_uri`, creates `StatementFile` rows with `source="agent_drop"`, and auto-imports them via `StatementImportService`.
 - Statement imports should preview before commit and classify rows as new, duplicate, invalid, or possible changed.
 - Deduplication is row-level so current/open statements can overlap later closed statements.
