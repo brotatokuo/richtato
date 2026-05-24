@@ -50,6 +50,7 @@ class Command(BaseCommand):
         self.stdout.write(f"  Imported:         {result.files_imported}")
         self.stdout.write(f"  Skipped:          {result.files_skipped}")
         self.stdout.write(f"  Failed:           {result.files_failed}")
+        self.stdout.write(f"  Removed:          {result.files_removed}")
         if options["dry_run"]:
             self.stdout.write(self.style.WARNING("  (dry-run: nothing was written)"))
 

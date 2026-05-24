@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import io
 import re
@@ -19,6 +20,7 @@ from apps.transaction.models import Transaction
 
 OPENING_BALANCE_DESCRIPTION = "Opening Balance"
 BOFA_BANKING_ACCOUNT_TYPES = {"checking", "savings"}
+BOFA_MAX_RUNNING_BALANCE_WARNINGS = 3
 BOFA_BEGINNING_BALANCE_RE = re.compile(
     r"beginning balance as of (\d{1,2}/\d{1,2}/\d{4})",
     re.IGNORECASE,
@@ -27,6 +29,9 @@ BOFA_ENDING_BALANCE_RE = re.compile(
     r"ending balance as of (\d{1,2}/\d{1,2}/\d{4})",
     re.IGNORECASE,
 )
+BOFA_TRANSACTION_DATE_PREFIX = re.compile(r"^\d{2}/\d{2}/\d{4},")
+BOFA_EMPTY_AMOUNT_ROW = re.compile(r'^(.+?),,("(?:-)?[\d,]+\.\d{2}")\s*$')
+BOFA_AMOUNT_BALANCE_SUFFIX = re.compile(r'^(.+),("(?:-)?[\d,]+\.\d{2}"),("(?:-)?[\d,]+\.\d{2}")\s*$')
 
 SUPPORTED_INSTITUTIONS = {
     "bofa": {
@@ -362,17 +367,40 @@ class StatementImportService:
     def _read_frame(self, content: bytes, extension: str, *, institution: str = "") -> pd.DataFrame:
         if extension == ".csv":
             csv_content = content
-            if institution == "bofa":
+            if institution == "bofa" or self._looks_like_bofa_banking_csv(content):
                 csv_content = self._extract_bofa_transaction_csv(content)
             try:
-                return pd.read_csv(io.BytesIO(csv_content), dtype=str).dropna(how="all")
-            except UnicodeDecodeError:
-                return pd.read_csv(
-                    io.BytesIO(csv_content),
-                    dtype=str,
-                    encoding="latin-1",
-                ).dropna(how="all")
+                return self._read_csv_bytes(csv_content)
+            except pd.errors.ParserError:
+                if csv_content is content:
+                    csv_content = self._extract_bofa_transaction_csv(content)
+                    return self._read_csv_bytes(csv_content)
+                raise
         return pd.read_excel(io.BytesIO(content), dtype=str).dropna(how="all")
+
+    @staticmethod
+    def _read_csv_bytes(csv_content: bytes) -> pd.DataFrame:
+        try:
+            return pd.read_csv(io.BytesIO(csv_content), dtype=str).dropna(how="all")
+        except UnicodeDecodeError:
+            return pd.read_csv(
+                io.BytesIO(csv_content),
+                dtype=str,
+                encoding="latin-1",
+            ).dropna(how="all")
+
+    @staticmethod
+    def _looks_like_bofa_banking_csv(content: bytes) -> bool:
+        """Detect BoFA checking/savings CSV exports by summary block or transaction header."""
+        text = content.decode("utf-8-sig", errors="replace")
+        if "description,,summary amt." in text.lower():
+            return True
+
+        for line in text.splitlines():
+            normalized = line.strip().lower()
+            if normalized.startswith("date,") and "description" in normalized and "amount" in normalized:
+                return True
+        return False
 
     def _extract_bofa_transaction_csv(self, content: bytes) -> bytes:
         """Skip BoFA's summary preamble and return only the transaction table CSV.
@@ -388,7 +416,7 @@ class StatementImportService:
         Pandas cannot parse the mixed column counts unless we start at the
         ``Date,Description,Amount`` header row.
         """
-        text = content.decode("utf-8", errors="replace")
+        text = content.decode("utf-8-sig", errors="replace")
         lines = text.splitlines()
         header_idx = None
         for index, line in enumerate(lines):
@@ -402,14 +430,51 @@ class StatementImportService:
         if header_idx is None:
             return content
 
-        return "\n".join(lines[header_idx:]).encode("utf-8")
+        sanitized_lines = [lines[header_idx]]
+        for line in lines[header_idx + 1 :]:
+            sanitized_lines.append(self._sanitize_bofa_transaction_line(line))
+
+        return "\n".join(sanitized_lines).encode("utf-8")
+
+    @staticmethod
+    def _sanitize_bofa_transaction_line(line: str) -> str:
+        """Re-quote BoFA rows whose Zelle memos contain unescaped inner quotes."""
+        if not BOFA_TRANSACTION_DATE_PREFIX.match(line):
+            return line
+
+        date, rest = line.split(",", 1)
+        empty_amount_match = BOFA_EMPTY_AMOUNT_ROW.match(rest)
+        if empty_amount_match:
+            description = StatementImportService._strip_csv_outer_quotes(empty_amount_match.group(1))
+            balance = empty_amount_match.group(2)
+            return f'{date},"{StatementImportService._csv_escape(description)}",,{balance}'
+
+        amount_balance_match = BOFA_AMOUNT_BALANCE_SUFFIX.match(rest)
+        if not amount_balance_match:
+            return line
+
+        description = StatementImportService._strip_csv_outer_quotes(amount_balance_match.group(1))
+        amount = amount_balance_match.group(2)
+        balance = amount_balance_match.group(3)
+        return f'{date},"{StatementImportService._csv_escape(description)}",{amount},{balance}'
+
+    @staticmethod
+    def _strip_csv_outer_quotes(value: str) -> str:
+        value = value.strip()
+        if len(value) >= 2 and value[0] == '"' and value[-1] == '"':
+            return value[1:-1]
+        return value
+
+    @staticmethod
+    def _csv_escape(value: str) -> str:
+        return value.replace('"', '""')
 
     def _uses_bofa_banking_balances(self, account: FinancialAccount, institution: str) -> bool:
         return institution == "bofa" and account.account_type in BOFA_BANKING_ACCOUNT_TYPES
 
     def _parse_bofa_balance_summary(self, content: bytes) -> dict[str, str] | None:
         """Extract beginning/ending balances from BoFA's summary preamble."""
-        text = content.decode("utf-8", errors="replace")
+        text = content.decode("utf-8-sig", errors="replace")
         beginning_date = None
         beginning_balance = None
         ending_date = None
@@ -420,8 +485,11 @@ class StatementImportService:
             if not normalized:
                 continue
             lower = normalized.lower()
-            cells = [cell.strip().strip('"') for cell in normalized.split(",")]
-            amount_text = cells[-1] if cells else ""
+            try:
+                cells = next(csv.reader([normalized]))
+            except csv.Error:
+                continue
+            amount_text = cells[-1].strip().strip('"') if cells else ""
 
             if lower.startswith("beginning balance as of"):
                 match = BOFA_BEGINNING_BALANCE_RE.search(lower)
@@ -447,6 +515,31 @@ class StatementImportService:
             summary["ending_date"] = ending_date.isoformat()
         return summary
 
+    def _correct_bofa_summary_from_transactions(
+        self,
+        summary: dict[str, str],
+        frame: pd.DataFrame,
+    ) -> dict[str, str]:
+        """Prefer transaction-table balances when the summary preamble was misparsed."""
+        corrected = dict(summary)
+
+        for _, raw_row in frame.iterrows():
+            raw_mapping = {str(key).strip(): value for key, value in raw_row.to_dict().items()}
+            description = self._first_value(raw_mapping, ["Description", "Payee"])
+            if "beginning balance" not in description.lower():
+                continue
+            running_balance = self._signed_decimal(
+                self._first_value(raw_mapping, ["Running Bal.", "Running Bal", "Running Balance"])
+            )
+            if running_balance is None:
+                break
+            parsed_beginning = Decimal(corrected["beginning_balance"])
+            if abs(running_balance - parsed_beginning) > Decimal("0.01"):
+                corrected["beginning_balance"] = str(running_balance.quantize(Decimal("0.01")))
+            break
+
+        return corrected
+
     def _validate_bofa_banking_balances(
         self,
         account: FinancialAccount,
@@ -468,6 +561,7 @@ class StatementImportService:
             )
             return
 
+        summary = self._correct_bofa_summary_from_transactions(summary, frame)
         result.balance_summary = summary
         beginning_balance = Decimal(summary["beginning_balance"])
         ending_balance = Decimal(summary["ending_balance"])
@@ -520,11 +614,13 @@ class StatementImportService:
             if signed_amount is None:
                 if running_value:
                     running_balance = self._signed_decimal(running_value)
-                    if running_balance is not None and abs(running_balance - expected) > Decimal("0.01"):
-                        errors.append(
-                            f"Row {row_number}: running balance is {running_balance}, "
-                            f"expected {expected.quantize(Decimal('0.01'))}."
-                        )
+                    if running_balance is not None:
+                        if abs(running_balance - expected) > Decimal("0.01"):
+                            errors.append(
+                                f"Row {row_number}: running balance is {running_balance}, "
+                                f"expected {expected.quantize(Decimal('0.01'))}."
+                            )
+                        expected = running_balance
                 continue
 
             expected = (expected + signed_amount).quantize(Decimal("0.01"))
@@ -539,6 +635,12 @@ class StatementImportService:
                     f"Row {row_number}: running balance is {running_balance}, "
                     f"expected {expected} after applying the transaction amount."
                 )
+
+        if len(errors) > BOFA_MAX_RUNNING_BALANCE_WARNINGS:
+            extra = len(errors) - BOFA_MAX_RUNNING_BALANCE_WARNINGS
+            return errors[:BOFA_MAX_RUNNING_BALANCE_WARNINGS] + [
+                f"... and {extra} more running balance mismatch{'es' if extra != 1 else ''}."
+            ]
 
         return errors
 

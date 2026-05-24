@@ -7,6 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
 import {
@@ -16,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   statementFileService,
   type StatementFileRecord,
@@ -27,10 +30,20 @@ import {
   type StatementInstitution,
 } from '@/lib/api/statementImport';
 import { StatementReconciliationSummary } from '@/components/accounts/StatementReconciliationSummary';
+import {
+  formatSingleMonthPeriod,
+  formatStatementPeriodFromRange,
+  resolveFilingMonth,
+  STATEMENT_PERIOD_MAX_LENGTH,
+  validateStatementPeriod,
+} from '@/lib/formatStatementPeriod';
 import { cn } from '@/lib/utils';
 import { FileUp, Loader2, Upload } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { DateRange } from 'react-day-picker';
 import { toast } from 'sonner';
+
+type PeriodMode = 'single' | 'custom';
 
 const SUPPORTED_EXTENSIONS = ['.csv', '.xls', '.xlsx'];
 
@@ -85,8 +98,14 @@ export function StatementUploadDialog({
   const [institution, setInstitution] = useState('');
   const [statementStatus, setStatementStatus] =
     useState<StatementStatus>('provisional');
+  const [periodMode, setPeriodMode] = useState<PeriodMode>('single');
   const [statementYear, setStatementYear] = useState(today.getFullYear());
   const [statementMonth, setStatementMonth] = useState(today.getMonth() + 1);
+  const [customDateRange, setCustomDateRange] = useState<
+    DateRange | undefined
+  >();
+  const [customLabel, setCustomLabel] = useState('');
+  const [customLabelTouched, setCustomLabelTouched] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [busy, setBusy] = useState(false);
   const [statement, setStatement] = useState<StatementFileRecord | null>(null);
@@ -96,6 +115,26 @@ export function StatementUploadDialog({
     if (!preview) return 0;
     return preview.rows.filter(row => row.status === 'new').length;
   }, [preview]);
+
+  const customLabelError = useMemo(
+    () => validateStatementPeriod(customLabel),
+    [customLabel]
+  );
+
+  useEffect(() => {
+    if (
+      periodMode !== 'custom' ||
+      customLabelTouched ||
+      !customDateRange?.from ||
+      !customDateRange.to
+    ) {
+      return;
+    }
+
+    setCustomLabel(
+      formatStatementPeriodFromRange(customDateRange.from, customDateRange.to)
+    );
+  }, [customDateRange, customLabelTouched, periodMode]);
 
   useEffect(() => {
     if (!open) return;
@@ -130,8 +169,12 @@ export function StatementUploadDialog({
       resolveParserInstitution(defaultInstitutionSlug, institutions)
     );
     setStatementStatus('provisional');
+    setPeriodMode('single');
     setStatementYear(today.getFullYear());
     setStatementMonth(today.getMonth() + 1);
+    setCustomDateRange(undefined);
+    setCustomLabel('');
+    setCustomLabelTouched(false);
     setStatement(null);
     setPreview(null);
     setDragActive(false);
@@ -160,6 +203,40 @@ export function StatementUploadDialog({
     setPreview(null);
   };
 
+  const resolveUploadPeriod = (): {
+    statementPeriod: string;
+    statementYear: number;
+    statementMonth: number;
+  } | null => {
+    if (periodMode === 'single') {
+      return {
+        statementPeriod: formatSingleMonthPeriod(statementYear, statementMonth),
+        statementYear,
+        statementMonth,
+      };
+    }
+
+    if (!customDateRange?.from || !customDateRange.to) {
+      toast.error('Choose a statement date range');
+      return null;
+    }
+
+    const labelError = validateStatementPeriod(customLabel);
+    if (labelError) {
+      toast.error('Invalid statement period label', {
+        description: labelError,
+      });
+      return null;
+    }
+
+    const filing = resolveFilingMonth(customDateRange.to);
+    return {
+      statementPeriod: customLabel.trim(),
+      statementYear: filing.year,
+      statementMonth: filing.month,
+    };
+  };
+
   const handleUploadAndPreview = async () => {
     if (!selectedFile) {
       toast.error('Choose a statement file first');
@@ -170,6 +247,9 @@ export function StatementUploadDialog({
       return;
     }
 
+    const period = resolveUploadPeriod();
+    if (!period) return;
+
     setBusy(true);
     try {
       const uploadResult = await statementFileService.upload({
@@ -177,9 +257,9 @@ export function StatementUploadDialog({
         account: accountId,
         institution,
         statementStatus,
-        statementYear,
-        statementMonth,
-        statementPeriod: `${statementYear}-${String(statementMonth).padStart(2, '0')}`,
+        statementYear: period.statementYear,
+        statementMonth: period.statementMonth,
+        statementPeriod: period.statementPeriod,
       });
 
       if (!uploadResult.created) {
@@ -237,7 +317,7 @@ export function StatementUploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto scrollbar-thin">
         <DialogHeader>
           <DialogTitle>Upload statement</DialogTitle>
           <DialogDescription>
@@ -325,16 +405,84 @@ export function StatementUploadDialog({
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label>Statement period</Label>
-              <MonthYearPicker
-                year={statementYear}
-                month={statementMonth}
-                onChange={(year, month) => {
-                  setStatementYear(year);
-                  setStatementMonth(month);
-                }}
-              />
+              <Tabs
+                value={periodMode}
+                onValueChange={value => setPeriodMode(value as PeriodMode)}
+              >
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="single" disabled={busy}>
+                    Single month
+                  </TabsTrigger>
+                  <TabsTrigger value="custom" disabled={busy}>
+                    Custom range
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="single" className="mt-3 space-y-2">
+                  <MonthYearPicker
+                    year={statementYear}
+                    month={statementMonth}
+                    onChange={(year, month) => {
+                      setStatementYear(year);
+                      setStatementMonth(month);
+                    }}
+                  />
+                </TabsContent>
+                <TabsContent value="custom" className="mt-3 space-y-3">
+                  <DateRangePicker
+                    dateRange={customDateRange}
+                    onDateRangeChange={range => {
+                      setCustomDateRange(range);
+                      if (!customLabelTouched && range?.from && range.to) {
+                        setCustomLabel(
+                          formatStatementPeriodFromRange(range.from, range.to)
+                        );
+                      }
+                    }}
+                    disabled={busy}
+                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="statement-period-label">Period label</Label>
+                    <Input
+                      id="statement-period-label"
+                      value={customLabel}
+                      placeholder="Oct 2025–Jan 2026"
+                      maxLength={STATEMENT_PERIOD_MAX_LENGTH}
+                      disabled={busy}
+                      onChange={event => {
+                        setCustomLabelTouched(true);
+                        setCustomLabel(event.target.value);
+                      }}
+                    />
+                    {customLabelError && (
+                      <p className="text-xs text-destructive">
+                        {customLabelError}
+                      </p>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
+              <div className="space-y-1 text-[11px] text-muted-foreground/80">
+                <p>
+                  <span className="font-medium text-muted-foreground">
+                    Naming only.
+                  </span>{' '}
+                  This label helps you find the statement later. It does not
+                  filter transactions, affect deduplication, or change how rows
+                  are imported.
+                </p>
+                {periodMode === 'custom' && (
+                  <p>
+                    Library sorting uses the range{' '}
+                    <span className="font-medium text-muted-foreground">
+                      end date
+                    </span>{' '}
+                    (for example, a period ending Jan 14, 2026 appears under Jan
+                    2026).
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">

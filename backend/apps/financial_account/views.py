@@ -134,9 +134,7 @@ class FinancialAccountDetailAPIView(APIView):
             logger.info(
                 "Account PATCH validated",
                 account_id=pk,
-                validated_data={
-                    key: str(value) for key, value in serializer.validated_data.items()
-                },
+                validated_data={key: str(value) for key, value in serializer.validated_data.items()},
             )
             updated_account = self.account_service.update_account(account, **serializer.validated_data)
             updated_account.refresh_from_db()
@@ -494,6 +492,7 @@ class AccountScanStorageAPIView(APIView):
                 "files_imported": result.files_imported,
                 "files_skipped": result.files_skipped,
                 "files_failed": result.files_failed,
+                "files_removed": result.files_removed,
                 "outcomes": [
                     {
                         "relative_path": o.relative_path,

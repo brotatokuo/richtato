@@ -110,6 +110,22 @@ class TestStorageScannerService:
         assert statement.import_status == "imported"
         assert Transaction.objects.filter(account=bofa_account, sync_source="csv").count() == 2
 
+    def test_scan_removes_orphaned_statement_catalog_rows(self, chase_account, fake_drive_storage):
+        _write_drop(fake_drive_storage, chase_account, "june.csv", CHASE_CSV)
+        service = StorageScannerService()
+        service.scan_account(chase_account.id)
+
+        statement = StatementFile.objects.get(account=chase_account)
+        folder_id = chase_account.storage_uri.replace("gdrive://", "")
+        del fake_drive_storage.files_by_folder[folder_id]["june.csv"]
+
+        result = service.scan_account(chase_account.id)
+
+        assert result.files_removed == 1
+        statement.refresh_from_db()
+        assert statement.is_deleted is True
+        assert StatementFile.objects.filter(account=chase_account, is_deleted=False).count() == 0
+
     def test_rescan_is_idempotent(self, chase_account, fake_drive_storage):
         _write_drop(fake_drive_storage, chase_account, "june.csv", CHASE_CSV)
         service = StorageScannerService()

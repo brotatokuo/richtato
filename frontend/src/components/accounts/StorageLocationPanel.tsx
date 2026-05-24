@@ -13,6 +13,16 @@
 import { StatementUploadDialog } from '@/components/accounts/StatementUploadDialog';
 import { hasReconciliationWarnings } from '@/components/accounts/statementReconciliation';
 import { StatementReconciliationSummary } from '@/components/accounts/StatementReconciliationSummary';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -21,6 +31,7 @@ import {
   type StatementFileRecord,
   type StatementFileSource,
 } from '@/lib/api/statementFiles';
+import { statementPeriodDisplayLabel } from '@/lib/formatStatementPeriod';
 import { cn } from '@/lib/utils';
 import {
   AlertTriangle,
@@ -32,6 +43,7 @@ import {
   FolderOpen,
   Loader2,
   RefreshCw,
+  Trash2,
   Upload,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -122,6 +134,10 @@ export function StorageLocationPanel({
   const [scanning, setScanning] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<StatementFileRecord | null>(
+    null
+  );
+  const [removing, setRemoving] = useState(false);
 
   const loadFiles = () => {
     let cancelled = false;
@@ -129,9 +145,24 @@ export function StorageLocationPanel({
     setError(null);
     statementFileService
       .list({ account: accountId })
-      .then(response => {
+      .then(async response => {
         if (cancelled) return;
-        setFiles(response.rows.slice(0, 8));
+        const recentFiles = response.rows.slice(0, 8);
+        const refreshedFiles = await Promise.all(
+          recentFiles.map(async file => {
+            if (file.import_status === 'imported') {
+              return file;
+            }
+            try {
+              const previewResult = await statementFileService.preview(file.id);
+              return previewResult.statement;
+            } catch {
+              return file;
+            }
+          })
+        );
+        if (cancelled) return;
+        setFiles(refreshedFiles);
       })
       .catch(err => {
         if (cancelled) return;
@@ -161,20 +192,31 @@ export function StorageLocationPanel({
 
       if (storageError) {
         toast.error('Could not access storage', { description: storageError });
-      } else if (result.files_imported > 0) {
-        toast.success(
-          `${result.files_imported} file${result.files_imported === 1 ? '' : 's'} imported`,
-          {
-            description: `${result.files_seen} file${result.files_seen === 1 ? '' : 's'} found in storage`,
-          }
-        );
-        loadFiles();
-      } else if (result.files_seen === 0) {
-        toast.info('No files found in storage');
       } else {
-        toast.info(
-          `${result.files_seen} file${result.files_seen === 1 ? '' : 's'} found — all already imported`
-        );
+        if (result.files_removed > 0) {
+          toast.info(
+            `Removed ${result.files_removed} stale file${result.files_removed === 1 ? '' : 's'} from the list`,
+            {
+              description:
+                'These files were deleted from Google Drive but were still listed in Richtato.',
+            }
+          );
+        }
+        if (result.files_imported > 0) {
+          toast.success(
+            `${result.files_imported} file${result.files_imported === 1 ? '' : 's'} imported`,
+            {
+              description: `${result.files_seen} file${result.files_seen === 1 ? '' : 's'} found in storage`,
+            }
+          );
+        } else if (result.files_seen === 0 && result.files_removed === 0) {
+          toast.info('No files found in storage');
+        } else if (result.files_removed === 0) {
+          toast.info(
+            `${result.files_seen} file${result.files_seen === 1 ? '' : 's'} found — all already imported`
+          );
+        }
+        loadFiles();
       }
       if (!storageError && result.files_failed > 0) {
         toast.warning(
@@ -187,6 +229,26 @@ export function StorageLocationPanel({
       });
     } finally {
       setScanning(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    if (!removeTarget) return;
+
+    setRemoving(true);
+    try {
+      await statementFileService.remove(removeTarget.id);
+      toast.success('Statement removed', {
+        description: removeTarget.original_filename,
+      });
+      setRemoveTarget(null);
+      loadFiles();
+    } catch (err) {
+      toast.error('Failed to remove statement', {
+        description: err instanceof Error ? err.message : 'Please try again.',
+      });
+    } finally {
+      setRemoving(false);
     }
   };
 
@@ -336,9 +398,12 @@ export function StorageLocationPanel({
                         )}
                       </div>
                       <p className="text-[11px] text-muted-foreground/70">
-                        {file.statement_year}-
-                        {String(file.statement_month).padStart(2, '0')} ·{' '}
-                        {formatSize(file.size_bytes)} ·{' '}
+                        {statementPeriodDisplayLabel(
+                          file.statement_period,
+                          file.statement_year,
+                          file.statement_month
+                        )}{' '}
+                        · {formatSize(file.size_bytes)} ·{' '}
                         {formatDate(file.created_at)}
                       </p>
                       {reconciliationWarnings && (
@@ -350,11 +415,23 @@ export function StorageLocationPanel({
                         </div>
                       )}
                     </div>
-                    <span className="ml-2 shrink-0 text-[11px] text-muted-foreground/70">
-                      {file.imported_count > 0
-                        ? `${file.imported_count} imported`
-                        : file.import_status}
-                    </span>
+                    <div className="ml-2 flex shrink-0 items-center gap-1.5">
+                      <span className="text-[11px] text-muted-foreground/70">
+                        {file.imported_count > 0
+                          ? `${file.imported_count} imported`
+                          : file.import_status}
+                      </span>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        aria-label={`Remove ${file.original_filename}`}
+                        onClick={() => setRemoveTarget(file)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 </li>
               );
@@ -362,6 +439,42 @@ export function StorageLocationPanel({
           </ul>
         )}
       </div>
+
+      <AlertDialog
+        open={removeTarget !== null}
+        onOpenChange={open => {
+          if (!open && !removing) setRemoveTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove statement file?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes{' '}
+              <span className="font-medium text-foreground">
+                {removeTarget?.original_filename}
+              </span>{' '}
+              from Richtato&apos;s statement list and deletes the stored copy in
+              Google Drive when it still exists. Imported transactions are not
+              deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={removing}
+              onClick={event => {
+                event.preventDefault();
+                void handleRemove();
+              }}
+            >
+              {removing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <StatementUploadDialog
         open={uploadOpen}

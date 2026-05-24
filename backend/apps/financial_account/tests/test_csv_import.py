@@ -282,6 +282,95 @@ class TestStatementImportService:
         assert result.rows[1].transaction_type == "credit"
         assert result.rows[0].source_row_hash
 
+    def test_preview_bank_of_america_parses_zelle_memo_quotes(self, account):
+        service = StatementImportService()
+        statement = _make_named_csv(
+            "Description,,Summary Amt.\n"
+            'Beginning balance as of 01/12/2026,,"1,830.69"\n'
+            'Ending balance as of 01/12/2026,,"1,884.56"\n'
+            "\n"
+            "Date,Description,Amount,Running Bal.\n"
+            '01/12/2026,"Zelle payment from MOHAMED E L KHAIRIL for "ribs, chicken, parking, chipotle"; Conf# hgccZkfYc","60.67","1,891.36"\n'
+            '01/12/2026,"Online Banking payment to CRD 8737 Confirmation# 4206190553","-72.81","1,884.56"\n'
+        )
+
+        result = service.preview_statement(account, statement, "bofa", "2026-01")
+
+        assert result.errors == []
+        assert result.parsed_count == 2
+        assert (
+            result.rows[0].description
+            == 'Zelle payment from MOHAMED E L KHAIRIL for "ribs, chicken, parking, chipotle"; Conf# hgccZkfYc'
+        )
+        assert result.rows[0].amount == Decimal("60.67")
+        assert result.rows[1].description == "Online Banking payment to CRD 8737 Confirmation# 4206190553"
+
+    def test_preview_bank_of_america_zelle_quotes_without_bofa_institution(self, account):
+        service = StatementImportService()
+        statement = _make_named_csv(
+            "Description,,Summary Amt.\n"
+            'Beginning balance as of 01/12/2026,,"1,830.69"\n'
+            'Ending balance as of 01/12/2026,,"1,884.56"\n'
+            "\n"
+            "Date,Description,Amount,Running Bal.\n"
+            '01/12/2026,"Zelle payment from MOHAMED E L KHAIRIL for "ribs, chicken, parking, chipotle"; Conf# hgccZkfYc","60.67","1,891.36"\n'
+        )
+
+        result = service.preview_statement(account, statement, "chase", "2026-01")
+
+        assert result.errors == []
+        assert result.parsed_count == 1
+        assert "ribs, chicken, parking, chipotle" in result.rows[0].description
+
+    def test_preview_bank_of_america_parses_comma_thousands_in_summary_balances(self, account):
+        service = StatementImportService()
+        statement = _make_named_csv(
+            "Description,,Summary Amt.\n"
+            'Beginning balance as of 11/25/2024,,"1,617.51"\n'
+            'Total credits,,"93,312.65"\n'
+            'Total debits,,"-94,218.18"\n'
+            'Ending balance as of 11/25/2024,,"1,555.33"\n'
+            "\n"
+            "Date,Description,Amount,Running Bal.\n"
+            '11/25/2024,Beginning balance as of 11/25/2024,,"1,617.51"\n'
+            '11/25/2024,"Online Banking payment to CRD 8737 Confirmation# 4057021018","-62.18","1,555.33"\n'
+        )
+
+        result = service.preview_statement(account, statement, "bofa", "2024-11")
+
+        assert result.balance_summary == {
+            "beginning_balance": "1617.51",
+            "ending_balance": "1555.33",
+            "beginning_date": "2024-11-25",
+            "ending_date": "2024-11-25",
+        }
+        assert result.reconciliation["statement_internal_ok"] is True
+        assert not any("running balance" in warning.lower() for warning in result.reconciliation_warnings)
+
+    def test_preview_bank_of_america_corrects_misparsed_summary_from_transaction_row(self, account):
+        service = StatementImportService()
+        statement = _make_named_csv(
+            "Description,,Summary Amt.\n"
+            'Beginning balance as of 11/25/2024,,"1,617.51"\n'
+            'Ending balance as of 11/25/2024,,"1,555.33"\n'
+            "\n"
+            "Date,Description,Amount,Running Bal.\n"
+            '11/25/2024,Beginning balance as of 11/25/2024,,"1,617.51"\n'
+            '11/25/2024,"Online Banking payment to CRD 8737 Confirmation# 4057021018","-62.18","1,555.33"\n'
+        )
+        content = statement.read()
+        frame = service._read_frame(content, ".csv", institution="bofa")
+        summary = service._parse_bofa_balance_summary(content)
+        summary["beginning_balance"] = "617.51"
+        corrected = service._correct_bofa_summary_from_transactions(summary, frame)
+
+        assert corrected["beginning_balance"] == "1617.51"
+
+        statement.seek(0)
+        result = service.preview_statement(account, statement, "bofa", "2024-11")
+        assert result.balance_summary["beginning_balance"] == "1617.51"
+        assert result.reconciliation["statement_internal_ok"] is True
+
     def test_preview_bank_of_america_download_csv_with_summary_preamble(self, account):
         service = StatementImportService()
         statement = _make_bofa_checking_statement()
@@ -530,6 +619,59 @@ class TestStatementFileService:
         assert result.statement.stored_path.startswith("gdrive://test-folder/")
         assert fake_drive_storage.files_by_folder["test-folder"]
 
+    def test_upload_stores_custom_cross_year_period(self, account, fake_drive_storage, monkeypatch):
+        monkeypatch.setattr(
+            "apps.financial_account.storage.factory.GoogleDriveStatementStorage",
+            lambda: fake_drive_storage,
+        )
+        service = StatementFileService()
+        self._drive_account(account)
+        statement = _make_named_csv(
+            "Transaction Date,Description,Amount\n2026-01-10,Coffee,-5.00\n",
+            "cross-year.csv",
+        )
+
+        result = service.save_upload(
+            user=account.user,
+            account=account,
+            uploaded_file=statement,
+            institution="chase",
+            statement_period="2025-10-15 to 2026-01-14",
+            statement_status="closed",
+            statement_year=2026,
+            statement_month=1,
+        )
+
+        assert result.created is True
+        assert result.statement.statement_period == "2025-10-15 to 2026-01-14"
+        assert result.statement.statement_year == 2026
+        assert result.statement.statement_month == 1
+
+        imported = service.import_statement(result.statement)
+        assert imported.imported_count == 1
+        assert Transaction.objects.filter(account=account, sync_source="csv").count() == 1
+
+    def test_upload_rejects_statement_period_over_max_length(self, account, fake_drive_storage, monkeypatch):
+        monkeypatch.setattr(
+            "apps.financial_account.storage.factory.GoogleDriveStatementStorage",
+            lambda: fake_drive_storage,
+        )
+        service = StatementFileService()
+        self._drive_account(account)
+        statement = _make_named_csv(
+            "Transaction Date,Description,Amount\n2025-06-01,Coffee,-5.00\n",
+            "june.csv",
+        )
+
+        with pytest.raises(ValueError, match="statement_period must be 40 characters or fewer"):
+            service.save_upload(
+                user=account.user,
+                account=account,
+                uploaded_file=statement,
+                institution="chase",
+                statement_period="x" * 41,
+            )
+
     def test_duplicate_upload_returns_existing_record(self, account, fake_drive_storage, monkeypatch):
         monkeypatch.setattr(
             "apps.financial_account.storage.factory.GoogleDriveStatementStorage",
@@ -596,3 +738,48 @@ class TestStatementFileService:
         assert updated.statement_month == 7
         assert updated.stored_path == stored_path
         assert fake_drive_storage.files_by_folder["test-folder"]
+
+    def test_list_statements_reconciles_missing_drive_files(self, account, fake_drive_storage, monkeypatch):
+        monkeypatch.setattr(
+            "apps.financial_account.storage.factory.GoogleDriveStatementStorage",
+            lambda: fake_drive_storage,
+        )
+        service = StatementFileService()
+        self._drive_account(account)
+        upload = service.save_upload(
+            account.user,
+            account,
+            _make_named_csv("Transaction Date,Description,Amount\n2025-06-01,Coffee,-5.00\n"),
+            "chase",
+            "2025-06",
+        )
+        folder_id = "test-folder"
+        stored_name = next(iter(fake_drive_storage.files_by_folder[folder_id]))
+        del fake_drive_storage.files_by_folder[folder_id][stored_name]
+
+        rows = list(service.list_statements(account.user, account_id=account.id))
+
+        assert rows == []
+        upload.statement.refresh_from_db()
+        assert upload.statement.is_deleted is True
+
+    def test_soft_delete_removes_stored_drive_file(self, account, fake_drive_storage, monkeypatch):
+        monkeypatch.setattr(
+            "apps.financial_account.storage.factory.GoogleDriveStatementStorage",
+            lambda: fake_drive_storage,
+        )
+        service = StatementFileService()
+        self._drive_account(account)
+        upload = service.save_upload(
+            account.user,
+            account,
+            _make_named_csv("Transaction Date,Description,Amount\n2025-06-01,Coffee,-5.00\n"),
+            "chase",
+            "2025-06",
+        )
+
+        service.soft_delete_statement(upload.statement)
+
+        assert fake_drive_storage.files_by_folder["test-folder"] == {}
+        upload.statement.refresh_from_db()
+        assert upload.statement.is_deleted is True

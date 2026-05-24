@@ -16,7 +16,7 @@ from loguru import logger
 
 from apps.financial_account.models import FinancialAccount, StatementFile
 from apps.financial_account.services.statement_import_service import StatementImportResult, StatementImportService
-from apps.financial_account.storage import get_storage
+from apps.financial_account.storage import UnknownStorageScheme, get_storage
 from apps.richtato_user.models import User
 
 
@@ -32,6 +32,7 @@ class StatementFileService:
     """Manage Google Drive statement files and import history."""
 
     SUPPORTED_EXTENSIONS = {".csv", ".xls", ".xlsx"}
+    STATEMENT_PERIOD_MAX_LENGTH = 40
 
     def __init__(self):
         self.import_service = StatementImportService()
@@ -46,6 +47,11 @@ class StatementFileService:
         import_status: str | None = None,
     ):
         """List active statement files for a user with optional folder filters."""
+        if account_id:
+            account = FinancialAccount.objects.filter(id=account_id, user=user).first()
+            if account:
+                self.reconcile_missing_storage(account)
+
         queryset = StatementFile.objects.filter(user=user, is_deleted=False).select_related("account")
         if account_id:
             queryset = queryset.filter(account_id=account_id)
@@ -83,6 +89,8 @@ class StatementFileService:
         if extension not in self.SUPPORTED_EXTENSIONS:
             raise ValueError("Unsupported file type. Upload a CSV, XLS, or XLSX file.")
 
+        self._validate_statement_period(statement_period)
+
         content = uploaded_file.read()
         if isinstance(content, str):
             content = content.encode()
@@ -100,6 +108,25 @@ class StatementFileService:
             .first()
         )
         if existing:
+            updated_fields: list[str] = []
+            if existing.institution != institution:
+                existing.institution = institution
+                updated_fields.append("institution")
+            if statement_period and existing.statement_period != statement_period:
+                existing.statement_period = statement_period
+                updated_fields.append("statement_period")
+            if existing.statement_year != year:
+                existing.statement_year = year
+                updated_fields.append("statement_year")
+            if existing.statement_month != month:
+                existing.statement_month = month
+                updated_fields.append("statement_month")
+            if existing.statement_status != statement_status:
+                existing.statement_status = statement_status
+                updated_fields.append("statement_status")
+            if updated_fields:
+                updated_fields.append("updated_at")
+                existing.save(update_fields=updated_fields)
             return StatementUploadResult(statement=existing, created=False)
 
         storage_uri = account.ensure_storage_uri()
@@ -137,6 +164,9 @@ class StatementFileService:
         statement_month: int | None = None,
     ) -> StatementFile:
         """Update metadata and move the stored file when account changes."""
+        if statement_period is not None:
+            self._validate_statement_period(statement_period)
+
         old_account = statement.account
         old_storage_uri = old_account.ensure_storage_uri()
         old_relative = self._stored_relative_path(statement.stored_path, old_storage_uri)
@@ -188,8 +218,57 @@ class StatementFileService:
         return statement
 
     def soft_delete_statement(self, statement: StatementFile) -> None:
-        """Soft delete the statement record while keeping import history."""
+        """Remove the stored file when present and soft-delete the catalog row."""
+        try:
+            storage_uri = statement.account.ensure_storage_uri()
+            relative = self._stored_relative_path(statement.stored_path, storage_uri)
+            storage = get_storage(storage_uri)
+            storage.delete_file(storage_uri, relative)
+        except Exception:
+            logger.exception(
+                "Failed to delete stored statement file before soft delete",
+                statement_id=statement.id,
+                stored_path=statement.stored_path,
+            )
         statement.soft_delete()
+
+    def reconcile_missing_storage(
+        self,
+        account: FinancialAccount,
+        *,
+        present_relative_paths: set[str] | None = None,
+    ) -> int:
+        """Soft-delete statement rows whose Google Drive file no longer exists."""
+        storage_uri = account.resolved_storage_uri()
+        if not storage_uri:
+            return 0
+
+        if present_relative_paths is None:
+            try:
+                storage = get_storage(storage_uri)
+                present_relative_paths = {stored.relative_path for stored in storage.list_files(storage_uri)}
+            except (NotImplementedError, UnknownStorageScheme, ValueError) as exc:
+                logger.warning(
+                    "Skipping statement storage reconcile for account {}: {}",
+                    account.id,
+                    exc,
+                )
+                return 0
+
+        removed = 0
+        for statement in StatementFile.objects.filter(account=account, is_deleted=False):
+            relative = self._stored_relative_path(statement.stored_path, storage_uri)
+            if relative in present_relative_paths:
+                continue
+            statement.soft_delete()
+            removed += 1
+            logger.info(
+                "Removed orphaned statement catalog row",
+                account_id=account.id,
+                statement_id=statement.id,
+                stored_path=statement.stored_path,
+            )
+        return removed
 
     def download_response(self, statement: StatementFile) -> FileResponse:
         """Return a file response for a stored statement."""
@@ -328,6 +407,10 @@ class StatementFileService:
                 "updated_at",
             ]
         )
+
+    def _validate_statement_period(self, statement_period: str) -> None:
+        if len(statement_period) > self.STATEMENT_PERIOD_MAX_LENGTH:
+            raise ValueError(f"statement_period must be {self.STATEMENT_PERIOD_MAX_LENGTH} characters or fewer")
 
     def _resolve_year_month(
         self,

@@ -1,4 +1,5 @@
 import type { StatementImportResult } from '@/lib/api/statementImport';
+import { formatCurrency } from '@/lib/format';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 interface StatementReconciliationSummaryProps {
@@ -9,6 +10,8 @@ interface StatementReconciliationSummaryProps {
   compact?: boolean;
 }
 
+const MAX_VISIBLE_RECONCILIATION_WARNINGS = 5;
+
 export function StatementReconciliationSummary({
   result,
   compact = false,
@@ -17,6 +20,14 @@ export function StatementReconciliationSummary({
   const summary = result.balance_summary;
   const reconciliation = result.reconciliation ?? {};
   const hasWarnings = warnings.length > 0;
+  const visibleWarnings = warnings.slice(
+    0,
+    MAX_VISIBLE_RECONCILIATION_WARNINGS
+  );
+  const hiddenWarningCount = Math.max(
+    0,
+    warnings.length - visibleWarnings.length
+  );
   const isBalanced =
     !hasWarnings &&
     (reconciliation.statement_internal_ok === true ||
@@ -25,6 +36,13 @@ export function StatementReconciliationSummary({
   if (!summary && warnings.length === 0) {
     return null;
   }
+
+  const formatBalance = (value: string | undefined) => {
+    if (!value) return '—';
+    const parsed = Number(value.replace(/,/g, ''));
+    if (Number.isNaN(parsed)) return `$${value}`;
+    return formatCurrency(parsed);
+  };
 
   return (
     <div
@@ -53,8 +71,8 @@ export function StatementReconciliationSummary({
               : 'mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground'
           }
         >
-          <span>Beginning: ${summary.beginning_balance}</span>
-          <span>Ending: ${summary.ending_balance}</span>
+          <span>Beginning: {formatBalance(summary.beginning_balance)}</span>
+          <span>Ending: {formatBalance(summary.ending_balance)}</span>
         </div>
       )}
 
@@ -73,7 +91,7 @@ export function StatementReconciliationSummary({
             {reconciliation.opening_balance_action.startsWith('will_')
               ? 'will be set'
               : 'set'}{' '}
-            to ${reconciliation.opening_balance_amount}
+            to ${formatBalance(reconciliation.opening_balance_amount)}
             {reconciliation.opening_balance_date
               ? ` on ${reconciliation.opening_balance_date}`
               : ''}
@@ -85,13 +103,19 @@ export function StatementReconciliationSummary({
         <ul
           className={
             compact
-              ? 'mt-1 space-y-1 text-[11px] text-amber-700 dark:text-amber-300'
-              : 'mt-2 space-y-1 text-xs text-amber-700 dark:text-amber-300'
+              ? 'mt-1 max-h-32 space-y-1 overflow-y-auto scrollbar-thin text-[11px] text-amber-700 dark:text-amber-300'
+              : 'mt-2 max-h-40 space-y-1 overflow-y-auto scrollbar-thin text-xs text-amber-700 dark:text-amber-300'
           }
         >
-          {warnings.map(warning => (
+          {visibleWarnings.map(warning => (
             <li key={warning}>{warning}</li>
           ))}
+          {hiddenWarningCount > 0 && (
+            <li className="text-muted-foreground">
+              ... and {hiddenWarningCount} more warning
+              {hiddenWarningCount === 1 ? '' : 's'}.
+            </li>
+          )}
         </ul>
       )}
 

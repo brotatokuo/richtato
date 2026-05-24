@@ -17,6 +17,7 @@ from django.core.files.base import ContentFile
 from loguru import logger
 
 from apps.financial_account.models import FinancialAccount, StatementFile
+from apps.financial_account.services.statement_file_service import StatementFileService
 from apps.financial_account.services.statement_import_service import StatementImportResult, StatementImportService
 from apps.financial_account.storage import UnknownStorageScheme, get_storage
 
@@ -51,6 +52,7 @@ class ScanResult:
     files_imported: int = 0
     files_skipped: int = 0
     files_failed: int = 0
+    files_removed: int = 0
     outcomes: list[ScanFileOutcome] = field(default_factory=list)
 
 
@@ -61,6 +63,7 @@ class StorageScannerService:
 
     def __init__(self):
         self.import_service = StatementImportService()
+        self.statement_file_service = StatementFileService()
 
     def scan_all(self, *, dry_run: bool = False) -> ScanResult:
         """Scan every active FinancialAccount for new files."""
@@ -83,12 +86,13 @@ class StorageScannerService:
             result.accounts_scanned += 1
             self._scan_account(account, result, dry_run=dry_run)
         logger.info(
-            "Storage scan complete: accounts={} files_seen={} imported={} skipped={} failed={} dry_run={}",
+            "Storage scan complete: accounts={} files_seen={} imported={} skipped={} failed={} removed={} dry_run={}",
             result.accounts_scanned,
             result.files_seen,
             result.files_imported,
             result.files_skipped,
             result.files_failed,
+            result.files_removed,
             dry_run,
         )
         return result
@@ -132,6 +136,13 @@ class StorageScannerService:
                 )
             )
             return
+
+        if not dry_run:
+            present_paths = {stored.relative_path for stored in stored_files}
+            result.files_removed += self.statement_file_service.reconcile_missing_storage(
+                account,
+                present_relative_paths=present_paths,
+            )
 
         parser_key = self._parser_key_for_account(account)
         for stored in stored_files:

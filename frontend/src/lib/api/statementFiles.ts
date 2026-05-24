@@ -183,6 +183,7 @@ class StatementFileService {
     files_imported: number;
     files_skipped: number;
     files_failed: number;
+    files_removed: number;
     outcomes: {
       relative_path: string;
       status: string;
