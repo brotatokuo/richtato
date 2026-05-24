@@ -4,6 +4,7 @@ import { AccountDetailModal } from '@/components/settings/AccountDetailModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { transactionsApiService } from '@/lib/api/transactions';
@@ -14,7 +15,9 @@ import {
   ArrowRight,
   ArrowUpDown,
   Edit2,
+  FileText,
   Landmark,
+  LineChart,
   TrendingDown,
   TrendingUp,
   Users,
@@ -37,6 +40,8 @@ interface BalancePoint {
   balance: number;
 }
 
+type AccountDetailTab = 'balance' | 'transactions' | 'statements';
+
 interface AccountDetailPanelProps {
   account: AccountWithBalance | null;
   onAccountUpdated: () => void;
@@ -54,6 +59,7 @@ export function AccountDetailPanel({
   const [txLoading, setTxLoading] = useState(false);
   const [chartLoading, setChartLoading] = useState(false);
 
+  const [activeTab, setActiveTab] = useState<AccountDetailTab>('balance');
   const [showEdit, setShowEdit] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [isShared, setIsShared] = useState(
@@ -82,7 +88,7 @@ export function AccountDetailPanel({
     setChartLoading(true);
 
     transactionsApiService
-      .getAccountTransactions(accountId, { page: 1, pageSize: 10 })
+      .getAccountTransactions(accountId, { page: 1, pageSize: 50 })
       .then(d => setTransactions(d.rows || []))
       .catch(() => setTransactions([]))
       .finally(() => setTxLoading(false));
@@ -96,6 +102,7 @@ export function AccountDetailPanel({
 
   useEffect(() => {
     if (!account) return;
+    setActiveTab('balance');
     setTransactions([]);
     setBalanceHistory([]);
     setIsShared(account.shared_with_household ?? false);
@@ -254,8 +261,8 @@ export function AccountDetailPanel({
           Select an account
         </p>
         <p className="text-sm text-muted-foreground/60 mt-1">
-          Choose an account from the list to view details, balance history, and
-          recent transactions.
+          Choose an account from the list to view balance history, transactions,
+          and statements.
         </p>
       </div>
     );
@@ -265,9 +272,9 @@ export function AccountDetailPanel({
   const isLiability = (account.account_type || account.type) === 'credit_card';
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Account header */}
-      <div className="px-6 pt-5 pb-4 border-b border-border/60">
+      <div className="flex-shrink-0 px-6 pt-5 pb-4 border-b border-border/60">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
             {entityLogo ? (
@@ -399,108 +406,141 @@ export function AccountDetailPanel({
         </div>
       </div>
 
-      {/* Storage location + recent files */}
-      <div className="px-6 py-4 border-b border-border/40">
-        <p className="text-sm font-medium text-muted-foreground mb-3">
-          Storage
-        </p>
-        <StorageLocationPanel
-          accountId={account.id}
-          accountName={account.name}
-          institutionSlug={account.entity}
-          storageUri={account.storage_uri}
-          resolvedStorageUri={account.resolved_storage_uri}
-          onUploadComplete={onAccountUpdated}
-        />
-      </div>
-
-      {/* Balance chart */}
-      <div className="px-6 py-4 border-b border-border/40">
-        <p className="text-sm font-medium text-muted-foreground mb-3">
-          Balance History
-        </p>
-        {chartLoading ? (
-          <div className="h-32 flex items-center justify-center">
-            <LoadingSpinner />
-          </div>
-        ) : balanceHistory.length < 2 ? (
-          <div className="h-32 flex items-center justify-center">
-            <p className="text-sm text-muted-foreground/60">
-              Not enough data to show chart
-            </p>
-          </div>
-        ) : (
-          <BaseChart
-            type="line"
-            data={chartData}
-            options={chartOptions}
-            height="140px"
-          />
-        )}
-      </div>
-
-      {/* Recent Transactions */}
-      <div className="px-6 py-4 flex-1">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-medium text-muted-foreground">
-            Recent Transactions
-          </p>
-          <button
-            onClick={() => navigate(`/transactions?account=${account.id}`)}
-            className="text-xs text-primary hover:underline flex items-center gap-1"
-          >
-            View all
-            <ArrowRight className="h-3 w-3" />
-          </button>
+      <Tabs
+        value={activeTab}
+        onValueChange={value => setActiveTab(value as AccountDetailTab)}
+        className="flex flex-col flex-1 min-h-0"
+      >
+        <div className="flex-shrink-0 border-b border-border/40 px-6 pt-3 pb-0">
+          <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-grid">
+            <TabsTrigger
+              value="balance"
+              className="flex items-center gap-2 text-xs sm:text-sm"
+            >
+              <LineChart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>Balance History</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="transactions"
+              className="flex items-center gap-2 text-xs sm:text-sm"
+            >
+              <ArrowUpDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>Transactions</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="statements"
+              className="flex items-center gap-2 text-xs sm:text-sm"
+            >
+              <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>Statements</span>
+            </TabsTrigger>
+          </TabsList>
         </div>
 
-        {txLoading ? (
-          <div className="flex items-center justify-center h-24">
-            <LoadingSpinner />
-          </div>
-        ) : transactions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-24 text-center">
-            <ArrowUpDown className="h-6 w-6 text-muted-foreground/30 mb-2" />
-            <p className="text-sm text-muted-foreground/60">
-              No transactions found
+        <TabsContent
+          value="balance"
+          className="mt-0 flex-1 overflow-y-auto px-6 py-4 focus-visible:outline-none"
+        >
+          {chartLoading ? (
+            <div className="h-48 flex items-center justify-center">
+              <LoadingSpinner />
+            </div>
+          ) : balanceHistory.length < 2 ? (
+            <div className="h-48 flex flex-col items-center justify-center text-center">
+              <LineChart className="h-8 w-8 text-muted-foreground/30 mb-2" />
+              <p className="text-sm text-muted-foreground/60">
+                Not enough data to show balance history
+              </p>
+            </div>
+          ) : (
+            <BaseChart
+              type="line"
+              data={chartData}
+              options={chartOptions}
+              height="280px"
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent
+          value="transactions"
+          className="mt-0 flex-1 overflow-y-auto px-6 py-4 focus-visible:outline-none"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-medium text-muted-foreground">
+              Recent Transactions
             </p>
+            <button
+              onClick={() => navigate(`/transactions?account=${account.id}`)}
+              className="text-xs text-primary hover:underline flex items-center gap-1"
+            >
+              View all
+              <ArrowRight className="h-3 w-3" />
+            </button>
           </div>
-        ) : (
-          <div className="space-y-0">
-            {transactions.map((tx, i) => {
-              const amount = parseFloat(tx.amount);
-              const isDebit = tx.transaction_type === 'debit';
-              return (
-                <div
-                  key={tx.id}
-                  className={cn(
-                    'flex items-center justify-between py-2.5',
-                    i < transactions.length - 1 && 'border-b border-border/30'
-                  )}
-                >
-                  <div className="flex-1 min-w-0 mr-4">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {tx.description || '—'}
-                    </p>
-                    <p className="text-xs text-muted-foreground/70">
-                      {formatDate(tx.date, preferences.date_format)}
-                    </p>
-                  </div>
-                  <span
+
+          {txLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <LoadingSpinner />
+            </div>
+          ) : transactions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-32 text-center">
+              <ArrowUpDown className="h-6 w-6 text-muted-foreground/30 mb-2" />
+              <p className="text-sm text-muted-foreground/60">
+                No transactions found
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-0">
+              {transactions.map((tx, i) => {
+                const amount = parseFloat(tx.amount);
+                const isDebit = tx.transaction_type === 'debit';
+                return (
+                  <div
+                    key={tx.id}
                     className={cn(
-                      'text-sm font-semibold tabular-nums flex-shrink-0',
-                      isDebit ? 'text-red-500' : 'text-green-600'
+                      'flex items-center justify-between py-2.5',
+                      i < transactions.length - 1 && 'border-b border-border/30'
                     )}
                   >
-                    {isDebit ? '-' : '+'}
-                    {formatCurrency(amount, preferences.currency)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                    <div className="flex-1 min-w-0 mr-4">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {tx.description || '—'}
+                      </p>
+                      <p className="text-xs text-muted-foreground/70">
+                        {formatDate(tx.date, preferences.date_format)}
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        'text-sm font-semibold tabular-nums flex-shrink-0',
+                        isDebit ? 'text-red-500' : 'text-green-600'
+                      )}
+                    >
+                      {isDebit ? '-' : '+'}
+                      {formatCurrency(amount, preferences.currency)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent
+          value="statements"
+          className="mt-0 flex-1 overflow-y-auto px-6 py-4 focus-visible:outline-none"
+        >
+          <StorageLocationPanel
+            accountId={account.id}
+            accountName={account.name}
+            institutionSlug={account.entity}
+            storageUri={account.storage_uri}
+            resolvedStorageUri={account.resolved_storage_uri}
+            onUploadComplete={onAccountUpdated}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Edit modal */}
       <AccountDetailModal
