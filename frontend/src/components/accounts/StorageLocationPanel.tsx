@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import {
   Bot,
   CheckCircle2,
+  ExternalLink,
   FileWarning,
   FolderOpen,
   HardDrive,
@@ -166,6 +167,12 @@ export function StorageLocationPanel({
   const isOverride = Boolean(storageUri);
   const displayUri = resolvedStorageUri || storageUri || '';
   const isDrive = displayUri.startsWith('gdrive://');
+  const driveFolderId = isDrive
+    ? displayUri.replace('gdrive://', '').split('/')[0]
+    : null;
+  const driveUrl = driveFolderId
+    ? `https://drive.google.com/drive/folders/${driveFolderId}`
+    : null;
 
   return (
     <div className="space-y-3">
@@ -207,6 +214,17 @@ export function StorageLocationPanel({
                 ? 'Statements sync to this account folder in Google Drive.'
                 : 'The host bank-agent writes downloads here. Files are auto-imported when the backend scanner runs.'}
             </p>
+            {driveUrl && (
+              <a
+                href={driveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+              >
+                <ExternalLink className="h-3 w-3" />
+                Open in Google Drive
+              </a>
+            )}
           </div>
         </div>
       </div>
