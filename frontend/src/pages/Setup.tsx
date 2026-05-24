@@ -10,10 +10,10 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 type TabValue = 'categories' | 'budgets' | 'household' | 'statements';
 
 const VALID_TABS: TabValue[] = [
+  'statements',
   'categories',
   'budgets',
   'household',
-  'statements',
 ];
 
 export function Setup() {
@@ -22,7 +22,7 @@ export function Setup() {
   const [activeTab, setActiveTab] = useState<TabValue>(
     tabParam && VALID_TABS.includes(tabParam as TabValue)
       ? (tabParam as TabValue)
-      : 'categories'
+      : 'statements'
   );
 
   useEffect(() => {
@@ -53,6 +53,10 @@ export function Setup() {
       className="space-y-4"
     >
       <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 sm:w-auto sm:inline-grid">
+        <TabsTrigger value="statements" className="flex items-center gap-2">
+          <Cloud className="h-4 w-4" />
+          <span>Statements</span>
+        </TabsTrigger>
         <TabsTrigger value="categories" className="flex items-center gap-2">
           <Tag className="h-4 w-4" />
           <span>Categories</span>
@@ -65,11 +69,11 @@ export function Setup() {
           <Users className="h-4 w-4" />
           <span>Household</span>
         </TabsTrigger>
-        <TabsTrigger value="statements" className="flex items-center gap-2">
-          <Cloud className="h-4 w-4" />
-          <span>Statements</span>
-        </TabsTrigger>
       </TabsList>
+
+      <TabsContent value="statements">
+        <DriveStatementsSection />
+      </TabsContent>
 
       <TabsContent value="categories">
         <CategoriesSection />
@@ -81,10 +85,6 @@ export function Setup() {
 
       <TabsContent value="household">
         <HouseholdSettings />
-      </TabsContent>
-
-      <TabsContent value="statements">
-        <DriveStatementsSection />
       </TabsContent>
     </Tabs>
   );

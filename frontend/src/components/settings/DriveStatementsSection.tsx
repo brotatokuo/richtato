@@ -17,9 +17,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useDrive } from '@/contexts/DriveContext';
 import {
   driveStatementsApi,
-  type DriveStatus,
   type PickerTokenResponse,
 } from '@/lib/api/driveStatements';
 import {
@@ -75,29 +75,14 @@ declare global {
 const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
 
 export function DriveStatementsSection() {
-  const [status, setStatus] = useState<DriveStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    driveStatus: status,
+    isLoading: loading,
+    refreshDriveStatus,
+  } = useDrive();
   const [busy, setBusy] = useState(false);
   const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
-
-  const loadStatus = async () => {
-    setLoading(true);
-    try {
-      setStatus(await driveStatementsApi.getStatus());
-    } catch (error) {
-      toast.error('Unable to load Drive statement settings', {
-        description:
-          error instanceof Error ? error.message : 'Please try again.',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadStatus();
-  }, []);
 
   useEffect(() => {
     const connected = searchParams.get('drive') === 'connected';
@@ -106,7 +91,7 @@ export function DriveStatementsSection() {
       toast.success('Google Drive connected');
       searchParams.delete('drive');
       setSearchParams(searchParams, { replace: true });
-      void loadStatus();
+      void refreshDriveStatus();
     } else if (driveError) {
       toast.error('Google Drive connection failed', {
         description: driveError,
@@ -114,7 +99,7 @@ export function DriveStatementsSection() {
       searchParams.delete('drive_error');
       setSearchParams(searchParams, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, refreshDriveStatus]);
 
   const connectDrive = async () => {
     setBusy(true);
@@ -141,7 +126,7 @@ export function DriveStatementsSection() {
             folderId: folder.id,
             folderName: folder.name,
           });
-          setStatus(response.status);
+          await refreshDriveStatus();
           toast.success('Google Drive statement storage activated', {
             description: `${response.account_folders_created} account folders created, ${response.statements_migrated} statements migrated.`,
           });
@@ -171,7 +156,8 @@ export function DriveStatementsSection() {
   const disconnect = async () => {
     setBusy(true);
     try {
-      setStatus(await driveStatementsApi.disconnect());
+      await driveStatementsApi.disconnect();
+      await refreshDriveStatus();
       toast.success('Google Drive disconnected');
     } catch (error) {
       toast.error('Unable to disconnect Google Drive', {
@@ -187,7 +173,7 @@ export function DriveStatementsSection() {
     setBusy(true);
     try {
       const response = await driveStatementsApi.deactivate();
-      setStatus(response.status);
+      await refreshDriveStatus();
       setShowUnlinkConfirm(false);
       toast.success('Google Drive folder unlinked', {
         description: `${response.statements_migrated} statements moved back to local storage.`,

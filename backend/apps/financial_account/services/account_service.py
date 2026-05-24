@@ -116,7 +116,35 @@ class AccountService:
 
         logger.info(f"Created manual account {account.id} for user {user.username}: {name}")
 
+        self._provision_drive_folder(user, account)
+
         return account
+
+    def _provision_drive_folder(self, user: User, account: FinancialAccount) -> None:
+        """Create a Google Drive folder for a new account if Drive storage is active."""
+        from apps.financial_account.models import GoogleDriveConnection
+        from apps.financial_account.services.google_drive_activation_service import (
+            GoogleDriveActivationService,
+        )
+
+        connection = GoogleDriveConnection.objects.filter(user=user, is_active=True).first()
+        if not connection:
+            return
+        try:
+            drive_svc = GoogleDriveActivationService()
+            folder = drive_svc._create_account_folder(connection, account)
+            account.storage_uri = f"gdrive://{folder.folder_id}"
+            account.save(update_fields=["storage_uri", "updated_at"])
+            logger.info(
+                "Provisioned Drive folder {} for new account {}",
+                folder.folder_id,
+                account.id,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to create Drive folder for account {}; falling back to local storage",
+                account.id,
+            )
 
     def _create_opening_balance_transaction(self, account: FinancialAccount, initial_balance: Decimal) -> None:
         """Create an Opening Balance transaction so the initial balance appears in history."""

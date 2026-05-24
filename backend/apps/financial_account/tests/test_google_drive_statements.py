@@ -5,6 +5,7 @@ from decimal import Decimal
 import pytest
 
 from apps.financial_account.models import FinancialAccount, GoogleDriveAccountFolder, GoogleDriveConnection
+from apps.financial_account.services.account_service import AccountService
 from apps.financial_account.services.google_drive_activation_service import GoogleDriveActivationService
 from apps.financial_account.services.google_drive_service import (
     DRIVE_FOLDER_MIME_TYPE,
@@ -141,3 +142,45 @@ class TestGoogleDriveActivationService:
 
         with pytest.raises(GoogleDriveError, match="Unlink the folder"):
             service.disconnect_if_inactive(user)
+
+
+class TestAccountServiceDriveProvisioning:
+    def test_create_account_with_active_drive_provisions_folder(self, user, monkeypatch):
+        connection = GoogleDriveConnection.objects.create(
+            user=user,
+            google_account_email="u@example.com",
+            root_folder_id="root-folder",
+            root_folder_name="Statements",
+            is_active=True,
+        )
+        connection.set_refresh_token("refresh-token")
+        connection.save()
+
+        import apps.financial_account.services.google_drive_activation_service as act_module
+
+        # Replace the real GoogleDriveService with FakeDriveService so no HTTP calls are made
+        monkeypatch.setattr(act_module, "GoogleDriveService", lambda: FakeDriveService())
+
+        service = AccountService()
+        account = service.create_manual_account(
+            user=user,
+            name="New Savings",
+            account_type="savings",
+        )
+
+        account.refresh_from_db()
+        drive_folder = GoogleDriveAccountFolder.objects.get(account=account)
+        assert account.storage_uri == f"gdrive://{drive_folder.folder_id}"
+        assert drive_folder.folder_id.startswith("folder-")
+
+    def test_create_account_without_active_drive_leaves_local_storage(self, user):
+        service = AccountService()
+        account = service.create_manual_account(
+            user=user,
+            name="Local Checking",
+            account_type="checking",
+        )
+
+        account.refresh_from_db()
+        assert account.storage_uri == ""
+        assert not GoogleDriveAccountFolder.objects.filter(account=account).exists()
