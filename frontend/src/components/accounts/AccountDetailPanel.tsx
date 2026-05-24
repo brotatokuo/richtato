@@ -4,7 +4,6 @@ import { AccountDetailModal } from '@/components/settings/AccountDetailModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { Modal } from '@/components/ui/Modal';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { transactionsApiService } from '@/lib/api/transactions';
@@ -16,7 +15,6 @@ import {
   ArrowUpDown,
   Edit2,
   Landmark,
-  Scale,
   TrendingDown,
   TrendingUp,
   Users,
@@ -24,7 +22,6 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { AccountBalanceForm } from './AccountBalanceForm';
 import { AccountWithBalance } from './AccountsSidebar';
 
 interface TransactionRow {
@@ -58,7 +55,6 @@ export function AccountDetailPanel({
   const [chartLoading, setChartLoading] = useState(false);
 
   const [showEdit, setShowEdit] = useState(false);
-  const [showSetBalance, setShowSetBalance] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [isShared, setIsShared] = useState(
     account?.shared_with_household ?? false
@@ -250,18 +246,6 @@ export function AccountDetailPanel({
     }
   };
 
-  const handleSetBalance = async (data: { balance: number; date: string }) => {
-    if (!account) return;
-    await transactionsApiService.setAccountBalance({
-      account: account.id,
-      balance: data.balance,
-      date: data.date,
-    });
-    fetchData(account.id);
-    onAccountUpdated();
-    setShowSetBalance(false);
-  };
-
   if (!account) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center px-8">
@@ -321,6 +305,47 @@ export function AccountDetailPanel({
                   'Account'}
               </Badge>
             </div>
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {isInHousehold && (
+              <Button
+                size="sm"
+                variant={isShared ? 'secondary' : 'ghost'}
+                onClick={async () => {
+                  const newValue = !isShared;
+                  setIsShared(newValue);
+                  try {
+                    await transactionsApiService.updateAccount(account.id, {
+                      shared_with_household: newValue,
+                    });
+                    onAccountUpdated();
+                    toast.success(
+                      newValue
+                        ? 'Account shared with household'
+                        : 'Account is now personal'
+                    );
+                  } catch (e) {
+                    setIsShared(!newValue);
+                    toast.error('Failed to update sharing', {
+                      description: e instanceof Error ? e.message : undefined,
+                    });
+                  }
+                }}
+                className="h-8 text-xs"
+              >
+                <Users className="h-3.5 w-3.5 mr-1.5" />
+                {isShared ? 'Shared' : 'Share'}
+              </Button>
+            )}
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setShowEdit(true)}
+              className="h-8 w-8"
+              title="Edit account"
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
@@ -474,58 +499,6 @@ export function AccountDetailPanel({
         )}
       </div>
 
-      {/* Quick actions */}
-      <div className="px-6 py-4 border-t border-border/40 flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setShowEdit(true)}
-          className="h-8 text-xs"
-        >
-          <Edit2 className="h-3.5 w-3.5 mr-1.5" />
-          Edit
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setShowSetBalance(true)}
-          className="h-8 text-xs"
-        >
-          <Scale className="h-3.5 w-3.5 mr-1.5" />
-          Set Balance
-        </Button>
-        {isInHousehold && (
-          <Button
-            size="sm"
-            variant={isShared ? 'default' : 'outline'}
-            onClick={async () => {
-              const newValue = !isShared;
-              setIsShared(newValue);
-              try {
-                await transactionsApiService.updateAccount(account.id, {
-                  shared_with_household: newValue,
-                });
-                onAccountUpdated();
-                toast.success(
-                  newValue
-                    ? 'Account shared with household'
-                    : 'Account is now personal'
-                );
-              } catch (e) {
-                setIsShared(!newValue);
-                toast.error('Failed to update sharing', {
-                  description: e instanceof Error ? e.message : undefined,
-                });
-              }
-            }}
-            className="h-8 text-xs"
-          >
-            <Users className="h-3.5 w-3.5 mr-1.5" />
-            {isShared ? 'Shared' : 'Share'}
-          </Button>
-        )}
-      </div>
-
       {/* Edit modal */}
       <AccountDetailModal
         isOpen={showEdit}
@@ -537,20 +510,6 @@ export function AccountDetailPanel({
         entityOptions={entityOptions}
         loading={editLoading}
       />
-
-      {/* Set balance modal */}
-      <Modal
-        isOpen={showSetBalance}
-        onClose={() => setShowSetBalance(false)}
-        title="Set Balance"
-      >
-        <AccountBalanceForm
-          accountId={account.id}
-          accountName={account.name}
-          onSubmit={handleSetBalance}
-          onCancel={() => setShowSetBalance(false)}
-        />
-      </Modal>
     </div>
   );
 }
