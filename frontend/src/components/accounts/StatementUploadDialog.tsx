@@ -26,6 +26,7 @@ import {
   type StatementImportResult,
   type StatementInstitution,
 } from '@/lib/api/statementImport';
+import { StatementReconciliationSummary } from '@/components/accounts/StatementReconciliationSummary';
 import { cn } from '@/lib/utils';
 import { FileUp, Loader2, Upload } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -209,12 +210,20 @@ export function StatementUploadDialog({
     try {
       const importResult = await statementFileService.import(statement.id);
       const imported = importResult.result.imported_count;
-      toast.success(
-        `${imported} transaction${imported === 1 ? '' : 's'} imported`,
-        {
-          description: importResult.statement.original_filename,
-        }
-      );
+      const warnings = importResult.result.reconciliation_warnings ?? [];
+
+      if (warnings.length > 0) {
+        toast.warning('Imported with balance warnings', {
+          description: warnings[0],
+        });
+      } else {
+        toast.success(
+          `${imported} transaction${imported === 1 ? '' : 's'} imported`,
+          {
+            description: importResult.statement.original_filename,
+          }
+        );
+      }
       onComplete?.();
       handleOpenChange(false);
     } catch (err) {
@@ -363,6 +372,9 @@ export function StatementUploadDialog({
                   {preview.errors[0]}
                 </p>
               )}
+              <div className="mt-3">
+                <StatementReconciliationSummary result={preview} />
+              </div>
             </div>
           )}
         </div>

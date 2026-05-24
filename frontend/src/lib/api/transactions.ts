@@ -72,6 +72,8 @@ export interface Account {
   // Empty until Drive is activated in Setup → Statements.
   storage_uri?: string;
   resolved_storage_uri?: string;
+  opening_balance?: string | null;
+  opening_balance_date?: string | null;
 }
 
 export interface Category {
@@ -108,12 +110,40 @@ class TransactionsApiService {
     };
   }
 
+  private formatApiError(
+    errorData: Record<string, unknown>,
+    status: number
+  ): string {
+    if (typeof errorData.error === 'string' && errorData.error) {
+      return errorData.error;
+    }
+
+    const fieldMessages = Object.entries(errorData)
+      .filter(([, value]) => value !== undefined && value !== null)
+      .map(([field, value]) => {
+        if (Array.isArray(value)) {
+          return `${field}: ${value.join(', ')}`;
+        }
+        if (typeof value === 'string') {
+          return `${field}: ${value}`;
+        }
+        return `${field}: ${JSON.stringify(value)}`;
+      });
+
+    if (fieldMessages.length > 0) {
+      return fieldMessages.join('; ');
+    }
+
+    return `HTTP error! status: ${status}`;
+  }
+
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.error || `HTTP error! status: ${response.status}`
-      );
+      const errorData = (await response.json().catch(() => ({}))) as Record<
+        string,
+        unknown
+      >;
+      throw new Error(this.formatApiError(errorData, response.status));
     }
     return response.json();
   }
@@ -300,6 +330,18 @@ class TransactionsApiService {
   }
 
   /**
+   * Get a single account by ID
+   */
+  async getAccountById(id: number): Promise<Account> {
+    const response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
+    return this.handleResponse<Account>(response);
+  }
+
+  /**
    * Get transactions for an account
    */
   async getAccountTransactions(
@@ -463,8 +505,12 @@ class TransactionsApiService {
       asset_entity_name: string;
       image_key: string | null;
       shared_with_household: boolean;
+      opening_balance: number | null;
+      opening_balance_date: string | null;
     }>
   ): Promise<Account> {
+    console.info('[AccountEdit] PATCH /accounts/%s payload:', id, input);
+
     let response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
       method: 'PATCH',
       headers: await csrfService.getHeaders(),
@@ -474,6 +520,9 @@ class TransactionsApiService {
 
     // If CSRF token is invalid, refresh it and retry once
     if (response.status === 403) {
+      console.warn(
+        '[AccountEdit] CSRF rejected, refreshing token and retrying'
+      );
       await csrfService.refreshToken();
       response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
         method: 'PATCH',
@@ -483,7 +532,13 @@ class TransactionsApiService {
       });
     }
 
-    return this.handleResponse<Account>(response);
+    const account = await this.handleResponse<Account>(response);
+    console.info('[AccountEdit] PATCH /accounts/%s response:', id, {
+      balance: account.balance,
+      opening_balance: account.opening_balance,
+      opening_balance_date: account.opening_balance_date,
+    });
+    return account;
   }
 
   /**

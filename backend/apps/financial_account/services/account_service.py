@@ -14,6 +14,9 @@ from apps.financial_account.repositories.institution_repository import (
 )
 from apps.richtato_user.models import User
 
+OPENING_BALANCE_DESCRIPTION = "Opening Balance"
+_MISSING = object()
+
 
 class AccountService:
     """Service for account management business logic."""
@@ -112,7 +115,7 @@ class AccountService:
             account.save(update_fields=["is_liability"])
 
         if initial_balance != Decimal("0"):
-            self._create_opening_balance_transaction(account, initial_balance)
+            self.upsert_opening_balance(account, initial_balance)
 
         logger.info(f"Created manual account {account.id} for user {user.username}: {name}")
 
@@ -146,30 +149,74 @@ class AccountService:
                 account.id,
             )
 
-    def _create_opening_balance_transaction(self, account: FinancialAccount, initial_balance: Decimal) -> None:
-        """Create an Opening Balance transaction so the initial balance appears in history."""
+    def get_opening_balance_transaction(self, account: FinancialAccount):
+        """Return the account's Opening Balance transaction, if one exists."""
         from apps.transaction.models import Transaction
 
-        if initial_balance > 0:
-            txn_type = "credit"
-            amount = initial_balance
-        else:
-            txn_type = "debit"
-            amount = abs(initial_balance)
-
-        Transaction.objects.create(
-            user=account.user,
+        return Transaction.objects.filter(
             account=account,
-            date=date.today(),
-            amount=amount,
-            transaction_type=txn_type,
-            description="Opening Balance",
-            sync_source="manual",
-            status="reconciled",
-        )
+            description=OPENING_BALANCE_DESCRIPTION,
+        ).first()
+
+    def get_opening_balance(self, account: FinancialAccount) -> tuple[Decimal | None, date | None]:
+        """Return signed opening balance amount and its date."""
+        transaction = self.get_opening_balance_transaction(account)
+        if transaction is None:
+            return None, None
+        return transaction.signed_amount, transaction.date
+
+    def upsert_opening_balance(
+        self,
+        account: FinancialAccount,
+        balance: Decimal,
+        balance_date: date | None = None,
+    ):
+        """Create or update the Opening Balance transaction for an account."""
+        from apps.transaction.models import Transaction
+
+        if balance_date is None:
+            balance_date = date.today()
+
+        if balance > 0:
+            txn_type = "credit"
+            amount = balance
+        elif balance < 0:
+            txn_type = "debit"
+            amount = abs(balance)
+        else:
+            self.delete_opening_balance(account)
+            return None
+
+        existing = self.get_opening_balance_transaction(account)
+        if existing is None:
+            return Transaction.objects.create(
+                user=account.user,
+                account=account,
+                date=balance_date,
+                amount=amount,
+                transaction_type=txn_type,
+                description=OPENING_BALANCE_DESCRIPTION,
+                sync_source="manual",
+                status="reconciled",
+            )
+
+        existing.date = balance_date
+        existing.amount = amount
+        existing.transaction_type = txn_type
+        existing.save(update_fields=["date", "amount", "transaction_type", "updated_at"])
+        return existing
+
+    def delete_opening_balance(self, account: FinancialAccount) -> None:
+        """Remove the Opening Balance transaction for an account."""
+        existing = self.get_opening_balance_transaction(account)
+        if existing is not None:
+            existing.delete()
 
     def update_account(self, account: FinancialAccount, **kwargs) -> FinancialAccount:
         """Update account fields."""
+        opening_balance = kwargs.pop("opening_balance", _MISSING)
+        opening_balance_date = kwargs.pop("opening_balance_date", None)
+
         # Handle institution name update
         if "institution_name" in kwargs:
             institution_name = kwargs.pop("institution_name")
@@ -180,7 +227,46 @@ class AccountService:
             else:
                 kwargs["institution"] = None
 
-        return self.account_repository.update_account(account, **kwargs)
+        updated_account = self.account_repository.update_account(account, **kwargs)
+
+        if opening_balance is not _MISSING:
+            if opening_balance is None:
+                logger.info(
+                    "Deleting opening balance",
+                    account_id=updated_account.id,
+                )
+                self.delete_opening_balance(updated_account)
+            else:
+                parsed_date = opening_balance_date
+                if isinstance(parsed_date, str):
+                    parsed_date = date.fromisoformat(parsed_date)
+                logger.info(
+                    "Upserting opening balance",
+                    account_id=updated_account.id,
+                    opening_balance=str(opening_balance),
+                    opening_balance_date=str(parsed_date),
+                )
+                self.upsert_opening_balance(
+                    updated_account,
+                    Decimal(str(opening_balance)),
+                    parsed_date,
+                )
+            updated_account.refresh_from_db()
+            balance, balance_date = self.get_opening_balance(updated_account)
+            logger.info(
+                "Opening balance persisted",
+                account_id=updated_account.id,
+                account_balance=str(updated_account.balance),
+                opening_balance=str(balance) if balance is not None else None,
+                opening_balance_date=balance_date.isoformat() if balance_date else None,
+            )
+        else:
+            logger.debug(
+                "Account update without opening balance change",
+                account_id=updated_account.id,
+            )
+
+        return updated_account
 
     def delete_account(self, account: FinancialAccount) -> bool:
         """

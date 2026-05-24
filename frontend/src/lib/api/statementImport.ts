@@ -37,6 +37,33 @@ export interface StatementImportResult {
   institution: string;
   statement_status: 'provisional' | 'closed';
   rows: StatementImportRow[];
+  balance_summary?: {
+    beginning_balance: string;
+    ending_balance: string;
+    beginning_date?: string;
+    ending_date?: string;
+  };
+  reconciliation?: {
+    statement_internal_ok?: boolean;
+    statement_internal_discrepancy?: string;
+    computed_ending_balance?: string;
+    statement_ending_balance?: string;
+    net_activity?: string;
+    running_balance_errors?: string[];
+    opening_balance_action?:
+      | 'create'
+      | 'update'
+      | 'matched'
+      | 'will_create'
+      | 'will_update';
+    opening_balance_amount?: string;
+    opening_balance_previous_amount?: string;
+    opening_balance_date?: string;
+    account_balance?: string;
+    account_ending_discrepancy?: string;
+    account_ending_ok?: boolean;
+  };
+  reconciliation_warnings?: string[];
 }
 
 export interface StatementImportInput {

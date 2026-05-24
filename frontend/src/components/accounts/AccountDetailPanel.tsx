@@ -1,6 +1,7 @@
 import { StorageLocationPanel } from '@/components/accounts/StorageLocationPanel';
 import { BaseChart } from '@/components/asset_dashboard/BaseChart';
 import { AccountDetailModal } from '@/components/settings/AccountDetailModal';
+import { TransactionsPanel } from '@/components/transactions/TransactionsPanel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -8,11 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { transactionsApiService } from '@/lib/api/transactions';
-import { formatCurrency, formatDate } from '@/lib/format';
+import { formatCurrency } from '@/lib/format';
 import { getEntityLogo } from '@/lib/imageMapping';
 import { cn } from '@/lib/utils';
 import {
-  ArrowRight,
   ArrowUpDown,
   Edit2,
   FileText,
@@ -23,17 +23,8 @@ import {
   Users,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AccountWithBalance } from './AccountsSidebar';
-
-interface TransactionRow {
-  id: number;
-  date: string;
-  description: string;
-  amount: string;
-  transaction_type: 'credit' | 'debit';
-}
 
 interface BalancePoint {
   date: string;
@@ -44,7 +35,7 @@ type AccountDetailTab = 'balance' | 'transactions' | 'statements';
 
 interface AccountDetailPanelProps {
   account: AccountWithBalance | null;
-  onAccountUpdated: () => void;
+  onAccountUpdated: (updatedAccount?: AccountWithBalance | null) => void;
 }
 
 export function AccountDetailPanel({
@@ -53,10 +44,7 @@ export function AccountDetailPanel({
 }: AccountDetailPanelProps) {
   const { preferences } = usePreferences();
   const { isInHousehold } = useHousehold();
-  const navigate = useNavigate();
-  const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [balanceHistory, setBalanceHistory] = useState<BalancePoint[]>([]);
-  const [txLoading, setTxLoading] = useState(false);
   const [chartLoading, setChartLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState<AccountDetailTab>('balance');
@@ -83,15 +71,8 @@ export function AccountDetailPanel({
       .catch(() => {});
   }, []);
 
-  const fetchData = useCallback(async (accountId: number) => {
-    setTxLoading(true);
+  const fetchBalanceHistory = useCallback(async (accountId: number) => {
     setChartLoading(true);
-
-    transactionsApiService
-      .getAccountTransactions(accountId, { page: 1, pageSize: 50 })
-      .then(d => setTransactions(d.rows || []))
-      .catch(() => setTransactions([]))
-      .finally(() => setTxLoading(false));
 
     transactionsApiService
       .getAccountBalanceHistory(accountId)
@@ -103,11 +84,10 @@ export function AccountDetailPanel({
   useEffect(() => {
     if (!account) return;
     setActiveTab('balance');
-    setTransactions([]);
     setBalanceHistory([]);
     setIsShared(account.shared_with_household ?? false);
-    fetchData(account.id);
-  }, [account, fetchData]);
+    fetchBalanceHistory(account.id);
+  }, [account, fetchBalanceHistory]);
 
   const chartData = useMemo(() => {
     if (!balanceHistory.length) return { series: [], dates: [] };
@@ -218,17 +198,66 @@ export function AccountDetailPanel({
     type: string;
     entity: string;
     image_key?: string | null;
+    opening_balance?: number | null;
+    opening_balance_date?: string | null;
   }) => {
     if (!account) return;
     setEditLoading(true);
     try {
-      await transactionsApiService.updateAccount(account.id, {
+      console.info('[AccountEdit] submitting account update', {
+        accountId: account.id,
+        form,
+      });
+      const updated = await transactionsApiService.updateAccount(account.id, {
         name: form.name,
         image_key: form.image_key,
+        ...(form.opening_balance !== undefined
+          ? {
+              opening_balance: form.opening_balance,
+              opening_balance_date: form.opening_balance_date,
+            }
+          : {}),
       });
-      onAccountUpdated();
+
+      if (
+        form.opening_balance !== undefined &&
+        form.opening_balance !== null &&
+        (updated.opening_balance === undefined ||
+          updated.opening_balance === null)
+      ) {
+        console.error(
+          '[AccountEdit] backend response missing opening_balance after PATCH',
+          updated
+        );
+        toast.error('Opening balance did not save', {
+          description:
+            'The server accepted the update but did not persist opening balance. Restart the backend container and try again.',
+        });
+        return;
+      }
+
+      const updatedWithBalance: AccountWithBalance = {
+        ...updated,
+        balance:
+          typeof updated.balance === 'number'
+            ? updated.balance
+            : Number(String(updated.balance || '0').replace(/[^0-9.-]+/g, '')),
+        lastUpdated: String(updated.date || account.lastUpdated || ''),
+      };
+      console.info(
+        '[AccountEdit] account update succeeded',
+        updatedWithBalance
+      );
+      toast.success('Account updated', {
+        description:
+          form.opening_balance !== undefined
+            ? `Opening balance: ${updated.opening_balance ?? 'removed'}`
+            : undefined,
+      });
+      onAccountUpdated(updatedWithBalance);
       setShowEdit(false);
     } catch (e) {
+      console.error('[AccountEdit] account update failed', e);
       toast.error('Failed to update', {
         description: e instanceof Error ? e.message : undefined,
       });
@@ -466,65 +495,12 @@ export function AccountDetailPanel({
           value="transactions"
           className="mt-0 flex-1 overflow-y-auto px-6 py-4 focus-visible:outline-none"
         >
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-medium text-muted-foreground">
-              Recent Transactions
-            </p>
-            <button
-              onClick={() => navigate(`/transactions?account=${account.id}`)}
-              className="text-xs text-primary hover:underline flex items-center gap-1"
-            >
-              View all
-              <ArrowRight className="h-3 w-3" />
-            </button>
-          </div>
-
-          {txLoading ? (
-            <div className="flex items-center justify-center h-32">
-              <LoadingSpinner />
-            </div>
-          ) : transactions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32 text-center">
-              <ArrowUpDown className="h-6 w-6 text-muted-foreground/30 mb-2" />
-              <p className="text-sm text-muted-foreground/60">
-                No transactions found
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-0">
-              {transactions.map((tx, i) => {
-                const amount = parseFloat(tx.amount);
-                const isDebit = tx.transaction_type === 'debit';
-                return (
-                  <div
-                    key={tx.id}
-                    className={cn(
-                      'flex items-center justify-between py-2.5',
-                      i < transactions.length - 1 && 'border-b border-border/30'
-                    )}
-                  >
-                    <div className="flex-1 min-w-0 mr-4">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {tx.description || '—'}
-                      </p>
-                      <p className="text-xs text-muted-foreground/70">
-                        {formatDate(tx.date, preferences.date_format)}
-                      </p>
-                    </div>
-                    <span
-                      className={cn(
-                        'text-sm font-semibold tabular-nums flex-shrink-0',
-                        isDebit ? 'text-red-500' : 'text-green-600'
-                      )}
-                    >
-                      {isDebit ? '-' : '+'}
-                      {formatCurrency(amount, preferences.currency)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <TransactionsPanel
+            accountId={account.id}
+            defaultAccountId={account.id}
+            hiddenColumns={['account']}
+            className="min-w-0"
+          />
         </TabsContent>
 
         <TabsContent

@@ -10,13 +10,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useHousehold } from '@/contexts/HouseholdContext';
-import { Account } from '@/lib/api/transactions';
+import { Account, transactionsApiService } from '@/lib/api/transactions';
 import {
   AVAILABLE_CARD_IMAGES,
   getAutoDetectedImageKey,
 } from '@/lib/imageMapping';
-import { Check, Sparkles, Users } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Calendar, Check, Sparkles, Users } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 interface AccountDetailModalProps {
   isOpen: boolean;
@@ -28,11 +29,21 @@ interface AccountDetailModalProps {
     entity: string;
     image_key?: string | null;
     shared_with_household?: boolean;
+    opening_balance?: number | null;
+    opening_balance_date?: string | null;
   }) => Promise<void>;
   onDelete: () => void;
   accountTypeOptions: Array<{ value: string; label: string }>;
   entityOptions: Array<{ value: string; label: string }>;
   loading: boolean;
+}
+
+function defaultOpeningBalanceDate(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function AccountDetailModal({
@@ -46,55 +57,103 @@ export function AccountDetailModal({
   loading,
 }: AccountDetailModalProps) {
   const { isInHousehold } = useHousehold();
+  const dateInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     name: '',
     type: 'checking',
     entity: '',
     imageKey: null as string | null,
     sharedWithHousehold: false,
+    openingBalance: '',
+    openingBalanceDate: defaultOpeningBalanceDate(),
   });
+  const [initialOpeningBalance, setInitialOpeningBalance] = useState('');
+  const [initialOpeningBalanceDate, setInitialOpeningBalanceDate] = useState(
+    defaultOpeningBalanceDate()
+  );
+  const [loadingOpeningBalance, setLoadingOpeningBalance] = useState(false);
 
-  // Find the matching entity option value for this account
-  const findEntityValue = (account: Account): string => {
-    if (account.entity) {
+  const findEntityValue = (accountRecord: Account): string => {
+    if (accountRecord.entity) {
       const matchBySlug = entityOptions.find(
         e =>
-          e.value === account.entity ||
-          e.label.toLowerCase().replace(/\s+/g, '_') === account.entity
+          e.value === accountRecord.entity ||
+          e.label.toLowerCase().replace(/\s+/g, '_') === accountRecord.entity
       );
       if (matchBySlug) return matchBySlug.value;
     }
 
-    if (account.institution_name) {
+    if (accountRecord.institution_name) {
       const matchByName = entityOptions.find(
-        e => e.label.toLowerCase() === account.institution_name?.toLowerCase()
+        e =>
+          e.label.toLowerCase() ===
+          accountRecord.institution_name?.toLowerCase()
       );
       if (matchByName) return matchByName.value;
     }
 
-    if (account.entity_display) {
+    if (accountRecord.entity_display) {
       const matchByDisplay = entityOptions.find(
-        e => e.label === account.entity_display
+        e => e.label === accountRecord.entity_display
       );
       if (matchByDisplay) return matchByDisplay.value;
     }
 
-    return account.entity || '';
+    return accountRecord.entity || '';
   };
 
   useEffect(() => {
-    if (account && entityOptions.length > 0) {
-      setForm({
-        name: account.name || '',
-        type: account.account_type || account.type || 'checking',
-        entity: findEntityValue(account),
-        imageKey: account.image_key ?? null,
-        sharedWithHousehold: account.shared_with_household ?? false,
+    if (!account || entityOptions.length === 0 || !isOpen) return;
+
+    let cancelled = false;
+    setLoadingOpeningBalance(true);
+
+    transactionsApiService
+      .getAccountById(account.id)
+      .then(accountDetail => {
+        if (cancelled) return;
+
+        const openingBalance = accountDetail.opening_balance ?? '';
+        const openingBalanceDate =
+          accountDetail.opening_balance_date ?? defaultOpeningBalanceDate();
+
+        setInitialOpeningBalance(openingBalance);
+        setInitialOpeningBalanceDate(openingBalanceDate);
+        console.info('[AccountEdit] loaded account detail for modal', {
+          accountId: accountDetail.id,
+          openingBalance,
+          openingBalanceDate,
+        });
+        setForm({
+          name: accountDetail.name || '',
+          type: accountDetail.account_type || accountDetail.type || 'checking',
+          entity: findEntityValue(accountDetail),
+          imageKey: accountDetail.image_key ?? null,
+          sharedWithHousehold: accountDetail.shared_with_household ?? false,
+          openingBalance,
+          openingBalanceDate,
+        });
+      })
+      .catch(err => {
+        if (cancelled) return;
+        console.error(
+          '[AccountEdit] failed to load account detail for modal',
+          err
+        );
+        toast.error('Failed to load account details', {
+          description: err instanceof Error ? err.message : undefined,
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingOpeningBalance(false);
       });
-    }
+
+    return () => {
+      cancelled = true;
+    };
     // findEntityValue depends on entityOptions which is already in deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [account, entityOptions]);
+  }, [account, entityOptions, isOpen]);
 
   const autoDetectedImageKey = useMemo(
     () => getAutoDetectedImageKey(form.name),
@@ -104,20 +163,59 @@ export function AccountDetailModal({
   const isCreditCard = form.type === 'credit_card';
 
   const handleFieldChange = (
-    field: 'name' | 'type' | 'entity',
+    field: 'name' | 'type' | 'entity' | 'openingBalance' | 'openingBalanceDate',
     value: string
   ) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async () => {
-    await onSubmit({
+    const trimmedOpeningBalance = form.openingBalance.trim();
+    const openingBalanceChanged =
+      trimmedOpeningBalance !== initialOpeningBalance.trim() ||
+      (trimmedOpeningBalance !== '' &&
+        form.openingBalanceDate !== initialOpeningBalanceDate);
+
+    const payload: {
+      name: string;
+      type: string;
+      entity: string;
+      image_key?: string | null;
+      shared_with_household?: boolean;
+      opening_balance?: number | null;
+      opening_balance_date?: string | null;
+    } = {
       name: form.name,
       type: form.type,
       entity: form.entity,
       image_key: form.imageKey,
       shared_with_household: form.sharedWithHousehold,
+    };
+
+    if (openingBalanceChanged) {
+      if (!trimmedOpeningBalance) {
+        payload.opening_balance = null;
+        payload.opening_balance_date = null;
+      } else {
+        const parsed = Number.parseFloat(trimmedOpeningBalance);
+        if (Number.isNaN(parsed)) {
+          toast.error('Enter a valid opening balance');
+          return;
+        }
+        payload.opening_balance = parsed;
+        payload.opening_balance_date = form.openingBalanceDate || null;
+      }
+    }
+
+    console.info('[AccountEdit] modal submit payload', {
+      accountId: account?.id,
+      openingBalanceChanged,
+      initialOpeningBalance,
+      initialOpeningBalanceDate,
+      payload,
     });
+
+    await onSubmit(payload);
   };
 
   const handleImageSelect = (key: string | null) => {
@@ -179,6 +277,69 @@ export function AccountDetailModal({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="detail-acc-opening-balance">
+                Opening Balance{' '}
+                <span className="text-muted-foreground font-normal">
+                  (optional)
+                </span>
+              </Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                  $
+                </span>
+                <Input
+                  id="detail-acc-opening-balance"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={form.openingBalance}
+                  onChange={e =>
+                    handleFieldChange('openingBalance', e.target.value)
+                  }
+                  className="pl-7"
+                  disabled={loadingOpeningBalance}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Balance this account had when you started tracking it. Leave
+                blank to remove an existing opening balance.
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="detail-acc-opening-date">
+                Opening Balance Date
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  ref={dateInputRef}
+                  id="detail-acc-opening-date"
+                  type="date"
+                  value={form.openingBalanceDate}
+                  onChange={e =>
+                    handleFieldChange('openingBalanceDate', e.target.value)
+                  }
+                  className="flex-1"
+                  disabled={
+                    loadingOpeningBalance || !form.openingBalance.trim()
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => dateInputRef.current?.showPicker?.()}
+                  title="Open calendar"
+                  disabled={
+                    loadingOpeningBalance || !form.openingBalance.trim()
+                  }
+                >
+                  <Calendar className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -317,7 +478,10 @@ export function AccountDetailModal({
               <Button variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button onClick={handleSubmit} disabled={!form.name || loading}>
+              <Button
+                onClick={handleSubmit}
+                disabled={!form.name || loading || loadingOpeningBalance}
+              >
                 Save Changes
               </Button>
             </div>

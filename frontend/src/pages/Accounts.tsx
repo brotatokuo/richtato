@@ -14,7 +14,10 @@ export function Accounts() {
     setReloadKey(k => k + 1);
   };
 
-  const handleAccountUpdated = () => {
+  const handleAccountUpdated = (updatedAccount?: AccountWithBalance | null) => {
+    if (updatedAccount) {
+      setSelectedAccount(updatedAccount);
+    }
     setReloadKey(k => k + 1);
   };
 

@@ -98,3 +98,41 @@ class TestOpeningBalance:
             initial_balance=Decimal("100.00"),
         )
         assert account.is_liability is False
+
+
+class TestOpeningBalanceUpdate:
+    def test_update_account_opening_balance(self, service, user):
+        account = service.create_manual_account(
+            user=user,
+            name="Checking",
+            account_type="checking",
+            initial_balance=Decimal("100.00"),
+        )
+        account.refresh_from_db()
+        assert account.balance == Decimal("100.00")
+
+        service.update_account(
+            account,
+            opening_balance=Decimal("250.00"),
+            opening_balance_date=date(2026, 1, 15),
+        )
+        account.refresh_from_db()
+        opening = Transaction.objects.get(account=account, description="Opening Balance")
+
+        assert opening.amount == Decimal("250.00")
+        assert opening.date == date(2026, 1, 15)
+        assert account.balance == Decimal("250.00")
+
+    def test_update_account_clears_opening_balance(self, service, user):
+        account = service.create_manual_account(
+            user=user,
+            name="Checking",
+            account_type="checking",
+            initial_balance=Decimal("100.00"),
+        )
+
+        service.update_account(account, opening_balance=None)
+        account.refresh_from_db()
+
+        assert not Transaction.objects.filter(account=account, description="Opening Balance").exists()
+        assert account.balance == Decimal("0")

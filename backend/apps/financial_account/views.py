@@ -112,17 +112,46 @@ class FinancialAccountDetailAPIView(APIView):
         if not account:
             return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
 
+        logger.info(
+            "Account PATCH request",
+            account_id=pk,
+            user_id=request.user.id,
+            payload=dict(request.data),
+        )
+
         serializer = FinancialAccountUpdateSerializer(data=request.data)
         if not serializer.is_valid():
+            logger.warning(
+                "Account PATCH validation failed",
+                account_id=pk,
+                user_id=request.user.id,
+                errors=serializer.errors,
+                payload=dict(request.data),
+            )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         try:
+            logger.info(
+                "Account PATCH validated",
+                account_id=pk,
+                validated_data={
+                    key: str(value) for key, value in serializer.validated_data.items()
+                },
+            )
             updated_account = self.account_service.update_account(account, **serializer.validated_data)
+            updated_account.refresh_from_db()
             response_serializer = FinancialAccountSerializer(updated_account)
+            logger.info(
+                "Account PATCH succeeded",
+                account_id=pk,
+                balance=str(updated_account.balance),
+                opening_balance=response_serializer.data.get("opening_balance"),
+                opening_balance_date=response_serializer.data.get("opening_balance_date"),
+            )
             return Response(response_serializer.data)
 
         except Exception as e:
-            logger.error(f"Error updating account {pk}: {str(e)}")
+            logger.exception(f"Error updating account {pk}: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete(self, request, pk):

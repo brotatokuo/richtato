@@ -1,5 +1,7 @@
 """Serializers for financial accounts."""
 
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from .models import AccountBalanceHistory, FinancialAccount, FinancialInstitution
@@ -35,6 +37,8 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
     entity_display = serializers.CharField(source="institution.name", read_only=True)
     date = serializers.SerializerMethodField()
     resolved_storage_uri = serializers.SerializerMethodField()
+    opening_balance = serializers.SerializerMethodField()
+    opening_balance_date = serializers.SerializerMethodField()
 
     class Meta:
         model = FinancialAccount
@@ -63,6 +67,8 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
             "entity",
             "entity_display",
             "date",
+            "opening_balance",
+            "opening_balance_date",
         ]
         read_only_fields = ["id", "created_at", "updated_at", "sync_source", "resolved_storage_uri"]
 
@@ -82,6 +88,22 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
         if obj.institution:
             return obj.institution.slug or obj.institution.name.lower().replace(" ", "_")
         return "manual"
+
+    def get_opening_balance(self, obj):
+        from apps.financial_account.services.account_service import AccountService
+
+        balance, _balance_date = AccountService().get_opening_balance(obj)
+        if balance is None:
+            return None
+        return str(balance.quantize(Decimal("0.01")))
+
+    def get_opening_balance_date(self, obj):
+        from apps.financial_account.services.account_service import AccountService
+
+        _balance, balance_date = AccountService().get_opening_balance(obj)
+        if balance_date is None:
+            return None
+        return balance_date.isoformat()
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -116,3 +138,10 @@ class FinancialAccountUpdateSerializer(serializers.Serializer):
     image_key = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
     shared_with_household = serializers.BooleanField(required=False)
     storage_uri = serializers.CharField(max_length=512, required=False, allow_blank=True)
+    opening_balance = serializers.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+    )
+    opening_balance_date = serializers.DateField(required=False, allow_null=True)

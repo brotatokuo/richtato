@@ -1,4 +1,5 @@
 import { MetricCard } from '@/components/asset_dashboard/MetricCard';
+import { TransactionPreviewList } from '@/components/transactions/TransactionPreviewList';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useHousehold } from '@/contexts/HouseholdContext';
@@ -310,41 +311,12 @@ export function HouseholdDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              {transactions.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">
-                  No shared transactions yet.
-                </p>
-              ) : (
-                <div className="divide-y divide-border/50">
-                  {transactions.map(txn => (
-                    <div
-                      key={txn.id}
-                      className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {txn.description}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {txn.account_name} ·{' '}
-                          {txn.category_name || 'Uncategorized'} · {txn.date}
-                        </p>
-                      </div>
-                      <span
-                        className={cn(
-                          'text-sm font-semibold tabular-nums whitespace-nowrap',
-                          txn.transaction_type === 'credit'
-                            ? 'text-green-500'
-                            : 'text-foreground'
-                        )}
-                      >
-                        {txn.transaction_type === 'credit' ? '+' : '-'}
-                        {formatCurrency(txn.amount, preferences.currency)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <TransactionPreviewList
+                transactions={transactions}
+                emptyMessage="No shared transactions yet."
+                showAccount
+                showCategory
+              />
             </CardContent>
           </Card>
         </>

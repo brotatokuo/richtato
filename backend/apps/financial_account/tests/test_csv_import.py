@@ -1,6 +1,7 @@
 """Tests for CSV statement import and reconciliation."""
 
 import io
+from datetime import date
 from decimal import Decimal
 
 import pandas as pd
@@ -63,6 +64,23 @@ def _make_xlsx(rows: list[dict], name: str = "statement.xlsx") -> io.BytesIO:
     xlsx_file.seek(0)
     xlsx_file.name = name
     return xlsx_file
+
+
+def _make_bofa_checking_statement() -> io.BytesIO:
+    return _make_named_csv(
+        "Description,,Summary Amt.\n"
+        'Beginning balance as of 05/13/2026,,"723.98"\n'
+        'Total credits,,"547.74"\n'
+        'Total debits,,"-821.00"\n'
+        'Ending balance as of 05/23/2026,,"450.72"\n'
+        "\n"
+        "Date,Description,Amount,Running Bal.\n"
+        '05/13/2026,Beginning balance as of 05/13/2026,,"723.98"\n'
+        '05/13/2026,"Monthly Maintenance Fee","-12.00","711.98"\n'
+        '05/15/2026,"VENMO DES:CASHOUT","447.74","1,159.72"\n'
+        '05/15/2026,"GUSTO PAYROLL DES:PAYROLL","100.00","1,259.72"\n'
+        '05/18/2026,"VENMO DES:PAYMENT","-809.00","450.72"\n'
+    )
 
 
 class TestCSVImportBasic:
@@ -266,31 +284,120 @@ class TestStatementImportService:
 
     def test_preview_bank_of_america_download_csv_with_summary_preamble(self, account):
         service = StatementImportService()
-        statement = _make_named_csv(
-            "Description,,Summary Amt.\n"
-            'Beginning balance as of 05/13/2026,,"723.98"\n'
-            'Total credits,,"547.74"\n'
-            'Total debits,,"-821.00"\n'
-            'Ending balance as of 05/23/2026,,"450.72"\n'
-            "\n"
-            "Date,Description,Amount,Running Bal.\n"
-            '05/13/2026,Beginning balance as of 05/13/2026,,"723.98"\n'
-            '05/13/2026,"Monthly Maintenance Fee","-12.00","711.98"\n'
-            '05/15/2026,"VENMO DES:CASHOUT","447.74","1,159.72"\n'
-            '05/18/2026,"VENMO DES:PAYMENT","-809.00","450.72"\n'
-        )
+        statement = _make_bofa_checking_statement()
 
         result = service.preview_statement(account, statement, "bofa", "2026-05")
 
         assert result.errors == []
-        assert result.parsed_count == 3
+        assert result.parsed_count == 4
         assert result.rows[0].description == "Monthly Maintenance Fee"
         assert result.rows[0].amount == Decimal("12.00")
         assert result.rows[0].transaction_type == "debit"
         assert result.rows[1].amount == Decimal("447.74")
         assert result.rows[1].transaction_type == "credit"
-        assert result.rows[2].amount == Decimal("809.00")
-        assert result.rows[2].transaction_type == "debit"
+        assert result.rows[2].amount == Decimal("100.00")
+        assert result.rows[2].transaction_type == "credit"
+        assert result.rows[3].amount == Decimal("809.00")
+        assert result.rows[3].transaction_type == "debit"
+        assert result.balance_summary == {
+            "beginning_balance": "723.98",
+            "ending_balance": "450.72",
+            "beginning_date": "2026-05-13",
+            "ending_date": "2026-05-23",
+        }
+        assert result.reconciliation["statement_internal_ok"] is True
+        assert result.reconciliation["opening_balance_action"] == "will_create"
+        assert result.reconciliation_warnings == []
+
+    def test_import_bank_of_america_checking_creates_opening_balance_and_reconciles(self, user):
+        service = StatementImportService()
+        account = FinancialAccount.objects.create(
+            user=user,
+            name="BoFA Checking",
+            account_type="checking",
+            balance=Decimal("0"),
+        )
+        statement = _make_bofa_checking_statement()
+
+        result = service.import_statement(account, statement, "bofa", "2026-05", "closed")
+
+        account.refresh_from_db()
+        opening = Transaction.objects.get(account=account, description="Opening Balance")
+
+        assert result.imported_count == 4
+        assert result.reconciliation["opening_balance_action"] == "create"
+        assert result.reconciliation["account_ending_ok"] is True
+        assert result.reconciliation["account_ending_discrepancy"] == "0.00"
+        assert result.reconciliation_warnings == []
+        assert opening.amount == Decimal("723.98")
+        assert opening.transaction_type == "credit"
+        assert opening.date.isoformat() == "2026-05-13"
+        assert account.balance == Decimal("450.72")
+
+    def test_preview_bank_of_america_flags_internal_total_mismatch(self, account):
+        service = StatementImportService()
+        statement = _make_named_csv(
+            "Description,,Summary Amt.\n"
+            'Beginning balance as of 05/13/2026,,"723.98"\n'
+            'Ending balance as of 05/23/2026,,"999.99"\n'
+            "\n"
+            "Date,Description,Amount,Running Bal.\n"
+            '05/13/2026,"Monthly Maintenance Fee","-12.00","711.98"\n'
+        )
+
+        result = service.preview_statement(account, statement, "bofa", "2026-05")
+
+        assert result.reconciliation["statement_internal_ok"] is False
+        assert len(result.reconciliation_warnings) >= 1
+        assert "Statement totals are inconsistent" in result.reconciliation_warnings[0]
+
+    def test_preview_bank_of_america_flags_running_balance_mismatch(self, account):
+        service = StatementImportService()
+        statement = _make_named_csv(
+            "Description,,Summary Amt.\n"
+            'Beginning balance as of 05/13/2026,,"723.98"\n'
+            'Ending balance as of 05/23/2026,,"711.98"\n'
+            "\n"
+            "Date,Description,Amount,Running Bal.\n"
+            '05/13/2026,"Monthly Maintenance Fee","-12.00","700.00"\n'
+        )
+
+        result = service.preview_statement(account, statement, "bofa", "2026-05")
+
+        assert result.reconciliation["statement_internal_ok"] is True
+        assert "running balance" in result.reconciliation_warnings[0].lower()
+
+    def test_import_bank_of_america_updates_existing_opening_balance(self, user):
+        service = StatementImportService()
+        account = FinancialAccount.objects.create(
+            user=user,
+            name="BoFA Checking",
+            account_type="checking",
+            balance=Decimal("0"),
+        )
+        Transaction.objects.create(
+            user=user,
+            account=account,
+            date=date(2026, 5, 1),
+            amount=Decimal("500.00"),
+            transaction_type="credit",
+            description="Opening Balance",
+            sync_source="manual",
+            status="reconciled",
+        )
+        account.refresh_from_db()
+        statement = _make_bofa_checking_statement()
+
+        result = service.import_statement(account, statement, "bofa", "2026-05", "closed")
+
+        opening = Transaction.objects.get(account=account, description="Opening Balance")
+        account.refresh_from_db()
+
+        assert result.reconciliation["opening_balance_action"] == "update"
+        assert any("Opening balance will be updated" in warning for warning in result.reconciliation_warnings)
+        assert opening.amount == Decimal("723.98")
+        assert opening.date.isoformat() == "2026-05-13"
+        assert account.balance == Decimal("450.72")
 
     def test_import_skips_overlapping_statement_rows(self, account):
         service = StatementImportService()

@@ -49,13 +49,13 @@ export function Sidebar({
   const navigationItems: NavItem[] = useMemo(() => {
     const items: NavItem[] = [
       { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
-      { name: 'Transactions', href: '/transactions', icon: Table },
       { name: 'Accounts', href: '/accounts', icon: Landmark },
       { name: 'Budget', href: '/budget', icon: Wallet },
     ];
     if (isInHousehold) {
       items.push({ name: 'Household', href: '/household', icon: Heart });
     }
+    items.push({ name: 'Transactions', href: '/transactions', icon: Table });
     return items;
   }, [isInHousehold]);
 

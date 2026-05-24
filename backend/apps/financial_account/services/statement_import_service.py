@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import re
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal, InvalidOperation
@@ -15,6 +16,17 @@ from loguru import logger
 
 from apps.financial_account.models import FinancialAccount
 from apps.transaction.models import Transaction
+
+OPENING_BALANCE_DESCRIPTION = "Opening Balance"
+BOFA_BANKING_ACCOUNT_TYPES = {"checking", "savings"}
+BOFA_BEGINNING_BALANCE_RE = re.compile(
+    r"beginning balance as of (\d{1,2}/\d{1,2}/\d{4})",
+    re.IGNORECASE,
+)
+BOFA_ENDING_BALANCE_RE = re.compile(
+    r"ending balance as of (\d{1,2}/\d{1,2}/\d{4})",
+    re.IGNORECASE,
+)
 
 SUPPORTED_INSTITUTIONS = {
     "bofa": {
@@ -156,10 +168,13 @@ class StatementImportResult:
     file_hash: str = ""
     institution: str = ""
     statement_status: str = "provisional"
+    balance_summary: dict[str, str] | None = None
+    reconciliation: dict[str, Any] = field(default_factory=dict)
+    reconciliation_warnings: list[str] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, Any]:
         """Serialize the import result for API responses."""
-        return {
+        payload: dict[str, Any] = {
             "parsed_count": self.parsed_count,
             "imported_count": self.imported_count,
             "duplicate_count": self.duplicate_count,
@@ -170,7 +185,12 @@ class StatementImportResult:
             "institution": self.institution,
             "statement_status": self.statement_status,
             "rows": [row.as_dict() for row in self.rows],
+            "reconciliation": self.reconciliation,
+            "reconciliation_warnings": self.reconciliation_warnings,
         }
+        if self.balance_summary is not None:
+            payload["balance_summary"] = self.balance_summary
+        return payload
 
 
 class StatementImportService:
@@ -201,6 +221,8 @@ class StatementImportService:
         """Parse and classify a statement without creating transactions."""
         result = self._parse_statement(account, statement_file, institution, statement_period, statement_status)
         self._classify_rows(account, result)
+        self._validate_bofa_banking_balances(account, institution, result)
+        self._plan_opening_balance(account, result, commit=False)
         return result
 
     def import_statement(
@@ -213,6 +235,9 @@ class StatementImportService:
     ) -> StatementImportResult:
         """Parse, deduplicate, and create transactions for new statement rows."""
         result = self.preview_statement(account, statement_file, institution, statement_period, statement_status)
+
+        self._apply_opening_balance(account, result, commit=True)
+
         transactions = []
 
         if statement_status == "closed":
@@ -252,6 +277,7 @@ class StatementImportService:
             transaction.save()
 
         result.imported_count = len(transactions)
+        self._reconcile_account_ending_balance(account, result)
         logger.info(
             "Imported statement rows",
             account_id=account.id,
@@ -298,6 +324,7 @@ class StatementImportService:
         if isinstance(content, str):
             content = content.encode()
         result.file_hash = hashlib.sha256(content).hexdigest()
+        result._raw_content = content  # noqa: SLF001 — used for BoFA balance validation
 
         try:
             frame = self._read_frame(content, extension, institution=institution)
@@ -308,6 +335,8 @@ class StatementImportService:
         if frame.empty:
             result.errors.append("Statement file has no rows")
             return result
+
+        result._transaction_frame = frame  # noqa: SLF001 — used for BoFA running-balance validation
 
         frame.columns = [str(column).strip() for column in frame.columns]
         for index, raw_row in frame.iterrows():
@@ -374,6 +403,268 @@ class StatementImportService:
             return content
 
         return "\n".join(lines[header_idx:]).encode("utf-8")
+
+    def _uses_bofa_banking_balances(self, account: FinancialAccount, institution: str) -> bool:
+        return institution == "bofa" and account.account_type in BOFA_BANKING_ACCOUNT_TYPES
+
+    def _parse_bofa_balance_summary(self, content: bytes) -> dict[str, str] | None:
+        """Extract beginning/ending balances from BoFA's summary preamble."""
+        text = content.decode("utf-8", errors="replace")
+        beginning_date = None
+        beginning_balance = None
+        ending_date = None
+        ending_balance = None
+
+        for line in text.splitlines():
+            normalized = line.strip()
+            if not normalized:
+                continue
+            lower = normalized.lower()
+            cells = [cell.strip().strip('"') for cell in normalized.split(",")]
+            amount_text = cells[-1] if cells else ""
+
+            if lower.startswith("beginning balance as of"):
+                match = BOFA_BEGINNING_BALANCE_RE.search(lower)
+                if match:
+                    beginning_date = self._parse_date(match.group(1))
+                beginning_balance = self._signed_decimal(amount_text)
+            elif lower.startswith("ending balance as of"):
+                match = BOFA_ENDING_BALANCE_RE.search(lower)
+                if match:
+                    ending_date = self._parse_date(match.group(1))
+                ending_balance = self._signed_decimal(amount_text)
+
+        if beginning_balance is None or ending_balance is None:
+            return None
+
+        summary = {
+            "beginning_balance": str(beginning_balance.quantize(Decimal("0.01"))),
+            "ending_balance": str(ending_balance.quantize(Decimal("0.01"))),
+        }
+        if beginning_date is not None:
+            summary["beginning_date"] = beginning_date.isoformat()
+        if ending_date is not None:
+            summary["ending_date"] = ending_date.isoformat()
+        return summary
+
+    def _validate_bofa_banking_balances(
+        self,
+        account: FinancialAccount,
+        institution: str,
+        result: StatementImportResult,
+    ) -> None:
+        if not self._uses_bofa_banking_balances(account, institution):
+            return
+
+        raw_content = getattr(result, "_raw_content", None)
+        frame = getattr(result, "_transaction_frame", None)
+        if raw_content is None or frame is None:
+            return
+
+        summary = self._parse_bofa_balance_summary(raw_content)
+        if summary is None:
+            result.reconciliation_warnings.append(
+                "Could not read beginning and ending balances from this BoFA statement."
+            )
+            return
+
+        result.balance_summary = summary
+        beginning_balance = Decimal(summary["beginning_balance"])
+        ending_balance = Decimal(summary["ending_balance"])
+
+        net_activity = Decimal("0")
+        for row in result.rows:
+            signed = row.amount if row.transaction_type == "credit" else -row.amount
+            net_activity += signed
+
+        computed_ending = (beginning_balance + net_activity).quantize(Decimal("0.01"))
+        result.reconciliation["computed_ending_balance"] = str(computed_ending)
+        result.reconciliation["statement_ending_balance"] = summary["ending_balance"]
+        result.reconciliation["net_activity"] = str(net_activity.quantize(Decimal("0.01")))
+
+        if computed_ending != ending_balance:
+            discrepancy = (computed_ending - ending_balance).quantize(Decimal("0.01"))
+            result.reconciliation["statement_internal_ok"] = False
+            result.reconciliation["statement_internal_discrepancy"] = str(discrepancy)
+            result.reconciliation_warnings.append(
+                "Statement totals are inconsistent: beginning balance "
+                f"({beginning_balance}) plus imported activity ({net_activity}) "
+                f"equals {computed_ending}, but the statement ending balance is {ending_balance}."
+            )
+        else:
+            result.reconciliation["statement_internal_ok"] = True
+
+        running_errors = self._validate_bofa_running_balances(frame, beginning_balance)
+        if running_errors:
+            result.reconciliation["running_balance_errors"] = running_errors
+            result.reconciliation_warnings.extend(running_errors)
+
+    def _validate_bofa_running_balances(
+        self,
+        frame: pd.DataFrame,
+        beginning_balance: Decimal,
+    ) -> list[str]:
+        errors: list[str] = []
+        expected = beginning_balance
+
+        for index, raw_row in frame.iterrows():
+            row_number = int(index) + 2
+            raw_mapping = {str(key).strip(): value for key, value in raw_row.to_dict().items()}
+            amount_value = self._first_value(raw_mapping, ["Amount"])
+            running_value = self._first_value(
+                raw_mapping,
+                ["Running Bal.", "Running Bal", "Running Balance"],
+            )
+            signed_amount = self._signed_decimal(amount_value)
+
+            if signed_amount is None:
+                if running_value:
+                    running_balance = self._signed_decimal(running_value)
+                    if running_balance is not None and abs(running_balance - expected) > Decimal("0.01"):
+                        errors.append(
+                            f"Row {row_number}: running balance is {running_balance}, "
+                            f"expected {expected.quantize(Decimal('0.01'))}."
+                        )
+                continue
+
+            expected = (expected + signed_amount).quantize(Decimal("0.01"))
+            if not running_value:
+                continue
+
+            running_balance = self._signed_decimal(running_value)
+            if running_balance is None:
+                continue
+            if abs(running_balance - expected) > Decimal("0.01"):
+                errors.append(
+                    f"Row {row_number}: running balance is {running_balance}, "
+                    f"expected {expected} after applying the transaction amount."
+                )
+
+        return errors
+
+    def _plan_opening_balance(
+        self,
+        account: FinancialAccount,
+        result: StatementImportResult,
+        *,
+        commit: bool,
+    ) -> None:
+        if result.balance_summary is None:
+            return
+
+        beginning_balance = Decimal(result.balance_summary["beginning_balance"])
+        beginning_date_text = result.balance_summary.get("beginning_date")
+        beginning_date = date.fromisoformat(beginning_date_text) if beginning_date_text else date.today()
+        action_info = self._resolve_opening_balance_action(
+            account=account,
+            beginning_balance=beginning_balance,
+            beginning_date=beginning_date,
+            commit=commit,
+        )
+        warning = action_info.pop("opening_balance_warning", None)
+        if warning:
+            result.reconciliation_warnings.append(warning)
+        result.reconciliation.update(action_info)
+
+    def _apply_opening_balance(
+        self,
+        account: FinancialAccount,
+        result: StatementImportResult,
+        *,
+        commit: bool,
+    ) -> None:
+        if not commit or result.balance_summary is None:
+            return
+        self._plan_opening_balance(account, result, commit=True)
+
+    def _resolve_opening_balance_action(
+        self,
+        account: FinancialAccount,
+        beginning_balance: Decimal,
+        beginning_date: date,
+        *,
+        commit: bool,
+    ) -> dict[str, str]:
+        existing = Transaction.objects.filter(
+            account=account,
+            description=OPENING_BALANCE_DESCRIPTION,
+        ).first()
+
+        target_type = "credit" if beginning_balance >= 0 else "debit"
+        target_amount = abs(beginning_balance).quantize(Decimal("0.01"))
+
+        info: dict[str, str] = {
+            "opening_balance_amount": str(beginning_balance.quantize(Decimal("0.01"))),
+            "opening_balance_date": beginning_date.isoformat(),
+        }
+
+        if existing is None:
+            info["opening_balance_action"] = "create" if commit else "will_create"
+            if commit:
+                Transaction.objects.create(
+                    user=account.user,
+                    account=account,
+                    date=beginning_date,
+                    amount=target_amount,
+                    transaction_type=target_type,
+                    description=OPENING_BALANCE_DESCRIPTION,
+                    sync_source="manual",
+                    status="reconciled",
+                )
+            return info
+
+        existing_signed = existing.signed_amount
+        target_signed = target_amount if target_type == "credit" else -target_amount
+        info["opening_balance_previous_amount"] = str(existing_signed.quantize(Decimal("0.01")))
+
+        if existing_signed == target_signed and existing.date == beginning_date:
+            info["opening_balance_action"] = "matched"
+            return info
+
+        info["opening_balance_action"] = "update" if commit else "will_update"
+        if existing_signed != target_signed:
+            info["opening_balance_warning"] = (
+                f"Opening balance will be updated from {existing_signed} to "
+                f"{target_signed.quantize(Decimal('0.01'))} based on the statement."
+            )
+        else:
+            info["opening_balance_warning"] = (
+                f"Opening balance date will be updated from {existing.date.isoformat()} "
+                f"to {beginning_date.isoformat()} based on the statement."
+            )
+
+        if commit:
+            existing.date = beginning_date
+            existing.amount = target_amount
+            existing.transaction_type = target_type
+            existing.save(update_fields=["date", "amount", "transaction_type", "updated_at"])
+        return info
+
+    def _reconcile_account_ending_balance(
+        self,
+        account: FinancialAccount,
+        result: StatementImportResult,
+    ) -> None:
+        if result.balance_summary is None:
+            return
+
+        account.refresh_from_db(fields=["balance"])
+        ending_balance = Decimal(result.balance_summary["ending_balance"])
+        discrepancy = (account.balance - ending_balance).quantize(Decimal("0.01"))
+
+        result.reconciliation["account_balance"] = str(account.balance.quantize(Decimal("0.01")))
+        result.reconciliation["account_ending_discrepancy"] = str(discrepancy)
+
+        if discrepancy != Decimal("0"):
+            result.reconciliation["account_ending_ok"] = False
+            result.reconciliation_warnings.append(
+                "Account balance after import is "
+                f"{account.balance.quantize(Decimal('0.01'))}, but the statement ending balance is "
+                f"{ending_balance.quantize(Decimal('0.01'))} "
+                f"(difference {discrepancy}). Other transactions or skipped duplicates may explain this."
+            )
+        else:
+            result.reconciliation["account_ending_ok"] = True
 
     def _normalize_row(
         self,
