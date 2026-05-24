@@ -11,6 +11,7 @@ from apps.financial_account.models import FinancialAccount
 from apps.financial_account.services.csv_import_service import CSVImportService
 from apps.financial_account.services.statement_file_service import StatementFileService
 from apps.financial_account.services.statement_import_service import (
+    StatementImportResult,
     StatementImportService,
 )
 from apps.richtato_user.models import User
@@ -738,6 +739,50 @@ class TestStatementFileService:
         assert updated.statement_month == 7
         assert updated.stored_path == stored_path
         assert fake_drive_storage.files_by_folder["test-folder"]
+
+    def test_acknowledge_reconciliation_clears_warning_state(self, account, fake_drive_storage, monkeypatch):
+        monkeypatch.setattr(
+            "apps.financial_account.storage.factory.GoogleDriveStatementStorage",
+            lambda: fake_drive_storage,
+        )
+        service = StatementFileService()
+        self._drive_account(account)
+        upload = service.save_upload(
+            account.user,
+            account,
+            _make_named_csv("Transaction Date,Description,Amount\n2025-06-01,Coffee,-5.00\n"),
+            "chase",
+            "2025-06",
+        )
+        upload.statement.last_import_result = {"reconciliation_warnings": ["Example warning"]}
+        upload.statement.save(update_fields=["last_import_result", "updated_at"])
+
+        acknowledged = service.acknowledge_reconciliation(upload.statement)
+        assert acknowledged.reconciliation_acknowledged_at is not None
+
+        result = StatementImportResult()
+        result.reconciliation_warnings = ["Example warning"]
+        service._update_import_summary(acknowledged, result, "previewed")
+        acknowledged.refresh_from_db()
+        assert acknowledged.reconciliation_acknowledged_at is None
+
+    def test_acknowledge_reconciliation_requires_warnings(self, account, fake_drive_storage, monkeypatch):
+        monkeypatch.setattr(
+            "apps.financial_account.storage.factory.GoogleDriveStatementStorage",
+            lambda: fake_drive_storage,
+        )
+        service = StatementFileService()
+        self._drive_account(account)
+        upload = service.save_upload(
+            account.user,
+            account,
+            _make_named_csv("Transaction Date,Description,Amount\n2025-06-01,Coffee,-5.00\n"),
+            "chase",
+            "2025-06",
+        )
+
+        with pytest.raises(ValueError, match="No reconciliation warnings to acknowledge"):
+            service.acknowledge_reconciliation(upload.statement)
 
     def test_list_statements_reconciles_missing_drive_files(self, account, fake_drive_storage, monkeypatch):
         monkeypatch.setattr(

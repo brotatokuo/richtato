@@ -230,6 +230,7 @@ class StatementFile(models.Model):
     invalid_count = models.PositiveIntegerField(default=0)
     possible_changed_count = models.PositiveIntegerField(default=0)
     last_import_result = models.JSONField(default=dict, blank=True)
+    reconciliation_acknowledged_at = models.DateTimeField(null=True, blank=True)
     source = models.CharField(
         max_length=20,
         choices=SOURCE_CHOICES,

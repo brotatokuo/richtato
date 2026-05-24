@@ -1110,6 +1110,10 @@ class StatementFileDetailAPIView(APIView):
                 return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
 
         try:
+            if request.data.get("reconciliation_acknowledged") is True:
+                updated = self.statement_file_service.acknowledge_reconciliation(statement)
+                return Response(self.statement_file_service.serialize(updated), status=status.HTTP_200_OK)
+
             updated = self.statement_file_service.update_statement(
                 statement,
                 account=account,

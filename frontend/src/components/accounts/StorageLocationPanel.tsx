@@ -11,7 +11,7 @@
  * also runs out-of-band via the host ``bank-agent`` CLI.
  */
 import { StatementUploadDialog } from '@/components/accounts/StatementUploadDialog';
-import { hasReconciliationWarnings } from '@/components/accounts/statementReconciliation';
+import { shouldShowReconciliationWarnings } from '@/components/accounts/statementReconciliation';
 import { StatementReconciliationSummary } from '@/components/accounts/StatementReconciliationSummary';
 import {
   AlertDialog,
@@ -138,6 +138,7 @@ export function StorageLocationPanel({
     null
   );
   const [removing, setRemoving] = useState(false);
+  const [acknowledgingId, setAcknowledgingId] = useState<number | null>(null);
 
   const loadFiles = () => {
     let cancelled = false;
@@ -252,6 +253,27 @@ export function StorageLocationPanel({
     }
   };
 
+  const handleAcknowledge = async (file: StatementFileRecord) => {
+    setAcknowledgingId(file.id);
+    try {
+      const updated = await statementFileService.acknowledgeReconciliation(
+        file.id
+      );
+      setFiles(current =>
+        current.map(item => (item.id === updated.id ? updated : item))
+      );
+      toast.success('Warning acknowledged', {
+        description: file.original_filename,
+      });
+    } catch (err) {
+      toast.error('Failed to acknowledge warning', {
+        description: err instanceof Error ? err.message : 'Please try again.',
+      });
+    } finally {
+      setAcknowledgingId(null);
+    }
+  };
+
   const displayUri = resolvedStorageUri || storageUri || '';
   const isDrive = displayUri.startsWith('gdrive://');
   const driveFolderId = isDrive
@@ -362,22 +384,21 @@ export function StorageLocationPanel({
         ) : (
           <ul className="space-y-1.5">
             {files.map(file => {
-              const reconciliationWarnings = hasReconciliationWarnings(
-                file.last_import_result
-              );
+              const showReconciliationWarnings =
+                shouldShowReconciliationWarnings(file);
               return (
                 <li
                   key={file.id}
                   className={cn(
                     'rounded-md border border-border/60 bg-card px-3 py-2',
-                    reconciliationWarnings &&
+                    showReconciliationWarnings &&
                       'border-amber-500/40 bg-amber-500/5'
                   )}
                 >
                   <div className="flex items-center gap-2">
                     <ImportStatusIcon
                       status={file.import_status}
-                      hasWarnings={reconciliationWarnings}
+                      hasWarnings={showReconciliationWarnings}
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
@@ -388,7 +409,7 @@ export function StorageLocationPanel({
                           {file.original_filename}
                         </p>
                         <SourceBadge source={file.source} />
-                        {reconciliationWarnings && (
+                        {showReconciliationWarnings && (
                           <Badge
                             variant="outline"
                             className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30"
@@ -406,12 +427,25 @@ export function StorageLocationPanel({
                         · {formatSize(file.size_bytes)} ·{' '}
                         {formatDate(file.created_at)}
                       </p>
-                      {reconciliationWarnings && (
-                        <div className="mt-2">
+                      {showReconciliationWarnings && (
+                        <div className="mt-2 space-y-2">
                           <StatementReconciliationSummary
                             compact
                             result={file.last_import_result}
                           />
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-[11px]"
+                            disabled={acknowledgingId === file.id}
+                            onClick={() => void handleAcknowledge(file)}
+                          >
+                            {acknowledgingId === file.id && (
+                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                            )}
+                            Acknowledge
+                          </Button>
                         </div>
                       )}
                     </div>

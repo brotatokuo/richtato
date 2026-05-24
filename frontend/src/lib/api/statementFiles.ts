@@ -31,6 +31,7 @@ export interface StatementFileRecord {
   invalid_count: number;
   possible_changed_count: number;
   last_import_result: StatementImportResult | Record<string, never>;
+  reconciliation_acknowledged_at: string | null;
   source: StatementFileSource;
   created_at: string;
   updated_at: string;
@@ -135,6 +136,7 @@ class StatementFileService {
       statement_status: StatementStatus;
       statement_year: number;
       statement_month: number;
+      reconciliation_acknowledged: boolean;
     }>
   ): Promise<StatementFileRecord> {
     const response = await csrfService.fetchWithCsrf(
@@ -156,6 +158,10 @@ class StatementFileService {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || 'Failed to delete statement');
     }
+  }
+
+  async acknowledgeReconciliation(id: number): Promise<StatementFileRecord> {
+    return this.update(id, { reconciliation_acknowledged: true });
   }
 
   async preview(id: number): Promise<StatementFileActionResponse> {

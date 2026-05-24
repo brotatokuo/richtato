@@ -11,6 +11,7 @@ from typing import Any
 
 from django.core.files.base import File
 from django.http import FileResponse
+from django.utils import timezone
 from django.utils.text import get_valid_filename
 from loguru import logger
 
@@ -217,6 +218,15 @@ class StatementFileService:
         statement.save()
         return statement
 
+    def acknowledge_reconciliation(self, statement: StatementFile) -> StatementFile:
+        """Mark current reconciliation warnings as reviewed by the user."""
+        warnings = (statement.last_import_result or {}).get("reconciliation_warnings") or []
+        if not warnings:
+            raise ValueError("No reconciliation warnings to acknowledge")
+        statement.reconciliation_acknowledged_at = timezone.now()
+        statement.save(update_fields=["reconciliation_acknowledged_at", "updated_at"])
+        return statement
+
     def soft_delete_statement(self, statement: StatementFile) -> None:
         """Remove the stored file when present and soft-delete the catalog row."""
         try:
@@ -317,6 +327,11 @@ class StatementFileService:
             "invalid_count": statement.invalid_count,
             "possible_changed_count": statement.possible_changed_count,
             "last_import_result": statement.last_import_result,
+            "reconciliation_acknowledged_at": (
+                statement.reconciliation_acknowledged_at.isoformat()
+                if statement.reconciliation_acknowledged_at
+                else None
+            ),
             "source": statement.source,
             "created_at": statement.created_at.isoformat(),
             "updated_at": statement.updated_at.isoformat(),
@@ -395,6 +410,8 @@ class StatementFileService:
         statement.possible_changed_count = result.possible_changed_count
         statement.last_import_result = result.as_dict()
         statement.import_status = import_status
+        if result.reconciliation_warnings:
+            statement.reconciliation_acknowledged_at = None
         statement.save(
             update_fields=[
                 "parsed_count",
@@ -404,6 +421,7 @@ class StatementFileService:
                 "possible_changed_count",
                 "last_import_result",
                 "import_status",
+                "reconciliation_acknowledged_at",
                 "updated_at",
             ]
         )
