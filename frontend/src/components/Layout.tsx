@@ -13,9 +13,7 @@ import {
   Table,
   Wallet,
 } from 'lucide-react';
-import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useDrive } from '@/contexts/DriveContext';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { BottomTabBar } from './BottomTabBar';
 import { Sidebar } from './Sidebar';
 
@@ -47,19 +45,6 @@ export function Layout() {
 function LayoutInner() {
   const location = useLocation();
   const { headerSlot } = useHeaderSlot();
-  const { isDriveActive, isLoading: driveLoading } = useDrive();
-
-  if (driveLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
-
-  if (!isDriveActive && location.pathname !== '/setup') {
-    return <Navigate to="/setup?tab=statements" replace />;
-  }
 
   // Get the current page config based on the route (supports nested paths)
   const matchedKey = Object.keys(routeConfig).find(

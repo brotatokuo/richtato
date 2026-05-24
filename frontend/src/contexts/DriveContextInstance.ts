@@ -5,6 +5,8 @@ export interface DriveContextType {
   driveStatus: DriveStatus | null;
   isDriveActive: boolean;
   isLoading: boolean;
+  /** True once drive status is known for the current auth session. */
+  isReady: boolean;
   refreshDriveStatus: () => Promise<void>;
 }
 

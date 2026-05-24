@@ -11,10 +11,12 @@ export function DriveProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const [driveStatus, setDriveStatus] = useState<DriveStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
 
   const refreshDriveStatus = useCallback(async () => {
     if (!isAuthenticated) {
       setDriveStatus(null);
+      setHasFetched(false);
       return;
     }
     setIsLoading(true);
@@ -25,6 +27,7 @@ export function DriveProvider({ children }: { children: ReactNode }) {
       setDriveStatus(null);
     } finally {
       setIsLoading(false);
+      setHasFetched(true);
     }
   }, [isAuthenticated]);
 
@@ -33,6 +36,7 @@ export function DriveProvider({ children }: { children: ReactNode }) {
   }, [refreshDriveStatus]);
 
   const isDriveActive = Boolean(driveStatus?.active);
+  const isReady = !isAuthenticated || hasFetched;
 
   return (
     <DriveContext.Provider
@@ -40,6 +44,7 @@ export function DriveProvider({ children }: { children: ReactNode }) {
         driveStatus,
         isDriveActive,
         isLoading,
+        isReady,
         refreshDriveStatus,
       }}
     >

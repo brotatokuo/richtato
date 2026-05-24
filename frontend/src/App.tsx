@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
+import { DriveSetupGate } from './components/DriveSetupGate';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
@@ -56,7 +57,9 @@ function App() {
                   path="/"
                   element={
                     <ProtectedRoute>
-                      <Layout />
+                      <DriveSetupGate>
+                        <Layout />
+                      </DriveSetupGate>
                     </ProtectedRoute>
                   }
                 >

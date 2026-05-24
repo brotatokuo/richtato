@@ -3,7 +3,6 @@ import { IncomeExpenseChart } from '@/components/asset_dashboard/IncomeExpenseCh
 import { NetWorthTrendChart } from '@/components/asset_dashboard/NetWorthTrendChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { MonthYearPicker } from '@/components/ui/MonthYearPicker';
 import { YearPicker } from '@/components/ui/YearPicker';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import {
@@ -15,7 +14,6 @@ import {
   assetDashboardApiService,
   type AssetDashboardData,
 } from '@/lib/api/asset-dashboard';
-import { transactionsApiService } from '@/lib/api/transactions';
 import { formatCurrency } from '@/lib/format';
 import echarts, { type ECharts, type EChartsOption } from '@/lib/echarts';
 import { cn } from '@/lib/utils';
@@ -27,8 +25,6 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-
-type TimeScope = 'month' | 'year';
 
 const COLORS = {
   income: '#22c55e',
@@ -59,7 +55,6 @@ function getCSSValue(property: string) {
 
 export function ReportPage() {
   const { preferences } = usePreferences();
-  const [scope, setScope] = useState<TimeScope>('month');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [assetMetrics, setAssetMetrics] = useState<AssetDashboardData | null>(
@@ -69,13 +64,8 @@ export function ReportPage() {
     null
   );
 
-  // Month mode state
-  const now = new Date();
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [monthYear, setMonthYear] = useState(now.getFullYear());
-
-  // Year mode state
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   const [data, setData] = useState<NormalizedData | null>(null);
@@ -84,76 +74,13 @@ export function ReportPage() {
   const sankeyChartRef = useRef<HTMLDivElement>(null);
   const sankeyChartInstance = useRef<ECharts | null>(null);
 
-  const loadMonthData = useCallback(async () => {
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const startDate = `${monthYear}-${pad(month)}-01`;
-    const endOfMonth = new Date(monthYear, month, 0);
-    const endDate = `${endOfMonth.getFullYear()}-${pad(endOfMonth.getMonth() + 1)}-${pad(endOfMonth.getDate())}`;
-
-    const summary = await transactionsApiService.getCashflowSummary(
-      startDate,
-      endDate
-    );
-
-    const incomeByCategory = new Map(
-      Object.entries(summary.income_by_category)
-    );
-    const expensesByCategory = new Map(
-      Object.entries(summary.expenses_by_category)
-    );
-    const investmentsByCategory = new Map(
-      Object.entries(summary.investments_by_category)
-    );
-
-    const categoryBreakdown: CategoryBreakdown[] = [
-      ...Array.from(expensesByCategory.entries()).map(([name, amount]) => ({
-        name,
-        amount,
-        is_essential: false,
-        color: COLORS.expense,
-        icon: '',
-      })),
-      ...Array.from(investmentsByCategory.entries()).map(([name, amount]) => ({
-        name,
-        amount,
-        is_essential: false,
-        color: COLORS.investment,
-        icon: '',
-      })),
-    ];
-
-    const incomeSources: IncomeSource[] = Array.from(
-      incomeByCategory.entries()
-    ).map(([name, amount]) => ({
-      name,
-      amount,
-      color: COLORS.income,
-    }));
-
-    setData({
-      totalIncome: summary.total_income,
-      totalExpenses: summary.total_expenses,
-      totalInvestments: summary.total_investments,
-      netSavings: summary.net_savings,
-      savingsRate:
-        summary.total_income > 0
-          ? Math.round((summary.net_savings / summary.total_income) * 100)
-          : 0,
-      incomeByCategory,
-      expensesByCategory,
-      investmentsByCategory,
-      categoryBreakdown,
-      incomeSources,
-    });
-  }, [month, monthYear]);
-
   const loadYearData = useCallback(async () => {
     const [analysisData, years] = await Promise.all([
       annualAnalysisApiService.getAnnualAnalysis(selectedYear),
       annualAnalysisApiService.getAvailableYears(),
     ]);
 
-    setAvailableYears(years.length > 0 ? years : [now.getFullYear()]);
+    setAvailableYears(years.length > 0 ? years : [currentYear]);
 
     const expensesByCategory = new Map<string, number>();
     const investmentsByCategory = new Map<string, number>();
@@ -179,14 +106,13 @@ export function ReportPage() {
       categoryBreakdown: analysisData.category_breakdown,
       incomeSources: analysisData.income_sources,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedYear]);
+  }, [currentYear, selectedYear]);
 
   const loadAssetMetrics = useCallback(async () => {
     try {
       setAssetMetricsError(null);
       const metrics = await assetDashboardApiService.getDashboardMetrics({
-        period: scope === 'year' ? '1y' : '30d',
+        period: '1y',
       });
       setAssetMetrics(metrics);
     } catch (err) {
@@ -195,17 +121,14 @@ export function ReportPage() {
         err instanceof Error ? err.message : 'Failed to load asset metrics'
       );
     }
-  }, [scope]);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
         setError(null);
-        await Promise.all([
-          scope === 'month' ? loadMonthData() : loadYearData(),
-          loadAssetMetrics(),
-        ]);
+        await Promise.all([loadYearData(), loadAssetMetrics()]);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
       } finally {
@@ -213,7 +136,7 @@ export function ReportPage() {
       }
     };
     load();
-  }, [scope, loadMonthData, loadYearData, loadAssetMetrics]);
+  }, [loadYearData, loadAssetMetrics]);
 
   // Sankey chart
   useEffect(() => {
@@ -429,48 +352,24 @@ export function ReportPage() {
 
   return (
     <div className="space-y-6">
-      {/* Time scope toggle + picker */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="inline-flex rounded-full border border-border/50 bg-muted/30 p-1">
-          <button
-            onClick={() => setScope('month')}
-            className={cn(
-              'px-4 py-1.5 rounded-full text-sm font-medium transition-all',
-              scope === 'month'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Month
-          </button>
-          <button
-            onClick={() => setScope('year')}
-            className={cn(
-              'px-4 py-1.5 rounded-full text-sm font-medium transition-all',
-              scope === 'year'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Year
-          </button>
+      {/* Dashboard year filter */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">
+            Dashboard Overview
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Cashflow totals use the selected year. Asset charts keep their own
+            range controls.
+          </p>
         </div>
-        {scope === 'month' ? (
-          <MonthYearPicker
-            year={monthYear}
-            month={month}
-            onChange={(y, m) => {
-              setMonthYear(y);
-              setMonth(m);
-            }}
-          />
-        ) : (
+        <div className="w-40">
           <YearPicker
             year={selectedYear}
             availableYears={availableYears}
             onChange={setSelectedYear}
           />
-        )}
+        </div>
       </div>
 
       {/* Summary Cards */}
