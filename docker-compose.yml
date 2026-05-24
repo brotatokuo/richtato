@@ -21,6 +21,8 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
     ports:
       - "8000:8000"
     volumes:
@@ -33,7 +35,8 @@ services:
       db:
         condition: service_healthy
     command: >
-      sh -c "python manage.py collectstatic --noinput &&
+      sh -c "find /app -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true &&
+      python manage.py collectstatic --noinput &&
       python manage.py migrate &&
       python manage.py createsuperuser --noinput || true &&
       python manage.py runserver 0.0.0.0:8000"
