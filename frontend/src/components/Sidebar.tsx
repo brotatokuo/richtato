@@ -37,6 +37,9 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
 }
 
+const collapsedLabelClass =
+  'pointer-events-none absolute left-full top-1/2 z-[60] ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-2.5 py-1.5 text-sm font-medium text-popover-foreground opacity-0 shadow-md transition-opacity duration-150 group-hover/sidebar-item:opacity-100';
+
 export function Sidebar({
   className,
   hideCollapseToggle = false,
@@ -80,7 +83,7 @@ export function Sidebar({
   return (
     <div
       className={cn(
-        'group relative z-50 flex h-dvh flex-col border-r',
+        'relative z-50 flex h-dvh flex-col overflow-visible border-r',
         isCollapsed ? 'w-16' : 'w-64',
         className
       )}
@@ -95,8 +98,8 @@ export function Sidebar({
         <Link
           to="/dashboard"
           className={cn(
-            'flex min-w-0 items-center rounded-xl transition-colors hover:bg-muted/70',
-            isCollapsed ? 'justify-center p-2' : 'gap-3 py-2 pl-2 pr-3'
+            'group/sidebar-item flex min-w-0 items-center rounded-xl transition-colors hover:bg-muted/70',
+            isCollapsed ? 'relative justify-center p-2' : 'gap-3 py-2 pl-2 pr-3'
           )}
           aria-label="Go to dashboard"
         >
@@ -112,13 +115,14 @@ export function Sidebar({
               Richtato
             </span>
           )}
+          {isCollapsed && <span className={collapsedLabelClass}>Richtato</span>}
         </Link>
         {!hideCollapseToggle && (
           <Button
             variant="ghost"
             size="icon"
             className={cn(
-              'text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-0',
+              'group/sidebar-item text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-0',
               isCollapsed
                 ? 'absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border border-border bg-background shadow-sm'
                 : 'h-9 w-9'
@@ -130,6 +134,9 @@ export function Sidebar({
               <ChevronRight className="h-3.5 w-3.5 opacity-70" />
             ) : (
               <ChevronLeft className="h-4 w-4 opacity-70" />
+            )}
+            {isCollapsed && (
+              <span className={collapsedLabelClass}>Expand sidebar</span>
             )}
           </Button>
         )}
@@ -146,17 +153,18 @@ export function Sidebar({
             <Link
               key={item.name}
               to={item.href}
+              aria-label={isCollapsed ? item.name : undefined}
               className={cn(
-                'flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200 group',
+                'group/sidebar-item flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200',
                 isActive
                   ? 'bg-primary text-primary-foreground shadow-lg'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white',
-                isCollapsed && 'justify-center px-2'
+                isCollapsed && 'relative justify-center px-2'
               )}
             >
               <Icon
                 className={cn(
-                  'h-5 w-5 shrink-0 transition-transform group-hover:scale-110',
+                  'h-5 w-5 shrink-0 transition-transform group-hover/sidebar-item:scale-110',
                   isActive && 'text-white'
                 )}
               />
@@ -164,6 +172,9 @@ export function Sidebar({
                 <span className="flex-1 flex items-center justify-between">
                   <span>{item.name}</span>
                 </span>
+              )}
+              {isCollapsed && (
+                <span className={collapsedLabelClass}>{item.name}</span>
               )}
             </Link>
           );
@@ -176,8 +187,8 @@ export function Sidebar({
           <DropdownMenuTrigger asChild>
             <button
               className={cn(
-                'flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-slate-800',
-                isCollapsed && 'justify-center'
+                'group/sidebar-item flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-slate-800',
+                isCollapsed && 'relative justify-center'
               )}
               aria-label="Open user menu"
             >
@@ -192,6 +203,11 @@ export function Sidebar({
                   <span className="block text-xs text-slate-500 dark:text-slate-400">
                     Settings and account
                   </span>
+                </span>
+              )}
+              {isCollapsed && (
+                <span className={collapsedLabelClass}>
+                  {user ? user.username : 'Account'}
                 </span>
               )}
             </button>
