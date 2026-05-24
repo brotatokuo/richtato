@@ -12,6 +12,7 @@
  * Drive-backed accounts upload through the backend for immediate import.
  */
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import {
   statementFileService,
@@ -25,9 +26,12 @@ import {
   FileWarning,
   FolderOpen,
   HardDrive,
+  Loader2,
+  RefreshCw,
   Upload,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 interface StorageLocationPanelProps {
   accountId: number;
@@ -96,9 +100,10 @@ export function StorageLocationPanel({
 }: StorageLocationPanelProps) {
   const [files, setFiles] = useState<StatementFileRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadFiles = () => {
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -118,7 +123,45 @@ export function StorageLocationPanel({
     return () => {
       cancelled = true;
     };
+  };
+
+  useEffect(() => {
+    return loadFiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountId]);
+
+  const handleScan = async () => {
+    setScanning(true);
+    try {
+      const result = await statementFileService.scanAccount(accountId);
+      if (result.files_imported > 0) {
+        toast.success(
+          `${result.files_imported} file${result.files_imported === 1 ? '' : 's'} imported`,
+          {
+            description: `${result.files_seen} file${result.files_seen === 1 ? '' : 's'} found in storage`,
+          }
+        );
+        loadFiles();
+      } else if (result.files_seen === 0) {
+        toast.info('No files found in storage');
+      } else {
+        toast.info(
+          `${result.files_seen} file${result.files_seen === 1 ? '' : 's'} found — all already imported`
+        );
+      }
+      if (result.files_failed > 0) {
+        toast.warning(
+          `${result.files_failed} file${result.files_failed === 1 ? '' : 's'} failed to import`
+        );
+      }
+    } catch (err) {
+      toast.error('Scan failed', {
+        description: err instanceof Error ? err.message : 'Please try again.',
+      });
+    } finally {
+      setScanning(false);
+    }
+  };
 
   const isOverride = Boolean(storageUri);
   const displayUri = resolvedStorageUri || storageUri || '';
@@ -173,11 +216,20 @@ export function StorageLocationPanel({
           <p className="text-xs font-medium text-muted-foreground">
             Recent files
           </p>
-          {files.length > 0 && (
-            <span className="text-[11px] text-muted-foreground/60">
-              {files.length} shown
-            </span>
-          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-6 px-2 text-[11px]"
+            onClick={handleScan}
+            disabled={scanning}
+          >
+            {scanning ? (
+              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-1 h-3 w-3" />
+            )}
+            Scan for new files
+          </Button>
         </div>
 
         {loading ? (

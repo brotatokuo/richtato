@@ -38,6 +38,11 @@ urlpatterns = [
         name="account-detail",
     ),
     path(
+        "<int:pk>/scan/",
+        views.AccountScanStorageAPIView.as_view(),
+        name="account-scan-storage",
+    ),
+    path(
         "<int:pk>/balance-history/",
         views.AccountBalanceHistoryAPIView.as_view(),
         name="account-balance-history",

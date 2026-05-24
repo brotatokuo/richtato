@@ -31,7 +31,7 @@ from apps.financial_account.services.statement_import_service import (
     SUPPORTED_INSTITUTIONS,
     StatementImportService,
 )
-from apps.financial_account.services.storage_scanner_service import INSTITUTION_SLUG_TO_PARSER
+from apps.financial_account.services.storage_scanner_service import INSTITUTION_SLUG_TO_PARSER, StorageScannerService
 
 
 class FinancialAccountListCreateAPIView(APIView):
@@ -438,6 +438,44 @@ class GoogleDriveSyncFoldersAPIView(APIView):
                 "status": self.activation_service.status(request.user),
                 "account_folders_created": result.account_folders_created,
                 "errors": result.errors,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class AccountScanStorageAPIView(APIView):
+    """Scan an account's storage URI for new statement files and auto-import them."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.account_service = AccountService()
+        self.scanner = StorageScannerService()
+
+    def post(self, request, pk):
+        account = self.account_service.get_account_by_id(pk, request.user)
+        if not account:
+            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        result = self.scanner.scan_account(account.id)
+        return Response(
+            {
+                "accounts_scanned": result.accounts_scanned,
+                "files_seen": result.files_seen,
+                "files_imported": result.files_imported,
+                "files_skipped": result.files_skipped,
+                "files_failed": result.files_failed,
+                "outcomes": [
+                    {
+                        "relative_path": o.relative_path,
+                        "status": o.status,
+                        "detail": o.detail,
+                        "imported_count": o.imported_count,
+                    }
+                    for o in result.outcomes
+                ],
             },
             status=status.HTTP_200_OK,
         )

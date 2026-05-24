@@ -178,6 +178,25 @@ class StatementFileService {
     return `${API_BASE}/accounts/statements/${id}/download/`;
   }
 
+  async scanAccount(accountId: number): Promise<{
+    files_seen: number;
+    files_imported: number;
+    files_skipped: number;
+    files_failed: number;
+    outcomes: {
+      relative_path: string;
+      status: string;
+      detail: string;
+      imported_count: number;
+    }[];
+  }> {
+    const response = await csrfService.fetchWithCsrf(
+      `${API_BASE}/accounts/${accountId}/scan/`,
+      { method: 'POST' }
+    );
+    return this.handleResponse(response);
+  }
+
   private async fetchWithCsrf(
     url: string,
     options: RequestInit
