@@ -29,17 +29,17 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import {
   statementFileService,
   type StatementFileRecord,
-  type StatementFileSource,
 } from '@/lib/api/statementFiles';
 import { statementPeriodDisplayLabel } from '@/lib/formatStatementPeriod';
+import {
+  getStatementFileUrl,
+  isDriveStatementFile,
+} from '@/lib/statementFileUrl';
 import { cn } from '@/lib/utils';
 import {
   AlertTriangle,
-  Bot,
-  CheckCircle2,
   Cloud,
   ExternalLink,
-  FileWarning,
   FolderOpen,
   Loader2,
   RefreshCw,
@@ -56,55 +56,6 @@ interface StorageLocationPanelProps {
   storageUri?: string;
   resolvedStorageUri?: string;
   onUploadComplete?: () => void;
-}
-
-function SourceBadge({ source }: { source: StatementFileSource }) {
-  if (source === 'agent_drop') {
-    return (
-      <Badge
-        variant="outline"
-        className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 text-[10px] gap-1"
-      >
-        <Bot className="h-3 w-3" />
-        Agent
-      </Badge>
-    );
-  }
-  if (source === 'manual_upload') {
-    return (
-      <Badge
-        variant="outline"
-        className="bg-blue-500/10 text-blue-600 dark:text-blue-300 border-blue-500/30 text-[10px] gap-1"
-      >
-        <Upload className="h-3 w-3" />
-        Upload
-      </Badge>
-    );
-  }
-  return (
-    <Badge variant="outline" className="text-[10px]">
-      Unknown
-    </Badge>
-  );
-}
-
-function ImportStatusIcon({
-  status,
-  hasWarnings,
-}: {
-  status: string;
-  hasWarnings?: boolean;
-}) {
-  if (hasWarnings) {
-    return <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />;
-  }
-  if (status === 'imported') {
-    return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />;
-  }
-  if (status === 'failed') {
-    return <FileWarning className="h-3.5 w-3.5 text-destructive" />;
-  }
-  return <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />;
 }
 
 function formatSize(bytes: number): string {
@@ -146,24 +97,9 @@ export function StorageLocationPanel({
     setError(null);
     statementFileService
       .list({ account: accountId })
-      .then(async response => {
+      .then(response => {
         if (cancelled) return;
-        const recentFiles = response.rows.slice(0, 8);
-        const refreshedFiles = await Promise.all(
-          recentFiles.map(async file => {
-            if (file.import_status === 'imported') {
-              return file;
-            }
-            try {
-              const previewResult = await statementFileService.preview(file.id);
-              return previewResult.statement;
-            } catch {
-              return file;
-            }
-          })
-        );
-        if (cancelled) return;
-        setFiles(refreshedFiles);
+        setFiles(response.rows.slice(0, 8));
       })
       .catch(err => {
         if (cancelled) return;
@@ -255,6 +191,14 @@ export function StorageLocationPanel({
 
   const handleAcknowledge = async (file: StatementFileRecord) => {
     setAcknowledgingId(file.id);
+    const acknowledgedAt = new Date().toISOString();
+    setFiles(current =>
+      current.map(item =>
+        item.id === file.id
+          ? { ...item, reconciliation_acknowledged_at: acknowledgedAt }
+          : item
+      )
+    );
     try {
       const updated = await statementFileService.acknowledgeReconciliation(
         file.id
@@ -266,6 +210,13 @@ export function StorageLocationPanel({
         description: file.original_filename,
       });
     } catch (err) {
+      setFiles(current =>
+        current.map(item =>
+          item.id === file.id
+            ? { ...item, reconciliation_acknowledged_at: null }
+            : item
+        )
+      );
       toast.error('Failed to acknowledge warning', {
         description: err instanceof Error ? err.message : 'Please try again.',
       });
@@ -386,6 +337,8 @@ export function StorageLocationPanel({
             {files.map(file => {
               const showReconciliationWarnings =
                 shouldShowReconciliationWarnings(file);
+              const fileUrl = getStatementFileUrl(file);
+              const opensInDrive = isDriveStatementFile(file);
               return (
                 <li
                   key={file.id}
@@ -395,25 +348,41 @@ export function StorageLocationPanel({
                       'border-amber-500/40 bg-amber-500/5'
                   )}
                 >
-                  <div className="flex items-center gap-2">
-                    <ImportStatusIcon
-                      status={file.import_status}
-                      hasWarnings={showReconciliationWarnings}
-                    />
+                  <div className="flex items-start gap-2">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p
-                          className="truncate text-xs font-medium text-foreground"
-                          title={file.original_filename}
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <a
+                          href={fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="truncate text-xs font-medium text-primary hover:underline"
+                          title={
+                            opensInDrive
+                              ? `Open ${file.original_filename} in Google Drive`
+                              : `Download ${file.original_filename}`
+                          }
                         >
                           {file.original_filename}
-                        </p>
-                        <SourceBadge source={file.source} />
+                        </a>
+                        <a
+                          href={fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 text-muted-foreground hover:text-primary"
+                          aria-label={
+                            opensInDrive
+                              ? `Open ${file.original_filename} in Google Drive`
+                              : `Download ${file.original_filename}`
+                          }
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
                         {showReconciliationWarnings && (
                           <Badge
                             variant="outline"
-                            className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                            className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 gap-1"
                           >
+                            <AlertTriangle className="h-3 w-3" />
                             Balance mismatch
                           </Badge>
                         )}

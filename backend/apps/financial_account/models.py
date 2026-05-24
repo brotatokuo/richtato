@@ -221,6 +221,7 @@ class StatementFile(models.Model):
     )
     original_filename = models.CharField(max_length=255)
     stored_path = models.CharField(max_length=500)
+    drive_file_id = models.CharField(max_length=255, blank=True, default="")
     content_type = models.CharField(max_length=120, blank=True, default="")
     size_bytes = models.PositiveBigIntegerField(default=0)
     file_hash = models.CharField(max_length=64)

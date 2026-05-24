@@ -28,6 +28,7 @@ class GoogleDriveStatementStorage:
                     size_bytes=file_metadata.size,
                     modified_at=self._modified_at(file_metadata.modified_time),
                     filename=file_metadata.name,
+                    external_file_id=file_metadata.id,
                 )
             )
         return out
@@ -56,6 +57,7 @@ class GoogleDriveStatementStorage:
             size_bytes=uploaded.size or len(content),
             modified_at=self._modified_at(uploaded.modified_time),
             filename=filename,
+            external_file_id=uploaded.id,
         )
 
     def delete_file(self, uri: str, relative_path: str) -> None:

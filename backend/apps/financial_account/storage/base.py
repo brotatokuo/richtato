@@ -26,6 +26,7 @@ class StoredFile:
     size_bytes: int
     modified_at: float
     filename: str
+    external_file_id: str = ""
 
 
 class StatementStorage(Protocol):

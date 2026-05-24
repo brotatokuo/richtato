@@ -59,6 +59,7 @@ class FakeGoogleDriveStorage:
             size_bytes=len(content),
             modified_at=0.0,
             filename=filename,
+            external_file_id=f"fake-file-{folder_id}-{filename}",
         )
 
     def delete_file(self, uri: str, relative_path: str) -> None:

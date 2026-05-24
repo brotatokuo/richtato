@@ -16,7 +16,7 @@ export function StatementReconciliationSummary({
   result,
   compact = false,
 }: StatementReconciliationSummaryProps) {
-  const warnings = result.reconciliation_warnings ?? [];
+  const warnings = Array.from(new Set(result.reconciliation_warnings ?? []));
   const summary = result.balance_summary;
   const reconciliation = result.reconciliation ?? {};
   const hasWarnings = warnings.length > 0;
@@ -107,8 +107,8 @@ export function StatementReconciliationSummary({
               : 'mt-2 max-h-40 space-y-1 overflow-y-auto scrollbar-thin text-xs text-amber-700 dark:text-amber-300'
           }
         >
-          {visibleWarnings.map(warning => (
-            <li key={warning}>{warning}</li>
+          {visibleWarnings.map((warning, index) => (
+            <li key={`${index}-${warning}`}>{warning}</li>
           ))}
           {hiddenWarningCount > 0 && (
             <li className="text-muted-foreground">

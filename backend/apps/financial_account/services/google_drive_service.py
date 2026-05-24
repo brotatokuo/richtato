@@ -286,6 +286,11 @@ class GoogleDriveService:
             raise FileNotFoundError(filename)
         return matches[0].id
 
+    @staticmethod
+    def file_view_url(file_id: str) -> str:
+        """Return a browser URL for viewing a Drive file."""
+        return f"https://drive.google.com/file/d/{file_id}/view"
+
     def _post_token(self, data: dict[str, str]) -> dict[str, Any]:
         response = requests.post(GOOGLE_TOKEN_URL, data=data, timeout=20)
         return self._json_response(response)

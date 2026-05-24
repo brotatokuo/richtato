@@ -33,6 +33,8 @@ export interface StatementFileRecord {
   last_import_result: StatementImportResult | Record<string, never>;
   reconciliation_acknowledged_at: string | null;
   source: StatementFileSource;
+  stored_path: string;
+  drive_file_url?: string | null;
   created_at: string;
   updated_at: string;
 }

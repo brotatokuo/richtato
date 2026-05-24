@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from django.core.files.base import File
 from django.http import FileResponse
@@ -134,6 +135,10 @@ class StatementFileService:
         storage = get_storage(storage_uri)
         relative_path = self._build_relative_path(file_hash, filename)
         stored = storage.write_file(storage_uri, relative_path, content)
+        drive_file_id = stored.external_file_id or self._lookup_drive_file_id(
+            account,
+            self._stored_path_from_storage(storage_uri, stored.relative_path),
+        )
 
         statement = StatementFile.objects.create(
             user=user,
@@ -146,6 +151,7 @@ class StatementFileService:
             import_status="uploaded",
             original_filename=filename,
             stored_path=self._stored_path_from_storage(storage_uri, stored.relative_path),
+            drive_file_id=drive_file_id,
             content_type=getattr(uploaded_file, "content_type", "") or "",
             size_bytes=len(content),
             file_hash=file_hash,
@@ -333,6 +339,8 @@ class StatementFileService:
                 else None
             ),
             "source": statement.source,
+            "stored_path": statement.stored_path,
+            "drive_file_url": self._drive_file_view_url(statement),
             "created_at": statement.created_at.isoformat(),
             "updated_at": statement.updated_at.isoformat(),
         }
@@ -468,3 +476,40 @@ class StatementFileService:
         if stored_path.startswith(prefix):
             return stored_path[len(prefix) :]
         return Path(stored_path).name
+
+    def _lookup_drive_file_id(self, account: FinancialAccount, stored_path: str) -> str:
+        """Resolve a Drive file id from a stored gdrive:// path."""
+        if not stored_path.startswith("gdrive://"):
+            return ""
+        try:
+            parsed = urlparse(stored_path)
+            folder_id = parsed.netloc
+            filename = Path(parsed.path.lstrip("/")).name
+            if not folder_id or not filename:
+                return ""
+
+            storage_uri = f"gdrive://{folder_id}"
+            storage = get_storage(storage_uri)
+            from apps.financial_account.storage.gdrive import GoogleDriveStatementStorage
+
+            if not isinstance(storage, GoogleDriveStatementStorage):
+                return ""
+            connection = storage.drive.connection_for_folder(folder_id)
+            return storage.drive.file_id_for_name(connection, folder_id, filename)
+        except Exception:
+            logger.exception("Failed to resolve Drive file id", stored_path=stored_path, account_id=account.id)
+            return ""
+
+    def _drive_file_view_url(self, statement: StatementFile) -> str | None:
+        """Return a browser URL for the stored Drive file when available."""
+        file_id = statement.drive_file_id
+        if not file_id:
+            file_id = self._lookup_drive_file_id(statement.account, statement.stored_path)
+            if file_id:
+                statement.drive_file_id = file_id
+                statement.save(update_fields=["drive_file_id", "updated_at"])
+        if not file_id:
+            return None
+        from apps.financial_account.services.google_drive_service import GoogleDriveService
+
+        return GoogleDriveService.file_view_url(file_id)

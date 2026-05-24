@@ -191,7 +191,7 @@ class StatementImportResult:
             "statement_status": self.statement_status,
             "rows": [row.as_dict() for row in self.rows],
             "reconciliation": self.reconciliation,
-            "reconciliation_warnings": self.reconciliation_warnings,
+            "reconciliation_warnings": list(dict.fromkeys(self.reconciliation_warnings)),
         }
         if self.balance_summary is not None:
             payload["balance_summary"] = self.balance_summary
@@ -677,7 +677,18 @@ class StatementImportService:
     ) -> None:
         if not commit or result.balance_summary is None:
             return
-        self._plan_opening_balance(account, result, commit=True)
+
+        beginning_balance = Decimal(result.balance_summary["beginning_balance"])
+        beginning_date_text = result.balance_summary.get("beginning_date")
+        beginning_date = date.fromisoformat(beginning_date_text) if beginning_date_text else date.today()
+        action_info = self._resolve_opening_balance_action(
+            account=account,
+            beginning_balance=beginning_balance,
+            beginning_date=beginning_date,
+            commit=True,
+        )
+        action_info.pop("opening_balance_warning", None)
+        result.reconciliation.update(action_info)
 
     def _resolve_opening_balance_action(
         self,

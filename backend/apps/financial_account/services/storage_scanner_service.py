@@ -251,6 +251,7 @@ class StorageScannerService:
             import_status="uploaded",
             original_filename=stored.filename,
             stored_path=self._stored_path_from_storage(storage_uri, stored.relative_path),
+            drive_file_id=getattr(stored, "external_file_id", "") or "",
             content_type="",
             size_bytes=stored.size_bytes,
             file_hash=file_hash,

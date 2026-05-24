@@ -131,12 +131,12 @@ describe('householdApi', () => {
   });
 
   describe('error handling', () => {
-    it('throws on non-OK response', async () => {
+    it('returns null when household does not exist', async () => {
       mockFetch.mockResolvedValueOnce(
         jsonResponse({ error: 'Not found' }, 404)
       );
 
-      await expect(householdApi.getHousehold()).rejects.toThrow('Not found');
+      await expect(householdApi.getHousehold()).resolves.toBeNull();
     });
 
     it('throws generic message when no error body', async () => {
