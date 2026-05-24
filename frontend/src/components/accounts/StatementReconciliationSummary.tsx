@@ -1,5 +1,5 @@
 import type { StatementImportResult } from '@/lib/api/statementImport';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatDate } from '@/lib/format';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 interface StatementReconciliationSummaryProps {
@@ -32,6 +32,7 @@ export function StatementReconciliationSummary({
     !hasWarnings &&
     (reconciliation.statement_internal_ok === true ||
       reconciliation.account_ending_ok === true);
+  const openingAction = reconciliation.opening_balance_action;
 
   if (!summary && warnings.length === 0) {
     return null;
@@ -43,6 +44,31 @@ export function StatementReconciliationSummary({
     if (Number.isNaN(parsed)) return `$${value}`;
     return formatCurrency(parsed);
   };
+
+  const openingBalanceMessage = (() => {
+    if (!openingAction || openingAction === 'none') return null;
+
+    if (openingAction === 'matched') {
+      return 'Account opening balance matches statement beginning balance.';
+    }
+
+    if (
+      openingAction === 'available_create' ||
+      openingAction === 'available_update'
+    ) {
+      return 'Statement beginning balance differs from account opening balance. Choose whether to update before importing.';
+    }
+
+    if (openingAction === 'create' || openingAction === 'update') {
+      return `Account opening balance ${openingAction === 'create' ? 'set' : 'updated'} to ${formatBalance(reconciliation.opening_balance_amount)}${
+        reconciliation.opening_balance_date
+          ? ` on ${formatDate(reconciliation.opening_balance_date)}`
+          : ''
+      }.`;
+    }
+
+    return null;
+  })();
 
   return (
     <div
@@ -76,28 +102,17 @@ export function StatementReconciliationSummary({
         </div>
       )}
 
-      {reconciliation.opening_balance_action &&
-        ['create', 'update', 'will_create', 'will_update'].includes(
-          reconciliation.opening_balance_action
-        ) && (
-          <p
-            className={
-              compact
-                ? 'text-[11px] text-muted-foreground/80'
-                : 'mt-2 text-xs text-muted-foreground'
-            }
-          >
-            Opening balance{' '}
-            {reconciliation.opening_balance_action.startsWith('will_')
-              ? 'will be set'
-              : 'set'}{' '}
-            to ${formatBalance(reconciliation.opening_balance_amount)}
-            {reconciliation.opening_balance_date
-              ? ` on ${reconciliation.opening_balance_date}`
-              : ''}
-            .
-          </p>
-        )}
+      {openingBalanceMessage && (
+        <p
+          className={
+            compact
+              ? 'text-[11px] text-muted-foreground/80'
+              : 'mt-2 text-xs text-muted-foreground'
+          }
+        >
+          {openingBalanceMessage}
+        </p>
+      )}
 
       {warnings.length > 0 && (
         <ul

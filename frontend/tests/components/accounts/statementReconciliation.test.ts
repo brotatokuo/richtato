@@ -1,4 +1,7 @@
-import { shouldShowReconciliationWarnings } from '@/components/accounts/statementReconciliation';
+import {
+  needsOpeningBalanceConfirmation,
+  shouldShowReconciliationWarnings,
+} from '@/components/accounts/statementReconciliation';
 import type { StatementFileRecord } from '@/lib/api/statementFiles';
 
 function makeFile(
@@ -58,5 +61,20 @@ describe('shouldShowReconciliationWarnings', () => {
         })
       )
     ).toBe(false);
+  });
+});
+
+describe('needsOpeningBalanceConfirmation', () => {
+  it('requires confirmation when create or update is available', () => {
+    expect(needsOpeningBalanceConfirmation('available_create')).toBe(true);
+    expect(needsOpeningBalanceConfirmation('available_update')).toBe(true);
+  });
+
+  it('does not require confirmation for matched or committed actions', () => {
+    expect(needsOpeningBalanceConfirmation('matched')).toBe(false);
+    expect(needsOpeningBalanceConfirmation('create')).toBe(false);
+    expect(needsOpeningBalanceConfirmation('update')).toBe(false);
+    expect(needsOpeningBalanceConfirmation('none')).toBe(false);
+    expect(needsOpeningBalanceConfirmation(undefined)).toBe(false);
   });
 });

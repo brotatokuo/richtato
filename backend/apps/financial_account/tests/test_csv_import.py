@@ -396,10 +396,10 @@ class TestStatementImportService:
             "ending_date": "2026-05-23",
         }
         assert result.reconciliation["statement_internal_ok"] is True
-        assert result.reconciliation["opening_balance_action"] == "will_create"
+        assert result.reconciliation["opening_balance_action"] == "available_create"
         assert result.reconciliation_warnings == []
 
-    def test_import_bank_of_america_checking_creates_opening_balance_and_reconciles(self, user):
+    def test_import_bank_of_america_checking_without_flag_leaves_opening_balance_unchanged(self, user):
         service = StatementImportService()
         account = FinancialAccount.objects.create(
             user=user,
@@ -412,10 +412,39 @@ class TestStatementImportService:
         result = service.import_statement(account, statement, "bofa", "2026-05", "closed")
 
         account.refresh_from_db()
+
+        assert result.imported_count == 4
+        assert result.reconciliation["opening_balance_action"] == "available_create"
+        assert result.reconciliation["opening_balance_applied"] is False
+        assert not Transaction.objects.filter(account=account, description="Opening Balance").exists()
+        assert result.reconciliation["account_ending_ok"] is False
+        assert any("opening balance was not changed" in warning.lower() for warning in result.reconciliation_warnings)
+
+    def test_import_bank_of_america_checking_with_flag_creates_opening_balance_and_reconciles(self, user):
+        service = StatementImportService()
+        account = FinancialAccount.objects.create(
+            user=user,
+            name="BoFA Checking",
+            account_type="checking",
+            balance=Decimal("0"),
+        )
+        statement = _make_bofa_checking_statement()
+
+        result = service.import_statement(
+            account,
+            statement,
+            "bofa",
+            "2026-05",
+            "closed",
+            apply_opening_balance=True,
+        )
+
+        account.refresh_from_db()
         opening = Transaction.objects.get(account=account, description="Opening Balance")
 
         assert result.imported_count == 4
         assert result.reconciliation["opening_balance_action"] == "create"
+        assert result.reconciliation["opening_balance_applied"] is True
         assert result.reconciliation["account_ending_ok"] is True
         assert result.reconciliation["account_ending_discrepancy"] == "0.00"
         assert result.reconciliation_warnings == []
@@ -457,7 +486,7 @@ class TestStatementImportService:
         assert result.reconciliation["statement_internal_ok"] is True
         assert "running balance" in result.reconciliation_warnings[0].lower()
 
-    def test_import_bank_of_america_updates_existing_opening_balance(self, user):
+    def test_import_bank_of_america_without_flag_keeps_existing_opening_balance(self, user):
         service = StatementImportService()
         account = FinancialAccount.objects.create(
             user=user,
@@ -483,11 +512,52 @@ class TestStatementImportService:
         opening = Transaction.objects.get(account=account, description="Opening Balance")
         account.refresh_from_db()
 
+        assert result.reconciliation["opening_balance_action"] == "available_update"
+        assert result.reconciliation["opening_balance_applied"] is False
+        assert result.reconciliation["account_opening_balance_current"] == "500.00"
+        assert opening.amount == Decimal("500.00")
+        assert opening.date.isoformat() == "2026-05-01"
+        assert result.reconciliation["account_ending_ok"] is False
+
+    def test_import_bank_of_america_with_flag_updates_existing_opening_balance(self, user):
+        service = StatementImportService()
+        account = FinancialAccount.objects.create(
+            user=user,
+            name="BoFA Checking",
+            account_type="checking",
+            balance=Decimal("0"),
+        )
+        Transaction.objects.create(
+            user=user,
+            account=account,
+            date=date(2026, 5, 1),
+            amount=Decimal("500.00"),
+            transaction_type="credit",
+            description="Opening Balance",
+            sync_source="manual",
+            status="reconciled",
+        )
+        account.refresh_from_db()
+        statement = _make_bofa_checking_statement()
+
+        result = service.import_statement(
+            account,
+            statement,
+            "bofa",
+            "2026-05",
+            "closed",
+            apply_opening_balance=True,
+        )
+
+        opening = Transaction.objects.get(account=account, description="Opening Balance")
+        account.refresh_from_db()
+
         assert result.reconciliation["opening_balance_action"] == "update"
-        assert any("Opening balance will be updated" in warning for warning in result.reconciliation_warnings)
+        assert result.reconciliation["opening_balance_applied"] is True
         assert opening.amount == Decimal("723.98")
         assert opening.date.isoformat() == "2026-05-13"
         assert account.balance == Decimal("450.72")
+        assert result.reconciliation["account_ending_ok"] is True
 
     def test_import_skips_overlapping_statement_rows(self, account):
         service = StatementImportService()

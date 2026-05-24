@@ -227,7 +227,7 @@ class StatementImportService:
         result = self._parse_statement(account, statement_file, institution, statement_period, statement_status)
         self._classify_rows(account, result)
         self._validate_bofa_banking_balances(account, institution, result)
-        self._plan_opening_balance(account, result, commit=False)
+        self._plan_opening_balance(account, result)
         return result
 
     def import_statement(
@@ -237,11 +237,17 @@ class StatementImportService:
         institution: str,
         statement_period: str = "",
         statement_status: str = "provisional",
+        *,
+        apply_opening_balance: bool = False,
     ) -> StatementImportResult:
         """Parse, deduplicate, and create transactions for new statement rows."""
         result = self.preview_statement(account, statement_file, institution, statement_period, statement_status)
 
-        self._apply_opening_balance(account, result, commit=True)
+        if apply_opening_balance:
+            self._apply_opening_balance(account, result)
+            result.reconciliation["opening_balance_applied"] = True
+        else:
+            result.reconciliation["opening_balance_applied"] = False
 
         transactions = []
 
@@ -282,7 +288,7 @@ class StatementImportService:
             transaction.save()
 
         result.imported_count = len(transactions)
-        self._reconcile_account_ending_balance(account, result)
+        self._reconcile_account_ending_balance(account, result, apply_opening_balance=apply_opening_balance)
         logger.info(
             "Imported statement rows",
             account_id=account.id,
@@ -648,8 +654,27 @@ class StatementImportService:
         self,
         account: FinancialAccount,
         result: StatementImportResult,
-        *,
-        commit: bool,
+    ) -> None:
+        if result.balance_summary is None:
+            result.reconciliation["opening_balance_action"] = "none"
+            return
+
+        beginning_balance = Decimal(result.balance_summary["beginning_balance"])
+        beginning_date_text = result.balance_summary.get("beginning_date")
+        beginning_date = date.fromisoformat(beginning_date_text) if beginning_date_text else date.today()
+        result.reconciliation.update(
+            self._build_opening_balance_reconciliation_info(
+                account=account,
+                beginning_balance=beginning_balance,
+                beginning_date=beginning_date,
+                for_commit=False,
+            )
+        )
+
+    def _apply_opening_balance(
+        self,
+        account: FinancialAccount,
+        result: StatementImportResult,
     ) -> None:
         if result.balance_summary is None:
             return
@@ -657,46 +682,22 @@ class StatementImportService:
         beginning_balance = Decimal(result.balance_summary["beginning_balance"])
         beginning_date_text = result.balance_summary.get("beginning_date")
         beginning_date = date.fromisoformat(beginning_date_text) if beginning_date_text else date.today()
-        action_info = self._resolve_opening_balance_action(
-            account=account,
-            beginning_balance=beginning_balance,
-            beginning_date=beginning_date,
-            commit=commit,
+        result.reconciliation.update(
+            self._build_opening_balance_reconciliation_info(
+                account=account,
+                beginning_balance=beginning_balance,
+                beginning_date=beginning_date,
+                for_commit=True,
+            )
         )
-        warning = action_info.pop("opening_balance_warning", None)
-        if warning:
-            result.reconciliation_warnings.append(warning)
-        result.reconciliation.update(action_info)
 
-    def _apply_opening_balance(
-        self,
-        account: FinancialAccount,
-        result: StatementImportResult,
-        *,
-        commit: bool,
-    ) -> None:
-        if not commit or result.balance_summary is None:
-            return
-
-        beginning_balance = Decimal(result.balance_summary["beginning_balance"])
-        beginning_date_text = result.balance_summary.get("beginning_date")
-        beginning_date = date.fromisoformat(beginning_date_text) if beginning_date_text else date.today()
-        action_info = self._resolve_opening_balance_action(
-            account=account,
-            beginning_balance=beginning_balance,
-            beginning_date=beginning_date,
-            commit=True,
-        )
-        action_info.pop("opening_balance_warning", None)
-        result.reconciliation.update(action_info)
-
-    def _resolve_opening_balance_action(
+    def _build_opening_balance_reconciliation_info(
         self,
         account: FinancialAccount,
         beginning_balance: Decimal,
         beginning_date: date,
         *,
-        commit: bool,
+        for_commit: bool,
     ) -> dict[str, str]:
         existing = Transaction.objects.filter(
             account=account,
@@ -705,15 +706,19 @@ class StatementImportService:
 
         target_type = "credit" if beginning_balance >= 0 else "debit"
         target_amount = abs(beginning_balance).quantize(Decimal("0.01"))
+        target_signed = target_amount if target_type == "credit" else -target_amount
+        statement_balance_text = str(beginning_balance.quantize(Decimal("0.01")))
 
         info: dict[str, str] = {
-            "opening_balance_amount": str(beginning_balance.quantize(Decimal("0.01"))),
+            "statement_beginning_balance": statement_balance_text,
+            "statement_beginning_date": beginning_date.isoformat(),
+            "opening_balance_amount": statement_balance_text,
             "opening_balance_date": beginning_date.isoformat(),
         }
 
         if existing is None:
-            info["opening_balance_action"] = "create" if commit else "will_create"
-            if commit:
+            info["opening_balance_action"] = "create" if for_commit else "available_create"
+            if for_commit:
                 Transaction.objects.create(
                     user=account.user,
                     account=account,
@@ -727,26 +732,16 @@ class StatementImportService:
             return info
 
         existing_signed = existing.signed_amount
-        target_signed = target_amount if target_type == "credit" else -target_amount
+        info["account_opening_balance_current"] = str(existing_signed.quantize(Decimal("0.01")))
+        info["account_opening_balance_date_current"] = existing.date.isoformat()
         info["opening_balance_previous_amount"] = str(existing_signed.quantize(Decimal("0.01")))
 
         if existing_signed == target_signed and existing.date == beginning_date:
             info["opening_balance_action"] = "matched"
             return info
 
-        info["opening_balance_action"] = "update" if commit else "will_update"
-        if existing_signed != target_signed:
-            info["opening_balance_warning"] = (
-                f"Opening balance will be updated from {existing_signed} to "
-                f"{target_signed.quantize(Decimal('0.01'))} based on the statement."
-            )
-        else:
-            info["opening_balance_warning"] = (
-                f"Opening balance date will be updated from {existing.date.isoformat()} "
-                f"to {beginning_date.isoformat()} based on the statement."
-            )
-
-        if commit:
+        info["opening_balance_action"] = "update" if for_commit else "available_update"
+        if for_commit:
             existing.date = beginning_date
             existing.amount = target_amount
             existing.transaction_type = target_type
@@ -757,6 +752,8 @@ class StatementImportService:
         self,
         account: FinancialAccount,
         result: StatementImportResult,
+        *,
+        apply_opening_balance: bool = False,
     ) -> None:
         if result.balance_summary is None:
             return
@@ -770,12 +767,19 @@ class StatementImportService:
 
         if discrepancy != Decimal("0"):
             result.reconciliation["account_ending_ok"] = False
-            result.reconciliation_warnings.append(
+            message = (
                 "Account balance after import is "
                 f"{account.balance.quantize(Decimal('0.01'))}, but the statement ending balance is "
                 f"{ending_balance.quantize(Decimal('0.01'))} "
-                f"(difference {discrepancy}). Other transactions or skipped duplicates may explain this."
+                f"(difference {discrepancy})."
             )
+            if not apply_opening_balance:
+                message += (
+                    " The account opening balance was not changed during import, so a difference here may be expected."
+                )
+            else:
+                message += " Other transactions or skipped duplicates may explain this."
+            result.reconciliation_warnings.append(message)
         else:
             result.reconciliation["account_ending_ok"] = True
 

@@ -174,10 +174,18 @@ class StatementFileService {
     return this.handleResponse(response);
   }
 
-  async import(id: number): Promise<StatementFileActionResponse> {
+  async import(
+    id: number,
+    options?: { applyOpeningBalance?: boolean }
+  ): Promise<StatementFileActionResponse> {
     const response = await csrfService.fetchWithCsrf(
       `${API_BASE}/accounts/statements/${id}/import/`,
-      { method: 'POST' }
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          apply_opening_balance: Boolean(options?.applyOpeningBalance),
+        }),
+      }
     );
     return this.handleResponse(response);
   }

@@ -30,6 +30,7 @@ import {
   type StatementInstitution,
 } from '@/lib/api/statementImport';
 import { StatementReconciliationSummary } from '@/components/accounts/StatementReconciliationSummary';
+import { needsOpeningBalanceConfirmation } from '@/components/accounts/statementReconciliation';
 import {
   formatSingleMonthPeriod,
   formatStatementPeriodFromRange,
@@ -37,8 +38,9 @@ import {
   STATEMENT_PERIOD_MAX_LENGTH,
   validateStatementPeriod,
 } from '@/lib/formatStatementPeriod';
+import { formatCurrency, formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { FileUp, Loader2, Upload } from 'lucide-react';
+import { Check, FileUp, Loader2, Upload } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { toast } from 'sonner';
@@ -110,6 +112,7 @@ export function StatementUploadDialog({
   const [busy, setBusy] = useState(false);
   const [statement, setStatement] = useState<StatementFileRecord | null>(null);
   const [preview, setPreview] = useState<StatementImportResult | null>(null);
+  const [applyOpeningBalance, setApplyOpeningBalance] = useState(false);
 
   const newCount = useMemo(() => {
     if (!preview) return 0;
@@ -120,6 +123,17 @@ export function StatementUploadDialog({
     () => validateStatementPeriod(customLabel),
     [customLabel]
   );
+
+  const openingBalanceAction = preview?.reconciliation?.opening_balance_action;
+  const showOpeningBalanceConfirmation =
+    needsOpeningBalanceConfirmation(openingBalanceAction);
+
+  const formatOpeningBalance = (value: string | undefined) => {
+    if (!value) return 'None set';
+    const parsed = Number(value.replace(/,/g, ''));
+    if (Number.isNaN(parsed)) return `$${value}`;
+    return formatCurrency(parsed);
+  };
 
   useEffect(() => {
     if (
@@ -177,6 +191,7 @@ export function StatementUploadDialog({
     setCustomLabelTouched(false);
     setStatement(null);
     setPreview(null);
+    setApplyOpeningBalance(false);
     setDragActive(false);
     setBusy(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -288,7 +303,10 @@ export function StatementUploadDialog({
 
     setBusy(true);
     try {
-      const importResult = await statementFileService.import(statement.id);
+      const importResult = await statementFileService.import(statement.id, {
+        applyOpeningBalance:
+          showOpeningBalanceConfirmation && applyOpeningBalance,
+      });
       const imported = importResult.result.imported_count;
       const warnings = importResult.result.reconciliation_warnings ?? [];
 
@@ -523,6 +541,73 @@ export function StatementUploadDialog({
               <div className="mt-3">
                 <StatementReconciliationSummary result={preview} />
               </div>
+              {showOpeningBalanceConfirmation && (
+                <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+                  <p className="text-sm font-medium text-foreground">
+                    Opening balance
+                  </p>
+                  <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                    <p>
+                      Statement beginning:{' '}
+                      {formatOpeningBalance(
+                        preview.reconciliation?.statement_beginning_balance ??
+                          preview.balance_summary?.beginning_balance
+                      )}
+                      {preview.reconciliation?.statement_beginning_date
+                        ? ` on ${formatDate(preview.reconciliation.statement_beginning_date)}`
+                        : preview.balance_summary?.beginning_date
+                          ? ` on ${formatDate(preview.balance_summary.beginning_date)}`
+                          : ''}
+                    </p>
+                    <p>
+                      Current account opening balance:{' '}
+                      {formatOpeningBalance(
+                        preview.reconciliation?.account_opening_balance_current
+                      )}
+                      {preview.reconciliation
+                        ?.account_opening_balance_date_current
+                        ? ` on ${formatDate(preview.reconciliation.account_opening_balance_date_current)}`
+                        : ''}
+                    </p>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => setApplyOpeningBalance(false)}
+                      className={cn(
+                        'relative w-full rounded-lg border-2 px-3 py-2 text-left text-sm transition-all',
+                        !applyOpeningBalance
+                          ? 'border-primary ring-2 ring-primary/20'
+                          : 'border-border hover:border-primary/50'
+                      )}
+                    >
+                      Keep existing opening balance
+                      {!applyOpeningBalance && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-primary p-0.5 text-primary-foreground">
+                          <Check className="h-3 w-3" />
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setApplyOpeningBalance(true)}
+                      className={cn(
+                        'relative w-full rounded-lg border-2 px-3 py-2 text-left text-sm transition-all',
+                        applyOpeningBalance
+                          ? 'border-primary ring-2 ring-primary/20'
+                          : 'border-border hover:border-primary/50'
+                      )}
+                    >
+                      Update account opening balance to match statement
+                      {applyOpeningBalance && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-primary p-0.5 text-primary-foreground">
+                          <Check className="h-3 w-3" />
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

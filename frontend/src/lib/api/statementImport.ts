@@ -51,14 +51,20 @@ export interface StatementImportResult {
     net_activity?: string;
     running_balance_errors?: string[];
     opening_balance_action?:
-      | 'create'
-      | 'update'
+      | 'none'
+      | 'available_create'
+      | 'available_update'
       | 'matched'
-      | 'will_create'
-      | 'will_update';
+      | 'create'
+      | 'update';
+    statement_beginning_balance?: string;
+    statement_beginning_date?: string;
+    account_opening_balance_current?: string;
+    account_opening_balance_date_current?: string;
     opening_balance_amount?: string;
     opening_balance_previous_amount?: string;
     opening_balance_date?: string;
+    opening_balance_applied?: boolean;
     account_balance?: string;
     account_ending_discrepancy?: string;
     account_ending_ok?: boolean;
@@ -73,6 +79,7 @@ export interface StatementImportInput {
   statementPeriod?: string;
   statementStatus: 'provisional' | 'closed';
   mode: 'preview' | 'commit';
+  applyOpeningBalance?: boolean;
 }
 
 class StatementImportService {
@@ -97,6 +104,9 @@ class StatementImportService {
     formData.append('statement_period', input.statementPeriod ?? '');
     formData.append('statement_status', input.statementStatus);
     formData.append('mode', input.mode);
+    if (input.mode === 'commit' && input.applyOpeningBalance) {
+      formData.append('apply_opening_balance', 'true');
+    }
 
     const csrfToken = await csrfService.getCSRFToken();
     let response = await fetch(`${API_BASE}/accounts/import-statement/`, {

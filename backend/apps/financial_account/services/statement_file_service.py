@@ -302,9 +302,14 @@ class StatementFileService:
         self._update_import_summary(statement, result, "previewed")
         return result
 
-    def import_statement(self, statement: StatementFile) -> StatementImportResult:
+    def import_statement(
+        self,
+        statement: StatementFile,
+        *,
+        apply_opening_balance: bool = False,
+    ) -> StatementImportResult:
         """Commit import from the stored file and persist the summary."""
-        result = self._run_import(statement, commit=True)
+        result = self._run_import(statement, commit=True, apply_opening_balance=apply_opening_balance)
         import_status = (
             "failed" if result.errors and result.imported_count == 0 and result.parsed_count == 0 else "imported"
         )
@@ -386,7 +391,13 @@ class StatementFileService:
         storage = get_storage(storage_uri)
         return storage.open_file(storage_uri, relative)
 
-    def _run_import(self, statement: StatementFile, commit: bool) -> StatementImportResult:
+    def _run_import(
+        self,
+        statement: StatementFile,
+        commit: bool,
+        *,
+        apply_opening_balance: bool = False,
+    ) -> StatementImportResult:
         with self._open_stored_file(statement) as stored_file:
             django_file = File(stored_file, name=statement.original_filename)
             if commit:
@@ -396,6 +407,7 @@ class StatementFileService:
                     statement.institution,
                     statement.statement_period,
                     statement.statement_status,
+                    apply_opening_balance=apply_opening_balance,
                 )
             return self.import_service.preview_statement(
                 statement.account,

@@ -868,12 +868,14 @@ class StatementImportAPIView(APIView):
 
         try:
             if mode == "commit":
+                apply_opening_balance = self._bool_from_request(request, "apply_opening_balance")
                 result = self.statement_service.import_statement(
                     account=account,
                     statement_file=statement_file,
                     institution=institution,
                     statement_period=statement_period,
                     statement_status=statement_status,
+                    apply_opening_balance=apply_opening_balance,
                 )
                 # User-driven uploads of statement files bump a manual account
                 # into the "upload" sync mode so the UI badge stays accurate.
@@ -901,6 +903,14 @@ class StatementImportAPIView(APIView):
             )
 
         return Response(result.as_dict(), status=status.HTTP_200_OK)
+
+    def _bool_from_request(self, request, key: str) -> bool:
+        value = request.data.get(key)
+        if isinstance(value, bool):
+            return value
+        if value in (None, ""):
+            return False
+        return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
 class AgentStatementUploadAPIView(APIView):
@@ -1205,7 +1215,11 @@ class StatementFileImportAPIView(APIView):
         if not statement:
             return Response({"error": "Statement not found"}, status=status.HTTP_404_NOT_FOUND)
         try:
-            result = self.statement_file_service.import_statement(statement)
+            apply_opening_balance = self._bool_from_request(request, "apply_opening_balance")
+            result = self.statement_file_service.import_statement(
+                statement,
+                apply_opening_balance=apply_opening_balance,
+            )
         except Exception as e:
             logger.error(f"Statement import failed for {pk}: {str(e)}")
             return Response({"error": f"Import failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1217,3 +1231,11 @@ class StatementFileImportAPIView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+    def _bool_from_request(self, request, key: str) -> bool:
+        value = request.data.get(key)
+        if isinstance(value, bool):
+            return value
+        if value in (None, ""):
+            return False
+        return str(value).strip().lower() in {"1", "true", "yes", "on"}
