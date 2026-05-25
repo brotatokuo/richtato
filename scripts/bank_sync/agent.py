@@ -358,6 +358,14 @@ def cmd_sync(args: argparse.Namespace) -> int:
     )
     if outcome.failure_reason or outcome.account_failures:
         _print_failure_details(outcome, login_id=args.login_id)
+        from scripts.bank_sync.notification_client import post_failure_event
+
+        post_failure_event(
+            store=store,
+            login_id=args.login_id,
+            outcome=outcome,
+            event_type="manual_download",
+        )
     if outcome.needs_reauth:
         return 2
     return 0 if outcome.run_status == "completed" else 2
@@ -406,9 +414,18 @@ def cmd_run(args: argparse.Namespace) -> int:
                 login.institution_slug,
             )
             try:
-                asyncio.run(
+                outcome = asyncio.run(
                     worker.download_login(store, login.id, kind="scheduled_download")
                 )
+                if outcome.failure_reason or outcome.account_failures:
+                    from scripts.bank_sync.notification_client import post_failure_event
+
+                    post_failure_event(
+                        store=store,
+                        login_id=login.id,
+                        outcome=outcome,
+                        event_type="scheduled_download",
+                    )
             except Exception:
                 logger.exception(
                     "Unhandled error during scheduled download for login {}", login.id
@@ -729,6 +746,21 @@ def cmd_import(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_api(args: argparse.Namespace) -> int:
+    """Serve the local-only HTTP API used by the Richtato setup UI."""
+
+    from scripts.bank_sync.local_api import serve_local_api
+
+    token = args.token or os.environ.get("BANK_AGENT_LOCAL_TOKEN", "")
+    if not token:
+        print(
+            "Warning: BANK_AGENT_LOCAL_TOKEN is not set; local API requests are unauthenticated.",
+            file=sys.stderr,
+        )
+    serve_local_api(store=_store(args), host=args.host, port=args.port, token=token)
+    return 0
+
+
 # ============================ parser ===================================
 
 
@@ -923,6 +955,27 @@ def build_parser() -> argparse.ArgumentParser:
         "input", type=str, help="Path to a previously exported JSON file"
     )
     p_import.set_defaults(func=cmd_import)
+
+    p_api = sub.add_parser(
+        "api",
+        help="Serve a loopback HTTP API for setup/status/actions",
+    )
+    p_api.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Bind host. Keep this on 127.0.0.1 unless you fully trust the network.",
+    )
+    p_api.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("BANK_AGENT_API_PORT", "8765")),
+    )
+    p_api.add_argument(
+        "--token",
+        default=None,
+        help="Bearer token required by the local API (default: BANK_AGENT_LOCAL_TOKEN).",
+    )
+    p_api.set_defaults(func=cmd_api)
 
     return parser
 

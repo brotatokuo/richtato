@@ -25,6 +25,9 @@ BANK_AGENT_DB_PATH=/local_data/bank-agent/agent.db
 
 - Active users with a non-empty `email`
 - `UserPreference.notifications_enabled` is true (toggle in **Preferences → Notifications**)
+- `UserPreference.bank_sync_daily_digest` is true
+
+Immediate failure emails are separate and opt-in through **Preferences → Notifications → Bank Sync Alerts**. In-app bank-sync alerts are the default minimum notification path.
 
 ## Manual send / preview
 

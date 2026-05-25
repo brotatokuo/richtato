@@ -12,6 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.core.services.notification_service import NotificationService
 from apps.financial_account.serializers import (
     FinancialAccountCreateSerializer,
     FinancialAccountSerializer,
@@ -299,6 +300,53 @@ class BankSyncSetupAPIView(APIView):
 
     def get(self, request):
         return Response(self.setup_service.build_for_user(request.user), status=status.HTTP_200_OK)
+
+
+class BankAgentEventAPIView(APIView):
+    """Receive local bank-agent failure events and create user notifications."""
+
+    authentication_classes = [TokenAuthentication, SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.notification_service = NotificationService()
+
+    def post(self, request):
+        event_type = str(request.data.get("event_type") or "sync_failed")
+        failure_kind = str(request.data.get("failure_kind") or "unknown")
+        login_id = request.data.get("login_id")
+        account_id = request.data.get("richtato_account_id") or request.data.get("account_id")
+        institution = str(request.data.get("institution_slug") or request.data.get("institution") or "bank")
+        nickname = str(request.data.get("nickname") or "")
+        message = str(request.data.get("message") or request.data.get("failure_reason") or "Bank sync failed.")
+
+        label = institution + (f" ({nickname})" if nickname else "")
+        title = "Bank login needs re-auth" if failure_kind == "needs_reauth" else "Bank sync failed"
+        body = f"{label}: {message}"
+        source_key_parts = [event_type, failure_kind, str(login_id or ""), str(account_id or "")]
+        notification = self.notification_service.notify_bank_sync_failure(
+            user=request.user,
+            title=title,
+            body=body[:1000],
+            severity="warning" if failure_kind == "needs_reauth" else "error",
+            source_key=":".join(source_key_parts),
+            metadata={
+                "event_type": event_type,
+                "failure_kind": failure_kind,
+                "login_id": login_id,
+                "account_id": account_id,
+                "institution": institution,
+                "nickname": nickname,
+            },
+        )
+        return Response(
+            {
+                "created": notification is not None,
+                "notification_id": notification.id if notification else None,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class GoogleDriveStatusAPIView(APIView):

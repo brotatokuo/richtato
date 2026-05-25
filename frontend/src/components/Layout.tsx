@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { BottomTabBar } from './BottomTabBar';
+import { NotificationBell } from './NotificationBell';
 import { Sidebar } from './Sidebar';
 
 // Route to page title and icon mapping
@@ -88,6 +89,7 @@ function LayoutInner() {
               {headerSlot && (
                 <div className="hidden items-center md:flex">{headerSlot}</div>
               )}
+              <NotificationBell />
             </div>
           </div>
         </header>

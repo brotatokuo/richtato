@@ -921,12 +921,13 @@ def cmd_bank_menu():
         "Sign in / refresh cookies",
         "Run manual sync",
         "Start daemon",
+        "Start local API",
         "View log",
         "Apply setup YAML",
         "Back",
     ]
     idx = select("Select bank sync action:", options, default=0)
-    if idx is None or idx == 7:
+    if idx is None or idx == 8:
         print_info("Cancelled.")
         return
 
@@ -941,8 +942,10 @@ def cmd_bank_menu():
     elif idx == 4:
         _bank_start_daemon(root)
     elif idx == 5:
-        _bank_logs(root, follow=confirm("Follow log?", default=False))
+        _run_bank_agent(["api"], root=root)
     elif idx == 6:
+        _bank_logs(root, follow=confirm("Follow log?", default=False))
+    elif idx == 7:
         result = _bank_apply(root)
         if result == 0:
             _bank_status(root)
@@ -960,13 +963,14 @@ def cmd_bank(args: Optional[Sequence[str]] = None):
     command = args[0]
     if command in ("help", "--help", "-h"):
         print(
-            "Usage: richtato bank [setup|status|signin|sync|daemon|logs|apply]\n\n"
+            "Usage: richtato bank [setup|status|signin|sync|daemon|api|logs|apply]\n\n"
             "Examples:\n"
             "  richtato bank setup\n"
             "  richtato bank status\n"
             "  richtato bank signin 1\n"
             "  richtato bank sync 1\n"
             "  richtato bank daemon\n"
+            "  BANK_AGENT_LOCAL_TOKEN=<token> richtato bank api\n"
             "  richtato bank logs --follow\n"
         )
     elif command == "setup":
@@ -981,6 +985,8 @@ def cmd_bank(args: Optional[Sequence[str]] = None):
         sys.exit(_bank_sync(root, login_ids[0] if login_ids else None, headed=headed))
     elif command == "daemon":
         sys.exit(_bank_start_daemon(root))
+    elif command == "api":
+        sys.exit(_run_bank_agent(["api", *args[1:]], root=root))
     elif command == "logs":
         sys.exit(_bank_logs(root, follow="--follow" in args[1:] or "-f" in args[1:]))
     elif command == "apply":

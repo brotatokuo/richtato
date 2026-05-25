@@ -1,8 +1,23 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BankSyncSection } from '@/components/settings/BankSyncSection';
+import { bankAgentLocalApi } from '@/lib/api/bankAgentLocal';
 import { bankSyncApi } from '@/lib/api/bankSync';
 import { render as renderWithRouter } from '../../test-utils/utils';
+
+vi.mock('@/lib/api/bankAgentLocal', () => ({
+  bankAgentLocalApi: {
+    getStatus: vi.fn(),
+    applyYaml: vi.fn(),
+    signIn: vi.fn(),
+    sync: vi.fn(),
+  },
+  getStoredLocalAgentConnection: () => ({
+    baseUrl: 'http://127.0.0.1:8765',
+    token: '',
+  }),
+  storeLocalAgentConnection: vi.fn(),
+}));
 
 vi.mock('@/lib/api/bankSync', () => ({
   bankSyncApi: {
@@ -10,6 +25,7 @@ vi.mock('@/lib/api/bankSync', () => ({
     updateSyncMode: vi.fn(),
     updateAccountSchedule: vi.fn(),
     updateActivityUrl: vi.fn(),
+    getSetupYamlText: vi.fn(),
     downloadSetupYaml: vi.fn(),
   },
   SYNC_MODE_OPTIONS: [
@@ -33,11 +49,13 @@ vi.mock('@/lib/api/bankSync', () => ({
 const mockGetSetup = vi.mocked(bankSyncApi.getSetup);
 const mockDownloadSetupYaml = vi.mocked(bankSyncApi.downloadSetupYaml);
 const mockUpdateActivityUrl = vi.mocked(bankSyncApi.updateActivityUrl);
+const mockGetLocalStatus = vi.mocked(bankAgentLocalApi.getStatus);
 
 beforeEach(() => {
   mockGetSetup.mockReset();
   mockDownloadSetupYaml.mockReset();
   mockUpdateActivityUrl.mockReset();
+  mockGetLocalStatus.mockReset();
 });
 
 describe('BankSyncSection', () => {
@@ -87,6 +105,7 @@ describe('BankSyncSection', () => {
     expect(await screen.findByText('Robinhood Brokerage')).toBeInTheDocument();
     expect(screen.getByText(/Portfolio balance scrape/)).toBeInTheDocument();
     expect(screen.getByText(/Host Agent Setup/)).toBeInTheDocument();
+    expect(screen.getByText(/Local Agent Connection/)).toBeInTheDocument();
     expect(screen.getByText(/richtato bank setup/)).toBeInTheDocument();
     expect(
       screen.getByRole('combobox', {
@@ -171,6 +190,53 @@ describe('BankSyncSection', () => {
     await user.click(screen.getByRole('button', { name: /download setup/i }));
 
     expect(mockDownloadSetupYaml).toHaveBeenCalledTimes(1);
+  });
+
+  it('loads local bank-agent status', async () => {
+    mockGetSetup.mockResolvedValue({
+      accounts: [],
+      agent_config: {
+        version: 1,
+        generated_at: '2026-01-01T00:00:00Z',
+        user_id: 1,
+        source: 'richtato_accounts',
+        logins: [],
+      },
+      duplicate_institution_logins: [],
+    });
+    mockGetLocalStatus.mockResolvedValue({
+      ok: true,
+      reauth_required: true,
+      login_count: 1,
+      account_count: 1,
+      logins: [
+        {
+          id: 4,
+          institution_slug: 'bofa',
+          nickname: 'personal',
+          status: 'needs_reauth',
+          cadence: 'daily',
+          preferred_run_hour_local: 6,
+          next_run_at: null,
+          last_run_at: null,
+          last_success_at: null,
+          last_failure_kind: 'needs_reauth',
+          last_failure_reason: 'Redirected to sign-in',
+          cookies_captured_at: null,
+          accounts: [],
+        },
+      ],
+      recent_runs: [],
+    });
+
+    const user = userEvent.setup();
+    renderWithRouter(<BankSyncSection />);
+
+    await screen.findByText(/No linked accounts yet/i);
+    await user.click(screen.getByRole('button', { name: /check/i }));
+
+    expect(await screen.findByText(/Re-login required/i)).toBeInTheDocument();
+    expect(screen.getByText(/Redirected to sign-in/i)).toBeInTheDocument();
   });
 
   it('saves activity url edits when the field loses focus', async () => {

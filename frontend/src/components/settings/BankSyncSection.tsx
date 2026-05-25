@@ -26,6 +26,12 @@ import {
   type BankSyncSetupAccount,
   type SyncMode,
 } from '@/lib/api/bankSync';
+import {
+  bankAgentLocalApi,
+  getStoredLocalAgentConnection,
+  storeLocalAgentConnection,
+  type LocalAgentStatus,
+} from '@/lib/api/bankAgentLocal';
 import { cn } from '@/lib/utils';
 import {
   AlertTriangle,
@@ -35,6 +41,7 @@ import {
   ExternalLink,
   Landmark,
   Loader2,
+  PlugZap,
   RefreshCw,
   Terminal,
 } from 'lucide-react';
@@ -47,6 +54,7 @@ const HOST_COMMANDS = [
   'richtato bank status',
   'richtato bank signin <login_id>',
   'richtato bank sync <login_id>',
+  'BANK_AGENT_LOCAL_TOKEN=<token> richtato bank api',
   'richtato bank daemon',
 ] as const;
 
@@ -103,6 +111,19 @@ export function BankSyncSection() {
     string[]
   >([]);
   const [savingAccountId, setSavingAccountId] = useState<number | null>(null);
+  const [localBaseUrl, setLocalBaseUrl] = useState(
+    () => getStoredLocalAgentConnection().baseUrl
+  );
+  const [localToken, setLocalToken] = useState(
+    () => getStoredLocalAgentConnection().token
+  );
+  const [localStatus, setLocalStatus] = useState<LocalAgentStatus | null>(null);
+  const [localAgentError, setLocalAgentError] = useState<string | null>(null);
+  const [checkingLocalAgent, setCheckingLocalAgent] = useState(false);
+  const [applyingSetup, setApplyingSetup] = useState(false);
+  const [localActionLoginId, setLocalActionLoginId] = useState<number | null>(
+    null
+  );
 
   const loadSetup = useCallback(async (options?: { silent?: boolean }) => {
     if (options?.silent) {
@@ -217,6 +238,98 @@ export function BankSyncSection() {
       });
     } finally {
       setDownloadingSetup(false);
+    }
+  };
+
+  const handleCheckLocalAgent = async () => {
+    setCheckingLocalAgent(true);
+    setLocalAgentError(null);
+    try {
+      storeLocalAgentConnection({ baseUrl: localBaseUrl, token: localToken });
+      const status = await bankAgentLocalApi.getStatus({
+        baseUrl: localBaseUrl,
+        token: localToken,
+      });
+      setLocalStatus(status);
+      toast.success('Connected to local bank-agent');
+    } catch (error) {
+      setLocalStatus(null);
+      const message =
+        error instanceof Error ? error.message : 'Unable to reach local agent.';
+      setLocalAgentError(message);
+      toast.error('Local bank-agent unavailable', { description: message });
+    } finally {
+      setCheckingLocalAgent(false);
+    }
+  };
+
+  const handleApplySetupToLocalAgent = async () => {
+    setApplyingSetup(true);
+    setLocalAgentError(null);
+    try {
+      storeLocalAgentConnection({ baseUrl: localBaseUrl, token: localToken });
+      const yaml = await bankSyncApi.getSetupYamlText();
+      const result = await bankAgentLocalApi.applyYaml({
+        baseUrl: localBaseUrl,
+        token: localToken,
+        yaml,
+      });
+      if (result.status) {
+        setLocalStatus(result.status);
+      }
+      toast.success('Applied setup to local bank-agent');
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to apply setup.';
+      setLocalAgentError(message);
+      toast.error('Unable to apply setup', { description: message });
+    } finally {
+      setApplyingSetup(false);
+    }
+  };
+
+  const handleLocalSignIn = async (loginId: number) => {
+    setLocalActionLoginId(loginId);
+    try {
+      const result = await bankAgentLocalApi.signIn({
+        baseUrl: localBaseUrl,
+        token: localToken,
+        loginId,
+      });
+      if (result.status) {
+        setLocalStatus(result.status);
+      }
+      toast.success(result.message || 'Sign-in completed');
+    } catch (error) {
+      toast.error('Unable to start sign-in', {
+        description:
+          error instanceof Error ? error.message : 'Please try again.',
+      });
+    } finally {
+      setLocalActionLoginId(null);
+    }
+  };
+
+  const handleLocalSync = async (loginId: number) => {
+    setLocalActionLoginId(loginId);
+    try {
+      const result = await bankAgentLocalApi.sync({
+        baseUrl: localBaseUrl,
+        token: localToken,
+        loginId,
+      });
+      if (result.status) {
+        setLocalStatus(result.status);
+      }
+      toast.success('Manual sync finished');
+    } catch (error) {
+      toast.error('Manual sync needs attention', {
+        description:
+          error instanceof Error ? error.message : 'Please check the agent.',
+      });
+      void handleCheckLocalAgent();
+    } finally {
+      setLocalActionLoginId(null);
     }
   };
 
@@ -574,6 +687,169 @@ export function BankSyncSection() {
                 </div>
               )}
             </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <PlugZap className="h-5 w-5" />
+            Local Agent Connection
+          </CardTitle>
+          <CardDescription>
+            Connect this browser to the host bank-agent API for live status,
+            setup apply, re-login, and manual sync actions.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-[1fr_14rem_auto]">
+            <Input
+              value={localBaseUrl}
+              onChange={event => setLocalBaseUrl(event.currentTarget.value)}
+              aria-label="Local bank-agent URL"
+              placeholder="http://127.0.0.1:8765"
+            />
+            <Input
+              value={localToken}
+              onChange={event => setLocalToken(event.currentTarget.value)}
+              aria-label="Local bank-agent token"
+              placeholder="Optional local token"
+              type="password"
+            />
+            <Button
+              variant="outline"
+              onClick={() => void handleCheckLocalAgent()}
+              disabled={checkingLocalAgent}
+            >
+              {checkingLocalAgent ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Check
+            </Button>
+          </div>
+
+          {localAgentError && (
+            <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+              {localAgentError}
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={() => void handleApplySetupToLocalAgent()}
+              disabled={applyingSetup || agentAccountCount === 0}
+            >
+              {applyingSetup ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Apply current setup
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              Requires the agent to be running with{' '}
+              <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                richtato bank api
+              </code>
+              .
+            </p>
+          </div>
+
+          {localStatus ? (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="default">
+                  {localStatus.login_count} local login
+                  {localStatus.login_count === 1 ? '' : 's'}
+                </Badge>
+                <Badge variant="outline">
+                  {localStatus.account_count} local account
+                  {localStatus.account_count === 1 ? '' : 's'}
+                </Badge>
+                {localStatus.reauth_required && (
+                  <Badge variant="destructive">Re-login required</Badge>
+                )}
+              </div>
+
+              {localStatus.logins.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  The local agent vault is empty. Apply the current setup, then
+                  sign in to each login.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {localStatus.logins.map(login => (
+                    <div
+                      key={login.id}
+                      className={cn(
+                        'rounded-lg border border-border p-3',
+                        login.status === 'needs_reauth' &&
+                          'border-amber-500/40 bg-amber-500/5'
+                      )}
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-medium">
+                              #{login.id} {login.institution_slug}
+                              {login.nickname ? ` / ${login.nickname}` : ''}
+                            </p>
+                            <Badge
+                              variant={
+                                login.status === 'active'
+                                  ? 'default'
+                                  : 'secondary'
+                              }
+                            >
+                              {login.status}
+                            </Badge>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {login.accounts.length} account
+                            {login.accounts.length === 1 ? '' : 's'} · last
+                            success {login.last_success_at || 'never'} · next{' '}
+                            {login.next_run_at || 'not scheduled'}
+                          </p>
+                          {login.last_failure_reason && (
+                            <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                              {login.last_failure_reason}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => void handleLocalSignIn(login.id)}
+                            disabled={localActionLoginId === login.id}
+                          >
+                            {localActionLoginId === login.id ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : null}
+                            Re-login
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => void handleLocalSync(login.id)}
+                            disabled={localActionLoginId === login.id}
+                          >
+                            Sync now
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No local status loaded yet. Checking the agent only talks to your
+              loopback API and does not expose cookies or activity URLs.
+            </p>
           )}
         </CardContent>
       </Card>

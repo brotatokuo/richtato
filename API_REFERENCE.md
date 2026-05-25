@@ -60,6 +60,16 @@ Common date filters:
 | `PUT` | `/preferences/` | Update preferences |
 | `GET` | `/preferences/field-choices/` | Get preference field choices |
 
+Preferences include bank-sync notification controls: in-app alerts default on, immediate email alerts are opt-in, and daily digest email can be toggled separately.
+
+## Core (`/api/v1/core/`)
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/notifications/` | List in-app notifications (`unread=1`, `limit=N`) |
+| `PATCH` | `/notifications/{id}/` | Mark one notification read with `{ "read": true }` |
+| `POST` | `/notifications/mark-all-read/` | Mark all current user's notifications read |
+
 ## Accounts (`/api/v1/accounts/`)
 
 | Method | Endpoint | Description |
@@ -82,6 +92,9 @@ Common date filters:
 | `POST` | `/drive/adopt-preview/` | Preview adopting an existing Drive root with Richtato-style account subfolders |
 | `POST` | `/drive/deactivate/` | Unlink an active Drive folder and clear account storage URIs |
 | `POST` | `/drive/disconnect/` | Disconnect inactive Drive OAuth credentials |
+| `GET` | `/sync-setup/` | Get Setup → Sync account readiness and generated agent config |
+| `GET` | `/bank-agent-setup-export/` | Download host bank-agent setup YAML with token/key/env and auto-sync account config |
+| `POST` | `/bank-agent-events/` | Bank agent failure event endpoint for in-app alerts and opt-in immediate email |
 | `POST` | `/agent-statements/` | Agent upload endpoint for Drive-backed statement downloads |
 | `POST` | `/agent-balances/` | Agent balance snapshot endpoint for investment balance sync (Token auth) |
 | `POST` | `/import-csv/` | Import statement CSV |

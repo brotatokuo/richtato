@@ -147,7 +147,7 @@ class BankSyncApi {
     await this.handleResponse(response);
   }
 
-  async downloadSetupYaml(): Promise<void> {
+  async getSetupYamlText(): Promise<string> {
     const response = await fetch(
       `${API_BASE}/accounts/bank-agent-setup-export/`,
       {
@@ -165,7 +165,11 @@ class BankSyncApi {
           : `HTTP error! status: ${response.status}`;
       throw new Error(message);
     }
-    const yamlText = await response.text();
+    return response.text();
+  }
+
+  async downloadSetupYaml(): Promise<void> {
+    const yamlText = await this.getSetupYamlText();
     const blob = new Blob([yamlText], { type: 'text/yaml;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');

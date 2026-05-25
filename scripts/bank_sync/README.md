@@ -40,6 +40,16 @@ vault, shows configured logins, and lets you sign in or run an immediate sync.
 Use `richtato bank` later for status, sign-in, manual sync, daemon startup, and
 logs.
 
+For the Richtato **Setup → Sync** live status panel, start the loopback API:
+
+```bash
+BANK_AGENT_LOCAL_TOKEN=<choose-a-local-token> richtato bank api
+```
+
+The API binds to `127.0.0.1:8765` by default. Enter the same token in Richtato
+when checking local agent status. It returns schedule/status metadata only; it
+does not expose decrypted cookies or bank activity URLs.
+
 ## Quick config from Richtato
 
 Richtato can generate the structural agent config from active accounts whose

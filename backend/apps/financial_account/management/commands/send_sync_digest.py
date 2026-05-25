@@ -89,5 +89,7 @@ class Command(BaseCommand):
             pref = getattr(user, "preferences", None)
             if pref is not None and not pref.notifications_enabled:
                 continue
+            if pref is not None and not pref.bank_sync_daily_digest:
+                continue
             eligible.append(user)
         return eligible

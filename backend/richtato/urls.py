@@ -62,6 +62,8 @@ urlpatterns = [
     # Auth and User management
     path("api/auth/", include("apps.richtato_user.urls")),
     path("api/v1/auth/", include("apps.richtato_user.urls")),
+    path("api/core/", include("apps.core.urls")),
+    path("api/v1/core/", include("apps.core.urls")),
     # Dashboard endpoints
     path("api/budget-dashboard/", include("apps.budget_dashboard.urls")),
     path("api/asset-dashboard/", include("apps.asset_dashboard.urls")),
