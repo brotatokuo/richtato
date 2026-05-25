@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { transactionsApiService } from '@/lib/api/transactions';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatDate } from '@/lib/format';
 import { getEntityLogo } from '@/lib/imageMapping';
 import { cn } from '@/lib/utils';
 import {
@@ -30,6 +30,10 @@ import type { InstitutionFieldChoice } from './AccountFormFields';
 interface BalancePoint {
   date: string;
   balance: number;
+}
+
+interface BalanceSnapshotRow extends BalancePoint {
+  change: number | null;
 }
 
 type AccountDetailTab = 'balance' | 'transactions' | 'statements';
@@ -187,6 +191,20 @@ export function AccountDetailPanel({
     }),
     [chartData, preferences.currency]
   );
+
+  const balanceRows = useMemo<BalanceSnapshotRow[]>(() => {
+    const sorted = [...balanceHistory].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+
+    return sorted.map((point, index) => {
+      const previousPoint = sorted[index + 1];
+      return {
+        ...point,
+        change: previousPoint ? point.balance - previousPoint.balance : null,
+      };
+    });
+  }, [balanceHistory]);
 
   const balanceChange = useMemo(() => {
     if (balanceHistory.length < 2) return null;
@@ -481,20 +499,94 @@ export function AccountDetailPanel({
             <div className="h-48 flex items-center justify-center">
               <LoadingSpinner />
             </div>
-          ) : balanceHistory.length < 2 ? (
-            <div className="h-48 flex flex-col items-center justify-center text-center">
-              <LineChart className="h-8 w-8 text-muted-foreground/30 mb-2" />
-              <p className="text-sm text-muted-foreground/60">
-                Not enough data to show balance history
-              </p>
-            </div>
           ) : (
-            <BaseChart
-              type="line"
-              data={chartData}
-              options={chartOptions}
-              height="280px"
-            />
+            <div className="space-y-4">
+              {balanceHistory.length < 2 ? (
+                <div className="h-48 flex flex-col items-center justify-center text-center">
+                  <LineChart className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                  <p className="text-sm text-muted-foreground/60">
+                    {balanceHistory.length === 0
+                      ? 'No balance history yet'
+                      : 'Not enough data to show balance history'}
+                  </p>
+                </div>
+              ) : (
+                <BaseChart
+                  type="line"
+                  data={chartData}
+                  options={chartOptions}
+                  height="280px"
+                />
+              )}
+
+              {balanceRows.length > 0 && (
+                <div className="rounded-lg border border-border/60 bg-card/50">
+                  <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+                    <div>
+                      <h3 className="text-sm font-medium text-foreground">
+                        Balance Snapshots
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Dated balance records for this account
+                      </p>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {balanceRows.length} snapshot
+                      {balanceRows.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/30 text-xs uppercase text-muted-foreground">
+                        <tr>
+                          <th className="px-4 py-2 text-left font-medium">
+                            Date
+                          </th>
+                          <th className="px-4 py-2 text-right font-medium">
+                            Balance
+                          </th>
+                          <th className="px-4 py-2 text-right font-medium">
+                            Change
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/60">
+                        {balanceRows.map(row => (
+                          <tr key={row.date} className="hover:bg-muted/20">
+                            <td className="px-4 py-2 text-muted-foreground">
+                              {formatDate(row.date, preferences.date_format)}
+                            </td>
+                            <td className="px-4 py-2 text-right font-medium tabular-nums text-foreground">
+                              {formatCurrency(
+                                row.balance,
+                                preferences.currency
+                              )}
+                            </td>
+                            <td
+                              className={cn(
+                                'px-4 py-2 text-right font-medium tabular-nums',
+                                row.change === null
+                                  ? 'text-muted-foreground'
+                                  : row.change >= 0
+                                    ? 'text-green-600'
+                                    : 'text-red-500'
+                              )}
+                            >
+                              {row.change === null
+                                ? '—'
+                                : `${row.change >= 0 ? '+' : '-'}${formatCurrency(
+                                    Math.abs(row.change),
+                                    preferences.currency
+                                  )}`}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </TabsContent>
 
