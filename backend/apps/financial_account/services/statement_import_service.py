@@ -15,6 +15,14 @@ from typing import Any
 import pandas as pd
 from loguru import logger
 
+from apps.financial_account.institutions.parsers.robinhood_credit_pdf import parse_robinhood_credit_pdf
+from apps.financial_account.institutions.registry import (
+    get_parser_config,
+    get_supported_institutions,
+    parser_key_for_slug,
+    supported_extensions_for_parser,
+    supported_file_types_for_parser,
+)
 from apps.financial_account.models import FinancialAccount
 from apps.transaction.models import Transaction
 
@@ -32,103 +40,6 @@ BOFA_ENDING_BALANCE_RE = re.compile(
 BOFA_TRANSACTION_DATE_PREFIX = re.compile(r"^\d{2}/\d{2}/\d{4},")
 BOFA_EMPTY_AMOUNT_ROW = re.compile(r'^(.+?),,("(?:-)?[\d,]+\.\d{2}")\s*$')
 BOFA_AMOUNT_BALANCE_SUFFIX = re.compile(r'^(.+),("(?:-)?[\d,]+\.\d{2}"),("(?:-)?[\d,]+\.\d{2}")\s*$')
-
-INSTITUTION_PARSER_ALIASES = {
-    "citibank": "citi",
-}
-
-SUPPORTED_INSTITUTIONS = {
-    "bofa": {
-        "display_name": "Bank of America",
-        "domains": ["banking", "credit_card"],
-        "date": ["Posted Date", "Transaction Date", "Date"],
-        "description": ["Payee", "Description", "Description Original"],
-        "amount": ["Amount"],
-        "debit": ["Debit", "Withdrawal"],
-        "credit": ["Credit", "Deposit"],
-    },
-    "marcus": {
-        "display_name": "Marcus",
-        "domains": ["banking"],
-        "date": ["Date", "Transaction Date", "Post Date"],
-        "description": ["Description", "Details", "Transaction"],
-        "amount": ["Amount"],
-        "debit": ["Debit", "Withdrawal"],
-        "credit": ["Credit", "Deposit"],
-    },
-    "amex": {
-        "display_name": "American Express",
-        "domains": ["credit_card"],
-        "date": ["Date", "Transaction Date"],
-        "description": ["Description", "Appears On Your Statement As"],
-        "amount": ["Amount"],
-        "debit": ["Debit", "Charge"],
-        "credit": ["Credit", "Payment"],
-    },
-    "robinhood_bank": {
-        "display_name": "Robinhood Bank",
-        "domains": ["banking"],
-        "date": ["Date", "Transaction Date", "Posted Date"],
-        "description": ["Description", "Memo", "Details"],
-        "amount": ["Amount"],
-        "debit": ["Debit", "Withdrawal"],
-        "credit": ["Credit", "Deposit"],
-    },
-    "fidelity": {
-        "display_name": "Fidelity",
-        "domains": ["investment"],
-        "date": ["Run Date", "Date", "Settlement Date", "Trade Date"],
-        "description": ["Description", "Action", "Name"],
-        "amount": ["Amount", "Cash Amount", "Net Amount"],
-        "debit": ["Debit"],
-        "credit": ["Credit"],
-        "activity": ["Action", "Activity Type", "Type"],
-        "symbol": ["Symbol"],
-        "quantity": ["Quantity", "Shares"],
-    },
-    "robinhood_investments": {
-        "display_name": "Robinhood Investments",
-        "domains": ["investment"],
-        "date": ["Activity Date", "Date", "Trade Date"],
-        "description": ["Description", "Instrument", "Trans Code"],
-        "amount": ["Amount", "Value", "Net Amount"],
-        "debit": ["Debit"],
-        "credit": ["Credit"],
-        "activity": ["Activity Type", "Trans Code", "Type"],
-        "symbol": ["Symbol"],
-        "quantity": ["Quantity"],
-    },
-    "guideline": {
-        "display_name": "Guideline",
-        "domains": ["retirement"],
-        "date": ["Date", "Transaction Date", "Payroll Date"],
-        "description": ["Description", "Transaction Type", "Fund"],
-        "amount": ["Amount", "Value"],
-        "debit": ["Debit"],
-        "credit": ["Credit", "Contribution"],
-        "activity": ["Transaction Type", "Type", "Activity"],
-        "symbol": ["Fund", "Symbol"],
-        "quantity": ["Shares", "Units", "Quantity"],
-    },
-    "chase": {
-        "display_name": "Chase",
-        "domains": ["banking", "credit_card"],
-        "date": ["Transaction Date", "Post Date", "Date"],
-        "description": ["Description", "Payee"],
-        "amount": ["Amount"],
-        "debit": ["Debit", "Withdrawal"],
-        "credit": ["Credit", "Deposit"],
-    },
-    "citi": {
-        "display_name": "Citi",
-        "domains": ["credit_card"],
-        "date": ["Date", "Transaction Date"],
-        "description": ["Description"],
-        "amount": ["Amount"],
-        "debit": ["Debit"],
-        "credit": ["Credit"],
-    },
-}
 
 
 @dataclass
@@ -212,21 +123,13 @@ class StatementImportResult:
 
 
 class StatementImportService:
-    """Import transactions from CSV, XLS, and XLSX institution statements."""
+    """Import transactions from CSV, Excel, and institution-specific statement files."""
 
-    SUPPORTED_EXTENSIONS = {".csv", ".xls", ".xlsx"}
+    SUPPORTED_EXTENSIONS = {".csv", ".xls", ".xlsx", ".pdf"}
 
     def get_supported_institutions(self) -> list[dict[str, Any]]:
         """Return institution metadata for frontend selectors."""
-        return [
-            {
-                "id": institution_id,
-                "display_name": config["display_name"],
-                "domains": config["domains"],
-                "file_types": ["csv", "xls", "xlsx"],
-            }
-            for institution_id, config in SUPPORTED_INSTITUTIONS.items()
-        ]
+        return get_supported_institutions()
 
     def preview_statement(
         self,
@@ -333,17 +236,19 @@ class StatementImportService:
         statement_status: str,
     ) -> StatementImportResult:
         result = StatementImportResult(institution=institution, statement_status=statement_status)
-        institution = INSTITUTION_PARSER_ALIASES.get(institution, institution)
-        result.institution = institution
-        config = SUPPORTED_INSTITUTIONS.get(institution)
+        parser_key = institution if get_parser_config(institution) else parser_key_for_slug(institution)
+        config = get_parser_config(parser_key) if parser_key else None
         if config is None:
             result.errors.append(f"Unsupported institution: {institution}")
             return result
+        result.institution = parser_key
 
         filename = getattr(statement_file, "name", "")
         extension = Path(filename).suffix.lower()
-        if extension not in self.SUPPORTED_EXTENSIONS:
-            result.errors.append("Unsupported file type. Upload a CSV, XLS, or XLSX file.")
+        allowed_extensions = supported_extensions_for_parser(parser_key)
+        if extension not in allowed_extensions:
+            allowed_types = ", ".join(supported_file_types_for_parser(parser_key)).upper()
+            result.errors.append(f"Unsupported file type. Upload a {allowed_types} file for this institution.")
             return result
 
         content = statement_file.read() if hasattr(statement_file, "read") else statement_file
@@ -353,7 +258,7 @@ class StatementImportService:
         result._raw_content = content  # noqa: SLF001 — used for BoFA balance validation
 
         try:
-            frame = self._read_frame(content, extension, institution=institution)
+            frame = self._read_frame(content, extension, parser_key=parser_key)
         except Exception as exc:
             result.errors.append(f"Failed to parse statement file: {exc}")
             return result
@@ -369,7 +274,7 @@ class StatementImportService:
             normalized = self._normalize_row(
                 account=account,
                 config=config,
-                institution=institution,
+                institution=parser_key,
                 source_file_hash=result.file_hash,
                 statement_period=statement_period,
                 row_number=int(index) + 2,
@@ -385,10 +290,14 @@ class StatementImportService:
             result.errors.append("No valid statement rows found")
         return result
 
-    def _read_frame(self, content: bytes, extension: str, *, institution: str = "") -> pd.DataFrame:
+    def _read_frame(self, content: bytes, extension: str, *, parser_key: str = "") -> pd.DataFrame:
+        if extension == ".pdf":
+            if parser_key == "robinhood_credit":
+                return parse_robinhood_credit_pdf(content)
+            raise ValueError(f"PDF statements are not supported for institution {parser_key}.")
         if extension == ".csv":
             csv_content = content
-            if institution == "bofa" or self._looks_like_bofa_banking_csv(content):
+            if parser_key == "bofa" or self._looks_like_bofa_banking_csv(content):
                 csv_content = self._extract_bofa_transaction_csv(content)
             try:
                 return self._read_csv_bytes(csv_content)
@@ -958,6 +867,8 @@ class StatementImportService:
         if amount is None:
             return None, "debit"
         if signed_amount < 0:
+            if account.account_type == "credit_card":
+                return abs(amount), "credit"
             return abs(amount), "debit"
 
         # Credit card exports often use positive amounts for purchases.

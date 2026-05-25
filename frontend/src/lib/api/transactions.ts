@@ -856,6 +856,11 @@ class TransactionsApiService {
   async getAccountFieldChoices(): Promise<{
     type: Array<{ value: string; label: string }>;
     entity: Array<{ value: string; label: string }>;
+    institutions?: Array<{
+      value: string;
+      label: string;
+      account_types: Array<{ value: string; label: string }>;
+    }>;
   }> {
     const response = await fetch(`${this.baseUrl}/accounts/field-choices/`, {
       method: 'GET',

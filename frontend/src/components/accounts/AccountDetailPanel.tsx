@@ -25,6 +25,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { AccountWithBalance } from './AccountsSidebar';
+import type { InstitutionFieldChoice } from './AccountFormFields';
 
 interface BalancePoint {
   date: string;
@@ -60,6 +61,9 @@ export function AccountDetailPanel({
   const [entityOptions, setEntityOptions] = useState<
     Array<{ value: string; label: string }>
   >([]);
+  const [institutions, setInstitutions] = useState<InstitutionFieldChoice[]>(
+    []
+  );
 
   useEffect(() => {
     transactionsApiService
@@ -67,6 +71,7 @@ export function AccountDetailPanel({
       .then(c => {
         setAccountTypeOptions(c.type || []);
         setEntityOptions(c.entity || []);
+        setInstitutions(c.institutions || []);
       })
       .catch(() => {});
   }, []);
@@ -526,6 +531,7 @@ export function AccountDetailPanel({
         onDelete={handleDelete}
         accountTypeOptions={accountTypeOptions}
         entityOptions={entityOptions}
+        institutions={institutions}
         loading={editLoading}
       />
     </div>

@@ -32,6 +32,7 @@ class FinancialAccount(models.Model):
         ("checking", "Checking Account"),
         ("savings", "Savings Account"),
         ("credit_card", "Credit Card"),
+        ("investment", "Investment Account"),
     ]
 
     SYNC_SOURCE_CHOICES = [

@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from loguru import logger
 
+from apps.financial_account.institutions.registry import is_valid_account_type
 from apps.financial_account.models import FinancialAccount
 from apps.financial_account.repositories.account_repository import (
     FinancialAccountRepository,
@@ -89,10 +90,13 @@ class AccountService:
         """
         # Get or create institution if provided
         institution = None
+        institution_slug = institution_slug or "other"
 
-        # First try to look up by slug (for preset banks selected from dropdown)
-        if institution_slug and institution_slug != "other":
-            institution = self.institution_repository.get_by_slug(institution_slug)
+        if not is_valid_account_type(institution_slug, account_type):
+            raise ValueError(f"Account type '{account_type}' is not supported for institution '{institution_slug}'.")
+
+        # Look up preset institution from the registry-backed seed data.
+        institution = self.institution_repository.get_by_slug(institution_slug)
 
         # If no slug match, try by name (for synced accounts or custom entries)
         if not institution and institution_name:

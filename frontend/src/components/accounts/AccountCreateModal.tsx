@@ -1,7 +1,10 @@
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/Modal';
 import { useState } from 'react';
-import { AccountFormFields } from './AccountFormFields';
+import {
+  AccountFormFields,
+  type InstitutionFieldChoice,
+} from './AccountFormFields';
 
 interface AccountCreateModalProps {
   isOpen: boolean;
@@ -14,6 +17,7 @@ interface AccountCreateModalProps {
   }) => Promise<void>;
   accountTypeOptions: Array<{ value: string; label: string }>;
   entityOptions: Array<{ value: string; label: string }>;
+  institutions?: InstitutionFieldChoice[];
   loading: boolean;
 }
 
@@ -30,6 +34,7 @@ export function AccountCreateModal({
   onSubmit,
   accountTypeOptions,
   entityOptions,
+  institutions = [],
   loading,
 }: AccountCreateModalProps) {
   const [form, setForm] = useState(EMPTY_FORM);
@@ -59,6 +64,7 @@ export function AccountCreateModal({
           onChange={handleFieldChange}
           accountTypeOptions={accountTypeOptions}
           entityOptions={entityOptions}
+          institutions={institutions}
           idPrefix="acc"
           showStartingBalance
         />

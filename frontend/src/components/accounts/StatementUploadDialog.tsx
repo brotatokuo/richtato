@@ -41,7 +41,7 @@ import { toast } from 'sonner';
 
 type PeriodMode = 'single' | 'custom';
 
-const SUPPORTED_EXTENSIONS = ['.csv', '.xls', '.xlsx'];
+const SUPPORTED_EXTENSIONS = ['.csv', '.xls', '.xlsx', '.pdf'];
 
 function isSupportedFile(file: File): boolean {
   const name = file.name.toLowerCase();
@@ -124,7 +124,7 @@ export function StatementUploadDialog({
     }
     if (!isSupportedFile(file)) {
       toast.error('Unsupported file type', {
-        description: 'Upload a CSV, XLS, or XLSX statement file.',
+        description: 'Upload a CSV, XLS, XLSX, or PDF statement file.',
       });
       return;
     }
@@ -296,7 +296,7 @@ export function StatementUploadDialog({
               {selectedFile ? selectedFile.name : 'Drop a statement file here'}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              CSV, XLS, or XLSX
+              CSV, XLS, XLSX, or PDF
             </p>
             <Button
               type="button"

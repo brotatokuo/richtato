@@ -18,6 +18,7 @@ import {
 import { Calendar, Check, Sparkles, Users } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import type { InstitutionFieldChoice } from '@/components/accounts/AccountFormFields';
 
 interface AccountDetailModalProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ interface AccountDetailModalProps {
   onDelete: () => void;
   accountTypeOptions: Array<{ value: string; label: string }>;
   entityOptions: Array<{ value: string; label: string }>;
+  institutions?: InstitutionFieldChoice[];
   loading: boolean;
 }
 
@@ -54,6 +56,7 @@ export function AccountDetailModal({
   onDelete,
   accountTypeOptions,
   entityOptions,
+  institutions = [],
   loading,
 }: AccountDetailModalProps) {
   const { isInHousehold } = useHousehold();
@@ -68,6 +71,30 @@ export function AccountDetailModal({
     openingBalanceDate: defaultOpeningBalanceDate(),
   });
   const [initialOpeningBalance, setInitialOpeningBalance] = useState('');
+
+  const filteredTypeOptions = useMemo(() => {
+    const institution = institutions.find(item => item.value === form.entity);
+    if (institution?.account_types?.length) {
+      return institution.account_types;
+    }
+    return accountTypeOptions;
+  }, [accountTypeOptions, form.entity, institutions]);
+
+  const handleEntityChange = (value: string) => {
+    setForm(prev => {
+      const institution = institutions.find(item => item.value === value);
+      const nextTypeOptions = institution?.account_types?.length
+        ? institution.account_types
+        : accountTypeOptions;
+      let nextType = prev.type;
+      if (nextTypeOptions.length === 1) {
+        nextType = nextTypeOptions[0].value;
+      } else if (!nextTypeOptions.some(option => option.value === prev.type)) {
+        nextType = nextTypeOptions[0]?.value ?? 'checking';
+      }
+      return { ...prev, entity: value, type: nextType };
+    });
+  };
   const [initialOpeningBalanceDate, setInitialOpeningBalanceDate] = useState(
     defaultOpeningBalanceDate()
   );
@@ -251,7 +278,7 @@ export function AccountDetailModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {accountTypeOptions.map(t => (
+                  {filteredTypeOptions.map(t => (
                     <SelectItem key={t.value} value={t.value}>
                       {t.label}
                     </SelectItem>
@@ -262,10 +289,7 @@ export function AccountDetailModal({
 
             <div>
               <Label htmlFor="detail-acc-entity">Bank/Entity</Label>
-              <Select
-                value={form.entity}
-                onValueChange={v => handleFieldChange('entity', v)}
-              >
+              <Select value={form.entity} onValueChange={handleEntityChange}>
                 <SelectTrigger id="detail-acc-entity">
                   <SelectValue placeholder="Select a bank" />
                 </SelectTrigger>

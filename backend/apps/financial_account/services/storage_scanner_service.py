@@ -16,38 +16,11 @@ from pathlib import Path
 from django.core.files.base import ContentFile
 from loguru import logger
 
+from apps.financial_account.institutions.registry import parser_key_for_account, supported_extensions_for_parser
 from apps.financial_account.models import FinancialAccount, StatementFile
 from apps.financial_account.services.statement_file_service import StatementFileService
 from apps.financial_account.services.statement_import_service import StatementImportResult, StatementImportService
 from apps.financial_account.storage import UnknownStorageScheme, get_storage
-
-# FinancialInstitution.slug -> StatementImportService parser key. Slugs that
-# already match the parser key (chase, marcus, amex, fidelity, guideline)
-# fall through and are used verbatim.
-INSTITUTION_SLUG_TO_PARSER = {
-    "bank_of_america": "bofa",
-    "citibank": "citi",
-    "robinhood": "robinhood_bank",
-    "robinhood_investments": "robinhood_investments",
-    "robinhood_bank": "robinhood_bank",
-}
-
-
-def parser_key_for_account(account: FinancialAccount) -> str | None:
-    """Map an account's institution slug to a StatementImportService parser key."""
-    institution = account.institution
-    if institution is None:
-        return None
-    slug = (institution.slug or "").lower()
-    if not slug:
-        return None
-    if slug in INSTITUTION_SLUG_TO_PARSER:
-        return INSTITUTION_SLUG_TO_PARSER[slug]
-    from apps.financial_account.services.statement_import_service import SUPPORTED_INSTITUTIONS
-
-    if slug in SUPPORTED_INSTITUTIONS:
-        return slug
-    return None
 
 
 @dataclass
@@ -163,9 +136,10 @@ class StorageScannerService:
             )
 
         parser_key = self._parser_key_for_account(account)
+        allowed_extensions = supported_extensions_for_parser(parser_key)
         for stored in stored_files:
             result.files_seen += 1
-            if Path(stored.filename).suffix.lower() not in self.SUPPORTED_EXTENSIONS:
+            if Path(stored.filename).suffix.lower() not in allowed_extensions:
                 result.files_skipped += 1
                 result.outcomes.append(
                     ScanFileOutcome(

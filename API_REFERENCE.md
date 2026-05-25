@@ -83,8 +83,8 @@ Common date filters:
 | `POST` | `/drive/disconnect/` | Disconnect inactive Drive OAuth credentials |
 | `POST` | `/agent-statements/` | Agent upload endpoint for Drive-backed statement downloads |
 | `POST` | `/import-csv/` | Import statement CSV |
-| `GET` | `/import-statement/` | List supported CSV/Excel statement institutions |
-| `POST` | `/import-statement/` | Preview or commit CSV/Excel statement import |
+| `GET` | `/import-statement/` | List supported statement import institutions |
+| `POST` | `/import-statement/` | Preview or commit CSV/Excel/PDF statement import |
 | `GET` | `/statements/` | List stored statement records and folder summary |
 | `POST` | `/statements/` | Legacy statement file upload into the configured account storage |
 | `GET` | `/statements/{id}/` | Get statement file metadata |
@@ -102,9 +102,9 @@ Card-specific account routes are mounted at `/api/v1/card-accounts/`.
 
 `POST /api/v1/accounts/import-statement/` accepts multipart form data:
 
-- `file`: CSV, XLS, or XLSX statement export.
+- `file`: CSV, XLS, XLSX, or PDF statement export (PDF currently supported for `robinhood_credit` only).
 - `account`: target account ID.
-- `institution`: one of `bofa`, `marcus`, `amex`, `robinhood_bank`, `fidelity`, `robinhood_investments`, `guideline`, or `chase`.
+- `institution`: one of `bofa`, `marcus`, `amex`, `robinhood_bank`, `robinhood_credit`, `fidelity`, `robinhood_investments`, `guideline`, `citi`, or `chase`.
 - `mode`: `preview` or `commit`.
 - `statement_status`: `provisional` for current/open exports or `closed` for final statements.
 - `statement_period`: optional label such as `2025-06`.

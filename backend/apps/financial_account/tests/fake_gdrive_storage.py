@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 
 from apps.financial_account.storage.base import StoredFile
 
-SUPPORTED_EXTENSIONS = {".csv", ".xls", ".xlsx"}
+SUPPORTED_EXTENSIONS = {".csv", ".xls", ".xlsx", ".pdf"}
 
 
 @dataclass

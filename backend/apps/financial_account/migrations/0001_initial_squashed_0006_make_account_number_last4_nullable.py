@@ -27,26 +27,13 @@ COMMON_INSTITUTIONS = [
     # Major US Banks
     {"name": "Chase", "slug": "chase"},
     {"name": "Bank of America", "slug": "bank_of_america"},
-    {"name": "Wells Fargo", "slug": "wells_fargo"},
     {"name": "Citibank", "slug": "citibank"},
-    {"name": "Capital One", "slug": "capital_one"},
-    {"name": "US Bank", "slug": "us_bank"},
-    {"name": "PNC Bank", "slug": "pnc"},
-    {"name": "TD Bank", "slug": "td_bank"},
-    # Online Banks
-    {"name": "Ally Bank", "slug": "ally"},
-    {"name": "Discover Bank", "slug": "discover"},
-    {"name": "SoFi", "slug": "sofi"},
     # Credit Card Issuers
     {"name": "American Express", "slug": "american_express"},
     # Investment / Brokerage
     {"name": "Marcus by Goldman Sachs", "slug": "marcus"},
     {"name": "Robinhood", "slug": "robinhood"},
-    {"name": "Charles Schwab", "slug": "schwab"},
     {"name": "Fidelity", "slug": "fidelity"},
-    {"name": "Vanguard", "slug": "vanguard"},
-    # Credit Unions
-    {"name": "Navy Federal Credit Union", "slug": "navy_federal"},
     # Other
     {"name": "Other", "slug": "other"},
 ]

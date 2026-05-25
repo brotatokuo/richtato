@@ -16,6 +16,7 @@ from django.utils import timezone
 from django.utils.text import get_valid_filename
 from loguru import logger
 
+from apps.financial_account.institutions.registry import supported_extensions_for_parser
 from apps.financial_account.models import FinancialAccount, StatementFile
 from apps.financial_account.services.statement_import_service import StatementImportResult, StatementImportService
 from apps.financial_account.storage import UnknownStorageScheme, get_storage
@@ -88,8 +89,11 @@ class StatementFileService:
         """Save an uploaded statement to the account's Google Drive folder."""
         filename = get_valid_filename(Path(uploaded_file.name).name)
         extension = Path(filename).suffix.lower()
-        if extension not in self.SUPPORTED_EXTENSIONS:
-            raise ValueError("Unsupported file type. Upload a CSV, XLS, or XLSX file.")
+        allowed_extensions = supported_extensions_for_parser(institution)
+        if extension not in allowed_extensions:
+            raise ValueError(
+                f"Unsupported file type for this account. Allowed extensions: {', '.join(sorted(allowed_extensions))}."
+            )
 
         self._validate_statement_period(statement_period)
 

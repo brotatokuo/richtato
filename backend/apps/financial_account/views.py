@@ -226,29 +226,9 @@ class AccountFieldChoicesAPIView(APIView):
 
     def get(self, request):
         """Get available account types and entities."""
-        from apps.financial_account.models import FinancialAccount, FinancialInstitution
+        from apps.financial_account.institutions.registry import get_institution_field_choices
 
-        # Account type choices
-        type_choices = [{"value": choice[0], "label": choice[1]} for choice in FinancialAccount.ACCOUNT_TYPE_CHOICES]
-
-        # Entity/institution choices - use slug as value for consistency with frontend
-        # Sort alphabetically but keep "Other" at the end
-        institutions = FinancialInstitution.objects.all().order_by("name")
-        entity_choices = []
-        other_choice = None
-
-        for inst in institutions:
-            choice = {"value": inst.slug, "label": inst.name}
-            if inst.slug == "other":
-                other_choice = choice
-            else:
-                entity_choices.append(choice)
-
-        # Add "Other" at the end if it exists
-        if other_choice:
-            entity_choices.append(other_choice)
-
-        return Response({"type": type_choices, "entity": entity_choices})
+        return Response(get_institution_field_choices())
 
 
 class BankAgentConfigAPIView(APIView):

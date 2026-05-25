@@ -12,6 +12,7 @@ One folder per institution + account type; any reasonable filename is fine.
 | Chase | `checking/`, `savings/`, `credit_card/` |
 | Citi | `credit_card/` |
 | Marcus | `savings/` |
+| Robinhood | `checking/`, `savings/`, `credit_card/` |
 
 ## Folder layout
 
@@ -27,11 +28,13 @@ connector-specs/
 ├── chase/savings/
 ├── chase/credit_card/
 ├── citi/credit_card/          ← citi_costco.csv
-└── marcus/savings/
+├── marcus/savings/
+└── robinhood/credit_card/     ← robinhood_credit_may_2026.pdf
 ```
 
-Add 1–2 real exports per folder (`activity-export.csv`, `activity-export.xlsx`, or a
-descriptive name like `citi_costco.csv`). Redact account numbers if you want; keep
+Add 1–2 real exports per folder (`activity-export.csv`, `activity-export.xlsx`, a
+descriptive name like `citi_costco.csv`, or a monthly PDF such as
+`robinhood_credit_may_2026.pdf`). Redact account numbers if you want; keep
 headers and row structure.
 
 Mention quirks in chat (PDF-only, separate Debit/Credit columns, header row number,
@@ -51,8 +54,10 @@ amount sign convention) — no per-folder README required.
 | Chase | Credit | Partial | Done |
 | Citi | Credit | Done | Needed |
 | Marcus | Savings | Partial | Needed |
+| Robinhood | Checking/Savings | Partial (CSV) | Needed |
+| Robinhood | Credit | Done (PDF) | Needed |
 
-**Parser** → `backend/apps/financial_account/services/statement_import_service.py`
+**Parser** → `backend/apps/financial_account/institutions/parsers/` and `backend/apps/financial_account/services/statement_import_service.py`
 **Download adapter** → `scripts/bank_sync/institutions/`
 
 Parsers can ship before Playwright automation (manual upload / Drive drop works first).

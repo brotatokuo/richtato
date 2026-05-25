@@ -6,15 +6,9 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
+from apps.financial_account.institutions.registry import get_agent_institution_slug
 from apps.financial_account.models import FinancialAccount
 from apps.richtato_user.models import User
-
-SUPPORTED_AGENT_INSTITUTIONS = {
-    "bank_of_america": "bofa",
-    "bofa": "bofa",
-    "chase": "chase",
-    "jpmorgan_chase": "chase",
-}
 
 
 @dataclass(frozen=True)
@@ -79,8 +73,8 @@ class BankAgentConfigService:
         return list(queryset)
 
     def _agent_institution_slug(self, account: FinancialAccount) -> str | None:
-        slug = (account.institution.slug if account.institution else "").lower()
-        return SUPPORTED_AGENT_INSTITUTIONS.get(slug)
+        slug = account.institution.slug if account.institution else ""
+        return get_agent_institution_slug(slug)
 
     def _flow_for_account(self, account: FinancialAccount) -> str:
         return "credit_card" if account.account_type == "credit_card" else "deposit"

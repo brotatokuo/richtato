@@ -1,4 +1,5 @@
 import { AccountCreateModal } from '@/components/accounts/AccountCreateModal';
+import type { InstitutionFieldChoice } from '@/components/accounts/AccountFormFields';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { usePreferences } from '@/contexts/PreferencesContext';
@@ -43,10 +44,11 @@ function AccountIcon({ type }: { type: string }) {
     return <CreditCard className="h-4 w-4" />;
   if (t === 'savings' || t === 'savings_account')
     return <Wallet className="h-4 w-4" />;
+  if (t === 'investment') return <Landmark className="h-4 w-4" />;
   return <Building2 className="h-4 w-4" />;
 }
 
-const GROUP_ORDER = ['checking', 'savings', 'credit_card'];
+const GROUP_ORDER = ['checking', 'savings', 'investment', 'credit_card'];
 
 export function AccountsSidebar({
   selectedAccountId,
@@ -66,6 +68,9 @@ export function AccountsSidebar({
   const [entityOptions, setEntityOptions] = useState<
     Array<{ value: string; label: string }>
   >([]);
+  const [institutions, setInstitutions] = useState<InstitutionFieldChoice[]>(
+    []
+  );
   const [creating, setCreating] = useState(false);
 
   const loadAccounts = useCallback(async () => {
@@ -97,6 +102,7 @@ export function AccountsSidebar({
       .then(c => {
         setAccountTypeOptions(c.type || []);
         setEntityOptions(c.entity || []);
+        setInstitutions(c.institutions || []);
       })
       .catch(() => {});
   }, [loadAccounts]);
@@ -123,9 +129,11 @@ export function AccountsSidebar({
             ? 'Checking'
             : type === 'savings'
               ? 'Savings'
-              : type === 'credit_card'
-                ? 'Credit Cards'
-                : 'Other';
+              : type === 'investment'
+                ? 'Investments'
+                : type === 'credit_card'
+                  ? 'Credit Cards'
+                  : 'Other';
         return { label, type, accounts: accs, total, isLiability };
       });
   }, [accounts]);
@@ -385,6 +393,7 @@ export function AccountsSidebar({
         onSubmit={handleCreate}
         accountTypeOptions={accountTypeOptions}
         entityOptions={entityOptions}
+        institutions={institutions}
         loading={creating}
       />
     </div>

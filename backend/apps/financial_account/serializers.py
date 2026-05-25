@@ -4,6 +4,8 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
+from apps.financial_account.institutions.registry import ACCOUNT_TYPE_LABELS, is_valid_account_type
+
 from .models import AccountBalanceHistory, FinancialAccount, FinancialInstitution
 
 
@@ -114,7 +116,7 @@ class FinancialAccountCreateSerializer(serializers.Serializer):
     """Serializer for creating manual financial accounts."""
 
     name = serializers.CharField(max_length=255)
-    account_type = serializers.ChoiceField(choices=["checking", "savings", "credit_card"])
+    account_type = serializers.ChoiceField(choices=list(ACCOUNT_TYPE_LABELS.keys()))
     institution_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     institution_slug = serializers.CharField(
         max_length=255,
@@ -125,6 +127,19 @@ class FinancialAccountCreateSerializer(serializers.Serializer):
     account_number_last4 = serializers.CharField(max_length=4, required=False, allow_blank=True)
     initial_balance = serializers.DecimalField(max_digits=15, decimal_places=2, default=0)
     currency = serializers.CharField(max_length=3, default="USD")
+
+    def validate(self, attrs):
+        institution_slug = attrs.get("institution_slug") or "other"
+        account_type = attrs["account_type"]
+        if not is_valid_account_type(institution_slug, account_type):
+            raise serializers.ValidationError(
+                {
+                    "account_type": (
+                        f"Account type '{account_type}' is not supported for institution '{institution_slug}'."
+                    )
+                }
+            )
+        return attrs
 
 
 class FinancialAccountUpdateSerializer(serializers.Serializer):

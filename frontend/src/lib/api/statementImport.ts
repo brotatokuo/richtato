@@ -4,8 +4,9 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 export interface StatementInstitution {
   id: string;
+  slug: string;
   display_name: string;
-  domains: string[];
+  account_types: string[];
   file_types: string[];
 }
 
