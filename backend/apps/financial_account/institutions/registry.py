@@ -2,8 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
+
+import pandas as pd
+
+from apps.financial_account.institutions.parsers.amex_checking_pdf import parse_amex_checking_pdf
+from apps.financial_account.institutions.parsers.amex_xlsx import parse_amex_activity_excel
+from apps.financial_account.institutions.parsers.robinhood_bank_pdf import parse_robinhood_bank_pdf
+from apps.financial_account.institutions.parsers.robinhood_credit_pdf import parse_robinhood_credit_pdf
 
 ACCOUNT_TYPE_LABELS: dict[str, str] = {
     "checking": "Checking Account",
@@ -110,6 +118,22 @@ _PARSER_CONFIGS: dict[str, dict[str, Any]] = {
         "description": ["Transaction Description"],
         "amount": ["Amount"],
     },
+    "generic": {
+        "display_name": "Generic CSV",
+        "date": ["date"],
+        "description": ["description"],
+        "amount": ["amount"],
+        "debit": [],
+        "credit": [],
+        "type": ["type", "transaction_type"],
+    },
+}
+
+PARSER_READERS: dict[str, Callable[[bytes], pd.DataFrame]] = {
+    "amex": parse_amex_activity_excel,
+    "amex_checking": parse_amex_checking_pdf,
+    "robinhood_bank": parse_robinhood_bank_pdf,
+    "robinhood_credit": parse_robinhood_credit_pdf,
 }
 
 _DEFAULT_FILE_TYPES = ("csv", "xls", "xlsx")
@@ -229,6 +253,11 @@ def get_parser_config(parser_key: str) -> dict[str, Any] | None:
     if institution is not None and institution.parser_config:
         return institution.parser_config
     return _PARSER_CONFIGS.get(parser_key)
+
+
+def get_parser_reader(parser_key: str) -> Callable[[bytes], pd.DataFrame] | None:
+    """Return a format-specific reader that materializes a DataFrame from raw bytes."""
+    return PARSER_READERS.get(parser_key)
 
 
 def parser_key_for_account(account) -> str | None:

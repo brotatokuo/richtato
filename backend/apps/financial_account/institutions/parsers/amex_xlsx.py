@@ -21,7 +21,7 @@ def parse_amex_activity_excel(content: bytes) -> pd.DataFrame:
     workbook = pd.ExcelFile(buffer)
     sheet_name = _select_sheet(workbook.sheet_names)
     preview = pd.read_excel(
-        io.BytesIO(content),
+        workbook,
         sheet_name=sheet_name,
         header=None,
         nrows=15,
@@ -29,10 +29,10 @@ def parse_amex_activity_excel(content: bytes) -> pd.DataFrame:
     )
     header_row = _find_header_row(preview)
     if header_row is None:
-        frame = pd.read_excel(io.BytesIO(content), sheet_name=sheet_name, dtype=str)
+        frame = pd.read_excel(workbook, sheet_name=sheet_name, dtype=str)
     else:
         frame = pd.read_excel(
-            io.BytesIO(content),
+            workbook,
             sheet_name=sheet_name,
             header=header_row,
             dtype=str,

@@ -2,7 +2,7 @@
 
 Walks each account's ``gdrive://`` storage URI looking for files that are
 not yet tracked in ``StatementFile``. New files become ``agent_drop`` rows
-and are auto-imported via :class:`StatementImportService`.
+and are auto-imported via :class:`StatementFileService`.
 """
 
 from __future__ import annotations
@@ -13,13 +13,11 @@ from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 
-from django.core.files.base import ContentFile
 from loguru import logger
 
 from apps.financial_account.institutions.registry import parser_key_for_account, supported_extensions_for_parser
 from apps.financial_account.models import FinancialAccount, StatementFile
 from apps.financial_account.services.statement_file_service import StatementFileService
-from apps.financial_account.services.statement_import_service import StatementImportResult, StatementImportService
 from apps.financial_account.storage import UnknownStorageScheme, get_storage
 
 
@@ -53,7 +51,6 @@ class StorageScannerService:
     SUPPORTED_EXTENSIONS = {".csv", ".xls", ".xlsx"}
 
     def __init__(self):
-        self.import_service = StatementImportService()
         self.statement_file_service = StatementFileService()
 
     def scan_all(self, *, dry_run: bool = False) -> ScanResult:
@@ -199,7 +196,6 @@ class StorageScannerService:
                 self._import_one(
                     account=account,
                     storage_uri=storage_uri,
-                    storage=storage,
                     stored=stored,
                     file_hash=file_hash,
                     parser_key=parser_key,
@@ -222,68 +218,27 @@ class StorageScannerService:
         *,
         account: FinancialAccount,
         storage_uri: str,
-        storage,
         stored,
         file_hash: str,
         parser_key: str,
         result: ScanResult,
     ) -> None:
         year, month = self._year_month_from_path(stored.relative_path)
-        with storage.open_file(storage_uri, stored.relative_path) as handle:
-            content = handle.read()
-
-        statement = StatementFile.objects.create(
-            user=account.user,
+        statement, import_result = self.statement_file_service.register_discovered_file_and_import(
             account=account,
+            stored_path=self._stored_path_from_storage(storage_uri, stored.relative_path),
+            original_filename=stored.filename,
+            file_hash=file_hash,
+            size_bytes=stored.size_bytes,
+            drive_file_id=getattr(stored, "external_file_id", "") or "",
             institution=parser_key,
             statement_period=f"{year}-{month:02d}",
             statement_year=year,
             statement_month=month,
-            statement_status="provisional",
-            import_status="uploaded",
-            original_filename=stored.filename,
-            stored_path=self._stored_path_from_storage(storage_uri, stored.relative_path),
-            drive_file_id=getattr(stored, "external_file_id", "") or "",
-            content_type="",
-            size_bytes=stored.size_bytes,
-            file_hash=file_hash,
             source="agent_drop",
         )
 
-        django_file = ContentFile(content, name=stored.filename)
-        import_result: StatementImportResult = self.import_service.import_statement(
-            account=account,
-            statement_file=django_file,
-            institution=parser_key,
-            statement_period=statement.statement_period,
-            statement_status="provisional",
-        )
-
-        import_status = "imported"
-        if import_result.errors and import_result.imported_count == 0 and import_result.parsed_count == 0:
-            import_status = "failed"
-
-        statement.parsed_count = import_result.parsed_count
-        statement.imported_count = import_result.imported_count
-        statement.duplicate_count = import_result.duplicate_count
-        statement.invalid_count = import_result.invalid_count
-        statement.possible_changed_count = import_result.possible_changed_count
-        statement.last_import_result = import_result.as_dict()
-        statement.import_status = import_status
-        statement.save(
-            update_fields=[
-                "parsed_count",
-                "imported_count",
-                "duplicate_count",
-                "invalid_count",
-                "possible_changed_count",
-                "last_import_result",
-                "import_status",
-                "updated_at",
-            ]
-        )
-
-        if import_status == "failed":
+        if statement.import_status == "failed":
             result.files_failed += 1
             result.outcomes.append(
                 ScanFileOutcome(

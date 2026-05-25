@@ -15,18 +15,11 @@ from typing import Any
 import pandas as pd
 from loguru import logger
 
-from apps.financial_account.institutions.parsers.amex_checking_pdf import (
-    parse_amex_checking_balance_summary,
-    parse_amex_checking_pdf,
-)
-from apps.financial_account.institutions.parsers.amex_xlsx import parse_amex_activity_excel
-from apps.financial_account.institutions.parsers.robinhood_bank_pdf import (
-    parse_robinhood_bank_balance_summary,
-    parse_robinhood_bank_pdf,
-)
-from apps.financial_account.institutions.parsers.robinhood_credit_pdf import parse_robinhood_credit_pdf
+from apps.financial_account.institutions.parsers.amex_checking_pdf import parse_amex_checking_balance_summary
+from apps.financial_account.institutions.parsers.robinhood_bank_pdf import parse_robinhood_bank_balance_summary
 from apps.financial_account.institutions.registry import (
     get_parser_config,
+    get_parser_reader,
     get_supported_institutions,
     parser_key_for_slug,
     supported_extensions_for_parser,
@@ -34,6 +27,7 @@ from apps.financial_account.institutions.registry import (
 )
 from apps.financial_account.models import FinancialAccount
 from apps.transaction.models import Transaction
+from apps.transaction.services.bulk_transaction_service import bulk_create_import_transactions
 
 OPENING_BALANCE_DESCRIPTION = "Opening Balance"
 BOFA_BANKING_ACCOUNT_TYPES = {"checking", "savings"}
@@ -51,6 +45,8 @@ BOFA_ENDING_BALANCE_RE = re.compile(
 BOFA_TRANSACTION_DATE_PREFIX = re.compile(r"^\d{2}/\d{2}/\d{4},")
 BOFA_EMPTY_AMOUNT_ROW = re.compile(r'^(.+?),,("(?:-)?[\d,]+\.\d{2}")\s*$')
 BOFA_AMOUNT_BALANCE_SUFFIX = re.compile(r'^(.+),("(?:-)?[\d,]+\.\d{2}"),("(?:-)?[\d,]+\.\d{2}")\s*$')
+_DATE_ISO = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_DATE_US = re.compile(r"^(\d{1,2})/(\d{1,2})/(\d{4})$")
 
 
 @dataclass
@@ -168,9 +164,18 @@ class StatementImportService:
         statement_status: str = "provisional",
         *,
         apply_opening_balance: bool = False,
+        ending_balance: Decimal | None = None,
+        ending_date: date | None = None,
     ) -> StatementImportResult:
         """Parse, deduplicate, and create transactions for new statement rows."""
         result = self.preview_statement(account, statement_file, institution, statement_period, statement_status)
+
+        if ending_balance is not None:
+            summary = dict(result.balance_summary or {})
+            summary["ending_balance"] = str(ending_balance.quantize(Decimal("0.01")))
+            if ending_date is not None:
+                summary["ending_date"] = ending_date.isoformat()
+            result.balance_summary = summary
 
         if apply_opening_balance:
             self._apply_opening_balance(account, result)
@@ -213,10 +218,7 @@ class StatementImportService:
                 )
             )
 
-        for transaction in transactions:
-            transaction.save()
-
-        result.imported_count = len(transactions)
+        result.imported_count = bulk_create_import_transactions(account, transactions)
         self._reconcile_account_ending_balance(account, result, apply_opening_balance=apply_opening_balance)
         logger.info(
             "Imported statement rows",
@@ -283,15 +285,24 @@ class StatementImportService:
         result._transaction_frame = frame  # noqa: SLF001 — used for BoFA running-balance validation
 
         frame.columns = [str(column).strip() for column in frame.columns]
-        for index, raw_row in frame.iterrows():
+        column_map = self._resolve_column_map(list(frame.columns), config)
+        if parser_key == "generic":
+            missing = [field for field in ("date", "description", "amount") if not column_map.get(field)]
+            if missing:
+                result.errors.append(f"Missing required columns: {', '.join(missing)}")
+                return result
+
+        for row_number, raw_row in enumerate(frame.to_dict("records"), start=2):
+            raw_mapping = {str(key).strip(): value for key, value in raw_row.items()}
             normalized = self._normalize_row(
                 account=account,
                 config=config,
                 institution=parser_key,
                 source_file_hash=result.file_hash,
                 statement_period=statement_period,
-                row_number=int(index) + 2,
-                raw_row={str(key).strip(): value for key, value in raw_row.to_dict().items()},
+                row_number=row_number,
+                raw_row=raw_mapping,
+                column_map=column_map,
             )
             if normalized is None:
                 result.invalid_count += 1
@@ -304,14 +315,11 @@ class StatementImportService:
         return result
 
     def _read_frame(self, content: bytes, extension: str, *, parser_key: str = "") -> pd.DataFrame:
+        reader = get_parser_reader(parser_key)
         if extension == ".pdf":
-            if parser_key == "robinhood_credit":
-                return parse_robinhood_credit_pdf(content)
-            if parser_key == "robinhood_bank":
-                return parse_robinhood_bank_pdf(content)
-            if parser_key == "amex_checking":
-                return parse_amex_checking_pdf(content)
-            raise ValueError(f"PDF statements are not supported for institution {parser_key}.")
+            if reader is None:
+                raise ValueError(f"PDF statements are not supported for institution {parser_key}.")
+            return reader(content)
         if extension == ".csv":
             csv_content = content
             if parser_key == "bofa" or self._looks_like_bofa_banking_csv(content):
@@ -323,8 +331,8 @@ class StatementImportService:
                     csv_content = self._extract_bofa_transaction_csv(content)
                     return self._read_csv_bytes(csv_content)
                 raise
-        if parser_key == "amex":
-            return parse_amex_activity_excel(content)
+        if reader is not None and extension in {".xls", ".xlsx"}:
+            return reader(content)
         return pd.read_excel(io.BytesIO(content), dtype=str).dropna(how="all")
 
     @staticmethod
@@ -562,7 +570,10 @@ class StatementImportService:
         if raw_content is None or frame is None:
             return
 
-        summary = parse_robinhood_bank_balance_summary(raw_content)
+        try:
+            summary = parse_robinhood_bank_balance_summary(raw_content)
+        except Exception:
+            summary = None
         if summary is None:
             result.reconciliation_warnings.append(
                 "Could not read beginning and ending balances from this Robinhood Banking statement."
@@ -614,7 +625,10 @@ class StatementImportService:
         if raw_content is None or frame is None:
             return
 
-        summary = parse_amex_checking_balance_summary(raw_content)
+        try:
+            summary = parse_amex_checking_balance_summary(raw_content)
+        except Exception:
+            summary = None
         if summary is None:
             result.reconciliation_warnings.append(
                 "Could not read beginning and ending balances from this American Express checking statement."
@@ -845,21 +859,39 @@ class StatementImportService:
         statement_period: str,
         row_number: int,
         raw_row: dict[str, Any],
+        column_map: dict[str, str | None] | None = None,
     ) -> NormalizedStatementRow | None:
-        date_value = self._first_value(raw_row, config["date"])
-        description = self._first_value(raw_row, config["description"])
-        amount_value = self._first_value(raw_row, config["amount"])
-        debit_value = self._first_value(raw_row, config.get("debit", []))
-        credit_value = self._first_value(raw_row, config.get("credit", []))
+        if column_map is not None:
+            date_value = self._row_value(raw_row, column_map.get("date"))
+            description = self._row_value(raw_row, column_map.get("description"))
+            amount_value = self._row_value(raw_row, column_map.get("amount"))
+            debit_value = self._row_value(raw_row, column_map.get("debit"))
+            credit_value = self._row_value(raw_row, column_map.get("credit"))
+            type_value = self._row_value(raw_row, column_map.get("type"))
+            activity_type = self._row_value(raw_row, column_map.get("activity"))
+            symbol = self._row_value(raw_row, column_map.get("symbol"))
+            quantity = self._row_value(raw_row, column_map.get("quantity"))
+        else:
+            date_value = self._first_value(raw_row, config["date"])
+            description = self._first_value(raw_row, config["description"])
+            amount_value = self._first_value(raw_row, config["amount"])
+            debit_value = self._first_value(raw_row, config.get("debit", []))
+            credit_value = self._first_value(raw_row, config.get("credit", []))
+            type_value = self._first_value(raw_row, config.get("type", []))
+            activity_type = self._first_value(raw_row, config.get("activity", []))
+            symbol = self._first_value(raw_row, config.get("symbol", []))
+            quantity = self._first_value(raw_row, config.get("quantity", []))
 
         posted_date = self._parse_date(date_value)
-        amount, transaction_type = self._parse_amount(amount_value, debit_value, credit_value, account)
+        amount, transaction_type = self._parse_amount(
+            amount_value,
+            debit_value,
+            credit_value,
+            account,
+            type_value=type_value,
+        )
         if posted_date is None or amount is None or not description:
             return None
-
-        activity_type = self._first_value(raw_row, config.get("activity", []))
-        symbol = self._first_value(raw_row, config.get("symbol", []))
-        quantity = self._first_value(raw_row, config.get("quantity", []))
         description = self._normalize_description(description)
         row_hash_base = self._row_hash_base(
             account.id,
@@ -972,6 +1004,19 @@ class StatementImportService:
     def _parse_date(self, value: str) -> date | None:
         if not value:
             return None
+        value = value.strip()
+        if _DATE_ISO.match(value):
+            try:
+                return date.fromisoformat(value)
+            except ValueError:
+                return None
+        match = _DATE_US.match(value)
+        if match:
+            month, day, year = int(match.group(1)), int(match.group(2)), int(match.group(3))
+            try:
+                return date(year, month, day)
+            except ValueError:
+                return None
         parsed = pd.to_datetime(value, errors="coerce")
         if pd.isna(parsed):
             return None
@@ -983,7 +1028,17 @@ class StatementImportService:
         debit_value: str,
         credit_value: str,
         account: FinancialAccount,
+        *,
+        type_value: str = "",
     ) -> tuple[Decimal | None, str]:
+        type_normalized = type_value.strip().lower()
+        if type_normalized in ("debit", "credit"):
+            signed_amount = self._signed_decimal(amount_value)
+            amount = abs(signed_amount) if signed_amount is not None else self._decimal(amount_value)
+            if amount is None:
+                return None, "debit"
+            return amount, type_normalized
+
         if debit_value:
             amount = self._decimal(debit_value)
             return amount, "debit"
@@ -1037,6 +1092,38 @@ class StatementImportService:
             if value:
                 return value
         return ""
+
+    def _resolve_column_map(
+        self,
+        frame_columns: list[str],
+        config: dict[str, Any],
+    ) -> dict[str, str | None]:
+        lower_map = {column.strip().lower(): column for column in frame_columns}
+        resolved: dict[str, str | None] = {}
+        for field_name in (
+            "date",
+            "description",
+            "amount",
+            "debit",
+            "credit",
+            "type",
+            "activity",
+            "symbol",
+            "quantity",
+        ):
+            candidates = config.get(field_name, [])
+            resolved[field_name] = None
+            for candidate in candidates:
+                raw_key = lower_map.get(str(candidate).strip().lower())
+                if raw_key:
+                    resolved[field_name] = raw_key
+                    break
+        return resolved
+
+    def _row_value(self, raw_row: dict[str, Any], column_key: str | None) -> str:
+        if not column_key:
+            return ""
+        return self._stringify_value(raw_row.get(column_key))
 
     def _stringify_value(self, value: Any) -> str:
         if value is None or pd.isna(value):

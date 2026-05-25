@@ -164,6 +164,42 @@ class StatementFileService:
         logger.info("Stored statement file", statement_id=statement.id, account_id=account.id)
         return StatementUploadResult(statement=statement, created=True)
 
+    def register_discovered_file_and_import(
+        self,
+        *,
+        account: FinancialAccount,
+        stored_path: str,
+        original_filename: str,
+        file_hash: str,
+        size_bytes: int,
+        drive_file_id: str,
+        institution: str,
+        statement_period: str,
+        statement_year: int,
+        statement_month: int,
+        source: str = "agent_drop",
+    ) -> tuple[StatementFile, StatementImportResult]:
+        """Catalog an already-stored file and auto-import its transactions."""
+        statement = StatementFile.objects.create(
+            user=account.user,
+            account=account,
+            institution=institution,
+            statement_period=statement_period,
+            statement_year=statement_year,
+            statement_month=statement_month,
+            statement_status="provisional",
+            import_status="uploaded",
+            original_filename=original_filename,
+            stored_path=stored_path,
+            drive_file_id=drive_file_id,
+            content_type="",
+            size_bytes=size_bytes,
+            file_hash=file_hash,
+            source=source,
+        )
+        result = self.import_statement(statement)
+        return statement, result
+
     def update_statement(
         self,
         statement: StatementFile,

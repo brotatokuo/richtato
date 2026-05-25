@@ -21,7 +21,6 @@ from apps.financial_account.services.account_balance_service import (
 )
 from apps.financial_account.services.account_service import AccountService
 from apps.financial_account.services.bank_agent_config_service import BankAgentConfigOptions, BankAgentConfigService
-from apps.financial_account.services.csv_import_service import CSVImportService
 from apps.financial_account.services.google_drive_activation_service import GoogleDriveActivationService
 from apps.financial_account.services.google_drive_service import GoogleDriveError, GoogleDriveService
 from apps.financial_account.services.statement_file_service import (
@@ -704,7 +703,10 @@ class CardAccountFieldChoicesAPIView(APIView):
 
 
 class CSVStatementImportAPIView(APIView):
-    """Import transactions from a CSV statement file."""
+    """Import transactions from a CSV statement file.
+
+    Deprecated: prefer ``POST /import-statement/`` with ``institution=generic``.
+    """
 
     authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
@@ -712,7 +714,7 @@ class CSVStatementImportAPIView(APIView):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.account_service = AccountService()
-        self.csv_service = CSVImportService()
+        self.statement_service = StatementImportService()
 
     def post(self, request):
         """Import a CSV statement into an account.
@@ -768,9 +770,11 @@ class CSVStatementImportAPIView(APIView):
                 )
 
         try:
-            result = self.csv_service.import_statement(
+            result = self.statement_service.import_statement(
                 account=account,
-                csv_file=csv_file,
+                statement_file=csv_file,
+                institution="generic",
+                statement_status="closed",
                 ending_balance=ending_balance,
                 ending_date=ending_date,
             )
@@ -781,18 +785,19 @@ class CSVStatementImportAPIView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+        account.refresh_from_db(fields=["balance"])
         response_data = {
             "imported": result.imported_count,
-            "skipped_duplicates": result.skipped_duplicates,
+            "skipped_duplicates": result.duplicate_count,
             "errors": result.errors,
-            "balance_after_import": (
-                str(result.balance_after_import) if result.balance_after_import is not None else None
-            ),
+            "balance_after_import": str(account.balance),
         }
 
-        if result.discrepancy is not None:
-            response_data["discrepancy"] = str(result.discrepancy)
-            response_data["adjustment"] = str(result.adjustment_amount)
+        if ending_balance is not None:
+            discrepancy = result.reconciliation.get("account_ending_discrepancy")
+            if discrepancy is not None:
+                response_data["discrepancy"] = discrepancy
+            response_data["reconciliation_warnings"] = result.reconciliation_warnings
 
         return Response(response_data, status=status.HTTP_200_OK)
 
