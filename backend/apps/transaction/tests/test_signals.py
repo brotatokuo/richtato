@@ -7,7 +7,7 @@ import pytest
 
 from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
 from apps.richtato_user.models import User
-from apps.transaction.models import Transaction
+from apps.transaction.models import Transaction, TransactionCategory
 
 
 @pytest.fixture
@@ -147,6 +147,37 @@ class TestBalanceUpdateOnUpdate:
         account.refresh_from_db()
         # Was +100, now -100 → delta of -200
         assert account.balance == Decimal("4900.00")
+
+
+class TestCategoryOnlyUpdateSkipsBalanceSignals:
+    """Category changes must not trigger balance or history recomputation."""
+
+    def test_category_only_save_preserves_balance(self, account, user):
+        expense = TransactionCategory.objects.create(
+            user=user,
+            name="Coffee",
+            slug="coffee-signal-test",
+            type="expense",
+        )
+        tx = Transaction.objects.create(
+            user=user,
+            account=account,
+            date=date.today(),
+            amount=Decimal("5.00"),
+            transaction_type="debit",
+            description="Cafe",
+        )
+        account.refresh_from_db()
+        balance_after_create = account.balance
+        history_count_after_create = AccountBalanceHistory.objects.filter(account=account).count()
+
+        tx.category = expense
+        tx.categorization_status = "categorized"
+        tx.save(update_fields=["category", "categorization_status"])
+
+        account.refresh_from_db()
+        assert account.balance == balance_after_create
+        assert AccountBalanceHistory.objects.filter(account=account).count() == history_count_after_create
 
 
 class TestBalanceHistoryOnCreate:

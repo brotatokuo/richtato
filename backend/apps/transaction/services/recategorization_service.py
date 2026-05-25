@@ -5,15 +5,15 @@ from collections.abc import Callable
 from django.utils import timezone
 from loguru import logger
 
-from apps.transaction.models import RecategorizationTask, Transaction
-from apps.transaction.services.transaction_service import TransactionService
+from apps.transaction.models import RecategorizationTask, Transaction, TransactionCategory
+from apps.transaction.services.keyword_matching import load_user_keywords, match_category_from_keywords
 
 
 class RecategorizationService:
     """Service for bulk recategorization of user transactions."""
 
-    def __init__(self):
-        self.transaction_service = TransactionService()
+    BATCH_SIZE = 500
+    PROGRESS_INTERVAL = 50
 
     def recategorize_all_transactions(
         self,
@@ -39,26 +39,26 @@ class RecategorizationService:
         user = task.user
         keep_existing = task.keep_existing_for_unmatched
 
-        # Update task status to processing
         task.status = "processing"
         task.save(update_fields=["status"])
 
         try:
-            # Get only uncategorized transactions for the user
-            # This protects manually-categorized transactions from being overwritten
+            keywords = load_user_keywords(user)
+            uncategorized_category = None
+            if not keep_existing:
+                uncategorized_category = TransactionCategory.get_uncategorized_for_user(user)
+
             transactions = Transaction.objects.filter(
                 user=user,
                 categorization_status="uncategorized",
-            ).select_related("category")
+            )
             total_count = transactions.count()
 
-            # Update task with total count
             task.total_count = total_count
             task.save(update_fields=["total_count"])
 
             logger.info(f"Starting recategorization for user {user.id}: {total_count} transactions")
 
-            # Statistics
             stats = {
                 "total": total_count,
                 "processed": 0,
@@ -67,56 +67,47 @@ class RecategorizationService:
                 "unmatched": 0,
             }
 
-            # Process transactions in batches to avoid memory issues
-            batch_size = 100
-            for i in range(0, total_count, batch_size):
-                batch = transactions[i : i + batch_size]
+            pending_updates: list[Transaction] = []
 
-                for txn in batch:
-                    old_category = txn.category
-                    old_category_id = old_category.id if old_category else None
+            for txn in transactions.iterator(chunk_size=self.BATCH_SIZE):
+                old_category_id = txn.category_id
+                new_category = match_category_from_keywords(txn.description, keywords)
 
-                    # Try to match category via keywords
-                    new_category = self.transaction_service._match_category_via_keywords(user, txn.description)
-
-                    if new_category:
-                        # Found a keyword match
-                        new_category_id = new_category.id
-                        if old_category_id != new_category_id:
-                            txn.category = new_category
-                            txn.categorization_status = "categorized"
-                            txn.save(update_fields=["category", "categorization_status"])
+                if new_category:
+                    if old_category_id != new_category.id:
+                        txn.category_id = new_category.id
+                        txn.categorization_status = "categorized"
+                        pending_updates.append(txn)
+                        stats["updated"] += 1
+                    else:
+                        stats["unchanged"] += 1
+                else:
+                    stats["unmatched"] += 1
+                    if not keep_existing and old_category_id is not None and uncategorized_category:
+                        if old_category_id != uncategorized_category.id:
+                            txn.category_id = uncategorized_category.id
+                            txn.categorization_status = "uncategorized"
+                            pending_updates.append(txn)
                             stats["updated"] += 1
                         else:
                             stats["unchanged"] += 1
                     else:
-                        # No keyword match found
-                        stats["unmatched"] += 1
-                        if not keep_existing:
-                            # User wants to mark unmatched as uncategorized
-                            if old_category_id is not None:
-                                txn.category = None
-                                txn.categorization_status = "uncategorized"
-                                txn.save(update_fields=["category", "categorization_status"])
-                                stats["updated"] += 1
-                            else:
-                                stats["unchanged"] += 1
-                        else:
-                            # Keep existing category
-                            stats["unchanged"] += 1
+                        stats["unchanged"] += 1
 
-                    stats["processed"] += 1
+                stats["processed"] += 1
 
-                    # Update task progress
-                    if stats["processed"] % 10 == 0:  # Update every 10 transactions
-                        task.processed_count = stats["processed"]
-                        task.updated_count = stats["updated"]
-                        task.save(update_fields=["processed_count", "updated_count"])
+                if len(pending_updates) >= self.BATCH_SIZE:
+                    self._bulk_update_categories(pending_updates)
+                    pending_updates = []
 
-                        if progress_callback:
-                            progress_callback(stats["processed"], total_count)
+                if stats["processed"] % self.PROGRESS_INTERVAL == 0:
+                    self._update_task_progress(task, stats)
+                    if progress_callback:
+                        progress_callback(stats["processed"], total_count)
 
-            # Mark task as completed
+            if pending_updates:
+                self._bulk_update_categories(pending_updates)
+
             task.status = "completed"
             task.processed_count = stats["processed"]
             task.updated_count = stats["updated"]
@@ -139,10 +130,22 @@ class RecategorizationService:
             return stats
 
         except Exception as e:
-            # Mark task as failed
             logger.error(f"Recategorization failed for user {user.id}: {str(e)}")
             task.status = "failed"
             task.error_message = str(e)
             task.completed_at = timezone.now()
             task.save(update_fields=["status", "error_message", "completed_at"])
             raise
+
+    def _bulk_update_categories(self, transactions: list[Transaction]) -> None:
+        """Persist category changes without per-row save/signal overhead."""
+        Transaction.objects.bulk_update(
+            transactions,
+            ["category_id", "categorization_status"],
+            batch_size=self.BATCH_SIZE,
+        )
+
+    def _update_task_progress(self, task: RecategorizationTask, stats: dict[str, int]) -> None:
+        task.processed_count = stats["processed"]
+        task.updated_count = stats["updated"]
+        task.save(update_fields=["processed_count", "updated_count"])
