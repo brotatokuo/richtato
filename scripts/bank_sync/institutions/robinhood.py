@@ -15,7 +15,11 @@ from scripts.bank_sync.institutions.base import (
     BaseInstitutionAdapter,
     DiscoveredAccount,
 )
-from scripts.bank_sync.playwright_helpers import wait_for_user_login
+from scripts.bank_sync.playwright_helpers import (
+    is_login_url,
+    raise_after_selector_failure,
+    wait_for_user_login,
+)
 
 _LOGIN = "https://robinhood.com/login"
 _PORTFOLIO_URL = "https://robinhood.com/?classic=1"
@@ -151,9 +155,12 @@ class RobinhoodAdapter(BaseInstitutionAdapter):
             await portfolio_value.wait_for(state="visible", timeout=_BALANCE_WAIT_MS)
         except Exception as exc:
             self._raise_if_needs_reauth(page)
-            raise NoDownloadError(
-                f"Portfolio value not found at {target_url}: {exc}"
-            ) from exc
+            await raise_after_selector_failure(
+                page,
+                exc,
+                login_markers=_LOGIN_URL_MARKERS,
+                dom_context=f"Robinhood portfolio value not found at {target_url}",
+            )
 
         aria_label = (await portfolio_value.get_attribute("aria-label") or "").strip()
         if aria_label:
@@ -196,5 +203,5 @@ class RobinhoodAdapter(BaseInstitutionAdapter):
 
     def _raise_if_needs_reauth(self, page: Page) -> None:
         url = (page.url or "").lower()
-        if any(marker in url for marker in _LOGIN_URL_MARKERS):
+        if is_login_url(url, _LOGIN_URL_MARKERS):
             raise NeedsReauthError("Robinhood session expired; sign in again.")

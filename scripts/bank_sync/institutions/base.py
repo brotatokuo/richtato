@@ -70,9 +70,11 @@ class BaseInstitutionAdapter:
 
         Returns the local file path. Raises
         :class:`scripts.bank_sync.errors.NeedsReauthError` if the page
-        redirects to a sign-in screen and
+        redirects to a sign-in screen,
+        :class:`scripts.bank_sync.errors.DomBrokenError` if the authenticated
+        page no longer exposes the expected download controls, and
         :class:`scripts.bank_sync.errors.NoDownloadError` if the bank
-        produced no file.
+        produced no file while the session and DOM look healthy.
         """
 
         raise NotImplementedError
@@ -88,8 +90,10 @@ class BaseInstitutionAdapter:
         Used by investment-only institutions that expose balances on a
         dashboard page rather than downloadable statements. Raises
         :class:`scripts.bank_sync.errors.NeedsReauthError` when cookies
-        expired and :class:`scripts.bank_sync.errors.NoDownloadError` when
-        the balance element cannot be found.
+        expired, :class:`scripts.bank_sync.errors.DomBrokenError` when the
+        balance element is missing on an authenticated page, and
+        :class:`scripts.bank_sync.errors.NoDownloadError` when balance text
+        cannot be parsed.
         """
 
         raise NotImplementedError

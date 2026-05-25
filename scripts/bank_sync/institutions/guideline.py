@@ -12,7 +12,11 @@ from playwright.async_api import BrowserContext, Page
 
 from scripts.bank_sync.errors import NeedsReauthError, NoDownloadError
 from scripts.bank_sync.institutions.base import BaseInstitutionAdapter, DiscoveredAccount
-from scripts.bank_sync.playwright_helpers import wait_for_user_login
+from scripts.bank_sync.playwright_helpers import (
+    is_login_url,
+    raise_after_selector_failure,
+    wait_for_user_login,
+)
 
 _HOME = "https://my.guideline.com/"
 _LOGGED_IN_URLS = ("/savers/", "/dashboard")
@@ -97,9 +101,12 @@ class GuidelineAdapter(BaseInstitutionAdapter):
             await heading.wait_for(state="visible", timeout=_BALANCE_WAIT_MS)
         except Exception as exc:
             self._raise_if_needs_reauth(page)
-            raise NoDownloadError(
-                f"Balance element not found at {activity_url}: {exc}"
-            ) from exc
+            await raise_after_selector_failure(
+                page,
+                exc,
+                login_markers=_LOGIN_URL_MARKERS,
+                dom_context=f"Guideline balance element not found at {activity_url}",
+            )
 
         text = (await heading.inner_text() or "").strip()
         balance = parse_balance_text(text)
@@ -118,5 +125,5 @@ class GuidelineAdapter(BaseInstitutionAdapter):
 
     def _raise_if_needs_reauth(self, page: Page) -> None:
         url = (page.url or "").lower()
-        if any(marker in url for marker in _LOGIN_URL_MARKERS):
+        if is_login_url(url, _LOGIN_URL_MARKERS):
             raise NeedsReauthError("Guideline session expired; sign in again.")

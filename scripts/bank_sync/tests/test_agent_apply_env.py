@@ -164,6 +164,9 @@ class TestSyncHeaded:
                     files_downloaded=1,
                     failure_reason="",
                     needs_reauth=False,
+                    failure_kind=None,
+                    account_failures=[],
+                    run_status="completed",
                 )
 
         fake_store = object()

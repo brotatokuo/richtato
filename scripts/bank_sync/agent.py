@@ -50,6 +50,8 @@ from scripts.bank_sync.agent_store import (
     import_from_dict,
 )
 from scripts.bank_sync.encryption import MissingAgentKey, generate_key
+from scripts.bank_sync.cli_hints import signin_command_hint
+from scripts.bank_sync.errors import FailureKind, parse_failure_kind, strip_failure_prefix
 
 
 def _lazy_worker():
@@ -74,6 +76,65 @@ def _store(args: argparse.Namespace) -> AgentStore:
     return AgentStore(db_path=db_path)
 
 
+def _failure_action_message(
+    kind: FailureKind | None,
+    *,
+    login_id: int | None = None,
+) -> str | None:
+    if kind is None:
+        return None
+    messages = {
+        FailureKind.NEEDS_REAUTH: (
+            f"Login needs re-auth; run {signin_command_hint(login_id)} to refresh cookies."
+        ),
+        FailureKind.DOM_BROKEN: (
+            "Bank page layout changed; automation needs an adapter update."
+        ),
+        FailureKind.NO_DOWNLOAD: "No statement or balance was produced (session looks OK).",
+        FailureKind.IMPORT_REJECTED: (
+            "Download succeeded but Richtato rejected the upload."
+        ),
+        FailureKind.LOGIN_CANCELLED: (
+            f"Sign-in was cancelled; run {signin_command_hint(login_id)} again."
+        ),
+        FailureKind.CONFIG: "Fix the bank-agent configuration and retry.",
+        FailureKind.UNKNOWN: "Unexpected error; check logs for details.",
+    }
+    return messages.get(kind)
+
+
+def _print_failure_details(outcome, *, login_id: int | None = None) -> None:
+    kind = outcome.failure_kind or parse_failure_kind(outcome.failure_reason)
+    if outcome.account_failures:
+        if len(outcome.account_failures) == 1:
+            failure = outcome.account_failures[0]
+            print(
+                f"Failure [{failure.kind}]: Account {failure.account_id}: {failure.message}",
+                file=sys.stderr,
+            )
+        else:
+            primary_kind = kind or outcome.account_failures[0].kind
+            print(f"Failure [{primary_kind}]:", file=sys.stderr)
+            for failure in outcome.account_failures:
+                print(
+                    f"  Account {failure.account_id}: {failure.message}",
+                    file=sys.stderr,
+                )
+    elif outcome.failure_reason:
+        label = f" [{kind}]" if kind else ""
+        detail = strip_failure_prefix(outcome.failure_reason)
+        print(f"Failure{label}: {detail}", file=sys.stderr)
+
+    action = _failure_action_message(kind, login_id=login_id)
+    if action and not outcome.needs_reauth:
+        print(f"Action: {action}", file=sys.stderr)
+    elif outcome.needs_reauth:
+        print(
+            f"Action: Login needs re-auth; run {signin_command_hint(login_id)} to refresh cookies.",
+            file=sys.stderr,
+        )
+
+
 def _print_login(login: Login, accounts_count: int) -> None:
     print(
         f"#{login.id} [{login.institution_slug}] {login.nickname or '(default)'}"
@@ -82,7 +143,51 @@ def _print_login(login: Login, accounts_count: int) -> None:
         f"  accounts={accounts_count}"
     )
     if login.last_failure_reason:
-        print(f"     last_failure: {login.last_failure_reason}")
+        kind = parse_failure_kind(login.last_failure_reason)
+        label = f" [{kind}]" if kind else ""
+        detail = strip_failure_prefix(login.last_failure_reason)
+        print(f"     last_failure{label}: {detail}")
+        action = _failure_action_message(kind, login_id=login.id)
+        if action:
+            print(f"     action: {action}")
+
+
+def _print_login_status(login: Login, accounts) -> None:
+    label = login.nickname or "default"
+    print(f"Login #{login.id}  {login.institution_slug} / {label}")
+    print(
+        f"  Status: {login.status} | "
+        f"Cadence: {login.cadence} at {login.preferred_run_hour_local:02d}:00 | "
+        f"Accounts: {len(accounts)}"
+    )
+    print(f"  Last success: {login.last_success_at or '-'}")
+    print(f"  Next run: {login.next_run_at or '-'}")
+    if login.last_failure_reason:
+        kind = parse_failure_kind(login.last_failure_reason)
+        label = f" [{kind}]" if kind else ""
+        detail = strip_failure_prefix(login.last_failure_reason)
+        print(f"  Last failure{label}: {detail}")
+        action = _failure_action_message(kind, login_id=login.id)
+        if action:
+            print(f"  Action: {action}")
+
+    if not accounts:
+        print("  Accounts: none")
+        return
+
+    print("  Accounts:")
+    for account in accounts:
+        enabled = "on" if account.enabled else "off"
+        name = account.detected_account_name or "(unset)"
+        print(f"    #{account.id}  {name}")
+        print(
+            f"       Flow: {account.flow} | "
+            f"Enabled: {enabled} | "
+            f"Last success: {account.last_success_at or '-'}"
+        )
+        if account.richtato_account_id is not None:
+            print(f"       Richtato account ID: {account.richtato_account_id}")
+        print(f"       Storage URI: {account.storage_uri or '(none)'}")
 
 
 # ============================= login commands ==========================
@@ -249,17 +354,13 @@ def cmd_sync(args: argparse.Namespace) -> int:
     )
     print(
         f"Attempted={outcome.attempted} succeeded={outcome.succeeded} "
-        f"files={outcome.files_downloaded}"
+        f"files={outcome.files_downloaded} status={outcome.run_status}"
     )
-    if outcome.failure_reason:
-        print(f"Failure: {outcome.failure_reason}", file=sys.stderr)
+    if outcome.failure_reason or outcome.account_failures:
+        _print_failure_details(outcome, login_id=args.login_id)
     if outcome.needs_reauth:
-        print(
-            "Login needs re-auth; run `bank-agent login signin` to refresh cookies.",
-            file=sys.stderr,
-        )
         return 2
-    return 0 if not outcome.failure_reason else 2
+    return 0 if outcome.run_status == "completed" else 2
 
 
 def cmd_status(args: argparse.Namespace) -> int:
@@ -268,16 +369,11 @@ def cmd_status(args: argparse.Namespace) -> int:
     if not logins:
         print("No logins configured.")
         return 0
-    for login in logins:
+    for index, login in enumerate(logins):
         accounts = store.list_accounts(login.id)
-        _print_login(login, len(accounts))
-        for account in accounts:
-            enabled = "on" if account.enabled else "off"
-            print(
-                f"     account #{account.id} {account.detected_account_name or '(unset)'} "
-                f"flow={account.flow} enabled={enabled}"
-            )
-            print(f"        storage_uri: {account.storage_uri}")
+        if index:
+            print()
+        _print_login_status(login, accounts)
     return 0
 
 

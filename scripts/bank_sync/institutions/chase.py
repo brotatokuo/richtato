@@ -9,11 +9,13 @@ from urllib.parse import urljoin
 from loguru import logger
 from playwright.async_api import BrowserContext, Page
 
-from scripts.bank_sync.errors import NeedsReauthError, NoDownloadError
+from scripts.bank_sync.errors import NeedsReauthError
 from scripts.bank_sync.institutions.base import BaseInstitutionAdapter, DiscoveredAccount
 from scripts.bank_sync.playwright_helpers import (
     DOWNLOAD_TIMEOUT_MS,
     download_to_dir,
+    is_login_url,
+    raise_after_selector_failure,
     wait_for_user_login,
 )
 
@@ -23,6 +25,7 @@ _LOGGED_IN_URLS = (
     "/secure/dashboard",
     "/cmo/account/dashboard",
 )
+_LOGIN_URL_MARKERS = ("logon", "auth/logon")
 
 
 class ChaseAdapter(BaseInstitutionAdapter):
@@ -88,18 +91,22 @@ class ChaseAdapter(BaseInstitutionAdapter):
     ) -> Path:
         await page.goto(activity_url, wait_until="domcontentloaded", timeout=DOWNLOAD_TIMEOUT_MS)
         url = page.url or ""
-        if "logon" in url or "auth/logon" in url:
+        if is_login_url(url, _LOGIN_URL_MARKERS):
             raise NeedsReauthError(f"Chase redirected to sign-in: {url}")
 
         async def trigger() -> None:
-            # Chase's "Download account activity" CTA. Selectors are
-            # text-based to absorb minor DOM tweaks; tests in production
-            # will tighten these as we observe real failures.
-            await page.get_by_role("button", name=re.compile(r"download (account )?activity", re.I)).click()
-            await page.get_by_label(re.compile(r"csv|comma", re.I)).check()
-            await page.get_by_role("button", name=re.compile(r"^download$", re.I)).click()
+            try:
+                await page.get_by_role(
+                    "button", name=re.compile(r"download (account )?activity", re.I)
+                ).click()
+                await page.get_by_label(re.compile(r"csv|comma", re.I)).check()
+                await page.get_by_role("button", name=re.compile(r"^download$", re.I)).click()
+            except Exception as exc:
+                await raise_after_selector_failure(
+                    page,
+                    exc,
+                    login_markers=_LOGIN_URL_MARKERS,
+                    dom_context="Chase activity page missing download controls",
+                )
 
-        try:
-            return await download_to_dir(page, download_dir=download_dir, trigger=trigger)
-        except Exception as exc:
-            raise NoDownloadError(f"Chase download did not produce a file: {exc}") from exc
+        return await download_to_dir(page, download_dir=download_dir, trigger=trigger)

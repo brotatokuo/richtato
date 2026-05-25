@@ -447,10 +447,12 @@ class AgentStore:
         self,
         run_id: int,
         *,
-        succeeded: bool,
+        status: str,
         files_downloaded: int = 0,
         error: str = "",
     ) -> None:
+        if status not in RUN_STATUSES:
+            raise ValueError(f"status must be one of {RUN_STATUSES}, got {status!r}")
         with self._connect() as conn:
             conn.execute(
                 """
@@ -459,7 +461,7 @@ class AgentStore:
                 WHERE id = ?
                 """,
                 (
-                    "completed" if succeeded else "failed",
+                    status,
                     _utc_now_iso(),
                     files_downloaded,
                     error,

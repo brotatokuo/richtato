@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from pathlib import Path
 from typing import Any
 
 from loguru import logger
 from playwright.async_api import BrowserContext, Download, Page
+
+from scripts.bank_sync.errors import DomBrokenError, NeedsReauthError
 
 # Default upper bound for the user's headed-login flow (sign-in + MFA + 2FA
 # prompts). 10 minutes is generous; the agent reports ``login_cancelled``
@@ -17,6 +20,84 @@ INTERACTIVE_LOGIN_TIMEOUT_MS = 10 * 60 * 1000
 # Per-download wait. Banks typically generate CSV/XLS within 5s, but we
 # give a 60s ceiling to absorb slow CSV regenerations.
 DOWNLOAD_TIMEOUT_MS = 60 * 1000
+
+_REAUTH_TEXT_MARKERS = (
+    "sign in",
+    "sign-in",
+    "log on",
+    "log in",
+    "session expired",
+    "session has expired",
+    "verify your identity",
+    "multi-factor",
+    "two-step verification",
+    "enter your password",
+    "user id",
+    "online id",
+)
+
+
+def is_login_url(url: str, markers: tuple[str, ...]) -> bool:
+    """Return ``True`` when ``url`` contains any institution login marker."""
+    lowered = (url or "").lower()
+    return any(marker in lowered for marker in markers)
+
+
+def html_body_suggests_reauth(body: bytes) -> bool:
+    """Heuristic check for sign-in HTML returned instead of a download."""
+    if not body:
+        return False
+    sample = body[:8000].decode("utf-8", errors="ignore").lower()
+    if "<html" not in sample and "<!doctype html" not in sample:
+        return False
+    return any(marker in sample for marker in _REAUTH_TEXT_MARKERS) or bool(
+        re.search(r'\b(type=["\']password["\']|name=["\']password["\'])', sample)
+    )
+
+
+async def page_suggests_reauth(
+    page: Page,
+    *,
+    login_markers: tuple[str, ...],
+) -> bool:
+    """Return ``True`` when the current page looks like a sign-in screen."""
+    try:
+        url = page.url or ""
+    except Exception:
+        return False
+
+    if is_login_url(url, login_markers):
+        return True
+
+    try:
+        title = (await page.title() or "").lower()
+    except Exception:
+        title = ""
+
+    if any(marker in title for marker in _REAUTH_TEXT_MARKERS):
+        return True
+
+    try:
+        body_text = (await page.locator("body").inner_text(timeout=2_000) or "").lower()
+    except Exception:
+        body_text = ""
+
+    if len(body_text) > 20_000:
+        body_text = body_text[:20_000]
+    return any(marker in body_text for marker in _REAUTH_TEXT_MARKERS)
+
+
+async def raise_after_selector_failure(
+    page: Page,
+    exc: BaseException,
+    *,
+    login_markers: tuple[str, ...],
+    dom_context: str,
+) -> None:
+    """Classify a selector/timeout failure as reauth or DOM breakage."""
+    if await page_suggests_reauth(page, login_markers=login_markers):
+        raise NeedsReauthError(f"Session expired during {dom_context}.") from exc
+    raise DomBrokenError(f"{dom_context}: {exc}") from exc
 
 
 async def wait_for_user_login(

@@ -14,15 +14,26 @@ from urllib.parse import urljoin
 from loguru import logger
 from playwright.async_api import BrowserContext, Page
 
-from scripts.bank_sync.errors import NeedsReauthError, NoDownloadError
+from scripts.bank_sync.errors import (
+    AgentError,
+    DomBrokenError,
+    FAILURE_KIND_PRIORITY,
+    NeedsReauthError,
+    NoDownloadError,
+    failure_kind_for,
+)
 from scripts.bank_sync.institutions.base import BaseInstitutionAdapter, DiscoveredAccount
 from scripts.bank_sync.playwright_helpers import (
     DOWNLOAD_TIMEOUT_MS,
+    html_body_suggests_reauth,
+    is_login_url,
+    raise_after_selector_failure,
     wait_for_user_login,
 )
 
 _HOME = "https://www.bankofamerica.com/"
 _LOGGED_IN_URLS = ("/myaccountdetails/", "/myaccounts", "/myaccountoverview")
+_LOGIN_URL_MARKERS = ("signin", "login")
 _DOWNLOAD_FORM_URL = (
     "https://secure.bankofamerica.com/ogateway/addapi/v1/download/form/transaction"
 )
@@ -65,12 +76,7 @@ class BofaAdapter(BaseInstitutionAdapter):
         return await self._discover_accounts(page)
 
     async def _discover_accounts(self, page: Page) -> list[DiscoveredAccount]:
-        """Best-effort scan of the BoFA "My Accounts" page.
-
-        The page lists deposit and credit cards as ``<a>`` tags whose href
-        carries the ``adx`` token. We capture the visible text as the
-        detected name and infer the ``flow`` from the section header.
-        """
+        """Best-effort scan of the BoFA "My Accounts" page."""
 
         accounts: list[DiscoveredAccount] = []
         try:
@@ -79,12 +85,8 @@ class BofaAdapter(BaseInstitutionAdapter):
                 wait_until="domcontentloaded",
             )
         except Exception:
-            # Some users land directly on /myaccounts - that's fine; we'll
-            # scan whatever the current URL is.
             logger.debug("BoFA overview navigation failed; falling back to current page")
 
-        # Pull every link that points at the activity page and carries an
-        # ``adx`` token; those are the per-account "View activity" anchors.
         anchors = await page.query_selector_all("a[href*='adx=']")
         seen_tokens: set[str] = set()
         for anchor in anchors:
@@ -124,18 +126,32 @@ class BofaAdapter(BaseInstitutionAdapter):
         except Exception:
             pass
 
-        await page.get_by_role("button", name=re.compile(r"download", re.I)).first.click()
-        await form.wait_for(state="visible", timeout=DOWNLOAD_TIMEOUT_MS)
+        try:
+            await page.get_by_role("button", name=re.compile(r"download", re.I)).first.click()
+            await form.wait_for(state="visible", timeout=DOWNLOAD_TIMEOUT_MS)
+        except Exception as exc:
+            await raise_after_selector_failure(
+                page,
+                exc,
+                login_markers=_LOGIN_URL_MARKERS,
+                dom_context="BoFA activity page missing download control",
+            )
 
     async def _select_download_options(self, page: Page) -> None:
         """Fill the transaction period + file type dropdowns on the download form."""
         period_select = page.locator("#select_txnPeriod")
-        await period_select.wait_for(state="visible", timeout=DOWNLOAD_TIMEOUT_MS)
+        try:
+            await period_select.wait_for(state="visible", timeout=DOWNLOAD_TIMEOUT_MS)
+        except Exception as exc:
+            await raise_after_selector_failure(
+                page,
+                exc,
+                login_markers=_LOGIN_URL_MARKERS,
+                dom_context="BoFA download form missing transaction period selector",
+            )
 
         period_value = "Current transactions"
         if await period_select.locator(f'option[value="{period_value}"]').count() == 0:
-            # Fall back to the newest closed statement period when "Current
-            # transactions" is not offered for this account type.
             period_value = await period_select.evaluate(
                 """select => {
                     const option = [...select.options].find(
@@ -145,7 +161,9 @@ class BofaAdapter(BaseInstitutionAdapter):
                 }"""
             )
             if not period_value:
-                raise NoDownloadError("BoFA download form has no selectable transaction period.")
+                raise DomBrokenError(
+                    "BoFA download form has no selectable transaction period."
+                )
 
         await period_select.select_option(value=period_value)
         await page.locator("#select_fileType").select_option(value="csv")
@@ -158,7 +176,15 @@ class BofaAdapter(BaseInstitutionAdapter):
         if await submit.count():
             await submit.first.click()
             return
-        await page.get_by_role("button", name=re.compile(r"download", re.I)).last.click()
+        try:
+            await page.get_by_role("button", name=re.compile(r"download", re.I)).last.click()
+        except Exception as exc:
+            await raise_after_selector_failure(
+                page,
+                exc,
+                login_markers=_LOGIN_URL_MARKERS,
+                dom_context="BoFA download form missing submit control",
+            )
 
     async def _download_via_form_post(
         self,
@@ -188,7 +214,13 @@ class BofaAdapter(BaseInstitutionAdapter):
 
         content_type = response.headers.get("content-type", "")
         if "text/html" in content_type.lower() and b"<html" in body[:1000].lower():
-            raise NoDownloadError("BoFA download POST returned an HTML error page.")
+            if html_body_suggests_reauth(body):
+                raise NeedsReauthError(
+                    "BoFA download POST returned a sign-in page instead of CSV."
+                )
+            raise DomBrokenError(
+                "BoFA download POST returned an HTML error page instead of CSV."
+            )
 
         filename = _filename_from_response_headers(response.headers)
         target = download_dir / filename
@@ -222,11 +254,11 @@ class BofaAdapter(BaseInstitutionAdapter):
     ) -> Path:
         await page.goto(activity_url, wait_until="domcontentloaded", timeout=DOWNLOAD_TIMEOUT_MS)
         url = page.url or ""
-        if "signin" in url or "login" in url:
+        if is_login_url(url, _LOGIN_URL_MARKERS):
             raise NeedsReauthError(f"BoFA redirected to sign-in: {url}")
 
         download_dir.mkdir(parents=True, exist_ok=True)
-        errors: list[str] = []
+        errors: list[Exception] = []
 
         for attempt in (
             lambda: self._download_via_form_post(
@@ -236,15 +268,27 @@ class BofaAdapter(BaseInstitutionAdapter):
         ):
             try:
                 target = await attempt()
-            except NoDownloadError as exc:
-                errors.append(str(exc))
-                continue
+            except NeedsReauthError:
+                raise
             except Exception as exc:
-                errors.append(str(exc))
+                errors.append(exc)
                 logger.debug("BoFA download attempt failed: {}", exc)
                 continue
             else:
                 logger.info("Downloaded {}", target)
                 return target
 
-        raise NoDownloadError("; ".join(errors) or "BoFA download did not produce a file.")
+        if not errors:
+            raise NoDownloadError("BoFA download did not produce a file.")
+
+        for exc in errors:
+            if isinstance(exc, NeedsReauthError):
+                raise exc
+
+        primary = min(
+            errors,
+            key=lambda exc: FAILURE_KIND_PRIORITY[failure_kind_for(exc)],
+        )
+        if isinstance(primary, AgentError):
+            raise primary
+        raise NoDownloadError("; ".join(str(exc) for exc in errors))

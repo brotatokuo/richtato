@@ -45,6 +45,16 @@ GOOGLE_DRIVE_PICKER_API_KEY = os.getenv("GOOGLE_DRIVE_PICKER_API_KEY", "")
 GOOGLE_DRIVE_PICKER_APP_ID = os.getenv("GOOGLE_DRIVE_PICKER_APP_ID", "")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
+# Resend transactional email (daily sync digest, etc.)
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "")
+
+# Host bank-agent SQLite vault (mounted at /local_data in Docker)
+_default_agent_db = _PROJECT_ROOT / "local_data" / "bank-agent" / "agent.db"
+if Path("/local_data").is_dir():
+    _default_agent_db = Path("/local_data/bank-agent/agent.db")
+BANK_AGENT_DB_PATH = os.getenv("BANK_AGENT_DB_PATH", str(_default_agent_db))
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 

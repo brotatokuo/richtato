@@ -11,6 +11,7 @@ Usage:
 import os
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, Sequence
 
@@ -511,6 +512,7 @@ def _bank_agent_env(root: str, setup_path: Optional[Path] = None) -> dict[str, s
     env["PYTHONPATH"] = (
         f"{root}{os.pathsep}{existing_pythonpath}" if existing_pythonpath else root
     )
+    env["RICHTATO_CLI"] = "1"
     return env
 
 
@@ -572,18 +574,43 @@ def _run_bank_agent(
     return run_cmd(cmd, cwd=root, env=_bank_agent_env(root, setup_path))
 
 
-def _resolve_setup_path(root: str, path_arg: Optional[str] = None) -> Optional[Path]:
-    if path_arg:
-        path = Path(path_arg).expanduser()
-        if not path.is_absolute():
-            path = Path(root) / path
-    else:
-        path = _default_bank_setup_path(root)
+def _setup_search_dirs(root: str) -> list[Path]:
+    home = Path.home()
+    return [Path(root), home / "Downloads", home / "downloads"]
 
-    if path.exists():
-        return path
 
-    print_error(f"Setup YAML not found: {path}")
+def _format_path_mtime(path: Path) -> str:
+    try:
+        return datetime.fromtimestamp(path.stat().st_mtime).strftime(
+            "%Y-%m-%d %H:%M"
+        )
+    except OSError:
+        return "unknown time"
+
+
+def _discover_setup_yamls(root: str) -> list[Path]:
+    seen: set[Path] = set()
+    candidates: list[Path] = []
+    for directory in _setup_search_dirs(root):
+        if not directory.exists():
+            continue
+        for pattern in ("richtato-bank-agent-setup*.yml", "richtato-bank-agent-setup*.yaml"):
+            for path in directory.glob(pattern):
+                if not path.is_file():
+                    continue
+                resolved = path.resolve()
+                if resolved in seen:
+                    continue
+                seen.add(resolved)
+                candidates.append(path)
+    return sorted(
+        candidates,
+        key=lambda path: path.stat().st_mtime if path.exists() else 0,
+        reverse=True,
+    )
+
+
+def _manual_setup_path(root: str) -> Optional[Path]:
     entered = prompt(
         "Path to richtato-bank-agent-setup.yml (blank to cancel)",
         "",
@@ -599,9 +626,133 @@ def _resolve_setup_path(root: str, path_arg: Optional[str] = None) -> Optional[P
     return entered_path
 
 
-def _login_ids_prompt(text: str) -> list[str]:
-    raw = prompt(text, "")
-    return [part.strip() for part in raw.split(",") if part.strip()]
+def _resolve_setup_path(root: str, path_arg: Optional[str] = None) -> Optional[Path]:
+    if path_arg:
+        path = Path(path_arg).expanduser()
+        if not path.is_absolute():
+            path = Path(root) / path
+        if not path.exists():
+            print_error(f"Setup YAML not found: {path}")
+            return None
+        print_info(f"Using setup YAML: {path}")
+        return path
+
+    default_path = _default_bank_setup_path(root)
+    candidates = _discover_setup_yamls(root)
+    options = []
+    for path in candidates:
+        if path.resolve() == default_path.resolve():
+            label = f"Use default repo-root file ({_format_path_mtime(path)})  {path}"
+        else:
+            label = f"Use detected file ({_format_path_mtime(path)})  {path}"
+        options.append(label)
+    options.extend(["Enter path manually", "Cancel"])
+
+    if candidates:
+        print_info("Select the exported bank-agent setup YAML to apply.")
+        idx = select("Detected setup YAML files:", options, default=0)
+        if idx is None or idx == len(options) - 1:
+            return None
+        if idx == len(options) - 2:
+            selected = _manual_setup_path(root)
+        else:
+            selected = candidates[idx]
+    else:
+        print_error(
+            "No setup YAML found in repo root or Downloads. "
+            "Download it from Richtato, then select its path."
+        )
+        selected = _manual_setup_path(root)
+
+    if selected is None:
+        return None
+    print_info(f"Using setup YAML: {selected}")
+    return selected
+
+
+def _multi_select(title: str, options: list[str]) -> list[int]:
+    choices = ["Skip", *options]
+    print(f"{Colors.DIM}{title}{Colors.END}")
+    print_info("Use Space to select logins, then Enter to continue.")
+    try:
+        menu = TerminalMenu(
+            choices,
+            multi_select=True,
+            multi_select_empty_ok=True,
+            show_multi_select_hint=True,
+            **MENU_STYLE,
+        )
+    except TypeError:
+        menu = TerminalMenu(
+            choices,
+            multi_select=True,
+            show_multi_select_hint=True,
+            **MENU_STYLE,
+        )
+    selected = menu.show()
+    if selected is None:
+        return []
+    selected_indexes = (
+        list(selected) if isinstance(selected, (tuple, list, set)) else [selected]
+    )
+    if 0 in selected_indexes:
+        return []
+    return [index - 1 for index in selected_indexes if index > 0]
+
+
+def _bank_login_options(root: str) -> list[tuple[str, str]]:
+    root_path = str(Path(root))
+    if root_path not in sys.path:
+        sys.path.insert(0, root_path)
+
+    env = _bank_agent_env(root)
+    previous = {
+        key: os.environ.get(key)
+        for key in ("BANK_AGENT_DB_PATH", "BANK_AGENT_FERNET_KEY")
+    }
+    try:
+        for key in ("BANK_AGENT_DB_PATH", "BANK_AGENT_FERNET_KEY"):
+            if value := env.get(key):
+                os.environ[key] = value
+
+        from scripts.bank_sync.agent_store import AgentStore
+        from scripts.bank_sync.errors import parse_failure_kind
+
+        store = AgentStore()
+        options = []
+        for login in store.list_logins():
+            account_count = len(store.list_accounts(login.id))
+            label = (
+                f"#{login.id}  {login.institution_slug} / "
+                f"{login.nickname or 'default'}  "
+                f"status={login.status} accounts={account_count} "
+                f"last_success={login.last_success_at or '-'}"
+            )
+            if login.last_failure_reason:
+                kind = parse_failure_kind(login.last_failure_reason)
+                if kind:
+                    label += f"  last_failure={kind}"
+            options.append((str(login.id), label))
+        return options
+    except Exception as exc:
+        print_error(f"Could not load bank logins for selection: {exc}")
+        return []
+    finally:
+        for key, value in previous.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
+def _select_bank_login_ids(root: str, title: str) -> list[str]:
+    options = _bank_login_options(root)
+    if not options:
+        print_info("No bank logins available to select.")
+        return []
+
+    selected = _multi_select(title, [label for _, label in options])
+    return [options[index][0] for index in selected]
 
 
 def _bank_status(root: str) -> int:
@@ -620,28 +771,61 @@ def _bank_apply(root: str, setup_path: Optional[Path] = None) -> int:
 
 
 def _bank_signin(root: str, login_id: Optional[str] = None) -> int:
-    if not login_id:
-        _bank_status(root)
-        login_id = prompt("Login ID to sign in", "")
-    if not login_id:
-        print_info("Cancelled.")
-        return 1
-    print_header(f"Bank Sign-In #{login_id}")
-    return _run_bank_agent(["login", "signin", login_id], root=root)
+    if login_id:
+        print_header(f"Bank Sign-In #{login_id}")
+        return _run_bank_agent(["login", "signin", login_id], root=root)
+
+    selected_login_ids = _select_bank_login_ids(
+        root, "Select logins to sign in or re-authenticate:"
+    )
+    if not selected_login_ids:
+        print_info("No logins selected.")
+        return 0
+
+    exit_code = 0
+    for selected_login_id in selected_login_ids:
+        print_header(f"Bank Sign-In #{selected_login_id}")
+        result = _run_bank_agent(["login", "signin", selected_login_id], root=root)
+        if result == 0:
+            print_success(f"Bank sign-in #{selected_login_id} finished.")
+        else:
+            print_error(f"Bank sign-in #{selected_login_id} failed.")
+            exit_code = result
+            if not confirm("Continue with remaining sign-ins?"):
+                break
+    return exit_code
 
 
-def _bank_sync(root: str, login_id: Optional[str] = None, headed: bool = False) -> int:
-    if not login_id:
-        _bank_status(root)
-        login_id = prompt("Login ID to sync", "")
-    if not login_id:
-        print_info("Cancelled.")
-        return 1
+def _bank_sync_one(root: str, login_id: str, headed: bool = False) -> int:
     args = ["sync", login_id]
     if headed:
         args.append("--headed")
     print_header(f"Bank Sync #{login_id}")
-    return _run_bank_agent(args, root=root)
+    result = _run_bank_agent(args, root=root)
+    if result == 0:
+        print_success(f"Bank sync #{login_id} finished.")
+    else:
+        print_error(f"Bank sync #{login_id} failed.")
+    return result
+
+
+def _bank_sync(root: str, login_id: Optional[str] = None, headed: bool = False) -> int:
+    if login_id:
+        return _bank_sync_one(root, login_id, headed=headed)
+
+    selected_login_ids = _select_bank_login_ids(root, "Select logins to sync:")
+    if not selected_login_ids:
+        print_info("No logins selected.")
+        return 0
+
+    exit_code = 0
+    for selected_login_id in selected_login_ids:
+        result = _bank_sync_one(root, selected_login_id, headed=headed)
+        if result != 0:
+            exit_code = result
+            if not confirm("Continue syncing remaining logins?"):
+                break
+    return exit_code
 
 
 def _bank_start_daemon(root: str) -> int:
@@ -708,20 +892,17 @@ def cmd_bank_setup(path_arg: Optional[str] = None):
 
     _bank_status(root)
 
-    print_info(
-        "Optional: enter login IDs from the status list to refresh bank cookies."
-    )
-    print_info("Leave blank if all listed logins are already active.")
-    for login_id in _login_ids_prompt(
-        "Login IDs to sign in or re-authenticate (comma-separated)"
+    print_info("Optional: select logins to refresh bank cookies.")
+    for login_id in _select_bank_login_ids(
+        root,
+        "Select logins to sign in or re-authenticate:",
     ):
         result = _bank_signin(root, login_id)
         if result != 0 and not confirm("Continue with remaining sign-ins?"):
             sys.exit(result)
 
-    print_info("Optional: enter login IDs to run an immediate sync now.")
-    print_info("Leave blank to finish setup without syncing.")
-    for login_id in _login_ids_prompt("Login IDs to sync now (comma-separated)"):
+    print_info("Optional: select logins to run an immediate sync now.")
+    for login_id in _select_bank_login_ids(root, "Select logins to sync now:"):
         result = _bank_sync(root, login_id)
         if result != 0 and not confirm("Continue with remaining syncs?"):
             sys.exit(result)
