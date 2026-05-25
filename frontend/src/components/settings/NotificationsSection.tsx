@@ -8,9 +8,49 @@ import {
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { preferencesApi } from '@/lib/api/user';
+import { cn } from '@/lib/utils';
 import { Bell } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+
+function NotificationRow({
+  id,
+  label,
+  description,
+  checked,
+  disabled,
+  onCheckedChange,
+  className,
+}: {
+  id: string;
+  label: string;
+  description: string;
+  checked: boolean;
+  disabled?: boolean;
+  onCheckedChange: (value: boolean) => void;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-start justify-between gap-4 py-4 first:pt-0 last:pb-0',
+        className
+      )}
+    >
+      <div className="min-w-0 space-y-0.5">
+        <Label htmlFor={id}>{label}</Label>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      <Switch
+        id={id}
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        disabled={disabled}
+        className="shrink-0"
+      />
+    </div>
+  );
+}
 
 export function NotificationsSection() {
   const [loading, setLoading] = useState(false);
@@ -69,88 +109,65 @@ export function NotificationsSection() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Bell className="h-5 w-5" />
-          Notifications
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Bell className="h-4 w-4" />
+          Alerts
         </CardTitle>
-        <CardDescription>Manage your notification preferences</CardDescription>
+        <CardDescription>
+          Master notification switch plus bank sync delivery options
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {error && <div className="text-sm text-destructive">{error}</div>}
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="notifications">Enable Notifications</Label>
-            <div className="text-sm text-muted-foreground">
-              Master switch for account notifications
-            </div>
-          </div>
-          <Switch
+      <CardContent>
+        {error && <div className="mb-4 text-sm text-destructive">{error}</div>}
+
+        <div className="divide-y divide-border">
+          <NotificationRow
             id="notifications"
+            label="Enable notifications"
+            description="Master switch for account notifications"
             checked={notificationsEnabled}
+            disabled={loading}
             onCheckedChange={value =>
               void updatePreference('notifications_enabled', value)
             }
-            disabled={loading}
           />
-        </div>
-        <div className="rounded-lg border border-border p-4">
-          <div className="mb-3">
-            <p className="text-sm font-medium">Bank Sync Alerts</p>
-            <p className="text-sm text-muted-foreground">
-              In-app alerts are the baseline for polling failures and re-login
-              prompts. Email alerts are opt-in.
+
+          <div className="py-4">
+            <p className="text-sm font-medium">Bank sync</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              In-app alerts are on by default. Email alerts are opt-in.
             </p>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="space-y-0.5">
-                <Label htmlFor="bank-sync-in-app">In-app alerts</Label>
-                <div className="text-sm text-muted-foreground">
-                  Show failed sync, setup gap, and re-login notifications in
-                  Richtato
-                </div>
-              </div>
-              <Switch
+            <div className="mt-2 divide-y divide-border">
+              <NotificationRow
                 id="bank-sync-in-app"
+                label="In-app alerts"
+                description="Failed sync, setup gaps, and re-login prompts in Richtato"
                 checked={bankSyncInApp}
+                disabled={loading || !notificationsEnabled}
                 onCheckedChange={value =>
                   void updatePreference('bank_sync_in_app_notifications', value)
                 }
-                disabled={loading || !notificationsEnabled}
               />
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <div className="space-y-0.5">
-                <Label htmlFor="bank-sync-email">Immediate email alerts</Label>
-                <div className="text-sm text-muted-foreground">
-                  Send Resend email when polling fails or a bank login needs
-                  re-auth
-                </div>
-              </div>
-              <Switch
+              <NotificationRow
                 id="bank-sync-email"
+                label="Immediate email alerts"
+                description="Email when polling fails or a bank login needs re-auth"
                 checked={bankSyncEmail}
+                disabled={loading || !notificationsEnabled}
                 onCheckedChange={value =>
                   void updatePreference('bank_sync_email_notifications', value)
                 }
-                disabled={loading || !notificationsEnabled}
               />
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <div className="space-y-0.5">
-                <Label htmlFor="bank-sync-digest">Daily digest</Label>
-                <div className="text-sm text-muted-foreground">
-                  Include bank sync health in the scheduled summary email
-                </div>
-              </div>
-              <Switch
+              <NotificationRow
                 id="bank-sync-digest"
+                label="Daily digest"
+                description="Include bank sync health in the scheduled summary email"
                 checked={bankSyncDailyDigest}
+                disabled={loading || !notificationsEnabled}
                 onCheckedChange={value =>
                   void updatePreference('bank_sync_daily_digest', value)
                 }
-                disabled={loading || !notificationsEnabled}
               />
             </div>
           </div>
