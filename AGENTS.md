@@ -37,7 +37,7 @@ Richtato is an AI-native personal finance app for spending, budgets, net worth, 
 - Budgets use `/api/v1/budgets/`, not `/api/v1/budget/`.
 - User profile, preferences, and category settings live under `/api/v1/auth/`.
 - Google Drive statement storage plus the Playwright bank-agent is the primary no-aggregator ingestion path.
-- Automated bank sync uses a cookie-only Playwright agent under `/api/v1/bank-sync/`. Configure connections on the `/accounts` page. The full app stack is Docker-only (`db`, `backend`, `frontend`); bank automation is a separate host runtime started with `./scripts/bank_sync/start-headed.sh` and handles both headed sign-in and statement downloads.
+- Automated bank sync uses a cookie-only Playwright agent (`scripts/bank_sync/`). Configure per-account sync in **Setup → Sync**. The full app stack is Docker-only (`db`, `backend`, `frontend`); bank automation is a separate host runtime (`./scripts/bank_sync/start-headed.sh`). Daily sync digest email: `docs/sync-digest-email.md` and `python manage.py send_sync_digest`.
 - Do not document Plaid, Teller, or other paid aggregators as active unless you implement them.
 - Statement imports must be row-level idempotent; current/open statements are provisional and may overlap later closed statements.
 - Original statement files are stored in Google Drive after activation, under one flat folder per account. Activate Drive in **Setup → Statements** before uploading or syncing statements.
