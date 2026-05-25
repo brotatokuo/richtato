@@ -43,10 +43,11 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 const HOST_COMMANDS = [
-  'python -m scripts.bank_sync.agent apply richtato-bank-agent-setup.yml',
-  'python -m scripts.bank_sync.agent status',
-  'python -m scripts.bank_sync.agent login signin <login_id>',
-  'python -m scripts.bank_sync.agent sync',
+  'richtato bank setup',
+  'richtato bank status',
+  'richtato bank signin <login_id>',
+  'richtato bank sync <login_id>',
+  'richtato bank daemon',
 ] as const;
 
 function syncModeBadgeVariant(
@@ -584,7 +585,7 @@ export function BankSyncSection() {
             Host Agent Setup
           </CardTitle>
           <CardDescription>
-            After downloading setup, run these commands from your repo root on
+            After downloading setup, run the guided CLI from your repo root on
             your Linux desktop. Do not commit the setup file — it contains
             secrets and bank activity URLs.
           </CardDescription>
@@ -598,9 +599,10 @@ export function BankSyncSection() {
           <p className="text-sm text-muted-foreground">
             Use{' '}
             <code className="rounded bg-muted px-1 py-0.5 text-xs">
-              ./scripts/bank_sync/start-headed.sh
+              richtato bank
             </code>{' '}
-            to run the scheduled daemon after your first sign-in.
+            for daily status, sign-in, sync, daemon, and log actions after your
+            first setup.
           </p>
         </CardContent>
       </Card>

@@ -87,9 +87,7 @@ describe('BankSyncSection', () => {
     expect(await screen.findByText('Robinhood Brokerage')).toBeInTheDocument();
     expect(screen.getByText(/Portfolio balance scrape/)).toBeInTheDocument();
     expect(screen.getByText(/Host Agent Setup/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/apply richtato-bank-agent-setup.yml/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/richtato bank setup/)).toBeInTheDocument();
     expect(
       screen.getByRole('combobox', {
         name: /sync mode for robinhood brokerage/i,

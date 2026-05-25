@@ -17,12 +17,28 @@ leased task:
 Richtato's full stack and the bank automation runtime are separate:
 
 - `docker compose up -d` runs the app: Postgres, Django, and Vite.
-- `./scripts/bank_sync/start-headed.sh` runs the local Playwright bank agent
-  on your desktop. It handles both visible sign-in and headless statement
-  downloads.
+- `richtato bank` manages the local Playwright bank agent on your desktop. It
+  handles setup, visible sign-in, headless statement downloads, daemon startup,
+  and logs.
 
 The bank agent talks to Django over `/api/v1/bank-sync/runner/*` with the
 `RICHTATO_RUNNER_TOKEN` service account. It is not a Docker Compose service.
+
+## Preferred setup
+
+Download `richtato-bank-agent-setup.yml` from Richtato, leave it in the repo
+root, then run:
+
+```bash
+richtato bank setup
+```
+
+The guided CLI creates or reuses `scripts/bank_sync/.venv`, installs the
+agent requirements and Chromium, applies the setup YAML to the encrypted local
+vault, shows configured logins, and lets you sign in or run an immediate sync.
+
+Use `richtato bank` later for status, sign-in, manual sync, daemon startup, and
+logs.
 
 ## Quick config from Richtato
 
@@ -94,12 +110,12 @@ python -m scripts.bank_sync.agent login signin <login_id>
    sign in** or scheduled statement downloads:
 
    ```bash
-   ./scripts/bank_sync/start-headed.sh
+   richtato bank daemon
    ```
 
-   Run this after every reboot. It creates `scripts/bank_sync/.venv` on
+   Run this after every reboot. The CLI creates `scripts/bank_sync/.venv` on
    first use (downloads Chromium once) and writes logs to
-   `local_data/bank-sync-agent.log`.
+   `local_data/bank-agent.log`.
 
 ## Adding a new bank
 
