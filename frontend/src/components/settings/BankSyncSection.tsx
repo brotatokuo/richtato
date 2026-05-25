@@ -30,6 +30,7 @@ import {
   bankAgentLocalApi,
   getStoredLocalAgentConnection,
   storeLocalAgentConnection,
+  type LocalAgentLogin,
   type LocalAgentStatus,
 } from '@/lib/api/bankAgentLocal';
 import { cn } from '@/lib/utils';
@@ -85,6 +86,37 @@ function accountNeedsActivityUrl(account: BankSyncSetupAccount): boolean {
 
 function accountNeedsAttention(account: BankSyncSetupAccount): boolean {
   return accountNeedsStorage(account) || accountNeedsActivityUrl(account);
+}
+
+function localLoginHasValidSession(login: LocalAgentLogin): boolean {
+  return login.status === 'active' && Boolean(login.cookies_captured_at);
+}
+
+function localLoginStatusLabel(login: LocalAgentLogin): string {
+  if (localLoginHasValidSession(login)) {
+    return 'Logged in';
+  }
+  switch (login.status) {
+    case 'needs_reauth':
+      return 'Needs re-login';
+    case 'pending_login':
+      return 'Not signed in';
+    case 'active':
+      return 'Not signed in';
+    case 'disabled':
+      return 'Disabled';
+    case 'error':
+      return 'Error';
+    default:
+      return login.status.replaceAll('_', ' ');
+  }
+}
+
+function localLoginSignInLabel(login: LocalAgentLogin): string {
+  if (localLoginHasValidSession(login)) {
+    return 'Refresh sign-in';
+  }
+  return login.status === 'needs_reauth' ? 'Re-login' : 'Sign in';
 }
 
 function activityUrlHelpText(account: BankSyncSetupAccount): string {
@@ -781,12 +813,17 @@ export function BankSyncSection() {
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {localStatus.logins.map(login => (
+                  {localStatus.logins.map(login => {
+                    const hasValidSession = localLoginHasValidSession(login);
+                    return (
                     <div
                       key={login.id}
                       className={cn(
                         'rounded-lg border border-border p-3',
-                        login.status === 'needs_reauth' &&
+                        hasValidSession && 'border-emerald-500/30 bg-emerald-500/5',
+                        !hasValidSession &&
+                          (login.status === 'needs_reauth' ||
+                            login.status === 'pending_login') &&
                           'border-amber-500/40 bg-amber-500/5'
                       )}
                     >
@@ -799,12 +836,15 @@ export function BankSyncSection() {
                             </p>
                             <Badge
                               variant={
-                                login.status === 'active'
+                                hasValidSession
                                   ? 'default'
-                                  : 'secondary'
+                                  : login.status === 'needs_reauth' ||
+                                      login.status === 'error'
+                                    ? 'destructive'
+                                    : 'secondary'
                               }
                             >
-                              {login.status}
+                              {localLoginStatusLabel(login)}
                             </Badge>
                           </div>
                           <p className="mt-1 text-xs text-muted-foreground">
@@ -812,6 +852,9 @@ export function BankSyncSection() {
                             {login.accounts.length === 1 ? '' : 's'} · last
                             success {login.last_success_at || 'never'} · next{' '}
                             {login.next_run_at || 'not scheduled'}
+                            {login.cookies_captured_at
+                              ? ` · cookies ${login.cookies_captured_at}`
+                              : ''}
                           </p>
                           {login.last_failure_reason && (
                             <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
@@ -820,28 +863,38 @@ export function BankSyncSection() {
                           )}
                         </div>
                         <div className="flex flex-wrap gap-2">
+                          {hasValidSession && (
+                            <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                              <CheckCircle2 className="h-4 w-4 shrink-0" />
+                              Session ready
+                            </div>
+                          )}
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant={hasValidSession ? 'outline' : 'default'}
                             onClick={() => void handleLocalSignIn(login.id)}
                             disabled={localActionLoginId === login.id}
                           >
                             {localActionLoginId === login.id ? (
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             ) : null}
-                            Re-login
+                            {localLoginSignInLabel(login)}
                           </Button>
                           <Button
                             size="sm"
+                            variant="outline"
                             onClick={() => void handleLocalSync(login.id)}
-                            disabled={localActionLoginId === login.id}
+                            disabled={
+                              localActionLoginId === login.id ||
+                              !hasValidSession
+                            }
                           >
                             Sync now
                           </Button>
                         </div>
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               )}
             </div>

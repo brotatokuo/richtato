@@ -237,6 +237,58 @@ describe('BankSyncSection', () => {
 
     expect(await screen.findByText(/Re-login required/i)).toBeInTheDocument();
     expect(screen.getByText(/Redirected to sign-in/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /re-login/i })).toBeInTheDocument();
+  });
+
+  it('shows logged-in state when local agent reports an active session', async () => {
+    mockGetSetup.mockResolvedValue({
+      accounts: [],
+      agent_config: {
+        version: 1,
+        generated_at: '2026-01-01T00:00:00Z',
+        user_id: 1,
+        source: 'richtato_accounts',
+        logins: [],
+      },
+      duplicate_institution_logins: [],
+    });
+    mockGetLocalStatus.mockResolvedValue({
+      ok: true,
+      reauth_required: false,
+      login_count: 1,
+      account_count: 1,
+      logins: [
+        {
+          id: 5,
+          institution_slug: 'chase',
+          nickname: 'personal',
+          status: 'active',
+          cadence: 'daily',
+          preferred_run_hour_local: 6,
+          next_run_at: '2026-05-26T06:00:00Z',
+          last_run_at: '2026-05-25T06:00:00Z',
+          last_success_at: '2026-05-25T06:00:00Z',
+          last_failure_kind: null,
+          last_failure_reason: '',
+          cookies_captured_at: '2026-05-24T12:00:00Z',
+          accounts: [],
+        },
+      ],
+      recent_runs: [],
+    });
+
+    const user = userEvent.setup();
+    renderWithRouter(<BankSyncSection />);
+
+    await screen.findByText(/No linked accounts yet/i);
+    await user.click(screen.getByRole('button', { name: /check/i }));
+
+    expect(await screen.findByText('Logged in')).toBeInTheDocument();
+    expect(screen.getByText('Session ready')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /refresh sign-in/i })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sync now/i })).toBeEnabled();
   });
 
   it('saves activity url edits when the field loses focus', async () => {
