@@ -31,6 +31,39 @@ export interface PickerTokenResponse {
   app_id: string;
 }
 
+export interface DriveAdoptPreview {
+  root_folder_id: string;
+  root_folder_name: string;
+  adopted: Array<{
+    account_id: number;
+    account_name: string;
+    folder_id: string;
+    folder_name: string;
+    statement_file_count: number;
+  }>;
+  would_create: Array<{
+    account_id: number;
+    account_name: string;
+    expected_folder_name: string;
+  }>;
+  unmatched: Array<{
+    folder_id: string;
+    folder_name: string;
+    parsed_account_id: number | null;
+  }>;
+  statement_file_counts: Record<string, number>;
+  errors: Array<{ message: string }>;
+}
+
+export interface DriveScanSummary {
+  accounts_scanned: number;
+  files_seen: number;
+  files_imported: number;
+  files_skipped: number;
+  files_failed: number;
+  files_removed: number;
+}
+
 class DriveStatementsApi {
   async getStatus(): Promise<DriveStatus> {
     const response = await fetch(`${API_BASE}/accounts/drive/status/`, {
@@ -54,9 +87,27 @@ class DriveStatementsApi {
     return this.handleResponse(response);
   }
 
-  async activate(input: { folderId: string; folderName: string }): Promise<{
+  async adoptPreview(folderId: string): Promise<DriveAdoptPreview> {
+    const response = await csrfService.fetchWithCsrf(
+      `${API_BASE}/accounts/drive/adopt-preview/`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ folder_id: folderId }),
+      }
+    );
+    return this.handleResponse(response);
+  }
+
+  async activate(input: {
+    folderId: string;
+    folderName: string;
+    adoptExisting?: boolean;
+  }): Promise<{
     status: DriveStatus;
     account_folders_created: number;
+    account_folders_adopted: number;
+    unmatched_drive_folders: DriveAdoptPreview['unmatched'];
+    scan_summary: DriveScanSummary | null;
     errors: string[];
   }> {
     const response = await csrfService.fetchWithCsrf(
@@ -66,6 +117,7 @@ class DriveStatementsApi {
         body: JSON.stringify({
           folder_id: input.folderId,
           folder_name: input.folderName,
+          adopt_existing: Boolean(input.adoptExisting),
         }),
       }
     );

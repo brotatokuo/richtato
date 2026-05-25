@@ -21,6 +21,7 @@ from apps.financial_account.services.account_balance_service import (
 )
 from apps.financial_account.services.account_service import AccountService
 from apps.financial_account.services.bank_agent_config_service import BankAgentConfigOptions, BankAgentConfigService
+from apps.financial_account.services.bank_sync_setup_service import BankSyncSetupService
 from apps.financial_account.services.google_drive_activation_service import GoogleDriveActivationService
 from apps.financial_account.services.google_drive_service import GoogleDriveError, GoogleDriveService
 from apps.financial_account.services.statement_file_service import (
@@ -265,6 +266,20 @@ class BankAgentConfigAPIView(APIView):
         return Response(self.config_service.build_for_user(request.user, options), status=status.HTTP_200_OK)
 
 
+class BankSyncSetupAPIView(APIView):
+    """Return per-account sync settings and generated bank-agent config for Setup → Sync."""
+
+    authentication_classes = [TokenAuthentication, SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.setup_service = BankSyncSetupService()
+
+    def get(self, request):
+        return Response(self.setup_service.build_for_user(request.user), status=status.HTTP_200_OK)
+
+
 class GoogleDriveStatusAPIView(APIView):
     """Return Google Drive statement storage connection status."""
 
@@ -351,7 +366,46 @@ class GoogleDrivePickerTokenAPIView(APIView):
 
 
 class GoogleDriveActivateAPIView(APIView):
-    """Activate an empty Drive folder as the statement root."""
+    """Activate a Drive folder as the statement root."""
+
+    authentication_classes = [SessionAuthentication, TokenAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.activation_service = GoogleDriveActivationService()
+
+    def post(self, request):
+        folder_id = request.data.get("folder_id")
+        if not folder_id:
+            return Response({"error": "folder_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        adopt_existing = bool(request.data.get("adopt_existing"))
+        try:
+            result = self.activation_service.activate(
+                request.user,
+                root_folder_id=folder_id,
+                root_folder_name=request.data.get("folder_name", ""),
+                adopt_existing=adopt_existing,
+                scan_after_adopt=adopt_existing,
+            )
+        except GoogleDriveError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "status": self.activation_service.status(request.user),
+                "account_folders_created": result.account_folders_created,
+                "account_folders_adopted": result.account_folders_adopted,
+                "unmatched_drive_folders": result.unmatched_drive_folders,
+                "scan_summary": result.scan_summary,
+                "errors": result.errors,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class GoogleDriveAdoptPreviewAPIView(APIView):
+    """Preview adopting an existing Drive root with Richtato-style account folders."""
 
     authentication_classes = [SessionAuthentication, TokenAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
@@ -365,19 +419,19 @@ class GoogleDriveActivateAPIView(APIView):
         if not folder_id:
             return Response({"error": "folder_id is required"}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            result = self.activation_service.activate(
-                request.user,
-                root_folder_id=folder_id,
-                root_folder_name=request.data.get("folder_name", ""),
-            )
+            preview = self.activation_service.preview_adopt_existing(request.user, root_folder_id=folder_id)
         except GoogleDriveError as exc:
             return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(
             {
-                "status": self.activation_service.status(request.user),
-                "account_folders_created": result.account_folders_created,
-                "errors": result.errors,
+                "root_folder_id": preview.root_folder_id,
+                "root_folder_name": preview.root_folder_name,
+                "adopted": preview.adopted,
+                "would_create": preview.would_create,
+                "unmatched": preview.unmatched,
+                "statement_file_counts": preview.statement_file_counts,
+                "errors": preview.errors,
             },
             status=status.HTTP_200_OK,
         )

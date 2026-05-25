@@ -303,6 +303,27 @@ def get_agent_institution_slug(account_institution_slug: str | None) -> str | No
     return institution.auto_sync_key
 
 
+def institution_supports_agent_sync(account_institution_slug: str | None) -> bool:
+    """Return True when the institution has a host bank-agent adapter."""
+    return get_agent_institution_slug(account_institution_slug) is not None
+
+
+def agent_flow_for_account(account_institution_slug: str | None, account_type: str) -> str | None:
+    """Return the bank-agent flow for an account, or None when unsupported."""
+    if not institution_supports_agent_sync(account_institution_slug):
+        return None
+    if account_type == "credit_card":
+        return "credit_card"
+    if account_institution_slug in {"guideline", "robinhood"} and account_type == "investment":
+        return "investment_balance"
+    return "deposit"
+
+
+def auto_sync_needs_storage_uri(flow: str | None) -> bool:
+    """Statement download flows require a Google Drive folder per account."""
+    return flow in {"deposit", "credit_card"}
+
+
 def is_valid_account_type(slug: str | None, account_type: str) -> bool:
     institution = get_institution(slug)
     if institution is None:

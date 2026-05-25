@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from apps.financial_account.institutions.registry import ACCOUNT_TYPE_LABELS, is_valid_account_type
+from apps.financial_account.institutions.registry import ACCOUNT_TYPE_LABELS, agent_flow_for_account, is_valid_account_type
 
 from .models import AccountBalanceHistory, FinancialAccount, FinancialInstitution
 
@@ -167,31 +167,44 @@ class FinancialAccountUpdateSerializer(serializers.Serializer):
         allow_null=True,
     )
     opening_balance_date = serializers.DateField(required=False, allow_null=True)
+    sync_mode = serializers.ChoiceField(
+        choices=["auto", "upload", "manual"],
+        required=False,
+    )
 
     def validate(self, attrs):
-        institution_slug = attrs.get("institution_slug")
-        account_type = attrs.get("account_type")
-        if institution_slug is None and account_type is None:
-            return attrs
-
         account = self.context.get("account")
-        resolved_slug = institution_slug
-        if resolved_slug is None:
-            if account and account.institution:
-                resolved_slug = account.institution.slug
-            else:
-                resolved_slug = "other"
 
-        resolved_type = account_type
-        if resolved_type is None:
-            resolved_type = account.account_type if account else None
+        institution_slug = attrs.get("institution_slug")
+        if institution_slug is None and account and account.institution:
+            institution_slug = account.institution.slug
+        elif institution_slug is None:
+            institution_slug = "other"
 
-        if resolved_type and not is_valid_account_type(resolved_slug, resolved_type):
-            raise serializers.ValidationError(
-                {
-                    "account_type": (
-                        f"Account type '{resolved_type}' is not supported for institution '{resolved_slug}'."
-                    )
-                }
-            )
+        account_type = attrs.get("account_type")
+        if account_type is None and account:
+            account_type = account.account_type
+
+        if attrs.get("institution_slug") is not None or attrs.get("account_type") is not None:
+            if account_type and not is_valid_account_type(institution_slug, account_type):
+                raise serializers.ValidationError(
+                    {
+                        "account_type": (
+                            f"Account type '{account_type}' is not supported for institution '{institution_slug}'."
+                        )
+                    }
+                )
+
+        sync_mode = attrs.get("sync_mode")
+        if sync_mode == "auto":
+            if agent_flow_for_account(institution_slug, account_type or "") is None:
+                raise serializers.ValidationError(
+                    {
+                        "sync_mode": (
+                            "Auto sync is not available for this institution and account type. "
+                            "Use upload or manual instead."
+                        )
+                    }
+                )
+
         return attrs

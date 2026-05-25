@@ -32,7 +32,16 @@ def account(user):
 
 
 class FakeDriveService:
+    existing_subfolders: dict[str, list[DriveFileMetadata]] = {}
+    folder_files: dict[str, list[DriveFileMetadata]] = {}
+
     def validate_empty_folder(self, connection, folder_id):
+        children = self.existing_subfolders.get(folder_id, [])
+        if children:
+            raise GoogleDriveError("Selected Drive folder must be empty.")
+        return self.validate_folder(connection, folder_id)
+
+    def validate_folder(self, connection, folder_id):
         return DriveFileMetadata(
             id=folder_id,
             name="Richtato Statements",
@@ -41,17 +50,33 @@ class FakeDriveService:
             mime_type=DRIVE_FOLDER_MIME_TYPE,
         )
 
+    def list_files(self, connection, folder_id, *, include_folders=False):
+        if include_folders:
+            return list(self.existing_subfolders.get(folder_id, []))
+        return list(self.folder_files.get(folder_id, []))
+
     def create_folder(self, connection, *, parent_id, name):
-        return DriveFileMetadata(
+        folder = DriveFileMetadata(
             id=f"folder-{name}",
             name=name,
             size=0,
             modified_time="",
             mime_type=DRIVE_FOLDER_MIME_TYPE,
         )
+        self.existing_subfolders.setdefault(parent_id, []).append(folder)
+        return folder
 
     def account_folder_name(self, account):
         return f"{account.id}-Drive_Checking"
+
+
+@pytest.fixture(autouse=True)
+def reset_fake_drive_state():
+    FakeDriveService.existing_subfolders = {}
+    FakeDriveService.folder_files = {}
+    yield
+    FakeDriveService.existing_subfolders = {}
+    FakeDriveService.folder_files = {}
 
 
 class TestGoogleDriveConnection:
@@ -140,6 +165,161 @@ class TestGoogleDriveActivationService:
 
         with pytest.raises(GoogleDriveError, match="Unlink the folder"):
             service.disconnect_if_inactive(user)
+
+    def test_preview_adopt_existing_matches_account_folders(self, user, account):
+        connection = GoogleDriveConnection.objects.create(user=user, google_account_email="u@example.com")
+        connection.set_refresh_token("refresh-token")
+        connection.save()
+        FakeDriveService.existing_subfolders["root-folder"] = [
+            DriveFileMetadata(
+                id="existing-folder",
+                name=f"{account.id}-Drive_Checking",
+                size=0,
+                modified_time="",
+                mime_type=DRIVE_FOLDER_MIME_TYPE,
+            ),
+            DriveFileMetadata(
+                id="stale-folder",
+                name="99-Old_Account",
+                size=0,
+                modified_time="",
+                mime_type=DRIVE_FOLDER_MIME_TYPE,
+            ),
+        ]
+        FakeDriveService.folder_files["existing-folder"] = [
+            DriveFileMetadata(
+                id="file-1",
+                name="statement.csv",
+                size=10,
+                modified_time="",
+                mime_type="text/csv",
+            )
+        ]
+
+        service = GoogleDriveActivationService()
+        service.drive = FakeDriveService()
+        preview = service.preview_adopt_existing(user, root_folder_id="root-folder")
+
+        assert preview.adopted == [
+            {
+                "account_id": account.id,
+                "account_name": account.name,
+                "folder_id": "existing-folder",
+                "folder_name": f"{account.id}-Drive_Checking",
+                "statement_file_count": 1,
+            }
+        ]
+        assert preview.would_create == []
+        assert preview.unmatched == [
+            {
+                "folder_id": "stale-folder",
+                "folder_name": "99-Old_Account",
+                "parsed_account_id": 99,
+            }
+        ]
+        assert preview.errors == []
+
+    def test_activate_adopt_existing_links_folders_and_creates_missing(self, user, account):
+        connection = GoogleDriveConnection.objects.create(user=user, google_account_email="u@example.com")
+        connection.set_refresh_token("refresh-token")
+        connection.save()
+        second_account = FinancialAccount.objects.create(
+            user=user,
+            name="Drive Savings",
+            account_type="savings",
+            balance=Decimal("0"),
+            sync_mode="auto",
+        )
+        FakeDriveService.existing_subfolders["root-folder"] = [
+            DriveFileMetadata(
+                id="existing-folder",
+                name=f"{account.id}-Drive_Checking",
+                size=0,
+                modified_time="",
+                mime_type=DRIVE_FOLDER_MIME_TYPE,
+            )
+        ]
+
+        service = GoogleDriveActivationService()
+        service.drive = FakeDriveService()
+        result = service.activate(user, root_folder_id="root-folder", adopt_existing=True)
+
+        account.refresh_from_db()
+        second_account.refresh_from_db()
+        connection.refresh_from_db()
+        adopted_folder = GoogleDriveAccountFolder.objects.get(account=account)
+        created_folder = GoogleDriveAccountFolder.objects.get(account=second_account)
+
+        assert result.account_folders_adopted == 1
+        assert result.account_folders_created == 1
+        assert connection.is_active is True
+        assert adopted_folder.folder_id == "existing-folder"
+        assert account.storage_uri == "gdrive://existing-folder"
+        assert created_folder.folder_id == f"folder-{second_account.id}-Drive_Checking"
+        assert second_account.storage_uri == f"gdrive://{created_folder.folder_id}"
+
+    def test_preview_adopt_existing_reports_duplicate_account_prefix(self, user, account):
+        connection = GoogleDriveConnection.objects.create(user=user, google_account_email="u@example.com")
+        connection.set_refresh_token("refresh-token")
+        connection.save()
+        FakeDriveService.existing_subfolders["root-folder"] = [
+            DriveFileMetadata(
+                id="folder-a",
+                name=f"{account.id}-Drive_Checking",
+                size=0,
+                modified_time="",
+                mime_type=DRIVE_FOLDER_MIME_TYPE,
+            ),
+            DriveFileMetadata(
+                id="folder-b",
+                name=f"{account.id}-Duplicate",
+                size=0,
+                modified_time="",
+                mime_type=DRIVE_FOLDER_MIME_TYPE,
+            ),
+        ]
+
+        service = GoogleDriveActivationService()
+        service.drive = FakeDriveService()
+        preview = service.preview_adopt_existing(user, root_folder_id="root-folder")
+
+        assert preview.adopted == [
+            {
+                "account_id": account.id,
+                "account_name": account.name,
+                "folder_id": "folder-a",
+                "folder_name": f"{account.id}-Drive_Checking",
+                "statement_file_count": 0,
+            }
+        ]
+        assert preview.errors[0]["message"].startswith(f"Duplicate account folder prefix {account.id}")
+
+    def test_activate_adopt_existing_rejects_duplicate_prefix(self, user, account):
+        connection = GoogleDriveConnection.objects.create(user=user, google_account_email="u@example.com")
+        connection.set_refresh_token("refresh-token")
+        connection.save()
+        FakeDriveService.existing_subfolders["root-folder"] = [
+            DriveFileMetadata(
+                id="folder-a",
+                name=f"{account.id}-Drive_Checking",
+                size=0,
+                modified_time="",
+                mime_type=DRIVE_FOLDER_MIME_TYPE,
+            ),
+            DriveFileMetadata(
+                id="folder-b",
+                name=f"{account.id}-Duplicate",
+                size=0,
+                modified_time="",
+                mime_type=DRIVE_FOLDER_MIME_TYPE,
+            ),
+        ]
+
+        service = GoogleDriveActivationService()
+        service.drive = FakeDriveService()
+
+        with pytest.raises(GoogleDriveError, match="Duplicate account folder prefix"):
+            service.activate(user, root_folder_id="root-folder", adopt_existing=True)
 
 
 class TestAccountServiceDriveProvisioning:

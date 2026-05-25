@@ -20,6 +20,7 @@ from rest_framework.views import APIView
 from apps.richtato_user.demo_user_factory import DemoUserFactory
 from apps.richtato_user.models import UserPreference
 from apps.richtato_user.serializers import UserPreferenceSerializer
+from apps.richtato_user.services.bank_agent_credentials_service import get_bank_agent_credentials
 from apps.richtato_user.services.category_settings_service import (
     CategorySettingsService,
 )
@@ -457,6 +458,29 @@ class APIProfileView(APIView):
             {
                 "success": True,
                 "user": profile_data,
+            }
+        )
+
+
+class APIAgentTokenView(APIView):
+    """Return the authenticated user's host bank-agent credentials."""
+
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Get bank-agent credentials",
+        operation_description=(
+            "Return the authenticated user's DRF token and stable Fernet key for "
+            "the host bank-agent CLI (RICHTATO_API_TOKEN and BANK_AGENT_FERNET_KEY)."
+        ),
+        responses={200: openapi.Response("Credentials payload")},
+    )
+    def get(self, request):
+        credentials = get_bank_agent_credentials(request.user)
+        return Response(
+            {
+                "token": credentials["token"],
+                "fernet_key": credentials["fernet_key"],
             }
         )
 

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from django.db import transaction
 from django.utils import timezone
@@ -13,8 +15,16 @@ from apps.financial_account.models import (
     GoogleDriveAccountFolder,
     GoogleDriveConnection,
 )
-from apps.financial_account.services.google_drive_service import GoogleDriveError, GoogleDriveService
+from apps.financial_account.services.google_drive_service import (
+    DRIVE_FOLDER_MIME_TYPE,
+    DriveFileMetadata,
+    GoogleDriveError,
+    GoogleDriveService,
+)
 from apps.richtato_user.models import User
+
+ACCOUNT_FOLDER_ID_PREFIX = re.compile(r"^(\d+)-")
+STATEMENT_EXTENSIONS = {".csv", ".xls", ".xlsx"}
 
 
 @dataclass
@@ -23,7 +33,23 @@ class DriveActivationResult:
 
     connection: GoogleDriveConnection
     account_folders_created: int = 0
+    account_folders_adopted: int = 0
+    unmatched_drive_folders: list[dict] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    scan_summary: dict | None = None
+
+
+@dataclass
+class DriveAdoptPreview:
+    """Dry-run summary for adopting an existing Drive root."""
+
+    root_folder_id: str
+    root_folder_name: str
+    adopted: list[dict] = field(default_factory=list)
+    would_create: list[dict] = field(default_factory=list)
+    unmatched: list[dict] = field(default_factory=list)
+    statement_file_counts: dict[str, int] = field(default_factory=dict)
+    errors: list[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -41,12 +67,24 @@ class GoogleDriveActivationService:
     def __init__(self):
         self.drive = GoogleDriveService()
 
-    def activate(self, user: User, *, root_folder_id: str, root_folder_name: str = "") -> DriveActivationResult:
+    def activate(
+        self,
+        user: User,
+        *,
+        root_folder_id: str,
+        root_folder_name: str = "",
+        adopt_existing: bool = False,
+        scan_after_adopt: bool = False,
+    ) -> DriveActivationResult:
         connection = GoogleDriveConnection.objects.filter(user=user).first()
         if not connection:
             raise GoogleDriveError("Connect Google Drive before choosing a statement folder.")
 
-        folder = self.drive.validate_empty_folder(connection, root_folder_id)
+        if adopt_existing:
+            folder = self.drive.validate_folder(connection, root_folder_id)
+        else:
+            folder = self.drive.validate_empty_folder(connection, root_folder_id)
+
         root_folder_name = root_folder_name or folder.name
         accounts = list(FinancialAccount.objects.filter(user=user, is_active=True).select_related("user"))
 
@@ -70,22 +108,87 @@ class GoogleDriveActivationService:
                 ]
             )
 
-            for account in accounts:
-                try:
-                    account_folder = self._create_account_folder(connection, account)
-                    result.account_folders_created += 1
-                    account.storage_uri = f"gdrive://{account_folder.folder_id}"
-                    account.save(update_fields=["storage_uri", "updated_at"])
-                except Exception as exc:
-                    msg = f"{account.name}: {exc}"
-                    result.errors.append(msg)
-                    logger.exception("Failed to create Drive folder for account {} during activation", account.id)
+            if adopt_existing:
+                preview = self.preview_adopt_existing(user, root_folder_id=root_folder_id)
+                if preview.errors:
+                    raise GoogleDriveError(preview.errors[0]["message"])
+
+                adopted_by_account_id = {item["account_id"]: item for item in preview.adopted}
+                result.unmatched_drive_folders = preview.unmatched
+
+                for account in accounts:
+                    adopted = adopted_by_account_id.get(account.id)
+                    try:
+                        if adopted:
+                            account_folder = self._link_existing_folder(
+                                connection,
+                                account,
+                                folder_id=adopted["folder_id"],
+                                folder_name=adopted["folder_name"],
+                            )
+                            result.account_folders_adopted += 1
+                        else:
+                            account_folder = self._create_account_folder(connection, account)
+                            result.account_folders_created += 1
+                        account.storage_uri = f"gdrive://{account_folder.folder_id}"
+                        account.save(update_fields=["storage_uri", "updated_at"])
+                    except Exception as exc:
+                        msg = f"{account.name}: {exc}"
+                        result.errors.append(msg)
+                        logger.exception("Failed to link Drive folder for account {} during adopt", account.id)
+            else:
+                for account in accounts:
+                    try:
+                        account_folder = self._create_account_folder(connection, account)
+                        result.account_folders_created += 1
+                        account.storage_uri = f"gdrive://{account_folder.folder_id}"
+                        account.save(update_fields=["storage_uri", "updated_at"])
+                    except Exception as exc:
+                        msg = f"{account.name}: {exc}"
+                        result.errors.append(msg)
+                        logger.exception("Failed to create Drive folder for account {} during activation", account.id)
 
             if result.errors:
                 connection.last_error = "\n".join(result.errors[:10])
                 connection.save(update_fields=["last_error", "updated_at"])
 
+        if adopt_existing and scan_after_adopt and not result.errors:
+            from apps.financial_account.services.storage_scanner_service import StorageScannerService
+
+            scan_result = StorageScannerService().scan_user(user.id)
+            result.scan_summary = {
+                "accounts_scanned": scan_result.accounts_scanned,
+                "files_seen": scan_result.files_seen,
+                "files_imported": scan_result.files_imported,
+                "files_skipped": scan_result.files_skipped,
+                "files_failed": scan_result.files_failed,
+                "files_removed": scan_result.files_removed,
+            }
+
         return result
+
+    def preview_adopt_existing(self, user: User, *, root_folder_id: str) -> DriveAdoptPreview:
+        connection = GoogleDriveConnection.objects.filter(user=user).first()
+        if not connection:
+            raise GoogleDriveError("Connect Google Drive before choosing a statement folder.")
+
+        folder = self.drive.validate_folder(connection, root_folder_id)
+        accounts = list(FinancialAccount.objects.filter(user=user, is_active=True).select_related("user"))
+        adopted, would_create, unmatched, errors = self._build_adopt_plan(connection, folder, accounts)
+
+        statement_file_counts = {
+            item["folder_id"]: item["statement_file_count"] for item in adopted if item.get("folder_id")
+        }
+
+        return DriveAdoptPreview(
+            root_folder_id=folder.id,
+            root_folder_name=folder.name,
+            adopted=adopted,
+            would_create=would_create,
+            unmatched=unmatched,
+            statement_file_counts=statement_file_counts,
+            errors=[{"message": message} for message in errors],
+        )
 
     def status(self, user: User) -> dict:
         connection = (
@@ -221,6 +324,81 @@ class GoogleDriveActivationService:
             ]
         )
 
+    def _build_adopt_plan(
+        self,
+        connection: GoogleDriveConnection,
+        root_folder: DriveFileMetadata,
+        accounts: list[FinancialAccount],
+    ) -> tuple[list[dict], list[dict], list[dict], list[str]]:
+        children = self.drive.list_files(connection, root_folder.id, include_folders=True)
+        subfolders = [item for item in children if item.mime_type == DRIVE_FOLDER_MIME_TYPE]
+
+        folders_by_account_id: dict[int, DriveFileMetadata] = {}
+        unmatched: list[dict] = []
+        errors: list[str] = []
+
+        for subfolder in subfolders:
+            match = ACCOUNT_FOLDER_ID_PREFIX.match(subfolder.name)
+            if not match:
+                unmatched.append(
+                    {
+                        "folder_id": subfolder.id,
+                        "folder_name": subfolder.name,
+                        "parsed_account_id": None,
+                    }
+                )
+                continue
+
+            account_id = int(match.group(1))
+            if account_id in folders_by_account_id:
+                existing = folders_by_account_id[account_id]
+                errors.append(
+                    f"Duplicate account folder prefix {account_id}: '{existing.name}' and '{subfolder.name}'."
+                )
+                continue
+            folders_by_account_id[account_id] = subfolder
+
+        account_ids = {account.id for account in accounts}
+        adopted: list[dict] = []
+        would_create: list[dict] = []
+
+        for account in accounts:
+            subfolder = folders_by_account_id.get(account.id)
+            if subfolder:
+                adopted.append(
+                    {
+                        "account_id": account.id,
+                        "account_name": account.name,
+                        "folder_id": subfolder.id,
+                        "folder_name": subfolder.name,
+                        "statement_file_count": self._count_statement_files(connection, subfolder.id),
+                    }
+                )
+            else:
+                would_create.append(
+                    {
+                        "account_id": account.id,
+                        "account_name": account.name,
+                        "expected_folder_name": self.drive.account_folder_name(account),
+                    }
+                )
+
+        for account_id, subfolder in folders_by_account_id.items():
+            if account_id not in account_ids:
+                unmatched.append(
+                    {
+                        "folder_id": subfolder.id,
+                        "folder_name": subfolder.name,
+                        "parsed_account_id": account_id,
+                    }
+                )
+
+        return adopted, would_create, unmatched, errors
+
+    def _count_statement_files(self, connection: GoogleDriveConnection, folder_id: str) -> int:
+        files = self.drive.list_files(connection, folder_id)
+        return sum(1 for item in files if Path(item.name).suffix.lower() in STATEMENT_EXTENSIONS)
+
     def _create_account_folder(
         self,
         connection: GoogleDriveConnection,
@@ -233,6 +411,21 @@ class GoogleDriveActivationService:
             account=account,
             folder_id=folder.id,
             folder_name=folder.name or folder_name,
+        )
+
+    def _link_existing_folder(
+        self,
+        connection: GoogleDriveConnection,
+        account: FinancialAccount,
+        *,
+        folder_id: str,
+        folder_name: str,
+    ) -> GoogleDriveAccountFolder:
+        return GoogleDriveAccountFolder.objects.create(
+            connection=connection,
+            account=account,
+            folder_id=folder_id,
+            folder_name=folder_name,
         )
 
     def _settings_configured(self) -> bool:

@@ -20,6 +20,11 @@ urlpatterns = [
         views.BankAgentConfigAPIView.as_view(),
         name="account-bank-agent-config",
     ),
+    path(
+        "sync-setup/",
+        views.BankSyncSetupAPIView.as_view(),
+        name="account-sync-setup",
+    ),
     path("drive/status/", views.GoogleDriveStatusAPIView.as_view(), name="account-drive-status"),
     path("drive/oauth/start/", views.GoogleDriveOAuthStartAPIView.as_view(), name="account-drive-oauth-start"),
     path(
@@ -29,6 +34,7 @@ urlpatterns = [
     ),
     path("drive/picker-token/", views.GoogleDrivePickerTokenAPIView.as_view(), name="account-drive-picker-token"),
     path("drive/activate/", views.GoogleDriveActivateAPIView.as_view(), name="account-drive-activate"),
+    path("drive/adopt-preview/", views.GoogleDriveAdoptPreviewAPIView.as_view(), name="account-drive-adopt-preview"),
     path("drive/deactivate/", views.GoogleDriveDeactivateAPIView.as_view(), name="account-drive-deactivate"),
     path("drive/disconnect/", views.GoogleDriveDisconnectAPIView.as_view(), name="account-drive-disconnect"),
     path("drive/sync-folders/", views.GoogleDriveSyncFoldersAPIView.as_view(), name="account-drive-sync-folders"),

@@ -125,10 +125,14 @@ class GoogleDriveService:
         )
         return payload["access_token"]
 
-    def validate_empty_folder(self, connection: GoogleDriveConnection, folder_id: str) -> DriveFileMetadata:
+    def validate_folder(self, connection: GoogleDriveConnection, folder_id: str) -> DriveFileMetadata:
         folder = self.get_file(connection, folder_id, fields="id,name,mimeType,modifiedTime")
         if folder.mime_type != DRIVE_FOLDER_MIME_TYPE:
             raise GoogleDriveError("Selected Drive item must be a folder.")
+        return folder
+
+    def validate_empty_folder(self, connection: GoogleDriveConnection, folder_id: str) -> DriveFileMetadata:
+        folder = self.validate_folder(connection, folder_id)
         if self.list_files(connection, folder_id, include_folders=True):
             raise GoogleDriveError("Selected Drive folder must be empty.")
         return folder

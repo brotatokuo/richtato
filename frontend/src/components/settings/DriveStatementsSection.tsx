@@ -17,15 +17,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useDrive } from '@/contexts/DriveContext';
 import {
   driveStatementsApi,
+  type DriveAdoptPreview,
   type PickerTokenResponse,
 } from '@/lib/api/driveStatements';
 import {
-  CheckCircle2,
   Cloud,
+  FolderInput,
   FolderOpen,
+  FolderPlus,
   FolderSync,
   Loader2,
   Unlink,
@@ -75,6 +85,8 @@ declare global {
 
 const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
 
+type ActivationMode = 'create' | 'adopt';
+
 export function DriveStatementsSection() {
   const {
     driveStatus: status,
@@ -83,6 +95,11 @@ export function DriveStatementsSection() {
   } = useDrive();
   const [busy, setBusy] = useState(false);
   const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
+  const [adoptPreview, setAdoptPreview] = useState<DriveAdoptPreview | null>(
+    null
+  );
+  const [pendingAdoptFolder, setPendingAdoptFolder] =
+    useState<PickerDocument | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
@@ -116,28 +133,81 @@ export function DriveStatementsSection() {
     }
   };
 
-  const chooseFolder = async () => {
+  const activateFolder = async (
+    folder: PickerDocument,
+    mode: ActivationMode
+  ) => {
+    try {
+      const response = await driveStatementsApi.activate({
+        folderId: folder.id,
+        folderName: folder.name,
+        adoptExisting: mode === 'adopt',
+      });
+      await refreshDriveStatus();
+      setAdoptPreview(null);
+      setPendingAdoptFolder(null);
+
+      if (mode === 'adopt') {
+        const adopted = response.account_folders_adopted;
+        const created = response.account_folders_created;
+        const imported = response.scan_summary?.files_imported ?? 0;
+        toast.success('Existing Google Drive folders linked', {
+          description: `${adopted} adopted, ${created} created, ${imported} statement file${imported === 1 ? '' : 's'} imported.`,
+        });
+        if (response.unmatched_drive_folders.length > 0) {
+          toast.warning('Some Drive folders were not linked', {
+            description: `${response.unmatched_drive_folders.length} folder${response.unmatched_drive_folders.length === 1 ? '' : 's'} did not match an active account.`,
+          });
+        }
+      } else {
+        toast.success('Google Drive statement storage activated', {
+          description: `${response.account_folders_created} account folders created.`,
+        });
+      }
+
+      if (response.errors.length > 0) {
+        toast.warning('Some account folders could not be configured', {
+          description: response.errors[0],
+        });
+      }
+    } catch (error) {
+      toast.error('Unable to activate Drive folder', {
+        description:
+          error instanceof Error ? error.message : 'Please try again.',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const chooseFolder = async (mode: ActivationMode) => {
     setBusy(true);
     try {
       const pickerToken = await driveStatementsApi.getPickerToken();
       await loadGooglePicker();
       openPicker(pickerToken, async folder => {
-        try {
-          const response = await driveStatementsApi.activate({
-            folderId: folder.id,
-            folderName: folder.name,
-          });
-          await refreshDriveStatus();
-          toast.success('Google Drive statement storage activated', {
-            description: `${response.account_folders_created} account folders created.`,
-          });
-          if (response.errors.length > 0) {
-            toast.warning('Some statements could not be migrated', {
-              description: response.errors[0],
-            });
+        if (mode === 'create') {
+          try {
+            await activateFolder(folder, mode);
+          } catch {
+            setBusy(false);
           }
+          return;
+        }
+
+        try {
+          const preview = await driveStatementsApi.adoptPreview(folder.id);
+          if (preview.errors.length > 0) {
+            toast.error('Unable to use this Drive folder', {
+              description: preview.errors[0]?.message ?? 'Please try again.',
+            });
+            setBusy(false);
+            return;
+          }
+          setPendingAdoptFolder(folder);
+          setAdoptPreview(preview);
         } catch (error) {
-          toast.error('Unable to activate Drive folder', {
+          toast.error('Unable to preview Drive folder', {
             description:
               error instanceof Error ? error.message : 'Please try again.',
           });
@@ -152,6 +222,14 @@ export function DriveStatementsSection() {
       });
       setBusy(false);
     }
+  };
+
+  const confirmAdopt = async () => {
+    if (!pendingAdoptFolder) {
+      return;
+    }
+    setBusy(true);
+    await activateFolder(pendingAdoptFolder, 'adopt');
   };
 
   const disconnect = async () => {
@@ -180,7 +258,7 @@ export function DriveStatementsSection() {
         description: `${response.account_folders_removed} account folders unlinked.`,
       });
       if (response.errors.length > 0) {
-        toast.warning('Some statements could not be migrated', {
+        toast.warning('Some account folders could not be unlinked', {
           description: response.errors[0],
         });
       }
@@ -229,8 +307,12 @@ export function DriveStatementsSection() {
           Statement Storage
         </CardTitle>
         <CardDescription>
-          Sync statements to an empty Google Drive folder. Richtato creates one
-          flat folder per account.
+          Sync statements to Google Drive. Choose an empty root folder to create
+          a fresh structure, or link an existing Richtato-style root with{' '}
+          <code className="rounded bg-muted px-1 py-0.5 text-xs">
+            {'{account_id}-{name}'}
+          </code>{' '}
+          subfolders.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -294,13 +376,30 @@ export function DriveStatementsSection() {
                 </Button>
               )}
               {isConnected && !isActive && (
-                <Button onClick={chooseFolder} disabled={busy}>
+                <Button
+                  onClick={() => void chooseFolder('create')}
+                  disabled={busy}
+                >
                   {busy ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    <FolderPlus className="mr-2 h-4 w-4" />
                   )}
-                  Choose Empty Folder
+                  Create New Structure
+                </Button>
+              )}
+              {isConnected && !isActive && (
+                <Button
+                  variant="outline"
+                  onClick={() => void chooseFolder('adopt')}
+                  disabled={busy}
+                >
+                  {busy ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FolderInput className="mr-2 h-4 w-4" />
+                  )}
+                  Use Existing Folders
                 </Button>
               )}
               {isConnected && !isActive && (
@@ -330,6 +429,100 @@ export function DriveStatementsSection() {
                 </Button>
               )}
             </div>
+
+            <Dialog
+              open={adoptPreview !== null}
+              onOpenChange={open => {
+                if (!open) {
+                  setAdoptPreview(null);
+                  setPendingAdoptFolder(null);
+                }
+              }}
+            >
+              <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Use existing Drive folders?</DialogTitle>
+                  <DialogDescription>
+                    {adoptPreview?.root_folder_name
+                      ? `Root folder: ${adoptPreview.root_folder_name}`
+                      : 'Review how Richtato will link your existing account folders.'}
+                  </DialogDescription>
+                </DialogHeader>
+
+                {adoptPreview && (
+                  <div className="space-y-4 text-sm">
+                    {adoptPreview.adopted.length > 0 && (
+                      <section className="space-y-2">
+                        <h3 className="font-medium text-foreground">
+                          Will adopt ({adoptPreview.adopted.length})
+                        </h3>
+                        <ul className="space-y-1 text-muted-foreground">
+                          {adoptPreview.adopted.map(item => (
+                            <li key={item.folder_id}>
+                              {item.account_name} → {item.folder_name}
+                              {item.statement_file_count > 0
+                                ? ` (${item.statement_file_count} statement file${item.statement_file_count === 1 ? '' : 's'})`
+                                : ''}
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    )}
+
+                    {adoptPreview.would_create.length > 0 && (
+                      <section className="space-y-2">
+                        <h3 className="font-medium text-foreground">
+                          Will create ({adoptPreview.would_create.length})
+                        </h3>
+                        <ul className="space-y-1 text-muted-foreground">
+                          {adoptPreview.would_create.map(item => (
+                            <li key={item.account_id}>
+                              {item.account_name} → {item.expected_folder_name}
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    )}
+
+                    {adoptPreview.unmatched.length > 0 && (
+                      <section className="space-y-2">
+                        <h3 className="font-medium text-foreground">
+                          Unmatched ({adoptPreview.unmatched.length})
+                        </h3>
+                        <ul className="space-y-1 text-muted-foreground">
+                          {adoptPreview.unmatched.map(item => (
+                            <li key={item.folder_id}>
+                              {item.folder_name}
+                              {item.parsed_account_id
+                                ? ` (account ${item.parsed_account_id} not found)`
+                                : ' (no account ID prefix)'}
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    )}
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setAdoptPreview(null);
+                      setPendingAdoptFolder(null);
+                    }}
+                    disabled={busy}
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={() => void confirmAdopt()} disabled={busy}>
+                    {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Link Existing Folders
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
             <AlertDialog
               open={showUnlinkConfirm}
               onOpenChange={setShowUnlinkConfirm}

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from apps.financial_account.institutions.registry import get_agent_institution_slug
+from apps.financial_account.institutions.registry import agent_flow_for_account, get_agent_institution_slug
 from apps.financial_account.models import FinancialAccount
 from apps.richtato_user.models import User
 
@@ -77,9 +77,6 @@ class BankAgentConfigService:
         return get_agent_institution_slug(slug)
 
     def _flow_for_account(self, account: FinancialAccount) -> str:
-        if account.account_type == "credit_card":
-            return "credit_card"
         institution_slug = account.institution.slug if account.institution else ""
-        if institution_slug in {"guideline", "robinhood"} and account.account_type == "investment":
-            return "investment_balance"
-        return "deposit"
+        flow = agent_flow_for_account(institution_slug, account.account_type)
+        return flow or "deposit"

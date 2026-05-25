@@ -78,8 +78,9 @@ Common date filters:
 | `POST` | `/drive/oauth/start/` | Start Google Drive OAuth |
 | `GET` | `/drive/oauth/callback/` | Complete Google Drive OAuth callback |
 | `GET` | `/drive/picker-token/` | Get short-lived token/config for Google Drive Picker |
-| `POST` | `/drive/activate/` | Activate an empty Drive folder and create account folders |
-| `POST` | `/drive/deactivate/` | Unlink an active Drive folder and migrate statements back to local storage |
+| `POST` | `/drive/activate/` | Activate a Drive folder and create or adopt account folders (`adopt_existing: true` to link existing `{account_id}-{name}` subfolders) |
+| `POST` | `/drive/adopt-preview/` | Preview adopting an existing Drive root with Richtato-style account subfolders |
+| `POST` | `/drive/deactivate/` | Unlink an active Drive folder and clear account storage URIs |
 | `POST` | `/drive/disconnect/` | Disconnect inactive Drive OAuth credentials |
 | `POST` | `/agent-statements/` | Agent upload endpoint for Drive-backed statement downloads |
 | `POST` | `/agent-balances/` | Agent balance snapshot endpoint for investment balance sync (Token auth) |
@@ -112,7 +113,7 @@ Card-specific account routes are mounted at `/api/v1/card-accounts/`.
 
 Statement imports use row-level deduplication. Current/open statement exports are provisional and may overlap later closed statements; duplicates are skipped and changed provisional rows are flagged for review.
 
-Google Drive statement storage is configured from **Setup → Statements** (`/setup?tab=statements`). The user connects Google Drive, selects an empty root folder, and Richtato creates one flat folder per active account. Statement records store metadata, file hash, account, institution, period, status, and the latest preview/import summary in Google Drive.
+Google Drive statement storage is configured from **Setup → Statements** (`/setup?tab=statements`). The user connects Google Drive, then either selects an empty root folder (Richtato creates one flat folder per active account) or links an existing root that already contains `{account_id}-{name}` subfolders. Adopting an existing root runs a preview, links matched folders by account ID prefix, creates folders for unmatched accounts, and scans for statement files to import. Statement records store metadata, file hash, account, institution, period, status, and the latest preview/import summary in Google Drive.
 
 ## Transactions (`/api/v1/transactions/`)
 
