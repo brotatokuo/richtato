@@ -285,7 +285,7 @@ export function StatementUploadDialog({
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv,.xls,.xlsx"
+              accept=".csv,.xls,.xlsx,.pdf,application/pdf"
               className="hidden"
               onChange={event =>
                 handleFileSelection(event.target.files?.[0] ?? null)
