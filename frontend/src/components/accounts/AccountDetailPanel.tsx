@@ -68,6 +68,12 @@ export function AccountDetailPanel({
   const [institutions, setInstitutions] = useState<InstitutionFieldChoice[]>(
     []
   );
+  const canShowTransactions =
+    account?.sync_capabilities?.transactions !== false;
+  const canShowStatements =
+    account?.sync_capabilities?.statement_files !== false;
+  const visibleTabCount =
+    1 + (canShowTransactions ? 1 : 0) + (canShowStatements ? 1 : 0);
 
   useEffect(() => {
     transactionsApiService
@@ -97,6 +103,16 @@ export function AccountDetailPanel({
     setIsShared(account.shared_with_household ?? false);
     fetchBalanceHistory(account.id);
   }, [account, fetchBalanceHistory]);
+
+  useEffect(() => {
+    if (!account) return;
+    if (
+      (activeTab === 'transactions' && !canShowTransactions) ||
+      (activeTab === 'statements' && !canShowStatements)
+    ) {
+      setActiveTab('balance');
+    }
+  }, [account, activeTab, canShowTransactions, canShowStatements]);
 
   const chartData = useMemo(() => {
     if (!balanceHistory.length) return { series: [], dates: [] };
@@ -466,7 +482,16 @@ export function AccountDetailPanel({
         className="flex flex-col flex-1 min-h-0"
       >
         <div className="flex-shrink-0 border-b border-border/40 px-6 pt-3 pb-0">
-          <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-grid">
+          <TabsList
+            className={cn(
+              'grid w-full sm:w-auto sm:inline-grid',
+              visibleTabCount === 3
+                ? 'grid-cols-3'
+                : visibleTabCount === 2
+                  ? 'grid-cols-2'
+                  : 'grid-cols-1'
+            )}
+          >
             <TabsTrigger
               value="balance"
               className="flex items-center gap-2 text-xs sm:text-sm"
@@ -474,20 +499,24 @@ export function AccountDetailPanel({
               <LineChart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span>Balance History</span>
             </TabsTrigger>
-            <TabsTrigger
-              value="transactions"
-              className="flex items-center gap-2 text-xs sm:text-sm"
-            >
-              <ArrowUpDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span>Transactions</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="statements"
-              className="flex items-center gap-2 text-xs sm:text-sm"
-            >
-              <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span>Statements</span>
-            </TabsTrigger>
+            {canShowTransactions && (
+              <TabsTrigger
+                value="transactions"
+                className="flex items-center gap-2 text-xs sm:text-sm"
+              >
+                <ArrowUpDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span>Transactions</span>
+              </TabsTrigger>
+            )}
+            {canShowStatements && (
+              <TabsTrigger
+                value="statements"
+                className="flex items-center gap-2 text-xs sm:text-sm"
+              >
+                <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span>Statements</span>
+              </TabsTrigger>
+            )}
           </TabsList>
         </div>
 
@@ -590,30 +619,34 @@ export function AccountDetailPanel({
           )}
         </TabsContent>
 
-        <TabsContent
-          value="transactions"
-          className="mt-0 flex-1 overflow-y-auto px-6 py-4 focus-visible:outline-none"
-        >
-          <TransactionsPanel
-            accountId={account.id}
-            defaultAccountId={account.id}
-            hiddenColumns={['account']}
-            className="min-w-0"
-          />
-        </TabsContent>
+        {canShowTransactions && (
+          <TabsContent
+            value="transactions"
+            className="mt-0 flex-1 overflow-y-auto px-6 py-4 focus-visible:outline-none"
+          >
+            <TransactionsPanel
+              accountId={account.id}
+              defaultAccountId={account.id}
+              hiddenColumns={['account']}
+              className="min-w-0"
+            />
+          </TabsContent>
+        )}
 
-        <TabsContent
-          value="statements"
-          className="mt-0 flex-1 overflow-y-auto px-6 py-4 focus-visible:outline-none"
-        >
-          <StorageLocationPanel
-            accountId={account.id}
-            accountName={account.name}
-            storageUri={account.storage_uri}
-            resolvedStorageUri={account.resolved_storage_uri}
-            onUploadComplete={onAccountUpdated}
-          />
-        </TabsContent>
+        {canShowStatements && (
+          <TabsContent
+            value="statements"
+            className="mt-0 flex-1 overflow-y-auto px-6 py-4 focus-visible:outline-none"
+          >
+            <StorageLocationPanel
+              accountId={account.id}
+              accountName={account.name}
+              storageUri={account.storage_uri}
+              resolvedStorageUri={account.resolved_storage_uri}
+              onUploadComplete={onAccountUpdated}
+            />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Edit modal */}

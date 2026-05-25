@@ -22,7 +22,7 @@ export function Accounts() {
   };
 
   return (
-    <div className="flex min-h-[36rem] h-[calc(100vh-12rem)] overflow-hidden rounded-lg border border-border/40 bg-card">
+    <div className="flex min-h-0 flex-1 overflow-hidden rounded-lg border border-border/40 bg-card">
       {/* Left sidebar */}
       <div className="w-72 flex-shrink-0 border-r border-border/60 bg-card/80 overflow-hidden flex flex-col">
         <AccountsSidebar

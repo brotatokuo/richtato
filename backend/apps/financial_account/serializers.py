@@ -7,6 +7,7 @@ from rest_framework import serializers
 from apps.financial_account.institutions.registry import (
     ACCOUNT_TYPE_LABELS,
     agent_flow_for_account,
+    auto_sync_needs_storage_uri,
     is_valid_account_type,
 )
 
@@ -45,6 +46,7 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
     resolved_storage_uri = serializers.SerializerMethodField()
     opening_balance = serializers.SerializerMethodField()
     opening_balance_date = serializers.SerializerMethodField()
+    sync_capabilities = serializers.SerializerMethodField()
 
     class Meta:
         model = FinancialAccount
@@ -77,6 +79,7 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
             "date",
             "opening_balance",
             "opening_balance_date",
+            "sync_capabilities",
         ]
         read_only_fields = ["id", "created_at", "updated_at", "sync_source", "resolved_storage_uri"]
 
@@ -112,6 +115,19 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
         if balance_date is None:
             return None
         return balance_date.isoformat()
+
+    def get_sync_capabilities(self, obj):
+        """Return UI capabilities derived from the account's sync contract."""
+        institution_slug = obj.institution.slug if obj.institution else None
+        agent_flow = agent_flow_for_account(institution_slug, obj.account_type)
+        is_balance_only_auto = obj.sync_mode == "auto" and agent_flow == "investment_balance"
+
+        return {
+            "transactions": not is_balance_only_auto,
+            "balance_snapshots": True,
+            "statement_files": auto_sync_needs_storage_uri(agent_flow) or bool(obj.resolved_storage_uri()),
+            "agent_flow": agent_flow,
+        }
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

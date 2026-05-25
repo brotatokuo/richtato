@@ -74,6 +74,12 @@ export interface Account {
   resolved_storage_uri?: string;
   opening_balance?: string | null;
   opening_balance_date?: string | null;
+  sync_capabilities?: {
+    transactions: boolean;
+    balance_snapshots: boolean;
+    statement_files: boolean;
+    agent_flow: 'deposit' | 'credit_card' | 'investment_balance' | null;
+  };
 }
 
 export interface Category {
