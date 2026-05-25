@@ -55,7 +55,7 @@ amount sign convention) — no per-folder README required.
 | Chase | Credit | Partial | Done |
 | Citi | Credit | Done | Needed |
 | Marcus | Savings | Partial | Needed |
-| Robinhood | Checking/Savings | Done (PDF + CSV) | Needed |
+| Robinhood | Checking/Savings | Done (PDF + CSV, balance reconciliation) | Needed |
 | Robinhood | Credit | Done (PDF) | Needed |
 
 **Parser** → `backend/apps/financial_account/institutions/parsers/` and `backend/apps/financial_account/services/statement_import_service.py`
