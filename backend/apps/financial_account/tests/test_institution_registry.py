@@ -32,7 +32,7 @@ def user(db):
         ("american_express", "amex"),
         ("citibank", "citi"),
         ("robinhood", "robinhood_bank"),
-        ("robinhood_investments", "robinhood_investments"),
+        ("robinhood_investments", "robinhood_bank"),
         ("guideline", "guideline"),
         ("other", None),
     ],
@@ -51,6 +51,7 @@ def test_parser_key_for_slug(slug, expected_parser):
         ("fidelity", "investment", True),
         ("fidelity", "checking", False),
         ("robinhood", "credit_card", True),
+        ("robinhood", "investment", True),
         ("robinhood", "checking", True),
         ("other", "investment", True),
     ],
@@ -92,7 +93,10 @@ def test_get_institution_field_choices_includes_per_institution_types():
         "checking",
         "savings",
         "credit_card",
+        "investment",
     }
+
+    assert "robinhood_investments" not in {item["value"] for item in payload["institutions"]}
 
     assert payload["entity"][-1]["value"] == "other"
 
@@ -138,6 +142,23 @@ def test_parser_key_for_account_routes_robinhood_credit_card():
     assert parser_key_for_account(checking_account) == "robinhood_bank"
 
 
+@pytest.mark.django_db
+def test_parser_key_for_account_routes_robinhood_investment():
+    user = User.objects.create_user(username="robinhood-inv", email="rh-inv@test.com", password="x")
+    institution, _ = FinancialInstitution.objects.get_or_create(
+        slug="robinhood",
+        defaults={"name": "Robinhood"},
+    )
+    investment_account = FinancialAccount.objects.create(
+        user=user,
+        name="Robinhood Brokerage",
+        account_type="investment",
+        institution=institution,
+    )
+
+    assert parser_key_for_account(investment_account) == "robinhood_investments"
+
+
 def test_supported_file_types_for_robinhood_credit():
     assert supported_file_types_for_parser("robinhood_credit") == ["pdf"]
     assert supported_extensions_for_parser("robinhood_credit") == {".pdf"}
@@ -158,6 +179,15 @@ def test_get_supported_institutions_includes_robinhood_credit_pdf():
     assert robinhood_credit["slug"] == "robinhood"
     assert robinhood_credit["account_types"] == ["credit_card"]
     assert robinhood_credit["file_types"] == ["pdf"]
+
+
+def test_get_supported_institutions_includes_robinhood_investments():
+    institutions = get_supported_institutions()
+    robinhood_investments = next(item for item in institutions if item["id"] == "robinhood_investments")
+
+    assert robinhood_investments["slug"] == "robinhood"
+    assert robinhood_investments["account_types"] == ["investment"]
+    assert robinhood_investments["file_types"] == ["csv", "xls", "xlsx"]
 
 
 def test_create_serializer_rejects_invalid_institution_type_pair():
