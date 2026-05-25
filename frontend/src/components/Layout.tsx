@@ -4,6 +4,7 @@ import {
 } from '@/contexts/HeaderSlotContext';
 import {
   BarChart3,
+  Bot,
   Calculator,
   Heart,
   Landmark,
@@ -24,6 +25,7 @@ const routeConfig: Record<
   { title: string; icon: React.ComponentType<{ className?: string }> }
 > = {
   '/accounts': { title: 'Accounts', icon: Landmark },
+  '/bank-agent': { title: 'Bank Agent', icon: Bot },
   '/budget': { title: 'Budget', icon: Wallet },
   '/transactions': { title: 'Transactions', icon: Table },
   '/dashboard': { title: 'Dashboard', icon: BarChart3 },

@@ -50,7 +50,7 @@ class NotificationService:
         severity: str = "error",
         source_key: str,
         metadata: dict[str, Any] | None = None,
-        action_url: str = "/setup?tab=sync",
+        action_url: str = "/bank-agent",
     ) -> InAppNotification | None:
         preference, _ = UserPreference.objects.get_or_create(user=user)
         if self._recent_duplicate(user=user, source_key=source_key):

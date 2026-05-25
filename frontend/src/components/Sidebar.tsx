@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import {
   BarChart3,
+  Bot,
   Calculator,
   ChevronLeft,
   ChevronRight,
@@ -53,6 +54,7 @@ export function Sidebar({
     const items: NavItem[] = [
       { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
       { name: 'Accounts', href: '/accounts', icon: Landmark },
+      { name: 'Bank Agent', href: '/bank-agent', icon: Bot },
       { name: 'Budget', href: '/budget', icon: Wallet },
     ];
     if (isInHousehold) {

@@ -1,18 +1,16 @@
-import { BankSyncSection } from '@/components/settings/BankSyncSection';
 import { HouseholdSettings } from '@/components/household/HouseholdSettings';
 import { BudgetsSection } from '@/components/settings/BudgetsSection';
 import { CategoriesSection } from '@/components/settings/CategoriesSection';
 import { DriveStatementsSection } from '@/components/settings/DriveStatementsSection';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bot, Cloud, PiggyBank, Tag, Users } from 'lucide-react';
+import { Cloud, PiggyBank, Tag, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 
-type TabValue = 'categories' | 'budgets' | 'household' | 'statements' | 'sync';
+type TabValue = 'categories' | 'budgets' | 'household' | 'statements';
 
 const VALID_TABS: TabValue[] = [
   'statements',
-  'sync',
   'categories',
   'budgets',
   'household',
@@ -42,6 +40,11 @@ export function Setup() {
     return <Navigate to="/accounts" replace />;
   }
 
+  // Legacy /setup?tab=sync now lives at /bank-agent.
+  if (tabParam === 'sync') {
+    return <Navigate to="/bank-agent" replace />;
+  }
+
   const handleTabChange = (value: string) => {
     const tab = value as TabValue;
     setActiveTab(tab);
@@ -54,14 +57,10 @@ export function Setup() {
       onValueChange={handleTabChange}
       className="space-y-4"
     >
-      <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 sm:w-auto sm:inline-grid">
+      <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 sm:w-auto sm:inline-grid">
         <TabsTrigger value="statements" className="flex items-center gap-2">
           <Cloud className="h-4 w-4" />
           <span>Statements</span>
-        </TabsTrigger>
-        <TabsTrigger value="sync" className="flex items-center gap-2">
-          <Bot className="h-4 w-4" />
-          <span>Sync</span>
         </TabsTrigger>
         <TabsTrigger value="categories" className="flex items-center gap-2">
           <Tag className="h-4 w-4" />
@@ -79,10 +78,6 @@ export function Setup() {
 
       <TabsContent value="statements">
         <DriveStatementsSection />
-      </TabsContent>
-
-      <TabsContent value="sync">
-        <BankSyncSection />
       </TabsContent>
 
       <TabsContent value="categories">

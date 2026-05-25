@@ -41,6 +41,9 @@ const HouseholdDashboard = lazy(() =>
 const Formulas = lazy(() =>
   import('./pages/Formulas').then(m => ({ default: m.Formulas }))
 );
+const BankAgent = lazy(() =>
+  import('./pages/BankAgent').then(m => ({ default: m.BankAgent }))
+);
 function App() {
   return (
     <AuthProvider>
@@ -137,8 +140,16 @@ function App() {
                     }
                   />
                   <Route
+                    path="bank-agent"
+                    element={
+                      <Suspense fallback={null}>
+                        <BankAgent />
+                      </Suspense>
+                    }
+                  />
+                  <Route
                     path="bank-automation"
-                    element={<Navigate to="/accounts" replace />}
+                    element={<Navigate to="/bank-agent" replace />}
                   />
                   <Route
                     path="settings"

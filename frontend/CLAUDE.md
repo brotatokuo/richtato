@@ -85,6 +85,7 @@ Current protected routes:
 | --------------- | ----------------------------------------- |
 | `/dashboard`    | `ReportPage`                              |
 | `/accounts`     | `Accounts`                                |
+| `/bank-agent`   | `BankAgent`                               |
 | `/budget`       | `BudgetDashboard` exported as `Dashboard` |
 | `/transactions` | `DataTable`                               |
 | `/setup`        | `Setup`                                   |

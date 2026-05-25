@@ -2,6 +2,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { cn } from '@/lib/utils';
 import {
+  Bot,
   Calculator,
   ChevronRight,
   Heart,
@@ -120,6 +121,7 @@ export function More() {
       )}
 
       <Section title="Settings">
+        <MenuRow href="/bank-agent" icon={Bot} label="Bank Agent" />
         <MenuRow href="/setup" icon={SlidersHorizontal} label="Setup" />
         <MenuRow href="/formulas" icon={Calculator} label="Formulas" />
       </Section>

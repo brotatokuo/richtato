@@ -18,6 +18,7 @@ const primaryTabs = [
 
 const moreRoutes = [
   '/household',
+  '/bank-agent',
   '/setup',
   '/preferences',
   '/formulas',
