@@ -59,6 +59,13 @@ Common date filters:
 | `GET` | `/preferences/` | Get preferences |
 | `PUT` | `/preferences/` | Update preferences |
 | `GET` | `/preferences/field-choices/` | Get preference field choices |
+| `GET` | `/backup/export/` | Download full user backup JSON |
+| `GET` | `/backup/export/transactions/` | Download transactions CSV (`start_date`, `end_date`, `account_id` optional) |
+| `GET` | `/backup/import/status/` | Check whether backup import is available on this account |
+| `POST` | `/backup/import/preview/` | Validate backup file and return import summary |
+| `POST` | `/backup/import/commit/` | Import backup onto a fresh account (`confirm: true`) |
+
+Backup JSON bundles include preferences, categories, keywords, budgets, accounts, and transactions. They exclude Google Drive OAuth tokens, bank-agent secrets, household membership, and statement files. Import is only allowed before the target account has any financial accounts or transactions.
 
 Preferences include bank-sync notification controls: in-app alerts default on, immediate email alerts are opt-in, and daily digest email can be toggled separately.
 

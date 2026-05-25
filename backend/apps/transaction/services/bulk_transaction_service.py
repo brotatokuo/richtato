@@ -50,3 +50,28 @@ def bulk_create_import_transactions(
     account.refresh_from_db(fields=["balance"])
     update_balances_from_date(account, min_date)
     return len(transactions)
+
+
+def bulk_create_restore_transactions(
+    account: FinancialAccount,
+    transactions: list[Transaction],
+) -> int:
+    """Insert restored backup transactions without changing account balance."""
+    if not transactions:
+        return 0
+
+    uncategorized = TransactionCategory.get_uncategorized_for_user(account.user)
+    min_date = min(txn.date for txn in transactions)
+
+    for txn in transactions:
+        if txn.category_id is None:
+            txn.category = uncategorized
+            if not txn.categorization_status:
+                txn.categorization_status = "uncategorized"
+
+    with suppress_transaction_balance_signals():
+        with transaction.atomic():
+            Transaction.objects.bulk_create(transactions, batch_size=500)
+
+    update_balances_from_date(account, min_date)
+    return len(transactions)
