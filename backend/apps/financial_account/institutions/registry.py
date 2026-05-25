@@ -166,12 +166,11 @@ INSTITUTIONS: dict[str, InstitutionDefinition] = {
         _inst("citibank", "Citibank", ("credit_card",), parser_key="citi"),
         _inst("american_express", "American Express", ("credit_card",), parser_key="amex"),
         _inst("marcus", "Marcus by Goldman Sachs", ("savings",), parser_key="marcus"),
-        _inst("robinhood", "Robinhood", ("checking", "savings", "credit_card"), parser_key="robinhood_bank"),
         _inst(
-            "robinhood_investments",
-            "Robinhood Investments",
-            ("investment",),
-            parser_key="robinhood_investments",
+            "robinhood",
+            "Robinhood",
+            ("checking", "savings", "credit_card", "investment"),
+            parser_key="robinhood_bank",
         ),
         _inst("fidelity", "Fidelity", ("investment",), parser_key="fidelity"),
         _inst("guideline", "Guideline", ("investment",), parser_key="guideline"),
@@ -184,6 +183,7 @@ _LEGACY_SLUG_ALIASES: dict[str, str] = {
     "bofa": "bank_of_america",
     "jpmorgan_chase": "chase",
     "robinhood_bank": "robinhood",
+    "robinhood_investments": "robinhood",
 }
 
 
@@ -228,8 +228,12 @@ def parser_key_for_account(account) -> str | None:
     if institution is None:
         return None
     canonical = _canonical_slug(institution.slug)
-    if canonical == "robinhood" and getattr(account, "account_type", None) == "credit_card":
-        return "robinhood_credit"
+    account_type = getattr(account, "account_type", None)
+    if canonical == "robinhood":
+        if account_type == "credit_card":
+            return "robinhood_credit"
+        if account_type == "investment":
+            return "robinhood_investments"
     return parser_key_for_slug(institution.slug)
 
 
@@ -316,6 +320,16 @@ def get_supported_institutions() -> list[dict[str, Any]]:
                     "display_name": f"{institution.name} Credit Card",
                     "account_types": ["credit_card"],
                     "file_types": list(_PDF_FILE_TYPES),
+                }
+            )
+        if institution.slug == "robinhood" and "investment" in institution.account_types:
+            entries.append(
+                {
+                    "id": "robinhood_investments",
+                    "slug": institution.slug,
+                    "display_name": f"{institution.name} Investments",
+                    "account_types": ["investment"],
+                    "file_types": list(_DEFAULT_FILE_TYPES),
                 }
             )
     return entries
