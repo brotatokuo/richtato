@@ -39,6 +39,14 @@ _PARSER_CONFIGS: dict[str, dict[str, Any]] = {
         "debit": ["Debit", "Charge"],
         "credit": ["Credit", "Payment"],
     },
+    "amex_checking": {
+        "display_name": "American Express Checking",
+        "date": ["Date", "Transaction Date", "Posted Date"],
+        "description": ["Description", "Memo", "Details"],
+        "amount": ["Amount"],
+        "debit": ["Debit", "Withdrawal"],
+        "credit": ["Credit", "Deposit"],
+    },
     "robinhood_bank": {
         "display_name": "Robinhood Bank",
         "date": ["Date", "Transaction Date", "Posted Date"],
@@ -107,6 +115,7 @@ _PARSER_CONFIGS: dict[str, dict[str, Any]] = {
 _DEFAULT_FILE_TYPES = ("csv", "xls", "xlsx")
 _PDF_FILE_TYPES = ("pdf",)
 _PARSER_FILE_TYPES: dict[str, tuple[str, ...]] = {
+    "amex_checking": _PDF_FILE_TYPES,
     "robinhood_bank": _DEFAULT_FILE_TYPES + _PDF_FILE_TYPES,
     "robinhood_credit": _PDF_FILE_TYPES,
 }
@@ -164,7 +173,7 @@ INSTITUTIONS: dict[str, InstitutionDefinition] = {
             auto_sync_key="chase",
         ),
         _inst("citibank", "Citibank", ("credit_card",), parser_key="citi"),
-        _inst("american_express", "American Express", ("credit_card",), parser_key="amex"),
+        _inst("american_express", "American Express", ("checking", "credit_card"), parser_key="amex"),
         _inst("marcus", "Marcus by Goldman Sachs", ("savings",), parser_key="marcus"),
         _inst(
             "robinhood",
@@ -234,6 +243,8 @@ def parser_key_for_account(account) -> str | None:
             return "robinhood_credit"
         if account_type == "investment":
             return "robinhood_investments"
+    if canonical == "american_express" and account_type == "checking":
+        return "amex_checking"
     return parser_key_for_slug(institution.slug)
 
 
@@ -303,6 +314,8 @@ def get_supported_institutions() -> list[dict[str, Any]]:
         file_types = list(_DEFAULT_FILE_TYPES)
         if institution.slug == "robinhood":
             file_types = sorted(set(file_types) | set(_PDF_FILE_TYPES))
+        if institution.slug == "american_express":
+            file_types = sorted(set(file_types) | set(_PDF_FILE_TYPES))
         entries.append(
             {
                 "id": institution.parser_key,
@@ -330,6 +343,16 @@ def get_supported_institutions() -> list[dict[str, Any]]:
                     "display_name": f"{institution.name} Investments",
                     "account_types": ["investment"],
                     "file_types": list(_DEFAULT_FILE_TYPES),
+                }
+            )
+        if institution.slug == "american_express" and "checking" in institution.account_types:
+            entries.append(
+                {
+                    "id": "amex_checking",
+                    "slug": institution.slug,
+                    "display_name": f"{institution.name} Checking",
+                    "account_types": ["checking"],
+                    "file_types": list(_PDF_FILE_TYPES),
                 }
             )
     return entries

@@ -45,7 +45,7 @@ def test_parser_key_for_slug(slug, expected_parser):
     ("slug", "account_type", "expected"),
     [
         ("american_express", "credit_card", True),
-        ("american_express", "checking", False),
+        ("american_express", "checking", True),
         ("citibank", "savings", False),
         ("chase", "checking", True),
         ("fidelity", "investment", True),
@@ -71,15 +71,16 @@ def test_get_supported_institutions_uses_account_types():
     amex = next(item for item in institutions if item["slug"] == "american_express")
 
     assert amex["id"] == "amex"
-    assert amex["account_types"] == ["credit_card"]
+    assert amex["account_types"] == ["checking", "credit_card"]
     assert "csv" in amex["file_types"]
+    assert "pdf" in amex["file_types"]
 
 
 def test_get_institution_field_choices_includes_per_institution_types():
     payload = get_institution_field_choices()
 
     amex = next(item for item in payload["institutions"] if item["value"] == "american_express")
-    assert amex["account_types"] == [{"value": "credit_card", "label": "Credit Card"}]
+    assert {item["value"] for item in amex["account_types"]} == {"checking", "credit_card"}
 
     chase = next(item for item in payload["institutions"] if item["value"] == "chase")
     assert {item["value"] for item in chase["account_types"]} == {
@@ -116,6 +117,23 @@ def test_parser_key_for_account_resolves_american_express():
     )
 
     assert parser_key_for_account(account) == "amex"
+
+
+@pytest.mark.django_db
+def test_parser_key_for_account_routes_amex_checking():
+    user = User.objects.create_user(username="amex-checking-registry", email="amex-ch@test.com", password="x")
+    institution, _ = FinancialInstitution.objects.get_or_create(
+        slug="american_express",
+        defaults={"name": "American Express"},
+    )
+    checking_account = FinancialAccount.objects.create(
+        user=user,
+        name="Rewards Checking",
+        account_type="checking",
+        institution=institution,
+    )
+
+    assert parser_key_for_account(checking_account) == "amex_checking"
 
 
 @pytest.mark.django_db
@@ -190,12 +208,33 @@ def test_get_supported_institutions_includes_robinhood_investments():
     assert robinhood_investments["file_types"] == ["csv", "xls", "xlsx"]
 
 
+def test_get_supported_institutions_includes_amex_checking_pdf():
+    institutions = get_supported_institutions()
+    amex_checking = next(item for item in institutions if item["id"] == "amex_checking")
+
+    assert amex_checking["slug"] == "american_express"
+    assert amex_checking["account_types"] == ["checking"]
+    assert amex_checking["file_types"] == ["pdf"]
+
+
+def test_create_serializer_accepts_amex_checking():
+    serializer = FinancialAccountCreateSerializer(
+        data={
+            "name": "Rewards Checking",
+            "account_type": "checking",
+            "institution_slug": "american_express",
+        }
+    )
+
+    assert serializer.is_valid(), serializer.errors
+
+
 def test_create_serializer_rejects_invalid_institution_type_pair():
     serializer = FinancialAccountCreateSerializer(
         data={
             "name": "Bad Combo",
             "account_type": "checking",
-            "institution_slug": "american_express",
+            "institution_slug": "citibank",
         }
     )
 
@@ -214,4 +253,4 @@ def test_account_field_choices_api(user):
     payload = response.json()
     assert "institutions" in payload
     amex = next(item for item in payload["institutions"] if item["value"] == "american_express")
-    assert amex["account_types"] == [{"value": "credit_card", "label": "Credit Card"}]
+    assert {item["value"] for item in amex["account_types"]} == {"checking", "credit_card"}

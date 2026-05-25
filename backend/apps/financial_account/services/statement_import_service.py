@@ -15,6 +15,11 @@ from typing import Any
 import pandas as pd
 from loguru import logger
 
+from apps.financial_account.institutions.parsers.amex_checking_pdf import (
+    parse_amex_checking_balance_summary,
+    parse_amex_checking_pdf,
+)
+from apps.financial_account.institutions.parsers.amex_xlsx import parse_amex_activity_excel
 from apps.financial_account.institutions.parsers.robinhood_bank_pdf import (
     parse_robinhood_bank_balance_summary,
     parse_robinhood_bank_pdf,
@@ -33,6 +38,7 @@ from apps.transaction.models import Transaction
 OPENING_BALANCE_DESCRIPTION = "Opening Balance"
 BOFA_BANKING_ACCOUNT_TYPES = {"checking", "savings"}
 ROBINHOOD_BANKING_ACCOUNT_TYPES = {"checking", "savings"}
+AMEX_CHECKING_ACCOUNT_TYPES = {"checking"}
 BOFA_MAX_RUNNING_BALANCE_WARNINGS = 3
 BOFA_BEGINNING_BALANCE_RE = re.compile(
     r"beginning balance as of (\d{1,2}/\d{1,2}/\d{4})",
@@ -149,6 +155,7 @@ class StatementImportService:
         self._classify_rows(account, result)
         self._validate_bofa_banking_balances(account, institution, result)
         self._validate_robinhood_banking_balances(account, institution, result)
+        self._validate_amex_checking_balances(account, institution, result)
         self._plan_opening_balance(account, result)
         return result
 
@@ -302,6 +309,8 @@ class StatementImportService:
                 return parse_robinhood_credit_pdf(content)
             if parser_key == "robinhood_bank":
                 return parse_robinhood_bank_pdf(content)
+            if parser_key == "amex_checking":
+                return parse_amex_checking_pdf(content)
             raise ValueError(f"PDF statements are not supported for institution {parser_key}.")
         if extension == ".csv":
             csv_content = content
@@ -314,6 +323,8 @@ class StatementImportService:
                     csv_content = self._extract_bofa_transaction_csv(content)
                     return self._read_csv_bytes(csv_content)
                 raise
+        if parser_key == "amex":
+            return parse_amex_activity_excel(content)
         return pd.read_excel(io.BytesIO(content), dtype=str).dropna(how="all")
 
     @staticmethod
@@ -412,6 +423,9 @@ class StatementImportService:
 
     def _uses_robinhood_banking_balances(self, account: FinancialAccount, institution: str) -> bool:
         return institution == "robinhood_bank" and account.account_type in ROBINHOOD_BANKING_ACCOUNT_TYPES
+
+    def _uses_amex_checking_balances(self, account: FinancialAccount, institution: str) -> bool:
+        return institution == "amex_checking" and account.account_type in AMEX_CHECKING_ACCOUNT_TYPES
 
     def _parse_bofa_balance_summary(self, content: bytes) -> dict[str, str] | None:
         """Extract beginning/ending balances from BoFA's summary preamble."""
@@ -552,6 +566,58 @@ class StatementImportService:
         if summary is None:
             result.reconciliation_warnings.append(
                 "Could not read beginning and ending balances from this Robinhood Banking statement."
+            )
+            return
+
+        result.balance_summary = summary
+        beginning_balance = Decimal(summary["beginning_balance"])
+        ending_balance = Decimal(summary["ending_balance"])
+
+        net_activity = Decimal("0")
+        for row in result.rows:
+            signed = row.amount if row.transaction_type == "credit" else -row.amount
+            net_activity += signed
+
+        computed_ending = (beginning_balance + net_activity).quantize(Decimal("0.01"))
+        result.reconciliation["computed_ending_balance"] = str(computed_ending)
+        result.reconciliation["statement_ending_balance"] = summary["ending_balance"]
+        result.reconciliation["net_activity"] = str(net_activity.quantize(Decimal("0.01")))
+
+        if computed_ending != ending_balance:
+            discrepancy = (computed_ending - ending_balance).quantize(Decimal("0.01"))
+            result.reconciliation["statement_internal_ok"] = False
+            result.reconciliation["statement_internal_discrepancy"] = str(discrepancy)
+            result.reconciliation_warnings.append(
+                "Statement totals are inconsistent: beginning balance "
+                f"({beginning_balance}) plus imported activity ({net_activity}) "
+                f"equals {computed_ending}, but the statement ending balance is {ending_balance}."
+            )
+        else:
+            result.reconciliation["statement_internal_ok"] = True
+
+        running_errors = self._validate_bofa_running_balances(frame, beginning_balance)
+        if running_errors:
+            result.reconciliation["running_balance_errors"] = running_errors
+            result.reconciliation_warnings.extend(running_errors)
+
+    def _validate_amex_checking_balances(
+        self,
+        account: FinancialAccount,
+        institution: str,
+        result: StatementImportResult,
+    ) -> None:
+        if not self._uses_amex_checking_balances(account, institution):
+            return
+
+        raw_content = getattr(result, "_raw_content", None)
+        frame = getattr(result, "_transaction_frame", None)
+        if raw_content is None or frame is None:
+            return
+
+        summary = parse_amex_checking_balance_summary(raw_content)
+        if summary is None:
+            result.reconciliation_warnings.append(
+                "Could not read beginning and ending balances from this American Express checking statement."
             )
             return
 
