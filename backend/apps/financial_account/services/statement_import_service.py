@@ -33,6 +33,10 @@ BOFA_TRANSACTION_DATE_PREFIX = re.compile(r"^\d{2}/\d{2}/\d{4},")
 BOFA_EMPTY_AMOUNT_ROW = re.compile(r'^(.+?),,("(?:-)?[\d,]+\.\d{2}")\s*$')
 BOFA_AMOUNT_BALANCE_SUFFIX = re.compile(r'^(.+),("(?:-)?[\d,]+\.\d{2}"),("(?:-)?[\d,]+\.\d{2}")\s*$')
 
+INSTITUTION_PARSER_ALIASES = {
+    "citibank": "citi",
+}
+
 SUPPORTED_INSTITUTIONS = {
     "bofa": {
         "display_name": "Bank of America",
@@ -114,6 +118,15 @@ SUPPORTED_INSTITUTIONS = {
         "amount": ["Amount"],
         "debit": ["Debit", "Withdrawal"],
         "credit": ["Credit", "Deposit"],
+    },
+    "citi": {
+        "display_name": "Citi",
+        "domains": ["credit_card"],
+        "date": ["Date", "Transaction Date"],
+        "description": ["Description"],
+        "amount": ["Amount"],
+        "debit": ["Debit"],
+        "credit": ["Credit"],
     },
 }
 
@@ -320,6 +333,8 @@ class StatementImportService:
         statement_status: str,
     ) -> StatementImportResult:
         result = StatementImportResult(institution=institution, statement_status=statement_status)
+        institution = INSTITUTION_PARSER_ALIASES.get(institution, institution)
+        result.institution = institution
         config = SUPPORTED_INSTITUTIONS.get(institution)
         if config is None:
             result.errors.append(f"Unsupported institution: {institution}")

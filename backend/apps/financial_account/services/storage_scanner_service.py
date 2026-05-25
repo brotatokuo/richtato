@@ -26,6 +26,7 @@ from apps.financial_account.storage import UnknownStorageScheme, get_storage
 # fall through and are used verbatim.
 INSTITUTION_SLUG_TO_PARSER = {
     "bank_of_america": "bofa",
+    "citibank": "citi",
     "robinhood": "robinhood_bank",
     "robinhood_investments": "robinhood_investments",
     "robinhood_bank": "robinhood_bank",

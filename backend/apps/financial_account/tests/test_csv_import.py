@@ -3,6 +3,7 @@
 import io
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -613,6 +614,54 @@ class TestStatementImportService:
         assert result.rows[0].transaction_type == "debit"
         assert result.rows[0].amount == Decimal("42.12")
 
+    def test_preview_citi_credit_card_csv(self, credit_card_account):
+        service = StatementImportService()
+        statement = _make_named_csv(
+            "Status,Date,Description,Debit,Credit,Member Name\n"
+            'Cleared,12/28/2025,"COSTCO WHSE #0423 SUNNYVALE CA",398.80,,MEMBER\n'
+            'Cleared,12/21/2025,"ONLINE PAYMENT, THANK YOU",,-1037.98,MEMBER\n'
+        )
+
+        result = service.preview_statement(credit_card_account, statement, "citi", "2025-12")
+
+        assert result.errors == []
+        assert result.parsed_count == 2
+        assert result.rows[0].posted_date == date(2025, 12, 28)
+        assert result.rows[0].description == "COSTCO WHSE #0423 SUNNYVALE CA"
+        assert result.rows[0].transaction_type == "debit"
+        assert result.rows[0].amount == Decimal("398.80")
+        assert result.rows[1].description == "ONLINE PAYMENT, THANK YOU"
+        assert result.rows[1].transaction_type == "credit"
+        assert result.rows[1].amount == Decimal("1037.98")
+
+    def test_preview_citi_credit_card_accepts_citibank_alias(self, credit_card_account):
+        service = StatementImportService()
+        statement = _make_named_csv(
+            'Status,Date,Description,Debit,Credit,Member Name\nCleared,12/01/2025,"GROCERY",12.34,,MEMBER\n'
+        )
+
+        result = service.preview_statement(credit_card_account, statement, "citibank", "2025-12")
+
+        assert result.institution == "citi"
+        assert result.parsed_count == 1
+        assert result.rows[0].amount == Decimal("12.34")
+
+    def test_preview_citi_costco_fixture_sample(self, credit_card_account):
+        service = StatementImportService()
+        sample_path = Path(__file__).resolve().parent / "fixtures" / "citi_costco.csv"
+        statement = io.BytesIO(sample_path.read_bytes())
+        statement.name = "citi_costco.csv"
+
+        result = service.preview_statement(credit_card_account, statement, "citi", "2025-12")
+
+        assert result.errors == []
+        assert result.parsed_count == 221
+        assert result.rows[0].description == "COSTCO WHSE #0423 SUNNYVALE CA"
+        assert result.rows[0].amount == Decimal("398.80")
+        payments = [row for row in result.rows if row.description == "ONLINE PAYMENT, THANK YOU"]
+        assert payments
+        assert all(row.transaction_type == "credit" for row in payments)
+
     @pytest.mark.parametrize(
         "institution",
         [
@@ -624,6 +673,7 @@ class TestStatementImportService:
             "robinhood_investments",
             "guideline",
             "chase",
+            "citi",
         ],
     )
     def test_all_target_institutions_have_csv_adapter(self, account, institution):
