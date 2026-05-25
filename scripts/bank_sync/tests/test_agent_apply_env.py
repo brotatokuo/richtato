@@ -1,0 +1,142 @@
+"""Tests for bank-agent apply env block handling."""
+
+import os
+from unittest.mock import patch
+
+import pytest
+
+from scripts.bank_sync.agent import _apply_config_payload, _apply_env_block
+from scripts.bank_sync.agent_store import AgentStore
+
+
+@pytest.fixture(autouse=True)
+def clear_agent_env(monkeypatch):
+    for key in ("RICHTATO_API_TOKEN", "BANK_AGENT_FERNET_KEY"):
+        monkeypatch.delenv(key, raising=False)
+
+
+class TestApplyEnvBlock:
+    def test_sets_credentials_from_env_block(self):
+        _apply_env_block(
+            {
+                "RICHTATO_API_TOKEN": "test-token",
+                "BANK_AGENT_FERNET_KEY": "test-fernet-key",
+            }
+        )
+
+        assert os.environ["RICHTATO_API_TOKEN"] == "test-token"
+        assert os.environ["BANK_AGENT_FERNET_KEY"] == "test-fernet-key"
+
+    def test_ignores_missing_or_invalid_env_block(self):
+        _apply_env_block(None)
+        _apply_env_block("not-a-dict")
+
+        assert "RICHTATO_API_TOKEN" not in os.environ
+        assert "BANK_AGENT_FERNET_KEY" not in os.environ
+
+    def test_cmd_apply_loads_env_before_applying_logins(self, tmp_path):
+        config_path = tmp_path / "setup.yml"
+        config_path.write_text(
+            "\n".join(
+                [
+                    "env:",
+                    '  RICHTATO_API_TOKEN: "yaml-token"',
+                    '  BANK_AGENT_FERNET_KEY: "yaml-fernet"',
+                    "logins: []",
+                ]
+            )
+        )
+
+        with patch(
+            "scripts.bank_sync.agent._apply_config_payload", return_value=0
+        ) as mock_apply:
+            from argparse import Namespace
+
+            from scripts.bank_sync.agent import cmd_apply
+
+            result = cmd_apply(Namespace(config=str(config_path), db=None))
+
+        assert result == 0
+        assert os.environ["RICHTATO_API_TOKEN"] == "yaml-token"
+        assert os.environ["BANK_AGENT_FERNET_KEY"] == "yaml-fernet"
+        mock_apply.assert_called_once()
+
+
+class TestApplyActivityUrl:
+    def test_apply_writes_activity_url_to_account(self, tmp_path, monkeypatch):
+        monkeypatch.setenv(
+            "BANK_AGENT_FERNET_KEY", "6cbW1FlbhKbMfjnF2hUNMSmti2-5Y9vOwGRmdQvpzBE="
+        )
+        store = AgentStore(tmp_path / "agent.db")
+
+        result = _apply_config_payload(
+            {
+                "logins": [
+                    {
+                        "institution": "bofa",
+                        "nickname": "personal",
+                        "cadence": "daily",
+                        "hour": 6,
+                        "accounts": [
+                            {
+                                "name": "BofA Personal",
+                                "flow": "deposit",
+                                "storage_uri": "gdrive://folder",
+                                "richtato_account_id": 302,
+                                "activity_url": "https://secure.bankofamerica.com/activity?adx=abc123",
+                            }
+                        ],
+                    }
+                ],
+            },
+            store,
+        )
+
+        assert result == 0
+        account = store.list_accounts()[0]
+        assert (
+            account.activity_url
+            == "https://secure.bankofamerica.com/activity?adx=abc123"
+        )
+
+    def test_apply_clears_activity_url_when_yaml_is_blank(self, tmp_path, monkeypatch):
+        monkeypatch.setenv(
+            "BANK_AGENT_FERNET_KEY", "6cbW1FlbhKbMfjnF2hUNMSmti2-5Y9vOwGRmdQvpzBE="
+        )
+        store = AgentStore(tmp_path / "agent.db")
+        login = store.add_login(institution_slug="bofa", nickname="personal")
+        store.add_account(
+            login_id=login.id,
+            storage_uri="gdrive://folder",
+            activity_url="https://secure.bankofamerica.com/activity?adx=abc123",
+            flow="deposit",
+            detected_account_name="BofA Personal",
+            richtato_account_id=302,
+        )
+
+        result = _apply_config_payload(
+            {
+                "logins": [
+                    {
+                        "institution": "bofa",
+                        "nickname": "personal",
+                        "cadence": "daily",
+                        "hour": 6,
+                        "accounts": [
+                            {
+                                "name": "BofA Personal",
+                                "flow": "deposit",
+                                "storage_uri": "gdrive://folder",
+                                "richtato_account_id": 302,
+                                "activity_url": "",
+                            }
+                        ],
+                    }
+                ],
+            },
+            store,
+        )
+
+        assert result == 0
+        account = store.list_accounts()[0]
+        assert account.activity_url == ""

@@ -25,6 +25,11 @@ urlpatterns = [
         views.BankSyncSetupAPIView.as_view(),
         name="account-sync-setup",
     ),
+    path(
+        "bank-agent-setup-export/",
+        views.BankAgentSetupExportAPIView.as_view(),
+        name="account-bank-agent-setup-export",
+    ),
     path("drive/status/", views.GoogleDriveStatusAPIView.as_view(), name="account-drive-status"),
     path("drive/oauth/start/", views.GoogleDriveOAuthStartAPIView.as_view(), name="account-drive-oauth-start"),
     path(

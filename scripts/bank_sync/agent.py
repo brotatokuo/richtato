@@ -100,7 +100,9 @@ def cmd_login_add(args: argparse.Namespace) -> int:
     except Exception as exc:
         print(f"Error adding login: {exc}", file=sys.stderr)
         return 2
-    print(f"Created login {login.id} ({login.institution_slug}/{login.nickname or 'default'}).")
+    print(
+        f"Created login {login.id} ({login.institution_slug}/{login.nickname or 'default'})."
+    )
     print("Next step: bank-agent login signin", login.id)
     return 0
 
@@ -237,7 +239,14 @@ def cmd_account_remove(args: argparse.Namespace) -> int:
 def cmd_sync(args: argparse.Namespace) -> int:
     store = _store(args)
     worker = _lazy_worker()
-    outcome = asyncio.run(worker.download_login(store, args.login_id, kind="manual_download"))
+    outcome = asyncio.run(
+        worker.download_login(
+            store,
+            args.login_id,
+            kind="manual_download",
+            headed=args.headed,
+        )
+    )
     print(
         f"Attempted={outcome.attempted} succeeded={outcome.succeeded} "
         f"files={outcome.files_downloaded}"
@@ -245,7 +254,10 @@ def cmd_sync(args: argparse.Namespace) -> int:
     if outcome.failure_reason:
         print(f"Failure: {outcome.failure_reason}", file=sys.stderr)
     if outcome.needs_reauth:
-        print("Login needs re-auth; run `bank-agent login signin` to refresh cookies.", file=sys.stderr)
+        print(
+            "Login needs re-auth; run `bank-agent login signin` to refresh cookies.",
+            file=sys.stderr,
+        )
         return 2
     return 0 if not outcome.failure_reason else 2
 
@@ -292,11 +304,19 @@ def cmd_run(args: argparse.Namespace) -> int:
         for login in due:
             if stop["flag"]:
                 break
-            logger.info("Running scheduled download for login {} ({})", login.id, login.institution_slug)
+            logger.info(
+                "Running scheduled download for login {} ({})",
+                login.id,
+                login.institution_slug,
+            )
             try:
-                asyncio.run(worker.download_login(store, login.id, kind="scheduled_download"))
+                asyncio.run(
+                    worker.download_login(store, login.id, kind="scheduled_download")
+                )
             except Exception:
-                logger.exception("Unhandled error during scheduled download for login {}", login.id)
+                logger.exception(
+                    "Unhandled error during scheduled download for login {}", login.id
+                )
         if stop["flag"]:
             break
         time.sleep(poll_seconds)
@@ -311,10 +331,10 @@ def cmd_run(args: argparse.Namespace) -> int:
 def cmd_apply(args: argparse.Namespace) -> int:
     """Upsert logins and accounts from a YAML config file into the vault.
 
-    Secrets (cookies, activity URLs) are never read or overwritten here.
-    Only structural config — institution, nickname, cadence, hour, storage_uri,
-    flow, and name — is synced. Run ``login signin`` afterward to capture
-    cookies for any newly added logins.
+    Cookies are never read or overwritten here. The setup YAML is authoritative
+    for structural config and activity URLs — institution, nickname, cadence,
+    hour, storage_uri, flow, name, and per-account activity_url. Run
+    ``login signin`` afterward to capture cookies for any newly added logins.
     """
     try:
         import yaml  # type: ignore[import-untyped]
@@ -340,15 +360,27 @@ def cmd_apply(args: argparse.Namespace) -> int:
         print("Config must have a top-level 'logins' list.", file=sys.stderr)
         return 1
 
+    _apply_env_block(raw.get("env"))
+
     store = _store(args)
     return _apply_config_payload(raw, store)
+
+
+def _apply_env_block(env_block) -> None:
+    """Load host credentials from an optional setup YAML env block."""
+    if not isinstance(env_block, dict):
+        return
+    for key in ("RICHTATO_API_TOKEN", "BANK_AGENT_FERNET_KEY"):
+        value = env_block.get(key)
+        if value:
+            os.environ[key] = str(value)
 
 
 def _apply_config_payload(raw: dict, store: AgentStore) -> int:
     """Upsert generated/YAML config into the local vault.
 
-    This intentionally preserves stored cookies and activity URLs. The config
-    owns only structural fields: login schedule plus account name/flow/storage.
+    This intentionally preserves stored cookies. The config owns login schedule,
+    account name/flow/storage, and activity URLs when provided.
     """
 
     logins_added = logins_updated = accounts_added = accounts_updated = 0
@@ -408,7 +440,9 @@ def _apply_config_payload(raw: dict, store: AgentStore) -> int:
                 )
 
         existing_accounts_by_uri = {
-            acc.storage_uri: acc for acc in store.list_accounts(login.id) if acc.storage_uri
+            acc.storage_uri: acc
+            for acc in store.list_accounts(login.id)
+            if acc.storage_uri
         }
         existing_accounts_by_richtato_id = {
             acc.richtato_account_id: acc
@@ -420,12 +454,19 @@ def _apply_config_payload(raw: dict, store: AgentStore) -> int:
             storage_uri = str(acc_cfg.get("storage_uri", "") or "").strip()
             name = str(acc_cfg.get("name", "") or "")
             flow = str(acc_cfg.get("flow", "deposit"))
+            activity_url = (
+                str(acc_cfg.get("activity_url", "") or "").strip()
+                if "activity_url" in acc_cfg
+                else None
+            )
             richtato_account_id = acc_cfg.get("richtato_account_id")
             if richtato_account_id is not None:
                 richtato_account_id = int(richtato_account_id)
 
             if not storage_uri and flow != "investment_balance":
-                print("  Skipping account entry with no 'storage_uri'.", file=sys.stderr)
+                print(
+                    "  Skipping account entry with no 'storage_uri'.", file=sys.stderr
+                )
                 continue
             if flow == "investment_balance" and not richtato_account_id:
                 print(
@@ -437,13 +478,17 @@ def _apply_config_payload(raw: dict, store: AgentStore) -> int:
             existing = None
             if storage_uri and storage_uri in existing_accounts_by_uri:
                 existing = existing_accounts_by_uri[storage_uri]
-            elif richtato_account_id and richtato_account_id in existing_accounts_by_richtato_id:
+            elif (
+                richtato_account_id
+                and richtato_account_id in existing_accounts_by_richtato_id
+            ):
                 existing = existing_accounts_by_richtato_id[richtato_account_id]
 
             if existing is None:
                 account = store.add_account(
                     login_id=login.id,
                     storage_uri=storage_uri,
+                    activity_url=activity_url or "",
                     flow=flow,
                     detected_account_name=name,
                     richtato_account_id=richtato_account_id,
@@ -454,20 +499,28 @@ def _apply_config_payload(raw: dict, store: AgentStore) -> int:
                     print(f"      storage_uri: {storage_uri}")
                 if richtato_account_id:
                     print(f"      richtato_account_id: {richtato_account_id}")
+                if activity_url:
+                    print("      activity_url: configured")
             else:
                 account = existing
                 changed = (
                     account.detected_account_name != name
                     or account.flow != flow
                     or account.richtato_account_id != richtato_account_id
+                    or (
+                        activity_url is not None
+                        and account.activity_url != activity_url
+                    )
                 )
                 if changed:
-                    store.update_account(
-                        account.id,
-                        detected_account_name=name,
-                        flow=flow,
-                        richtato_account_id=richtato_account_id,
-                    )
+                    update_kwargs = {
+                        "detected_account_name": name,
+                        "flow": flow,
+                        "richtato_account_id": richtato_account_id,
+                    }
+                    if activity_url is not None:
+                        update_kwargs["activity_url"] = activity_url
+                    store.update_account(account.id, **update_kwargs)
                     accounts_updated += 1
                     print(f"    ~ account #{account.id} {name!r} flow={flow} (updated)")
                 else:
@@ -481,7 +534,9 @@ def _apply_config_payload(raw: dict, store: AgentStore) -> int:
     if pending:
         print("\nLogins awaiting sign-in:")
         for lo in pending:
-            label = f"[{lo.institution_slug}]" + (f" ({lo.nickname})" if lo.nickname else "")
+            label = f"[{lo.institution_slug}]" + (
+                f" ({lo.nickname})" if lo.nickname else ""
+            )
             print(f"  bank-agent login signin {lo.id}   # {label}")
     return 0
 
@@ -497,16 +552,19 @@ def cmd_sync_config(args: argparse.Namespace) -> int:
 
     token = args.token or os.environ.get("RICHTATO_API_TOKEN", "")
     if not token:
-        print("Missing API token. Pass --token or set RICHTATO_API_TOKEN.", file=sys.stderr)
+        print(
+            "Missing API token. Pass --token or set RICHTATO_API_TOKEN.",
+            file=sys.stderr,
+        )
         return 2
 
-    base_url = (args.api_base or os.environ.get("RICHTATO_API_BASE_URL") or "http://127.0.0.1:8000/api/v1").rstrip(
-        "/"
-    )
+    base_url = (
+        args.api_base
+        or os.environ.get("RICHTATO_API_BASE_URL")
+        or "http://127.0.0.1:8000/api/v1"
+    ).rstrip("/")
     endpoint = urljoin(base_url + "/", "accounts/bank-agent-config/")
     params = {
-        "cadence": args.cadence,
-        "hour": str(args.hour),
         "nickname": args.nickname,
     }
     if args.all_supported:
@@ -524,7 +582,10 @@ def cmd_sync_config(args: argparse.Namespace) -> int:
         return 1
 
     if response.status_code != 200:
-        print(f"Richtato config fetch failed: HTTP {response.status_code} {response.text[:500]}", file=sys.stderr)
+        print(
+            f"Richtato config fetch failed: HTTP {response.status_code} {response.text[:500]}",
+            file=sys.stderr,
+        )
         return 1
 
     try:
@@ -534,7 +595,10 @@ def cmd_sync_config(args: argparse.Namespace) -> int:
         return 1
 
     if not isinstance(raw, dict) or "logins" not in raw:
-        print("Richtato config response must have a top-level 'logins' list.", file=sys.stderr)
+        print(
+            "Richtato config response must have a top-level 'logins' list.",
+            file=sys.stderr,
+        )
         return 1
 
     return _apply_config_payload(raw, _store(args))
@@ -591,24 +655,34 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_login_add = login_sub.add_parser("add", help="Create a new bank login")
     p_login_add.add_argument("institution", help="Institution slug (e.g. bofa, chase).")
-    p_login_add.add_argument("--nickname", default="", help="Optional nickname (e.g. 'Personal').")
+    p_login_add.add_argument(
+        "--nickname", default="", help="Optional nickname (e.g. 'Personal')."
+    )
     p_login_add.add_argument("--cadence", default="daily", choices=store_mod.CADENCES)
-    p_login_add.add_argument("--hour", type=int, default=6, help="Preferred local run hour 0-23.")
+    p_login_add.add_argument(
+        "--hour", type=int, default=6, help="Preferred local run hour 0-23."
+    )
     p_login_add.set_defaults(func=cmd_login_add)
 
     p_login_list = login_sub.add_parser("list", help="List configured logins")
     p_login_list.set_defaults(func=cmd_login_list)
 
-    p_login_signin = login_sub.add_parser("signin", help="Open headed Chromium to sign in / re-auth")
+    p_login_signin = login_sub.add_parser(
+        "signin", help="Open headed Chromium to sign in / re-auth"
+    )
     p_login_signin.add_argument("login_id", type=int)
     p_login_signin.set_defaults(func=cmd_login_signin)
 
-    p_login_remove = login_sub.add_parser("remove", help="Delete a login and all its accounts")
+    p_login_remove = login_sub.add_parser(
+        "remove", help="Delete a login and all its accounts"
+    )
     p_login_remove.add_argument("login_id", type=int)
     p_login_remove.add_argument("--yes", action="store_true", help="Confirm deletion")
     p_login_remove.set_defaults(func=cmd_login_remove)
 
-    p_login_schedule = login_sub.add_parser("schedule", help="Update cadence and preferred hour")
+    p_login_schedule = login_sub.add_parser(
+        "schedule", help="Update cadence and preferred hour"
+    )
     p_login_schedule.add_argument("login_id", type=int)
     p_login_schedule.add_argument("--cadence", choices=store_mod.CADENCES)
     p_login_schedule.add_argument("--hour", type=int)
@@ -625,9 +699,15 @@ def build_parser() -> argparse.ArgumentParser:
         default="",
         help="Google Drive folder URI (gdrive://<folder_id>) from Richtato account config.",
     )
-    p_account_add.add_argument("--activity-url", default="", help="Bank-side download URL (encrypted at rest).")
-    p_account_add.add_argument("--flow", default="deposit", choices=store_mod.ACCOUNT_FLOWS)
-    p_account_add.add_argument("--name", default="", help="Detected/account display name.")
+    p_account_add.add_argument(
+        "--activity-url", default="", help="Bank-side download URL (encrypted at rest)."
+    )
+    p_account_add.add_argument(
+        "--flow", default="deposit", choices=store_mod.ACCOUNT_FLOWS
+    )
+    p_account_add.add_argument(
+        "--name", default="", help="Detected/account display name."
+    )
     p_account_add.add_argument(
         "--richtato-account-id",
         type=int,
@@ -663,16 +743,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_account_update.set_defaults(func=cmd_account_update)
 
-    p_account_remove = account_sub.add_parser("remove", help="Delete an account binding")
+    p_account_remove = account_sub.add_parser(
+        "remove", help="Delete an account binding"
+    )
     p_account_remove.add_argument("account_id", type=int)
     p_account_remove.set_defaults(func=cmd_account_remove)
 
     # ---- top-level commands ---------------------------------------------
     p_sync = sub.add_parser("sync", help="Run one manual download for a login")
     p_sync.add_argument("login_id", type=int)
+    p_sync.add_argument(
+        "--headed",
+        action="store_true",
+        help="Run the manual sync in visible Chromium for debugging bank pages.",
+    )
     p_sync.set_defaults(func=cmd_sync)
 
-    p_status = sub.add_parser("status", help="Show all logins, accounts, and schedule state")
+    p_status = sub.add_parser(
+        "status", help="Show all logins, accounts, and schedule state"
+    )
     p_status.set_defaults(func=cmd_status)
 
     p_run = sub.add_parser("run", help="Daemon loop: poll due logins and download")
@@ -705,9 +794,13 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Richtato API base URL (default: RICHTATO_API_BASE_URL or http://127.0.0.1:8000/api/v1).",
     )
-    p_sync_config.add_argument("--token", default=None, help="DRF token (default: RICHTATO_API_TOKEN).")
+    p_sync_config.add_argument(
+        "--token", default=None, help="DRF token (default: RICHTATO_API_TOKEN)."
+    )
     p_sync_config.add_argument("--cadence", default="daily", choices=store_mod.CADENCES)
-    p_sync_config.add_argument("--hour", type=int, default=6, help="Preferred local run hour (0-23).")
+    p_sync_config.add_argument(
+        "--hour", type=int, default=6, help="Preferred local run hour (0-23)."
+    )
     p_sync_config.add_argument("--nickname", default="personal")
     p_sync_config.add_argument(
         "--all-supported",
@@ -716,15 +809,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_sync_config.set_defaults(func=cmd_sync_config)
 
-    p_genkey = sub.add_parser("generate-key", help="Print a fresh BANK_AGENT_FERNET_KEY value")
+    p_genkey = sub.add_parser(
+        "generate-key", help="Print a fresh BANK_AGENT_FERNET_KEY value"
+    )
     p_genkey.set_defaults(func=cmd_generate_key)
 
-    p_export = sub.add_parser("export", help="Dump the agent vault to JSON (encrypted blobs included)")
+    p_export = sub.add_parser(
+        "export", help="Dump the agent vault to JSON (encrypted blobs included)"
+    )
     p_export.add_argument("--output", type=str, default=None)
     p_export.set_defaults(func=cmd_export)
 
-    p_import = sub.add_parser("import", help="Restore the agent vault from a JSON export")
-    p_import.add_argument("input", type=str, help="Path to a previously exported JSON file")
+    p_import = sub.add_parser(
+        "import", help="Restore the agent vault from a JSON export"
+    )
+    p_import.add_argument(
+        "input", type=str, help="Path to a previously exported JSON file"
+    )
     p_import.set_defaults(func=cmd_import)
 
     return parser

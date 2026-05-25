@@ -4,7 +4,11 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from apps.financial_account.institutions.registry import ACCOUNT_TYPE_LABELS, agent_flow_for_account, is_valid_account_type
+from apps.financial_account.institutions.registry import (
+    ACCOUNT_TYPE_LABELS,
+    agent_flow_for_account,
+    is_valid_account_type,
+)
 
 from .models import AccountBalanceHistory, FinancialAccount, FinancialInstitution
 
@@ -57,6 +61,8 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
             "is_active",
             "sync_source",
             "sync_mode",
+            "agent_cadence",
+            "agent_sync_hour",
             "storage_uri",
             "resolved_storage_uri",
             "image_key",
@@ -160,6 +166,7 @@ class FinancialAccountUpdateSerializer(serializers.Serializer):
     image_key = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
     shared_with_household = serializers.BooleanField(required=False)
     storage_uri = serializers.CharField(max_length=512, required=False, allow_blank=True)
+    agent_activity_url = serializers.URLField(required=False, allow_blank=True, max_length=2048)
     opening_balance = serializers.DecimalField(
         max_digits=15,
         decimal_places=2,
@@ -171,6 +178,11 @@ class FinancialAccountUpdateSerializer(serializers.Serializer):
         choices=["auto", "upload", "manual"],
         required=False,
     )
+    agent_cadence = serializers.ChoiceField(
+        choices=["manual", "daily", "weekly", "monthly"],
+        required=False,
+    )
+    agent_sync_hour = serializers.IntegerField(min_value=0, max_value=23, required=False)
 
     def validate(self, attrs):
         account = self.context.get("account")

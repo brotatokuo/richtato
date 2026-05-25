@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -15,8 +16,6 @@ from apps.richtato_user.models import User
 class BankAgentConfigOptions:
     """Options for generated bank-agent config."""
 
-    cadence: str = "daily"
-    hour: int = 6
     nickname: str = "personal"
     include_all_supported: bool = False
 
@@ -27,31 +26,48 @@ class BankAgentConfigService:
     def build_for_user(self, user: User, options: BankAgentConfigOptions | None = None) -> dict[str, Any]:
         options = options or BankAgentConfigOptions()
         accounts = self._eligible_accounts(user, include_all_supported=options.include_all_supported)
-        grouped: dict[str, list[FinancialAccount]] = {}
+        grouped: dict[tuple[str, str, int], list[FinancialAccount]] = {}
 
         for account in accounts:
             institution_slug = self._agent_institution_slug(account)
             if not institution_slug:
                 continue
-            grouped.setdefault(institution_slug, []).append(account)
+            schedule_key = (
+                institution_slug,
+                account.agent_cadence,
+                account.agent_sync_hour,
+            )
+            grouped.setdefault(schedule_key, []).append(account)
 
+        institution_login_counts: dict[str, int] = defaultdict(int)
         logins = []
-        for institution_slug in sorted(grouped):
-            login_accounts = [
-                {
+        for institution_slug, cadence, hour in sorted(grouped):
+            group_accounts = sorted(grouped[(institution_slug, cadence, hour)], key=lambda item: item.name.lower())
+            institution_login_counts[institution_slug] += 1
+            login_index = institution_login_counts[institution_slug]
+            if login_index == 1:
+                nickname = options.nickname
+            else:
+                nickname = f"{options.nickname}-{group_accounts[0].id}"
+
+            login_accounts = []
+            for account in group_accounts:
+                account_payload = {
                     "name": account.name,
                     "flow": self._flow_for_account(account),
                     "storage_uri": account.resolved_storage_uri(),
                     "richtato_account_id": account.id,
                 }
-                for account in sorted(grouped[institution_slug], key=lambda item: item.name.lower())
-            ]
+                activity_url = account.agent_activity_url
+                if activity_url:
+                    account_payload["activity_url"] = activity_url
+                login_accounts.append(account_payload)
             logins.append(
                 {
                     "institution": institution_slug,
-                    "nickname": options.nickname,
-                    "cadence": options.cadence,
-                    "hour": options.hour,
+                    "nickname": nickname,
+                    "cadence": cadence,
+                    "hour": hour,
                     "accounts": login_accounts,
                 }
             )

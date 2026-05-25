@@ -137,7 +137,13 @@ async def interactive_login(store: AgentStore, login_id: int) -> tuple[bool, str
     return True, f"Captured cookies; discovered {len(discovered_accounts)} bank-side accounts (added {new_accounts})."
 
 
-async def download_login(store: AgentStore, login_id: int, *, kind: str = "manual_download") -> DownloadOutcome:
+async def download_login(
+    store: AgentStore,
+    login_id: int,
+    *,
+    kind: str = "manual_download",
+    headed: bool = False,
+) -> DownloadOutcome:
     """Replay stored cookies for ``login_id`` and download every enabled account.
 
     Each downloaded file is written into the account's ``storage_uri``
@@ -146,6 +152,13 @@ async def download_login(store: AgentStore, login_id: int, *, kind: str = "manua
     login = store.get_login(login_id)
     if login is None:
         return DownloadOutcome(attempted=0, succeeded=0, files_downloaded=0, failure_reason="Login not found")
+    if headed and not _x11_available():
+        return DownloadOutcome(
+            attempted=0,
+            succeeded=0,
+            files_downloaded=0,
+            failure_reason="No DISPLAY found; headed sync requires a desktop session.",
+        )
 
     storage_state_raw = login.storage_state
     if not storage_state_raw:
@@ -184,7 +197,11 @@ async def download_login(store: AgentStore, login_id: int, *, kind: str = "manua
     import tempfile
 
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=True)
+        browser = await pw.chromium.launch(
+            headless=not headed,
+            args=HEADED_CHROMIUM_ARGS if headed else None,
+            timeout=HEADED_LAUNCH_TIMEOUT_MS if headed else None,
+        )
         try:
             context = await browser.new_context(
                 storage_state=storage_state,

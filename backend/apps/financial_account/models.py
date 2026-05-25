@@ -46,6 +46,13 @@ class FinancialAccount(models.Model):
         ("manual", "Manual Entry"),
     ]
 
+    AGENT_CADENCE_CHOICES = [
+        ("manual", "Manual"),
+        ("daily", "Daily"),
+        ("weekly", "Weekly"),
+        ("monthly", "Monthly"),
+    ]
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -85,6 +92,16 @@ class FinancialAccount(models.Model):
             "upload (statement file upload), or manual (typed entries)."
         ),
     )
+    agent_cadence = models.CharField(
+        max_length=16,
+        choices=AGENT_CADENCE_CHOICES,
+        default="daily",
+        help_text="Host bank-agent sync cadence when sync_mode is auto.",
+    )
+    agent_sync_hour = models.PositiveSmallIntegerField(
+        default=6,
+        help_text="Preferred local hour (0-23) for host bank-agent scheduled sync.",
+    )
 
     # Household sharing
     shared_with_household = models.BooleanField(
@@ -108,6 +125,11 @@ class FinancialAccount(models.Model):
         blank=True,
         default="",
         help_text="Google Drive folder URI for this account's statement files (gdrive://<folder_id>).",
+    )
+    agent_activity_url_encrypted = models.TextField(
+        blank=True,
+        default="",
+        help_text="Encrypted bank-side activity URL used by the host bank-agent.",
     )
 
     # Metadata
@@ -146,6 +168,20 @@ class FinancialAccount(models.Model):
                 "Activate Drive in Setup → Statements."
             )
         return uri
+
+    @property
+    def agent_activity_url(self) -> str:
+        """Return the decrypted host bank-agent activity URL."""
+        from apps.bank_sync.encryption import decrypt_text
+
+        return decrypt_text(self.agent_activity_url_encrypted, user_id=self.user_id)
+
+    @agent_activity_url.setter
+    def agent_activity_url(self, value: str) -> None:
+        """Encrypt and store the host bank-agent activity URL."""
+        from apps.bank_sync.encryption import encrypt_text
+
+        self.agent_activity_url_encrypted = encrypt_text((value or "").strip(), user_id=self.user_id)
 
 
 class AccountBalanceHistory(models.Model):

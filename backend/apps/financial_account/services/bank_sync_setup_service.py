@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from typing import Any
 
 from apps.financial_account.institutions.registry import (
@@ -27,6 +28,7 @@ class BankSyncSetupService:
             institution_slug = account.institution.slug if account.institution else None
             flow = agent_flow_for_account(institution_slug, account.account_type)
             resolved_storage_uri = account.resolved_storage_uri()
+            activity_url = account.agent_activity_url
             rows.append(
                 {
                     "id": account.id,
@@ -36,15 +38,30 @@ class BankSyncSetupService:
                     "account_type": account.account_type,
                     "account_type_display": account.get_account_type_display(),
                     "sync_mode": account.sync_mode,
+                    "agent_cadence": account.agent_cadence,
+                    "agent_sync_hour": account.agent_sync_hour,
                     "agent_sync_supported": flow is not None,
                     "agent_flow": flow,
                     "needs_storage_for_auto": auto_sync_needs_storage_uri(flow),
                     "has_storage_uri": bool(resolved_storage_uri),
                     "resolved_storage_uri": resolved_storage_uri,
+                    "activity_url": activity_url,
+                    "has_activity_url": bool(activity_url),
+                    "needs_activity_url_for_auto": account.sync_mode == "auto"
+                    and flow is not None
+                    and not activity_url,
                 }
             )
 
+        agent_config = BankAgentConfigService().build_for_user(user)
+        duplicate_institution_logins = self._duplicate_institution_logins(agent_config["logins"])
+
         return {
             "accounts": rows,
-            "agent_config": BankAgentConfigService().build_for_user(user),
+            "agent_config": agent_config,
+            "duplicate_institution_logins": duplicate_institution_logins,
         }
+
+    def _duplicate_institution_logins(self, logins: list[dict[str, Any]]) -> list[str]:
+        counts = Counter(login["institution"] for login in logins)
+        return sorted(institution for institution, count in counts.items() if count > 1)

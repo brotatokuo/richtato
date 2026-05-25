@@ -3,6 +3,7 @@
 from urllib.parse import urlencode
 
 from django.conf import settings
+from django.http import HttpResponse
 from django.shortcuts import redirect
 from loguru import logger
 from rest_framework import status
@@ -21,6 +22,7 @@ from apps.financial_account.services.account_balance_service import (
 )
 from apps.financial_account.services.account_service import AccountService
 from apps.financial_account.services.bank_agent_config_service import BankAgentConfigOptions, BankAgentConfigService
+from apps.financial_account.services.bank_agent_setup_export_service import BankAgentSetupExportService
 from apps.financial_account.services.bank_sync_setup_service import BankSyncSetupService
 from apps.financial_account.services.google_drive_activation_service import GoogleDriveActivationService
 from apps.financial_account.services.google_drive_service import GoogleDriveError, GoogleDriveService
@@ -34,6 +36,13 @@ from apps.financial_account.services.storage_scanner_service import (
     StorageScannerService,
     parser_key_for_account,
 )
+
+SENSITIVE_ACCOUNT_FIELDS = {"agent_activity_url"}
+
+
+def _redact_account_payload(payload):
+    """Return a log-safe copy of an account mutation payload."""
+    return {key: ("[redacted]" if key in SENSITIVE_ACCOUNT_FIELDS else value) for key, value in payload.items()}
 
 
 class FinancialAccountListCreateAPIView(APIView):
@@ -118,7 +127,7 @@ class FinancialAccountDetailAPIView(APIView):
             "Account PATCH request",
             account_id=pk,
             user_id=request.user.id,
-            payload=dict(request.data),
+            payload=_redact_account_payload(dict(request.data)),
         )
 
         serializer = FinancialAccountUpdateSerializer(
@@ -131,7 +140,7 @@ class FinancialAccountDetailAPIView(APIView):
                 account_id=pk,
                 user_id=request.user.id,
                 errors=serializer.errors,
-                payload=dict(request.data),
+                payload=_redact_account_payload(dict(request.data)),
             )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -139,7 +148,9 @@ class FinancialAccountDetailAPIView(APIView):
             logger.info(
                 "Account PATCH validated",
                 account_id=pk,
-                validated_data={key: str(value) for key, value in serializer.validated_data.items()},
+                validated_data=_redact_account_payload(
+                    {key: str(value) for key, value in serializer.validated_data.items()}
+                ),
             )
             updated_account = self.account_service.update_account(account, **serializer.validated_data)
             updated_account.refresh_from_db()
@@ -245,25 +256,35 @@ class BankAgentConfigAPIView(APIView):
         self.config_service = BankAgentConfigService()
 
     def get(self, request):
-        try:
-            options = BankAgentConfigOptions(
-                cadence=request.query_params.get("cadence", "daily"),
-                hour=int(request.query_params.get("hour", "6")),
-                nickname=request.query_params.get("nickname", "personal"),
-                include_all_supported=request.query_params.get("include") == "all-supported",
-            )
-        except ValueError:
-            return Response({"error": "hour must be an integer from 0 to 23"}, status=status.HTTP_400_BAD_REQUEST)
-
-        if options.hour < 0 or options.hour > 23:
-            return Response({"error": "hour must be an integer from 0 to 23"}, status=status.HTTP_400_BAD_REQUEST)
-        if options.cadence not in {"manual", "daily", "weekly", "monthly"}:
-            return Response(
-                {"error": "cadence must be manual, daily, weekly, or monthly"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        options = BankAgentConfigOptions(
+            nickname=request.query_params.get("nickname", "personal"),
+            include_all_supported=request.query_params.get("include") == "all-supported",
+        )
 
         return Response(self.config_service.build_for_user(request.user, options), status=status.HTTP_200_OK)
+
+
+class BankAgentSetupExportAPIView(APIView):
+    """Download a host bank-agent setup YAML file with credentials and login config."""
+
+    authentication_classes = [TokenAuthentication, SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.export_service = BankAgentSetupExportService()
+
+    def get(self, request):
+        include_credentials = request.query_params.get("include_credentials", "1") != "0"
+        yaml_text = self.export_service.build_yaml_for_user(
+            request.user,
+            include_credentials=include_credentials,
+            include_all_supported=request.query_params.get("include") == "all-supported",
+            nickname=request.query_params.get("nickname", "personal"),
+        )
+        response = HttpResponse(yaml_text, content_type="text/yaml; charset=utf-8")
+        response["Content-Disposition"] = 'attachment; filename="richtato-bank-agent-setup.yml"'
+        return response
 
 
 class BankSyncSetupAPIView(APIView):

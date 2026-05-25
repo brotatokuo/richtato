@@ -51,7 +51,13 @@ class TestBankSyncSetupAPIView:
         assert row["agent_sync_supported"] is True
         assert row["agent_flow"] == "investment_balance"
         assert row["needs_storage_for_auto"] is False
+        assert row["activity_url"] == ""
+        assert row["has_activity_url"] is False
+        assert row["needs_activity_url_for_auto"] is True
+        assert row["agent_cadence"] == "daily"
+        assert row["agent_sync_hour"] == 6
         assert payload["agent_config"]["logins"][0]["institution"] == "robinhood"
+        assert payload["duplicate_institution_logins"] == []
 
 
 class TestAccountSyncModeUpdate:
@@ -97,3 +103,78 @@ class TestAccountSyncModeUpdate:
         assert "sync_mode" in response.json()
         account.refresh_from_db()
         assert account.sync_mode == "manual"
+
+
+class TestAccountScheduleUpdate:
+    def test_patch_agent_schedule_fields(self, user, robinhood_institution):
+        account = FinancialAccount.objects.create(
+            user=user,
+            name="Robinhood Brokerage",
+            account_type="investment",
+            institution=robinhood_institution,
+            sync_mode="auto",
+        )
+        client = APIClient()
+        client.force_authenticate(user=user)
+
+        response = client.patch(
+            reverse("account-detail", kwargs={"pk": account.id}),
+            {"agent_cadence": "weekly", "agent_sync_hour": 9},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        account.refresh_from_db()
+        assert account.agent_cadence == "weekly"
+        assert account.agent_sync_hour == 9
+
+    def test_patch_agent_activity_url(self, user, robinhood_institution):
+        account = FinancialAccount.objects.create(
+            user=user,
+            name="Robinhood Brokerage",
+            account_type="investment",
+            institution=robinhood_institution,
+            sync_mode="auto",
+        )
+        client = APIClient()
+        client.force_authenticate(user=user)
+
+        response = client.patch(
+            reverse("account-detail", kwargs={"pk": account.id}),
+            {"agent_activity_url": "https://robinhood.com/account?classic=1"},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        account.refresh_from_db()
+        assert account.agent_activity_url == "https://robinhood.com/account?classic=1"
+
+    def test_sync_setup_reports_duplicate_institution_logins(self, user):
+        chase, _ = FinancialInstitution.objects.get_or_create(slug="chase", defaults={"name": "Chase"})
+        FinancialAccount.objects.create(
+            user=user,
+            name="Chase Checking",
+            account_type="checking",
+            institution=chase,
+            sync_mode="auto",
+            agent_cadence="daily",
+            agent_sync_hour=6,
+        )
+        FinancialAccount.objects.create(
+            user=user,
+            name="Chase Savings",
+            account_type="savings",
+            institution=chase,
+            sync_mode="auto",
+            agent_cadence="weekly",
+            agent_sync_hour=7,
+        )
+        client = APIClient()
+        client.force_authenticate(user=user)
+
+        response = client.get(reverse("account-sync-setup"))
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["duplicate_institution_logins"] == ["chase"]
+        assert len(payload["agent_config"]["logins"]) == 2

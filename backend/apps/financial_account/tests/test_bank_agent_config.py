@@ -50,6 +50,8 @@ def _account(
     name: str,
     account_type: str = "checking",
     sync_mode: str = "auto",
+    agent_cadence: str = "daily",
+    agent_sync_hour: int = 6,
 ):
     return FinancialAccount.objects.create(
         user=user,
@@ -58,12 +60,16 @@ def _account(
         balance=Decimal("0"),
         institution=institution,
         sync_mode=sync_mode,
+        agent_cadence=agent_cadence,
+        agent_sync_hour=agent_sync_hour,
     )
 
 
 class TestBankAgentConfigService:
     def test_builds_config_from_active_auto_accounts(self, user, bofa_institution, chase_institution):
         checking = _account(user, bofa_institution, name="Advantage Checking")
+        checking.agent_activity_url = "https://secure.bankofamerica.com/activity?adx=abc123"
+        checking.save(update_fields=["agent_activity_url_encrypted"])
         credit_card = _account(user, chase_institution, name="Sapphire", account_type="credit_card")
         _account(user, bofa_institution, name="Manual Only", sync_mode="manual")
 
@@ -80,6 +86,7 @@ class TestBankAgentConfigService:
                 "flow": "deposit",
                 "storage_uri": checking.resolved_storage_uri(),
                 "richtato_account_id": checking.id,
+                "activity_url": "https://secure.bankofamerica.com/activity?adx=abc123",
             }
         ]
         assert chase_login["accounts"][0]["name"] == credit_card.name
@@ -149,16 +156,53 @@ class TestBankAgentConfigService:
 
         assert config["logins"][0]["accounts"][0]["richtato_account_id"] == manual.id
 
+    def test_groups_same_institution_by_schedule(self, user, chase_institution):
+        checking = _account(
+            user,
+            chase_institution,
+            name="Chase Checking",
+            agent_cadence="daily",
+            agent_sync_hour=6,
+        )
+        savings = _account(
+            user,
+            chase_institution,
+            name="Chase Savings",
+            account_type="savings",
+            agent_cadence="weekly",
+            agent_sync_hour=7,
+        )
+
+        config = BankAgentConfigService().build_for_user(user)
+
+        assert len(config["logins"]) == 2
+        daily_login = next(login for login in config["logins"] if login["cadence"] == "daily")
+        weekly_login = next(login for login in config["logins"] if login["cadence"] == "weekly")
+        assert daily_login["institution"] == "chase"
+        assert daily_login["nickname"] == "personal"
+        assert daily_login["hour"] == 6
+        assert daily_login["accounts"][0]["richtato_account_id"] == checking.id
+        assert weekly_login["institution"] == "chase"
+        assert weekly_login["nickname"] == f"personal-{savings.id}"
+        assert weekly_login["hour"] == 7
+        assert weekly_login["accounts"][0]["richtato_account_id"] == savings.id
+
 
 class TestBankAgentConfigAPIView:
     def test_returns_generated_config_for_authenticated_user(self, user, bofa_institution):
-        account = _account(user, bofa_institution, name="Auto Checking")
+        account = _account(
+            user,
+            bofa_institution,
+            name="Auto Checking",
+            agent_cadence="weekly",
+            agent_sync_hour=7,
+        )
         client = APIClient()
         client.force_authenticate(user=user)
 
         response = client.get(
             reverse("account-bank-agent-config"),
-            {"cadence": "weekly", "hour": "7", "nickname": "primary"},
+            {"nickname": "primary"},
         )
 
         assert response.status_code == 200
@@ -168,3 +212,25 @@ class TestBankAgentConfigAPIView:
         assert payload["logins"][0]["hour"] == 7
         assert payload["logins"][0]["nickname"] == "primary"
         assert payload["logins"][0]["accounts"][0]["storage_uri"] == account.resolved_storage_uri()
+
+
+class TestBankAgentSetupExportAPIView:
+    def test_returns_yaml_with_env_and_logins(self, user, bofa_institution):
+        account = _account(user, bofa_institution, name="Auto Checking")
+        account.agent_activity_url = "https://secure.bankofamerica.com/activity?adx=abc123"
+        account.save(update_fields=["agent_activity_url_encrypted"])
+        client = APIClient()
+        client.force_authenticate(user=user)
+
+        response = client.get(reverse("account-bank-agent-setup-export"))
+
+        assert response.status_code == 200
+        assert response["Content-Type"].startswith("text/yaml")
+        assert 'filename="richtato-bank-agent-setup.yml"' in response["Content-Disposition"]
+        body = response.content.decode()
+        assert "env:" in body
+        assert "RICHTATO_API_TOKEN:" in body
+        assert "BANK_AGENT_FERNET_KEY:" in body
+        assert "logins:" in body
+        assert '"bofa"' in body
+        assert 'activity_url: "https://secure.bankofamerica.com/activity?adx=abc123"' in body

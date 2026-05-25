@@ -4,6 +4,8 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 export type SyncMode = 'auto' | 'upload' | 'manual';
 
+export type AgentCadence = 'manual' | 'daily' | 'weekly' | 'monthly';
+
 export type AgentFlow = 'deposit' | 'credit_card' | 'investment_balance';
 
 export interface BankSyncSetupAccount {
@@ -14,11 +16,16 @@ export interface BankSyncSetupAccount {
   account_type: string;
   account_type_display: string;
   sync_mode: SyncMode;
+  agent_cadence: AgentCadence;
+  agent_sync_hour: number;
   agent_sync_supported: boolean;
   agent_flow: AgentFlow | null;
   needs_storage_for_auto: boolean;
   has_storage_uri: boolean;
   resolved_storage_uri: string;
+  activity_url: string;
+  has_activity_url: boolean;
+  needs_activity_url_for_auto: boolean;
 }
 
 export interface BankAgentConfigAccount {
@@ -26,12 +33,13 @@ export interface BankAgentConfigAccount {
   flow: AgentFlow;
   storage_uri: string;
   richtato_account_id: number;
+  activity_url?: string;
 }
 
 export interface BankAgentConfigLogin {
   institution: string;
   nickname: string;
-  cadence: string;
+  cadence: AgentCadence;
   hour: number;
   accounts: BankAgentConfigAccount[];
 }
@@ -47,7 +55,23 @@ export interface BankAgentConfig {
 export interface BankSyncSetupResponse {
   accounts: BankSyncSetupAccount[];
   agent_config: BankAgentConfig;
+  duplicate_institution_logins: string[];
 }
+
+export const AGENT_CADENCE_OPTIONS: Array<{
+  value: AgentCadence;
+  label: string;
+}> = [
+  { value: 'manual', label: 'On demand' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+];
+
+export const AGENT_HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => ({
+  value: hour,
+  label: `${hour.toString().padStart(2, '0')}:00`,
+}));
 
 class BankSyncApi {
   private async handleResponse<T>(response: Response): Promise<T> {
@@ -63,7 +87,15 @@ class BankSyncApi {
             ? errorData.sync_mode
             : Array.isArray(errorData.sync_mode)
               ? errorData.sync_mode.join(', ')
-              : `HTTP error! status: ${response.status}`;
+              : typeof errorData.agent_cadence === 'string'
+                ? errorData.agent_cadence
+                : Array.isArray(errorData.agent_cadence)
+                  ? errorData.agent_cadence.join(', ')
+                  : typeof errorData.agent_activity_url === 'string'
+                    ? errorData.agent_activity_url
+                    : Array.isArray(errorData.agent_activity_url)
+                      ? errorData.agent_activity_url.join(', ')
+                      : `HTTP error! status: ${response.status}`;
       throw new Error(message);
     }
     return response.json();
@@ -87,11 +119,60 @@ class BankSyncApi {
     await this.handleResponse(response);
   }
 
-  async getApiToken(): Promise<{ token: string; fernet_key: string }> {
-    const response = await fetch(`${API_BASE}/auth/api-token/`, {
-      credentials: 'include',
-    });
-    return this.handleResponse(response);
+  async updateAccountSchedule(
+    accountId: number,
+    input: { agent_cadence: AgentCadence; agent_sync_hour: number }
+  ): Promise<void> {
+    const response = await csrfService.fetchWithCsrf(
+      `${API_BASE}/accounts/${accountId}/`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }
+    );
+    await this.handleResponse(response);
+  }
+
+  async updateActivityUrl(
+    accountId: number,
+    activityUrl: string
+  ): Promise<void> {
+    const response = await csrfService.fetchWithCsrf(
+      `${API_BASE}/accounts/${accountId}/`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ agent_activity_url: activityUrl }),
+      }
+    );
+    await this.handleResponse(response);
+  }
+
+  async downloadSetupYaml(): Promise<void> {
+    const response = await fetch(
+      `${API_BASE}/accounts/bank-agent-setup-export/`,
+      {
+        credentials: 'include',
+      }
+    );
+    if (!response.ok) {
+      const errorData = (await response.json().catch(() => ({}))) as Record<
+        string,
+        unknown
+      >;
+      const message =
+        typeof errorData.error === 'string'
+          ? errorData.error
+          : `HTTP error! status: ${response.status}`;
+      throw new Error(message);
+    }
+    const yamlText = await response.text();
+    const blob = new Blob([yamlText], { type: 'text/yaml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'richtato-bank-agent-setup.yml';
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 }
 
