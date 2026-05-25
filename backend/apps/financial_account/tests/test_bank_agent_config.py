@@ -37,6 +37,12 @@ def guideline_institution(db):
     return institution
 
 
+@pytest.fixture
+def robinhood_institution(db):
+    institution, _ = FinancialInstitution.objects.get_or_create(slug="robinhood", defaults={"name": "Robinhood"})
+    return institution
+
+
 def _account(
     user,
     institution,
@@ -92,6 +98,33 @@ class TestBankAgentConfigService:
         assert config["logins"] == [
             {
                 "institution": "guideline",
+                "nickname": "personal",
+                "cadence": "daily",
+                "hour": 6,
+                "accounts": [
+                    {
+                        "name": account.name,
+                        "flow": "investment_balance",
+                        "storage_uri": account.resolved_storage_uri(),
+                        "richtato_account_id": account.id,
+                    }
+                ],
+            }
+        ]
+
+    def test_robinhood_investment_uses_investment_balance_flow(self, user, robinhood_institution):
+        account = _account(
+            user,
+            robinhood_institution,
+            name="Individual Brokerage",
+            account_type="investment",
+        )
+
+        config = BankAgentConfigService().build_for_user(user)
+
+        assert config["logins"] == [
+            {
+                "institution": "robinhood",
                 "nickname": "personal",
                 "cadence": "daily",
                 "hour": 6,

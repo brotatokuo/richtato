@@ -58,6 +58,7 @@ amount sign convention) — no per-folder README required.
 | Marcus | Savings | Partial | Needed |
 | Robinhood | Checking/Savings | Done (PDF + CSV, balance reconciliation) | Needed |
 | Robinhood | Credit | Done (PDF) | Needed |
+| Robinhood | Investment | Done (CSV) | Done (balance scrape) |
 | Guideline | Investment | Done (CSV) | Done (balance scrape) |
 
 **Parser** → `backend/apps/financial_account/institutions/parsers/` and `backend/apps/financial_account/services/statement_import_service.py`
@@ -72,3 +73,4 @@ Parsers can ship before Playwright automation (manual upload / Drive drop works 
 | Checking, Savings | `deposit` |
 | Credit | `credit_card` |
 | Guideline investment | `investment_balance` |
+| Robinhood investment | `investment_balance` |

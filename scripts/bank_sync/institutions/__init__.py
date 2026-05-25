@@ -16,6 +16,7 @@ from scripts.bank_sync.institutions.base import BaseInstitutionAdapter
 from scripts.bank_sync.institutions.bofa import BofaAdapter
 from scripts.bank_sync.institutions.chase import ChaseAdapter
 from scripts.bank_sync.institutions.guideline import GuidelineAdapter
+from scripts.bank_sync.institutions.robinhood import RobinhoodAdapter
 
 _REGISTRY: dict[str, type[BaseInstitutionAdapter]] = {
     "bofa": BofaAdapter,
@@ -23,6 +24,7 @@ _REGISTRY: dict[str, type[BaseInstitutionAdapter]] = {
     "chase": ChaseAdapter,
     "jpmorgan_chase": ChaseAdapter,
     "guideline": GuidelineAdapter,
+    "robinhood": RobinhoodAdapter,
 }
 
 

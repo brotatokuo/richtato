@@ -80,6 +80,6 @@ class BankAgentConfigService:
         if account.account_type == "credit_card":
             return "credit_card"
         institution_slug = account.institution.slug if account.institution else ""
-        if institution_slug == "guideline" and account.account_type == "investment":
+        if institution_slug in {"guideline", "robinhood"} and account.account_type == "investment":
             return "investment_balance"
         return "deposit"
