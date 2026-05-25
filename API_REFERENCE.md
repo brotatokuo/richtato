@@ -104,7 +104,7 @@ Card-specific account routes are mounted at `/api/v1/card-accounts/`.
 
 - `file`: CSV, XLS, XLSX, or PDF statement export (PDF currently supported for `robinhood_credit` only).
 - `account`: target account ID.
-- `institution`: one of `bofa`, `marcus`, `amex`, `robinhood_bank`, `robinhood_credit`, `fidelity`, `robinhood_investments`, `guideline`, `citi`, or `chase`.
+- `institution`: one of `bofa`, `marcus`, `amex`, `robinhood_bank`, `robinhood_credit`, `fidelity`, `robinhood_investments`, `guideline`, `citi`, or `chase`. Robinhood checking/savings accepts CSV/XLS/XLSX or PDF; Robinhood credit card accepts PDF only.
 - `mode`: `preview` or `commit`.
 - `statement_status`: `provisional` for current/open exports or `closed` for final statements.
 - `statement_period`: optional label such as `2025-06`.

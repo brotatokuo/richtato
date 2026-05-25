@@ -144,6 +144,13 @@ def test_supported_file_types_for_robinhood_credit():
     assert ".pdf" not in supported_extensions_for_parser("chase")
 
 
+def test_supported_file_types_for_robinhood_bank():
+    bank_types = supported_file_types_for_parser("robinhood_bank")
+    assert "pdf" in bank_types
+    assert "csv" in bank_types
+    assert supported_extensions_for_parser("robinhood_bank") == {".csv", ".pdf", ".xls", ".xlsx"}
+
+
 def test_get_supported_institutions_includes_robinhood_credit_pdf():
     institutions = get_supported_institutions()
     robinhood_credit = next(item for item in institutions if item["id"] == "robinhood_credit")

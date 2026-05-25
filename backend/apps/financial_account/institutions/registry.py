@@ -107,6 +107,7 @@ _PARSER_CONFIGS: dict[str, dict[str, Any]] = {
 _DEFAULT_FILE_TYPES = ("csv", "xls", "xlsx")
 _PDF_FILE_TYPES = ("pdf",)
 _PARSER_FILE_TYPES: dict[str, tuple[str, ...]] = {
+    "robinhood_bank": _DEFAULT_FILE_TYPES + _PDF_FILE_TYPES,
     "robinhood_credit": _PDF_FILE_TYPES,
 }
 
@@ -296,7 +297,7 @@ def get_supported_institutions() -> list[dict[str, Any]]:
         if not institution.parser_key:
             continue
         file_types = list(_DEFAULT_FILE_TYPES)
-        if institution.slug == "robinhood" and "credit_card" in institution.account_types:
+        if institution.slug == "robinhood":
             file_types = sorted(set(file_types) | set(_PDF_FILE_TYPES))
         entries.append(
             {

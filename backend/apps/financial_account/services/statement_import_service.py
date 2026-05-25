@@ -15,6 +15,7 @@ from typing import Any
 import pandas as pd
 from loguru import logger
 
+from apps.financial_account.institutions.parsers.robinhood_bank_pdf import parse_robinhood_bank_pdf
 from apps.financial_account.institutions.parsers.robinhood_credit_pdf import parse_robinhood_credit_pdf
 from apps.financial_account.institutions.registry import (
     get_parser_config,
@@ -294,6 +295,8 @@ class StatementImportService:
         if extension == ".pdf":
             if parser_key == "robinhood_credit":
                 return parse_robinhood_credit_pdf(content)
+            if parser_key == "robinhood_bank":
+                return parse_robinhood_bank_pdf(content)
             raise ValueError(f"PDF statements are not supported for institution {parser_key}.")
         if extension == ".csv":
             csv_content = content
