@@ -13,6 +13,7 @@ One folder per institution + account type; any reasonable filename is fine.
 | Citi | `credit_card/` |
 | Marcus | `savings/` |
 | Robinhood | `checking/`, `savings/`, `credit_card/` |
+| Guideline | `investment/` |
 
 ## Folder layout
 
@@ -57,9 +58,10 @@ amount sign convention) — no per-folder README required.
 | Marcus | Savings | Partial | Needed |
 | Robinhood | Checking/Savings | Done (PDF + CSV, balance reconciliation) | Needed |
 | Robinhood | Credit | Done (PDF) | Needed |
+| Guideline | Investment | Done (CSV) | Done (balance scrape) |
 
 **Parser** → `backend/apps/financial_account/institutions/parsers/` and `backend/apps/financial_account/services/statement_import_service.py`
-**Download adapter** → `scripts/bank_sync/institutions/`
+**Download adapter** → `scripts/bank_sync/institutions/` (statement download or balance scrape)
 
 Parsers can ship before Playwright automation (manual upload / Drive drop works first).
 
@@ -69,3 +71,4 @@ Parsers can ship before Playwright automation (manual upload / Drive drop works 
 | --- | --- |
 | Checking, Savings | `deposit` |
 | Credit | `credit_card` |
+| Guideline investment | `investment_balance` |

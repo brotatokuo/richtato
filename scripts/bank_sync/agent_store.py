@@ -32,7 +32,7 @@ DEFAULT_DB_PATH = Path(
 
 CADENCES = ("manual", "daily", "weekly", "monthly")
 LOGIN_STATUSES = ("pending_login", "active", "needs_reauth", "disabled", "error")
-ACCOUNT_FLOWS = ("deposit", "credit_card")
+ACCOUNT_FLOWS = ("deposit", "credit_card", "investment_balance")
 RUN_KINDS = ("interactive_login", "scheduled_download", "manual_download")
 RUN_STATUSES = ("queued", "running", "completed", "failed", "partial")
 
@@ -71,6 +71,7 @@ class Account:
     activity_url_encrypted: str
     flow: str
     storage_uri: str
+    richtato_account_id: int | None
     enabled: bool
     last_success_at: str | None
     created_at: str
@@ -175,6 +176,12 @@ class AgentStore:
     def _init_schema(self) -> None:
         with self._connect() as conn:
             conn.executescript(_SCHEMA)
+            self._migrate_schema(conn)
+
+    def _migrate_schema(self, conn: sqlite3.Connection) -> None:
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(account)").fetchall()}
+        if "richtato_account_id" not in columns:
+            conn.execute("ALTER TABLE account ADD COLUMN richtato_account_id INTEGER")
 
     # -------- Logins ------------------------------------------------------
 
@@ -321,15 +328,18 @@ class AgentStore:
         self,
         *,
         login_id: int,
-        storage_uri: str,
+        storage_uri: str = "",
         activity_url: str = "",
         flow: str = "deposit",
         detected_account_name: str = "",
+        richtato_account_id: int | None = None,
     ) -> Account:
         if flow not in ACCOUNT_FLOWS:
             raise ValueError(f"flow must be one of {ACCOUNT_FLOWS}, got {flow!r}")
-        if not storage_uri:
+        if flow != "investment_balance" and not storage_uri:
             raise ValueError("storage_uri is required")
+        if flow == "investment_balance" and not richtato_account_id:
+            raise ValueError("richtato_account_id is required for investment_balance flow")
         encrypted_url = encrypt_text(activity_url) if activity_url else ""
         now = _utc_now_iso()
         with self._connect() as conn:
@@ -337,11 +347,19 @@ class AgentStore:
                 """
                 INSERT INTO account (
                     login_id, detected_account_name, activity_url_encrypted,
-                    flow, storage_uri, enabled, created_at
+                    flow, storage_uri, richtato_account_id, enabled, created_at
                 )
-                VALUES (?, ?, ?, ?, ?, 1, ?)
+                VALUES (?, ?, ?, ?, ?, ?, 1, ?)
                 """,
-                (login_id, detected_account_name, encrypted_url, flow, storage_uri, now),
+                (
+                    login_id,
+                    detected_account_name,
+                    encrypted_url,
+                    flow,
+                    storage_uri,
+                    richtato_account_id,
+                    now,
+                ),
             )
             account_id = cursor.lastrowid
         return self.get_account(account_id)  # type: ignore[return-value]
@@ -370,6 +388,7 @@ class AgentStore:
         flow: str | None = None,
         storage_uri: str | None = None,
         detected_account_name: str | None = None,
+        richtato_account_id: int | None = None,
         enabled: bool | None = None,
     ) -> None:
         updates: list[str] = []
@@ -388,6 +407,9 @@ class AgentStore:
         if detected_account_name is not None:
             updates.append("detected_account_name = ?")
             params.append(detected_account_name)
+        if richtato_account_id is not None:
+            updates.append("richtato_account_id = ?")
+            params.append(richtato_account_id)
         if enabled is not None:
             updates.append("enabled = ?")
             params.append(1 if enabled else 0)
@@ -532,6 +554,8 @@ def _row_to_login(row: sqlite3.Row) -> Login:
 
 
 def _row_to_account(row: sqlite3.Row) -> Account:
+    keys = row.keys()
+    richtato_account_id = row["richtato_account_id"] if "richtato_account_id" in keys else None
     return Account(
         id=row["id"],
         login_id=row["login_id"],
@@ -539,6 +563,7 @@ def _row_to_account(row: sqlite3.Row) -> Account:
         activity_url_encrypted=row["activity_url_encrypted"],
         flow=row["flow"],
         storage_uri=row["storage_uri"],
+        richtato_account_id=richtato_account_id,
         enabled=bool(row["enabled"]),
         last_success_at=row["last_success_at"],
         created_at=row["created_at"],
@@ -584,6 +609,7 @@ def export_to_dict(store: AgentStore) -> dict[str, Any]:
                 "activity_url_encrypted": account.activity_url_encrypted,
                 "flow": account.flow,
                 "storage_uri": account.storage_uri,
+                "richtato_account_id": account.richtato_account_id,
                 "enabled": account.enabled,
             }
             for account in store.list_accounts()
@@ -645,10 +671,11 @@ def import_from_dict(store: AgentStore, payload: dict[str, Any]) -> tuple[int, i
             url_encrypted = account_payload.get("activity_url_encrypted") or ""
             store.add_account(
                 login_id=login.id,
-                storage_uri=account_payload["storage_uri"],
+                storage_uri=account_payload.get("storage_uri", ""),
                 activity_url=url_plaintext or "",
                 flow=account_payload.get("flow", "deposit"),
                 detected_account_name=account_payload.get("detected_account_name", ""),
+                richtato_account_id=account_payload.get("richtato_account_id"),
             )
             if not url_plaintext and url_encrypted:
                 with store._connect() as conn:  # noqa: SLF001

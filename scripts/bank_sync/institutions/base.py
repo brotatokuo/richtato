@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -72,6 +73,23 @@ class BaseInstitutionAdapter:
         redirects to a sign-in screen and
         :class:`scripts.bank_sync.errors.NoDownloadError` if the bank
         produced no file.
+        """
+
+        raise NotImplementedError
+
+    async def fetch_account_balance(
+        self,
+        page: Page,
+        *,
+        activity_url: str,
+    ) -> Decimal:
+        """Navigate to ``activity_url`` and scrape the current account balance.
+
+        Used by investment-only institutions that expose balances on a
+        dashboard page rather than downloadable statements. Raises
+        :class:`scripts.bank_sync.errors.NeedsReauthError` when cookies
+        expired and :class:`scripts.bank_sync.errors.NoDownloadError` when
+        the balance element cannot be found.
         """
 
         raise NotImplementedError

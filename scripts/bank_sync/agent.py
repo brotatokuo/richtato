@@ -167,16 +167,20 @@ def cmd_account_add(args: argparse.Namespace) -> int:
     try:
         account = store.add_account(
             login_id=args.login_id,
-            storage_uri=args.storage_uri,
+            storage_uri=args.storage_uri or "",
             activity_url=args.activity_url,
             flow=args.flow,
             detected_account_name=args.name,
+            richtato_account_id=args.richtato_account_id,
         )
     except Exception as exc:
         print(f"Error adding account: {exc}", file=sys.stderr)
         return 2
     print(f"Created account {account.id} under login {account.login_id}.")
-    print(f"  storage_uri: {account.storage_uri}")
+    if account.storage_uri:
+        print(f"  storage_uri: {account.storage_uri}")
+    if account.richtato_account_id is not None:
+        print(f"  richtato_account_id: {account.richtato_account_id}")
     return 0
 
 
@@ -193,7 +197,9 @@ def cmd_account_list(args: argparse.Namespace) -> int:
             f"last_success={account.last_success_at or '-'}"
         )
         print(f"     name: {account.detected_account_name or '(unset)'}")
-        print(f"     storage_uri: {account.storage_uri}")
+        print(f"     storage_uri: {account.storage_uri or '(none)'}")
+        if account.richtato_account_id is not None:
+            print(f"     richtato_account_id: {account.richtato_account_id}")
     return 0
 
 
@@ -208,6 +214,7 @@ def cmd_account_update(args: argparse.Namespace) -> int:
         flow=args.flow,
         storage_uri=args.storage_uri,
         detected_account_name=args.name,
+        richtato_account_id=args.richtato_account_id,
         enabled=args.enabled,
     )
     print(f"Updated account {args.account_id}.")
@@ -400,37 +407,66 @@ def _apply_config_payload(raw: dict, store: AgentStore) -> int:
                     + "  (unchanged)"
                 )
 
-        existing_accounts = {
-            acc.storage_uri: acc for acc in store.list_accounts(login.id)
+        existing_accounts_by_uri = {
+            acc.storage_uri: acc for acc in store.list_accounts(login.id) if acc.storage_uri
+        }
+        existing_accounts_by_richtato_id = {
+            acc.richtato_account_id: acc
+            for acc in store.list_accounts(login.id)
+            if acc.richtato_account_id is not None
         }
 
         for acc_cfg in login_cfg.get("accounts") or []:
             storage_uri = str(acc_cfg.get("storage_uri", "") or "").strip()
-            if not storage_uri:
-                print("  Skipping account entry with no 'storage_uri'.", file=sys.stderr)
-                continue
-
             name = str(acc_cfg.get("name", "") or "")
             flow = str(acc_cfg.get("flow", "deposit"))
+            richtato_account_id = acc_cfg.get("richtato_account_id")
+            if richtato_account_id is not None:
+                richtato_account_id = int(richtato_account_id)
 
-            if storage_uri not in existing_accounts:
+            if not storage_uri and flow != "investment_balance":
+                print("  Skipping account entry with no 'storage_uri'.", file=sys.stderr)
+                continue
+            if flow == "investment_balance" and not richtato_account_id:
+                print(
+                    "  Skipping investment_balance account with no 'richtato_account_id'.",
+                    file=sys.stderr,
+                )
+                continue
+
+            existing = None
+            if storage_uri and storage_uri in existing_accounts_by_uri:
+                existing = existing_accounts_by_uri[storage_uri]
+            elif richtato_account_id and richtato_account_id in existing_accounts_by_richtato_id:
+                existing = existing_accounts_by_richtato_id[richtato_account_id]
+
+            if existing is None:
                 account = store.add_account(
                     login_id=login.id,
                     storage_uri=storage_uri,
                     flow=flow,
                     detected_account_name=name,
+                    richtato_account_id=richtato_account_id,
                 )
                 accounts_added += 1
                 print(f"    + account #{account.id} {name!r} flow={flow}")
-                print(f"      storage_uri: {storage_uri}")
+                if storage_uri:
+                    print(f"      storage_uri: {storage_uri}")
+                if richtato_account_id:
+                    print(f"      richtato_account_id: {richtato_account_id}")
             else:
-                account = existing_accounts[storage_uri]
-                changed = account.detected_account_name != name or account.flow != flow
+                account = existing
+                changed = (
+                    account.detected_account_name != name
+                    or account.flow != flow
+                    or account.richtato_account_id != richtato_account_id
+                )
                 if changed:
                     store.update_account(
                         account.id,
                         detected_account_name=name,
                         flow=flow,
+                        richtato_account_id=richtato_account_id,
                     )
                     accounts_updated += 1
                     print(f"    ~ account #{account.id} {name!r} flow={flow} (updated)")
@@ -586,12 +622,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_account_add.add_argument("login_id", type=int)
     p_account_add.add_argument(
         "--storage-uri",
-        required=True,
+        default="",
         help="Google Drive folder URI (gdrive://<folder_id>) from Richtato account config.",
     )
     p_account_add.add_argument("--activity-url", default="", help="Bank-side download URL (encrypted at rest).")
     p_account_add.add_argument("--flow", default="deposit", choices=store_mod.ACCOUNT_FLOWS)
     p_account_add.add_argument("--name", default="", help="Detected/account display name.")
+    p_account_add.add_argument(
+        "--richtato-account-id",
+        type=int,
+        default=None,
+        help="Richtato FinancialAccount id (required for investment_balance flow).",
+    )
     p_account_add.set_defaults(func=cmd_account_add)
 
     p_account_list = account_sub.add_parser("list", help="List bank-side accounts")
@@ -604,6 +646,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_account_update.add_argument("--activity-url")
     p_account_update.add_argument("--flow", choices=store_mod.ACCOUNT_FLOWS)
     p_account_update.add_argument("--name")
+    p_account_update.add_argument("--richtato-account-id", type=int, default=None)
     enabled_group = p_account_update.add_mutually_exclusive_group()
     enabled_group.add_argument(
         "--enable",

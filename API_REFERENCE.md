@@ -82,6 +82,7 @@ Common date filters:
 | `POST` | `/drive/deactivate/` | Unlink an active Drive folder and migrate statements back to local storage |
 | `POST` | `/drive/disconnect/` | Disconnect inactive Drive OAuth credentials |
 | `POST` | `/agent-statements/` | Agent upload endpoint for Drive-backed statement downloads |
+| `POST` | `/agent-balances/` | Agent balance snapshot endpoint for investment balance sync (Token auth) |
 | `POST` | `/import-csv/` | Import statement CSV |
 | `GET` | `/import-statement/` | List supported statement import institutions |
 | `POST` | `/import-statement/` | Preview or commit CSV/Excel/PDF statement import |

@@ -95,8 +95,7 @@ class AccountService:
         if not is_valid_account_type(institution_slug, account_type):
             raise ValueError(f"Account type '{account_type}' is not supported for institution '{institution_slug}'.")
 
-        # Look up preset institution from the registry-backed seed data.
-        institution = self.institution_repository.get_by_slug(institution_slug)
+        institution = self.institution_repository.resolve_for_slug(institution_slug)
 
         # If no slug match, try by name (for synced accounts or custom entries)
         if not institution and institution_name:
@@ -221,7 +220,14 @@ class AccountService:
         opening_balance = kwargs.pop("opening_balance", _MISSING)
         opening_balance_date = kwargs.pop("opening_balance_date", None)
 
-        # Handle institution name update
+        institution_slug = kwargs.pop("institution_slug", None)
+        if institution_slug is not None:
+            if institution_slug:
+                kwargs["institution"] = self.institution_repository.resolve_for_slug(institution_slug)
+            else:
+                kwargs["institution"] = None
+
+        # Handle institution name update (legacy/custom entries)
         if "institution_name" in kwargs:
             institution_name = kwargs.pop("institution_name")
             if institution_name:
@@ -230,6 +236,11 @@ class AccountService:
                 kwargs["institution"] = institution
             else:
                 kwargs["institution"] = None
+
+        account_type = kwargs.pop("account_type", None)
+        if account_type is not None:
+            kwargs["account_type"] = account_type
+            kwargs["is_liability"] = account_type == "credit_card"
 
         updated_account = self.account_repository.update_account(account, **kwargs)
 

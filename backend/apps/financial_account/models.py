@@ -155,6 +155,7 @@ class AccountBalanceHistory(models.Model):
         ("transaction", "Transaction"),
         ("manual", "Manual"),
         ("csv_import", "CSV Import"),
+        ("agent_sync", "Agent Sync"),
     ]
 
     account = models.ForeignKey(FinancialAccount, on_delete=models.CASCADE, related_name="balance_history")

@@ -74,6 +74,11 @@ urlpatterns = [
         name="account-agent-statement-upload",
     ),
     path(
+        "agent-balances/",
+        views.AgentBalanceSnapshotAPIView.as_view(),
+        name="account-agent-balance-snapshot",
+    ),
+    path(
         "statements/",
         views.StatementFileListCreateAPIView.as_view(),
         name="account-statement-file-list-create",

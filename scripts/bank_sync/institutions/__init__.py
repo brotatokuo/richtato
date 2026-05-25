@@ -15,12 +15,14 @@ from __future__ import annotations
 from scripts.bank_sync.institutions.base import BaseInstitutionAdapter
 from scripts.bank_sync.institutions.bofa import BofaAdapter
 from scripts.bank_sync.institutions.chase import ChaseAdapter
+from scripts.bank_sync.institutions.guideline import GuidelineAdapter
 
 _REGISTRY: dict[str, type[BaseInstitutionAdapter]] = {
     "bofa": BofaAdapter,
     "bank_of_america": BofaAdapter,
     "chase": ChaseAdapter,
     "jpmorgan_chase": ChaseAdapter,
+    "guideline": GuidelineAdapter,
 }
 
 

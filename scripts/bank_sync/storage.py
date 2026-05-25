@@ -5,6 +5,8 @@ from __future__ import annotations
 import hashlib
 import os
 from dataclasses import dataclass
+from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 import requests
@@ -87,6 +89,38 @@ def _write_statement_to_backend(
         size_bytes=len(content),
         sha256=file_hash,
     )
+
+
+def push_balance_snapshot(
+    *,
+    richtato_account_id: int,
+    balance: Decimal,
+    balance_date: date,
+) -> dict:
+    """Push a scraped balance snapshot to Richtato."""
+    api_base = os.environ.get("RICHTATO_API_BASE_URL", "http://127.0.0.1:8000/api/v1").rstrip("/")
+    token = os.environ.get("RICHTATO_API_TOKEN", "")
+    if not token:
+        raise ValueError("RICHTATO_API_TOKEN is required for balance sync uploads.")
+
+    response = requests.post(
+        f"{api_base}/accounts/agent-balances/",
+        headers={"Authorization": f"Token {token}"},
+        json={
+            "account_id": richtato_account_id,
+            "balance": str(balance),
+            "date": balance_date.isoformat(),
+        },
+        timeout=30,
+    )
+    if not response.ok:
+        raise ValueError(
+            f"Richtato agent balance upload failed: HTTP {response.status_code} {response.text[:500]}"
+        )
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise ValueError("Richtato agent balance upload returned invalid JSON.")
+    return payload
 
 
 def _sanitize_filename(filename: str) -> str:

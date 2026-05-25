@@ -206,7 +206,13 @@ INSTITUTIONS: dict[str, InstitutionDefinition] = {
             parser_key="robinhood_bank",
         ),
         _inst("fidelity", "Fidelity", ("investment",), parser_key="fidelity"),
-        _inst("guideline", "Guideline", ("investment",), parser_key="guideline"),
+        _inst(
+            "guideline",
+            "Guideline",
+            ("investment",),
+            parser_key="guideline",
+            auto_sync_key="guideline",
+        ),
         _inst("other", "Other", ALL_ACCOUNT_TYPES),
     ]
 }

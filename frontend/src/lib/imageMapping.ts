@@ -95,6 +95,7 @@ const BANK_LOGOS: Record<string, string> = {
   robinhood: '/images/logos/robinhood.png',
   schwab: '/images/logos/charles_schwab.png',
   fidelity: '/images/logos/fidelity.png',
+  guideline: '/images/logos/guideline.png',
   vanguard: '',
   // Credit Unions
   navy_federal: '',
@@ -124,6 +125,7 @@ const ENTITY_LOGOS: Record<string, string> = {
   robinhood: '/images/logos/robinhood.png',
   schwab: '/images/logos/charles_schwab.png',
   fidelity: '/images/logos/fidelity.png',
+  guideline: '/images/logos/guideline.png',
   vanguard: '',
   // Credit Unions
   navy_federal: '',

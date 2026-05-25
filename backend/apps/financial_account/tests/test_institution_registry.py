@@ -63,6 +63,7 @@ def test_is_valid_account_type(slug, account_type, expected):
 def test_get_agent_institution_slug_supports_legacy_aliases():
     assert get_agent_institution_slug("bank_of_america") == "bofa"
     assert get_agent_institution_slug("jpmorgan_chase") == "chase"
+    assert get_agent_institution_slug("guideline") == "guideline"
     assert get_agent_institution_slug("american_express") is None
 
 

@@ -215,6 +215,8 @@ export function AccountDetailPanel({
       });
       const updated = await transactionsApiService.updateAccount(account.id, {
         name: form.name,
+        type: form.type,
+        entity: form.entity,
         image_key: form.image_key,
         ...(form.opening_balance !== undefined
           ? {

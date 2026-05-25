@@ -31,6 +31,12 @@ def chase_institution(db):
     return institution
 
 
+@pytest.fixture
+def guideline_institution(db):
+    institution, _ = FinancialInstitution.objects.get_or_create(slug="guideline", defaults={"name": "Guideline"})
+    return institution
+
+
 def _account(
     user,
     institution,
@@ -72,6 +78,33 @@ class TestBankAgentConfigService:
         ]
         assert chase_login["accounts"][0]["name"] == credit_card.name
         assert chase_login["accounts"][0]["flow"] == "credit_card"
+
+    def test_guideline_investment_uses_investment_balance_flow(self, user, guideline_institution):
+        account = _account(
+            user,
+            guideline_institution,
+            name="401(k)",
+            account_type="investment",
+        )
+
+        config = BankAgentConfigService().build_for_user(user)
+
+        assert config["logins"] == [
+            {
+                "institution": "guideline",
+                "nickname": "personal",
+                "cadence": "daily",
+                "hour": 6,
+                "accounts": [
+                    {
+                        "name": account.name,
+                        "flow": "investment_balance",
+                        "storage_uri": account.resolved_storage_uri(),
+                        "richtato_account_id": account.id,
+                    }
+                ],
+            }
+        ]
 
     def test_can_include_all_supported_accounts(self, user, bofa_institution):
         manual = _account(user, bofa_institution, name="Manual Supported", sync_mode="manual")

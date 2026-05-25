@@ -146,7 +146,14 @@ class FinancialAccountUpdateSerializer(serializers.Serializer):
     """Serializer for updating financial accounts."""
 
     name = serializers.CharField(max_length=255, required=False)
+    account_type = serializers.ChoiceField(choices=list(ACCOUNT_TYPE_LABELS.keys()), required=False)
     institution_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    institution_slug = serializers.CharField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+        help_text="Slug of preset institution (e.g., 'chase', 'guideline')",
+    )
     account_number_last4 = serializers.CharField(max_length=4, required=False, allow_blank=True)
     balance = serializers.DecimalField(max_digits=15, decimal_places=2, required=False)
     is_active = serializers.BooleanField(required=False)
@@ -160,3 +167,31 @@ class FinancialAccountUpdateSerializer(serializers.Serializer):
         allow_null=True,
     )
     opening_balance_date = serializers.DateField(required=False, allow_null=True)
+
+    def validate(self, attrs):
+        institution_slug = attrs.get("institution_slug")
+        account_type = attrs.get("account_type")
+        if institution_slug is None and account_type is None:
+            return attrs
+
+        account = self.context.get("account")
+        resolved_slug = institution_slug
+        if resolved_slug is None:
+            if account and account.institution:
+                resolved_slug = account.institution.slug
+            else:
+                resolved_slug = "other"
+
+        resolved_type = account_type
+        if resolved_type is None:
+            resolved_type = account.account_type if account else None
+
+        if resolved_type and not is_valid_account_type(resolved_slug, resolved_type):
+            raise serializers.ValidationError(
+                {
+                    "account_type": (
+                        f"Account type '{resolved_type}' is not supported for institution '{resolved_slug}'."
+                    )
+                }
+            )
+        return attrs

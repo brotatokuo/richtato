@@ -33,7 +33,7 @@ from scripts.bank_sync.errors import (
 )
 from scripts.bank_sync.institutions import get_adapter
 from scripts.bank_sync.playwright_helpers import capture_storage_state
-from scripts.bank_sync.storage import write_statement
+from scripts.bank_sync.storage import push_balance_snapshot, write_statement
 
 HEADED_CHROMIUM_ARGS = [
     "--no-first-run",
@@ -163,7 +163,13 @@ async def download_login(store: AgentStore, login_id: int, *, kind: str = "manua
     except KeyError as exc:
         return DownloadOutcome(attempted=0, succeeded=0, files_downloaded=0, failure_reason=str(exc))
 
-    accounts = [a for a in store.list_accounts(login_id) if a.enabled and a.activity_url_encrypted]
+    accounts = [
+        a
+        for a in store.list_accounts(login_id)
+        if a.enabled
+        and a.activity_url_encrypted
+        and (a.flow == "investment_balance" or a.storage_uri)
+    ]
     if not accounts:
         return DownloadOutcome(attempted=0, succeeded=0, files_downloaded=0, failure_reason="No enabled accounts.")
 
@@ -188,6 +194,54 @@ async def download_login(store: AgentStore, login_id: int, *, kind: str = "manua
             page = await context.new_page()
 
             for account in accounts:
+                if account.flow == "investment_balance":
+                    try:
+                        balance = await adapter.fetch_account_balance(
+                            page,
+                            activity_url=account.activity_url,
+                        )
+                    except NeedsReauthError as exc:
+                        needs_reauth = True
+                        failure_reason = f"needs_reauth on account {account.id}: {exc}"
+                        logger.warning(failure_reason)
+                        break
+                    except NoDownloadError as exc:
+                        logger.warning("balance_fetch_failed on account {}: {}", account.id, exc)
+                        continue
+                    except Exception as exc:
+                        logger.exception("Balance fetch crashed for account {}", account.id)
+                        failure_reason = failure_reason or f"Account {account.id}: {exc}"
+                        continue
+
+                    if not account.richtato_account_id:
+                        logger.warning(
+                            "Skipping balance push for account {}: missing richtato_account_id",
+                            account.id,
+                        )
+                        continue
+
+                    try:
+                        now = datetime.now(timezone.utc).astimezone()
+                        push_balance_snapshot(
+                            richtato_account_id=account.richtato_account_id,
+                            balance=balance,
+                            balance_date=now.date(),
+                        )
+                        logger.info(
+                            "Pushed balance account={} richtato_id={} balance={}",
+                            account.id,
+                            account.richtato_account_id,
+                            balance,
+                        )
+                    except Exception as exc:
+                        logger.exception("Failed to push balance for account {}", account.id)
+                        failure_reason = failure_reason or f"Account {account.id}: {exc}"
+                        continue
+
+                    succeeded += 1
+                    store.mark_account_success(account.id)
+                    continue
+
                 with tempfile.TemporaryDirectory() as tmpdir_str:
                     from pathlib import Path as _Path
 

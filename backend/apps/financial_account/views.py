@@ -120,7 +120,10 @@ class FinancialAccountDetailAPIView(APIView):
             payload=dict(request.data),
         )
 
-        serializer = FinancialAccountUpdateSerializer(data=request.data)
+        serializer = FinancialAccountUpdateSerializer(
+            data=request.data,
+            context={"account": account},
+        )
         if not serializer.is_valid():
             logger.warning(
                 "Account PATCH validation failed",
@@ -975,6 +978,70 @@ class AgentStatementUploadAPIView(APIView):
         if value in (None, ""):
             return None
         return int(value)
+
+
+class AgentBalanceSnapshotAPIView(APIView):
+    """Accept a bank-agent scraped balance snapshot for an investment account."""
+
+    authentication_classes = [TokenAuthentication, SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.account_service = AccountService()
+        self.balance_service = AccountBalanceService()
+
+    def post(self, request):
+        from datetime import date as date_type
+        from decimal import Decimal
+
+        account_id = request.data.get("account_id")
+        balance = request.data.get("balance")
+        balance_date = request.data.get("date")
+
+        if not all([account_id, balance is not None, balance_date]):
+            return Response(
+                {"error": "account_id, balance, and date are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        account = self.account_service.get_account_by_id(int(account_id), request.user)
+        if not account:
+            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            balance_decimal = Decimal(str(balance))
+        except Exception:
+            return Response(
+                {"error": "Invalid balance value"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            parsed_balance_date = date_type.fromisoformat(str(balance_date))
+        except ValueError:
+            return Response(
+                {"error": "Invalid date format (use YYYY-MM-DD)"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        old_balance = account.balance
+        updated_account = self.balance_service.set_balance_snapshot(
+            account=account,
+            new_balance=balance_decimal,
+            balance_date=parsed_balance_date,
+            source="agent_sync",
+        )
+
+        return Response(
+            {
+                "balance": str(updated_account.balance),
+                "date": str(parsed_balance_date),
+                "previous_balance": str(old_balance),
+                "adjustment": str(updated_account.balance - old_balance),
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class StatementFileListCreateAPIView(APIView):

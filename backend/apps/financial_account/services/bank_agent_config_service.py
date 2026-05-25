@@ -77,4 +77,9 @@ class BankAgentConfigService:
         return get_agent_institution_slug(slug)
 
     def _flow_for_account(self, account: FinancialAccount) -> str:
-        return "credit_card" if account.account_type == "credit_card" else "deposit"
+        if account.account_type == "credit_card":
+            return "credit_card"
+        institution_slug = account.institution.slug if account.institution else ""
+        if institution_slug == "guideline" and account.account_type == "investment":
+            return "investment_balance"
+        return "deposit"
