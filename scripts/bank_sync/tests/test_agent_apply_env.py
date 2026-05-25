@@ -1,11 +1,13 @@
 """Tests for bank-agent apply env block handling."""
 
 import os
+from argparse import Namespace
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
 
-from scripts.bank_sync.agent import _apply_config_payload, _apply_env_block
+from scripts.bank_sync.agent import _apply_config_payload, _apply_env_block, cmd_sync
 from scripts.bank_sync.agent_store import AgentStore
 
 
@@ -140,3 +142,43 @@ class TestApplyActivityUrl:
         assert result == 0
         account = store.list_accounts()[0]
         assert account.activity_url == ""
+
+
+class TestSyncHeaded:
+    def test_cmd_sync_passes_headed_to_worker(self):
+        calls = []
+
+        class FakeWorker:
+            async def download_login(self, store, login_id, *, kind, headed):
+                calls.append(
+                    {
+                        "store": store,
+                        "login_id": login_id,
+                        "kind": kind,
+                        "headed": headed,
+                    }
+                )
+                return SimpleNamespace(
+                    attempted=1,
+                    succeeded=1,
+                    files_downloaded=1,
+                    failure_reason="",
+                    needs_reauth=False,
+                )
+
+        fake_store = object()
+        with (
+            patch("scripts.bank_sync.agent._store", return_value=fake_store),
+            patch("scripts.bank_sync.agent._lazy_worker", return_value=FakeWorker()),
+        ):
+            result = cmd_sync(Namespace(login_id=1, headed=True, db=None))
+
+        assert result == 0
+        assert calls == [
+            {
+                "store": fake_store,
+                "login_id": 1,
+                "kind": "manual_download",
+                "headed": True,
+            }
+        ]

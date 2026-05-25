@@ -76,7 +76,11 @@ async def interactive_login(store: AgentStore, login_id: int) -> tuple[bool, str
     except KeyError as exc:
         return False, str(exc)
 
-    logger.info("Starting interactive login for {} ({})", login.institution_slug, login.nickname or "default")
+    logger.info(
+        "Starting interactive login for {} ({})",
+        login.institution_slug,
+        login.nickname or "default",
+    )
 
     discovered_accounts: list[Any] = []
     async with async_playwright() as pw:
@@ -95,7 +99,9 @@ async def interactive_login(store: AgentStore, login_id: int) -> tuple[bool, str
                 discovered_accounts = await adapter.interactive_login(context, page)
             except Exception as exc:
                 logger.exception("Adapter interactive_login crashed")
-                store.set_login_status(login_id, "error", last_failure_reason=str(exc)[:500])
+                store.set_login_status(
+                    login_id, "error", last_failure_reason=str(exc)[:500]
+                )
                 return False, f"Adapter crashed: {exc}"
 
             if page.is_closed():
@@ -118,7 +124,9 @@ async def interactive_login(store: AgentStore, login_id: int) -> tuple[bool, str
 
     new_accounts = 0
     for discovered in discovered_accounts:
-        payload = discovered.as_payload() if hasattr(discovered, "as_payload") else discovered
+        payload = (
+            discovered.as_payload() if hasattr(discovered, "as_payload") else discovered
+        )
         storage_uri = payload.get("storage_uri") or ""
         if not storage_uri:
             # Auto-binding requires the user to know the destination dir; emit
@@ -134,7 +142,10 @@ async def interactive_login(store: AgentStore, login_id: int) -> tuple[bool, str
         )
         new_accounts += 1
 
-    return True, f"Captured cookies; discovered {len(discovered_accounts)} bank-side accounts (added {new_accounts})."
+    return (
+        True,
+        f"Captured cookies; discovered {len(discovered_accounts)} bank-side accounts (added {new_accounts}).",
+    )
 
 
 async def download_login(
@@ -151,7 +162,12 @@ async def download_login(
     """
     login = store.get_login(login_id)
     if login is None:
-        return DownloadOutcome(attempted=0, succeeded=0, files_downloaded=0, failure_reason="Login not found")
+        return DownloadOutcome(
+            attempted=0,
+            succeeded=0,
+            files_downloaded=0,
+            failure_reason="Login not found",
+        )
     if headed and not _x11_available():
         return DownloadOutcome(
             attempted=0,
@@ -162,7 +178,9 @@ async def download_login(
 
     storage_state_raw = login.storage_state
     if not storage_state_raw:
-        store.set_login_status(login_id, "needs_reauth", last_failure_reason="No stored cookies.")
+        store.set_login_status(
+            login_id, "needs_reauth", last_failure_reason="No stored cookies."
+        )
         return DownloadOutcome(
             attempted=0,
             succeeded=0,
@@ -174,7 +192,9 @@ async def download_login(
     try:
         adapter = get_adapter(login.institution_slug)
     except KeyError as exc:
-        return DownloadOutcome(attempted=0, succeeded=0, files_downloaded=0, failure_reason=str(exc))
+        return DownloadOutcome(
+            attempted=0, succeeded=0, files_downloaded=0, failure_reason=str(exc)
+        )
 
     accounts = [
         a
@@ -184,7 +204,12 @@ async def download_login(
         and (a.flow == "investment_balance" or a.storage_uri)
     ]
     if not accounts:
-        return DownloadOutcome(attempted=0, succeeded=0, files_downloaded=0, failure_reason="No enabled accounts.")
+        return DownloadOutcome(
+            attempted=0,
+            succeeded=0,
+            files_downloaded=0,
+            failure_reason="No enabled accounts.",
+        )
 
     storage_state = json.loads(storage_state_raw)
     run = store.start_run(login_id, kind)
@@ -223,11 +248,17 @@ async def download_login(
                         logger.warning(failure_reason)
                         break
                     except NoDownloadError as exc:
-                        logger.warning("balance_fetch_failed on account {}: {}", account.id, exc)
+                        logger.warning(
+                            "balance_fetch_failed on account {}: {}", account.id, exc
+                        )
                         continue
                     except Exception as exc:
-                        logger.exception("Balance fetch crashed for account {}", account.id)
-                        failure_reason = failure_reason or f"Account {account.id}: {exc}"
+                        logger.exception(
+                            "Balance fetch crashed for account {}", account.id
+                        )
+                        failure_reason = (
+                            failure_reason or f"Account {account.id}: {exc}"
+                        )
                         continue
 
                     if not account.richtato_account_id:
@@ -251,8 +282,12 @@ async def download_login(
                             balance,
                         )
                     except Exception as exc:
-                        logger.exception("Failed to push balance for account {}", account.id)
-                        failure_reason = failure_reason or f"Account {account.id}: {exc}"
+                        logger.exception(
+                            "Failed to push balance for account {}", account.id
+                        )
+                        failure_reason = (
+                            failure_reason or f"Account {account.id}: {exc}"
+                        )
                         continue
 
                     succeeded += 1
@@ -280,7 +315,9 @@ async def download_login(
                         continue
                     except Exception as exc:
                         logger.exception("Download crashed for account {}", account.id)
-                        failure_reason = failure_reason or f"Account {account.id}: {exc}"
+                        failure_reason = (
+                            failure_reason or f"Account {account.id}: {exc}"
+                        )
                         continue
 
                     try:
@@ -300,8 +337,13 @@ async def download_login(
                             written.sha256[:12],
                         )
                     except Exception as exc:
-                        logger.exception("Failed to persist downloaded file for account {}", account.id)
-                        failure_reason = failure_reason or f"Account {account.id}: {exc}"
+                        logger.exception(
+                            "Failed to persist downloaded file for account {}",
+                            account.id,
+                        )
+                        failure_reason = (
+                            failure_reason or f"Account {account.id}: {exc}"
+                        )
                         continue
 
                     files_downloaded += 1
@@ -316,9 +358,15 @@ async def download_login(
         files_downloaded=files_downloaded,
         error=failure_reason,
     )
-    store.record_login_outcome(login_id, succeeded=(failure_reason == "" and not needs_reauth), failure_reason=failure_reason)
+    store.record_login_outcome(
+        login_id,
+        succeeded=(failure_reason == "" and not needs_reauth),
+        failure_reason=failure_reason,
+    )
     if needs_reauth:
-        store.set_login_status(login_id, "needs_reauth", last_failure_reason=failure_reason)
+        store.set_login_status(
+            login_id, "needs_reauth", last_failure_reason=failure_reason
+        )
 
     return DownloadOutcome(
         attempted=len(accounts),
