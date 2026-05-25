@@ -344,138 +344,145 @@ export function AccountDetailPanel({
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Account header */}
-      <div className="flex-shrink-0 px-6 pt-5 pb-4 border-b border-border/60">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+      <div className="flex-shrink-0 px-6 py-3 border-b border-border/60">
+        <div className="flex items-start gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
             {entityLogo ? (
               <img
                 src={entityLogo}
                 alt={account.institution_name || ''}
-                className="w-6 h-6 object-contain"
+                className="w-5 h-5 object-contain"
               />
             ) : (
-              <Landmark className="h-5 w-5 text-muted-foreground" />
+              <Landmark className="h-4 w-4 text-muted-foreground" />
             )}
           </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold text-foreground leading-tight flex items-center gap-2 flex-wrap">
-              {account.name}
-              {isShared && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                  <Users className="h-3 w-3" />
-                  Shared
-                </span>
-              )}
-            </h2>
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              <span className="text-sm text-muted-foreground">
+          <div className="flex-1 min-w-0 space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-base font-semibold text-foreground leading-tight flex items-center gap-1.5 min-w-0">
+                <span className="truncate">{account.name}</span>
+                {isShared && (
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-primary/10 px-1.5 py-px text-[10px] font-medium text-primary flex-shrink-0">
+                    <Users className="h-2.5 w-2.5" />
+                    Shared
+                  </span>
+                )}
+              </h2>
+              <div className="flex items-center gap-0.5 flex-shrink-0">
+                {isInHousehold && (
+                  <Button
+                    size="sm"
+                    variant={isShared ? 'secondary' : 'ghost'}
+                    onClick={async () => {
+                      const newValue = !isShared;
+                      setIsShared(newValue);
+                      try {
+                        await transactionsApiService.updateAccount(account.id, {
+                          shared_with_household: newValue,
+                        });
+                        onAccountUpdated();
+                        toast.success(
+                          newValue
+                            ? 'Account shared with household'
+                            : 'Account is now personal'
+                        );
+                      } catch (e) {
+                        setIsShared(!newValue);
+                        toast.error('Failed to update sharing', {
+                          description:
+                            e instanceof Error ? e.message : undefined,
+                        });
+                      }
+                    }}
+                    className="h-7 px-2 text-xs"
+                  >
+                    <Users className="h-3 w-3 mr-1" />
+                    {isShared ? 'Shared' : 'Share'}
+                  </Button>
+                )}
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setShowEdit(true)}
+                  className="h-7 w-7"
+                  title="Edit account"
+                >
+                  <Edit2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted-foreground flex-wrap">
+              <span className="truncate">
                 {account.institution_name || account.entity_display || 'Manual'}
               </span>
               {account.account_number_last4 && (
-                <span className="text-sm text-muted-foreground/60 font-mono">
+                <span className="text-muted-foreground/60 font-mono flex-shrink-0">
                   ····{account.account_number_last4}
                 </span>
               )}
-              <Badge variant="secondary" className="text-xs h-5">
+              <Badge
+                variant="secondary"
+                className="text-[10px] h-4 px-1.5 flex-shrink-0"
+              >
                 {account.account_type_display ||
                   account.type_display ||
                   'Account'}
               </Badge>
             </div>
-          </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {isInHousehold && (
-              <Button
-                size="sm"
-                variant={isShared ? 'secondary' : 'ghost'}
-                onClick={async () => {
-                  const newValue = !isShared;
-                  setIsShared(newValue);
-                  try {
-                    await transactionsApiService.updateAccount(account.id, {
-                      shared_with_household: newValue,
-                    });
-                    onAccountUpdated();
-                    toast.success(
-                      newValue
-                        ? 'Account shared with household'
-                        : 'Account is now personal'
-                    );
-                  } catch (e) {
-                    setIsShared(!newValue);
-                    toast.error('Failed to update sharing', {
-                      description: e instanceof Error ? e.message : undefined,
-                    });
-                  }
-                }}
-                className="h-8 text-xs"
-              >
-                <Users className="h-3.5 w-3.5 mr-1.5" />
-                {isShared ? 'Shared' : 'Share'}
-              </Button>
-            )}
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setShowEdit(true)}
-              className="h-8 w-8"
-              title="Edit account"
-            >
-              <Edit2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Hero balance */}
-        <div className="mt-4">
-          <p className="text-xs text-muted-foreground mb-1">Current Balance</p>
-          <div className="flex items-end gap-3">
-            <p
-              className={cn(
-                'text-3xl font-bold tabular-nums',
-                isLiability ? 'text-red-500' : 'text-foreground'
-              )}
-            >
-              {isLiability && account.balance < 0 ? '-' : ''}
-              {formatCurrency(Math.abs(account.balance), preferences.currency)}
-            </p>
-            {balanceChange !== null && (
-              <div
-                className={cn(
-                  'flex items-center gap-1 text-sm font-medium pb-1',
-                  balanceChange >= 0 ? 'text-green-600' : 'text-red-500'
-                )}
-              >
-                {balanceChange >= 0 ? (
-                  <TrendingUp className="h-4 w-4" />
-                ) : (
-                  <TrendingDown className="h-4 w-4" />
-                )}
-                {balanceChange >= 0 ? '+' : '-'}
-                {formatCurrency(
-                  Math.abs(balanceChange),
-                  preferences.currency,
-                  0
+            <div className="mt-2.5 pt-2.5 border-t border-border/40">
+              <p className="text-xs text-muted-foreground mb-0.5">
+                Current Balance
+              </p>
+              <div className="flex items-end gap-2.5">
+                <p
+                  className={cn(
+                    'text-3xl font-bold tabular-nums leading-none',
+                    isLiability ? 'text-red-500' : 'text-foreground'
+                  )}
+                >
+                  {isLiability && account.balance < 0 ? '-' : ''}
+                  {formatCurrency(
+                    Math.abs(account.balance),
+                    preferences.currency
+                  )}
+                </p>
+                {balanceChange !== null && (
+                  <div
+                    className={cn(
+                      'flex items-center gap-1 text-sm font-medium pb-0.5',
+                      balanceChange >= 0 ? 'text-green-600' : 'text-red-500'
+                    )}
+                  >
+                    {balanceChange >= 0 ? (
+                      <TrendingUp className="h-4 w-4" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4" />
+                    )}
+                    {balanceChange >= 0 ? '+' : '-'}
+                    {formatCurrency(
+                      Math.abs(balanceChange),
+                      preferences.currency,
+                      0
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-          {account.lastUpdated && (
-            <p className="text-xs text-muted-foreground/60 mt-1">
-              Last updated{' '}
-              {new Date(account.lastUpdated + 'T00:00:00').toLocaleDateString(
-                undefined,
-                {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                }
+              {account.lastUpdated && (
+                <p className="text-xs text-muted-foreground/60 mt-1">
+                  Last updated{' '}
+                  {new Date(
+                    account.lastUpdated + 'T00:00:00'
+                  ).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </p>
               )}
-            </p>
-          )}
+            </div>
+          </div>
         </div>
       </div>
-
       <Tabs
         value={activeTab}
         onValueChange={value => setActiveTab(value as AccountDetailTab)}
