@@ -43,6 +43,15 @@ def robinhood_institution(db):
     return institution
 
 
+@pytest.fixture
+def marcus_institution(db):
+    institution, _ = FinancialInstitution.objects.get_or_create(
+        slug="marcus",
+        defaults={"name": "Marcus by Goldman Sachs"},
+    )
+    return institution
+
+
 def _account(
     user,
     institution,
@@ -132,6 +141,33 @@ class TestBankAgentConfigService:
         assert config["logins"] == [
             {
                 "institution": "robinhood",
+                "nickname": "personal",
+                "cadence": "daily",
+                "hour": 6,
+                "accounts": [
+                    {
+                        "name": account.name,
+                        "flow": "investment_balance",
+                        "storage_uri": account.resolved_storage_uri(),
+                        "richtato_account_id": account.id,
+                    }
+                ],
+            }
+        ]
+
+    def test_marcus_savings_uses_investment_balance_flow(self, user, marcus_institution):
+        account = _account(
+            user,
+            marcus_institution,
+            name="Marcus Savings",
+            account_type="savings",
+        )
+
+        config = BankAgentConfigService().build_for_user(user)
+
+        assert config["logins"] == [
+            {
+                "institution": "marcus",
                 "nickname": "personal",
                 "cadence": "daily",
                 "hour": 6,

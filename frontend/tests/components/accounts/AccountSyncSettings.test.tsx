@@ -35,7 +35,7 @@ describe('AccountSyncSettings', () => {
       />
     );
 
-    expect(screen.getAllByText('Automatic import')).toHaveLength(2);
+    expect(screen.getByText('Automatic import')).toBeInTheDocument();
     expect(screen.getByText('Statement download')).toBeInTheDocument();
     expect(
       screen.getByText(/needs a Google Drive statement folder/i)

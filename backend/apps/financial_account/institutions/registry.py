@@ -198,7 +198,13 @@ INSTITUTIONS: dict[str, InstitutionDefinition] = {
         ),
         _inst("citibank", "Citibank", ("credit_card",), parser_key="citi"),
         _inst("american_express", "American Express", ("checking", "credit_card"), parser_key="amex"),
-        _inst("marcus", "Marcus by Goldman Sachs", ("savings",), parser_key="marcus"),
+        _inst(
+            "marcus",
+            "Marcus by Goldman Sachs",
+            ("savings",),
+            parser_key="marcus",
+            auto_sync_key="marcus",
+        ),
         _inst(
             "robinhood",
             "Robinhood",
@@ -315,6 +321,8 @@ def agent_flow_for_account(account_institution_slug: str | None, account_type: s
     if account_type == "credit_card":
         return "credit_card"
     if account_institution_slug in {"guideline", "robinhood"} and account_type == "investment":
+        return "investment_balance"
+    if account_institution_slug == "marcus" and account_type == "savings":
         return "investment_balance"
     return "deposit"
 

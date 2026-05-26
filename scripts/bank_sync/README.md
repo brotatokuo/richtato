@@ -127,6 +127,21 @@ python -m scripts.bank_sync.agent login signin <login_id>
    first use (downloads Chromium once) and writes logs to
    `local_data/bank-agent.log`.
 
+## Chase statement downloads
+
+Chase uses the signed-in **Direct Download** page (hash route
+`downloadAccountTransactions`). For each account, paste that page URL into
+Richtato as the activity URL — for example after opening **Download account
+activity** for the account while signed in.
+
+The adapter defaults to **Spreadsheet (CSV)** and **All transactions** (roughly
+the last 24 months). Re-downloading the full window on each scheduled run is
+intentional; Richtato deduplicates rows on import.
+
+Discovery during `richtato bank login signin chase` prefers Direct Download
+links when present; legacy `?accountId=` activity URLs still work with a
+fallback flow.
+
 ## Adding a new bank
 
 Add a `BaseInstitutionAdapter` subclass under

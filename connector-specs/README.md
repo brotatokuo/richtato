@@ -55,7 +55,7 @@ amount sign convention) — no per-folder README required.
 | Chase | Savings | Partial | Done |
 | Chase | Credit | Partial | Done |
 | Citi | Credit | Done | Needed |
-| Marcus | Savings | Partial | Needed |
+| Marcus | Savings | Partial | Done (aggregated balance scrape) |
 | Robinhood | Checking/Savings | Done (PDF + CSV, balance reconciliation) | Needed |
 | Robinhood | Credit | Done (PDF) | Needed |
 | Robinhood | Investment | Done (CSV) | Done (balance scrape) |
@@ -70,7 +70,8 @@ Parsers can ship before Playwright automation (manual upload / Drive drop works 
 
 | Account types | Agent `flow` |
 | --- | --- |
-| Checking, Savings | `deposit` |
+| Checking, Savings (except Marcus) | `deposit` |
 | Credit | `credit_card` |
+| Marcus savings | `investment_balance` (sums savings + CDs on dashboard) |
 | Guideline investment | `investment_balance` |
 | Robinhood investment | `investment_balance` |

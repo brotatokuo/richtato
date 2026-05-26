@@ -16,7 +16,7 @@ import {
   type AgentFlow,
   type SyncMode,
 } from '@/lib/api/bankSync';
-import { AlertTriangle, Bot, FileUp, Keyboard } from 'lucide-react';
+import { AlertTriangle, Bot } from 'lucide-react';
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import type { InstitutionFieldChoice } from './AccountFormFields';
@@ -55,17 +55,6 @@ function getAgentFlow(
     item => item.account_type === accountType
   )?.flow;
   return flow ?? null;
-}
-
-function syncModeIcon(mode: SyncMode) {
-  switch (mode) {
-    case 'auto':
-      return <Bot className="mt-0.5 h-4 w-4 text-primary" />;
-    case 'upload':
-      return <FileUp className="mt-0.5 h-4 w-4 text-muted-foreground" />;
-    default:
-      return <Keyboard className="mt-0.5 h-4 w-4 text-muted-foreground" />;
-  }
 }
 
 export function AccountSyncSettings({
@@ -111,18 +100,6 @@ export function AccountSyncSettings({
             ))}
           </SelectContent>
         </Select>
-      </div>
-
-      <div className="space-y-2">
-        {SYNC_MODE_OPTIONS.map(option => (
-          <div key={option.value} className="flex gap-2 text-xs">
-            {syncModeIcon(option.value)}
-            <div>
-              <p className="font-medium text-foreground">{option.label}</p>
-              <p className="text-muted-foreground">{option.description}</p>
-            </div>
-          </div>
-        ))}
       </div>
 
       {!autoSupported && (

@@ -119,10 +119,13 @@ function activityUrlHelpText(account: BankSyncSetupAccount): string {
     return 'Paste the Bank of America activity URL for this account. It should include adx=.';
   }
   if (account.institution_slug === 'chase') {
-    return 'Paste the Chase account activity or transactions page URL for this account.';
+    return 'Paste the Chase Direct Download URL for this account (open Download account activity while signed in, then copy the browser URL).';
   }
   if (account.institution_slug === 'guideline') {
     return 'Paste the Guideline 401(k) account page URL used for the balance scrape.';
+  }
+  if (account.institution_slug === 'marcus') {
+    return 'Paste the signed-in Marcus accounts dashboard URL (the page listing savings and CDs).';
   }
   return 'Paste the signed-in bank account activity URL used by the host bank-agent.';
 }
