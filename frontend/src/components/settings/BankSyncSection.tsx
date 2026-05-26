@@ -49,6 +49,14 @@ import {
   Terminal,
   X,
 } from 'lucide-react';
+import {
+  formatDistanceToNow,
+  format,
+  isToday,
+  isYesterday,
+  isTomorrow,
+  parseISO,
+} from 'date-fns';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -61,6 +69,23 @@ const HOST_COMMANDS = [
   'BANK_AGENT_LOCAL_TOKEN=<token> richtato bank api',
   'richtato bank daemon',
 ] as const;
+
+function fmtTimestamp(iso: string | null, opts?: { future?: boolean }): string {
+  if (!iso) return opts?.future ? 'not scheduled' : 'never';
+  try {
+    const d = parseISO(iso);
+    if (opts?.future) {
+      if (isToday(d)) return `today ${format(d, 'h:mm a')}`;
+      if (isTomorrow(d)) return `tomorrow ${format(d, 'h:mm a')}`;
+      return format(d, 'MMM d, h:mm a');
+    }
+    if (isToday(d)) return formatDistanceToNow(d, { addSuffix: true });
+    if (isYesterday(d)) return `yesterday ${format(d, 'h:mm a')}`;
+    return format(d, 'MMM d, h:mm a');
+  } catch {
+    return iso;
+  }
+}
 
 function syncModeBadgeVariant(
   mode: SyncMode
@@ -1014,11 +1039,13 @@ export function BankSyncSection() {
                             </div>
                             <p className="mt-1 text-xs text-muted-foreground">
                               {login.accounts.length} account
-                              {login.accounts.length === 1 ? '' : 's'} · last
-                              success {login.last_success_at || 'never'} · next{' '}
-                              {login.next_run_at || 'not scheduled'}
+                              {login.accounts.length === 1 ? '' : 's'} · synced{' '}
+                              {fmtTimestamp(login.last_success_at)} · next{' '}
+                              {fmtTimestamp(login.next_run_at, {
+                                future: true,
+                              })}
                               {login.cookies_captured_at
-                                ? ` · cookies ${login.cookies_captured_at}`
+                                ? ` · signed in ${fmtTimestamp(login.cookies_captured_at)}`
                                 : ''}
                             </p>
                             {login.last_failure_reason && (
