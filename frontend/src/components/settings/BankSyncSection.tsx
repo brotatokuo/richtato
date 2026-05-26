@@ -6,22 +6,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import {
   AGENT_CADENCE_OPTIONS,
-  AGENT_HOUR_OPTIONS,
   agentFlowLabel,
   bankSyncApi,
   SYNC_MODE_OPTIONS,
-  type AgentCadence,
   type BankSyncSetupAccount,
   type SyncMode,
 } from '@/lib/api/bankSync';
@@ -172,26 +162,12 @@ function localLoginSignInLabel(login: LocalAgentLogin): string {
 
 interface AccountRowProps {
   account: BankSyncSetupAccount;
-  isSaving: boolean;
-  onSyncModeChange: (account: BankSyncSetupAccount, mode: SyncMode) => void;
-  onScheduleChange: (
-    account: BankSyncSetupAccount,
-    input: { agent_cadence?: AgentCadence; agent_sync_hour?: number }
-  ) => void;
-  onActivityUrlBlur: (account: BankSyncSetupAccount, url: string) => void;
 }
 
-function AccountRow({
-  account,
-  isSaving,
-  onSyncModeChange,
-  onScheduleChange,
-  onActivityUrlBlur,
-}: AccountRowProps) {
+function AccountRow({ account }: AccountRowProps) {
   const isAuto = account.sync_mode === 'auto';
   const needsAttention = accountNeedsAttention(account);
   const needsActivityUrl = accountNeedsActivityUrl(account);
-  const autoDisabled = !account.agent_sync_supported;
 
   // Auto-expand rows that need attention so the user sees what's missing.
   const [expanded, setExpanded] = useState(needsAttention && isAuto);
@@ -237,38 +213,9 @@ function AccountRow({
         </div>
 
         <div className="flex items-center gap-2">
-          <Select
-            value={account.sync_mode}
-            disabled={isSaving}
-            onValueChange={value =>
-              onSyncModeChange(account, value as SyncMode)
-            }
-          >
-            <SelectTrigger
-              className="w-36"
-              aria-label={`Sync mode for ${account.name}`}
-            >
-              {isSaving ? (
-                <span className="flex items-center gap-2">
-                  <LoadingSpinner className="h-4 w-4" />
-                  Saving...
-                </span>
-              ) : (
-                <SelectValue />
-              )}
-            </SelectTrigger>
-            <SelectContent>
-              {SYNC_MODE_OPTIONS.map(option => (
-                <SelectItem
-                  key={option.value}
-                  value={option.value}
-                  disabled={option.value === 'auto' && autoDisabled}
-                >
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/accounts">Edit setup</Link>
+          </Button>
 
           {/* Only show expand toggle for auto accounts */}
           {isAuto && (
@@ -291,54 +238,15 @@ function AccountRow({
       {/* Expandable details — auto accounts only */}
       {isAuto && expanded && (
         <div className="border-t border-border px-3 pb-3 pt-3 space-y-4">
-          {/* Schedule */}
           <div className="space-y-1.5">
             <p className="text-xs font-medium text-muted-foreground">
               Schedule
             </p>
-            <div className="grid grid-cols-2 gap-2 sm:w-72">
-              <Select
-                value={account.agent_cadence}
-                disabled={isSaving}
-                onValueChange={value =>
-                  onScheduleChange(account, {
-                    agent_cadence: value as AgentCadence,
-                  })
-                }
-              >
-                <SelectTrigger aria-label={`Sync cadence for ${account.name}`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {AGENT_CADENCE_OPTIONS.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={String(account.agent_sync_hour)}
-                disabled={isSaving}
-                onValueChange={value =>
-                  onScheduleChange(account, {
-                    agent_sync_hour: Number(value),
-                  })
-                }
-              >
-                <SelectTrigger aria-label={`Sync hour for ${account.name}`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {AGENT_HOUR_OPTIONS.map(option => (
-                    <SelectItem key={option.value} value={String(option.value)}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <p className="text-sm text-foreground">{scheduleLabel(account)}</p>
+            <p className="text-xs text-muted-foreground">
+              Change cadence from the account edit flow, then apply setup here
+              so the local agent picks it up.
+            </p>
           </div>
 
           {/* Agent flow */}
@@ -358,26 +266,14 @@ function AccountRow({
             </div>
           )}
 
-          {/* Activity URL */}
           {account.agent_sync_supported && (
             <div className="space-y-1.5">
-              <label
-                htmlFor={`activity-url-${account.id}`}
-                className="text-xs font-medium text-muted-foreground"
-              >
+              <p className="text-xs font-medium text-muted-foreground">
                 Activity URL
-              </label>
-              <Input
-                id={`activity-url-${account.id}`}
-                type="url"
-                defaultValue={account.activity_url}
-                disabled={isSaving}
-                placeholder="https://..."
-                aria-label={`Activity URL for ${account.name}`}
-                onBlur={event =>
-                  onActivityUrlBlur(account, event.currentTarget.value)
-                }
-              />
+              </p>
+              <p className="text-sm text-foreground">
+                {account.has_activity_url ? 'Configured' : 'Missing'}
+              </p>
               <p className="text-xs text-muted-foreground">
                 {activityUrlHelpText(account)}
               </p>
@@ -389,7 +285,7 @@ function AccountRow({
             <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               <p>
-                Auto sync needs a Google Drive folder. Activate Drive in{' '}
+                Automatic import needs a Google Drive folder. Activate Drive in{' '}
                 <Link
                   to="/setup?tab=statements"
                   className="font-medium underline underline-offset-2"
@@ -405,8 +301,8 @@ function AccountRow({
             <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               <p>
-                Auto sync needs an activity URL before the exported setup file
-                can make this account ready for downloads.
+                Automatic import needs an activity URL. Add it from the account
+                edit flow before applying setup.
               </p>
             </div>
           )}
@@ -428,7 +324,6 @@ export function BankSyncSection() {
   const [duplicateInstitutionLogins, setDuplicateInstitutionLogins] = useState<
     string[]
   >([]);
-  const [savingAccountId, setSavingAccountId] = useState<number | null>(null);
   const [localBaseUrl, setLocalBaseUrl] = useState(
     () => getStoredLocalAgentConnection().baseUrl
   );
@@ -528,63 +423,6 @@ export function BankSyncSection() {
   );
   const attentionCount = missingStorageCount + missingActivityUrlCount;
 
-  const handleSyncModeChange = async (
-    account: BankSyncSetupAccount,
-    nextMode: SyncMode
-  ) => {
-    if (nextMode === account.sync_mode) return;
-    if (nextMode === 'auto' && !account.agent_sync_supported) {
-      toast.error('Auto sync is not available for this account', {
-        description:
-          'Pick a supported bank and account type, or use upload/manual.',
-      });
-      return;
-    }
-    setSavingAccountId(account.id);
-    try {
-      await bankSyncApi.updateSyncMode(account.id, nextMode);
-      toast.success(`${account.name} sync mode updated`);
-      await loadSetup({ silent: true });
-    } catch (error) {
-      toast.error('Unable to update sync mode', {
-        description:
-          error instanceof Error ? error.message : 'Please try again.',
-      });
-    } finally {
-      setSavingAccountId(null);
-    }
-  };
-
-  const handleScheduleChange = async (
-    account: BankSyncSetupAccount,
-    input: { agent_cadence?: AgentCadence; agent_sync_hour?: number }
-  ) => {
-    const nextCadence = input.agent_cadence ?? account.agent_cadence;
-    const nextHour = input.agent_sync_hour ?? account.agent_sync_hour;
-    if (
-      nextCadence === account.agent_cadence &&
-      nextHour === account.agent_sync_hour
-    ) {
-      return;
-    }
-    setSavingAccountId(account.id);
-    try {
-      await bankSyncApi.updateAccountSchedule(account.id, {
-        agent_cadence: nextCadence,
-        agent_sync_hour: nextHour,
-      });
-      toast.success(`${account.name} sync schedule updated`);
-      await loadSetup({ silent: true });
-    } catch (error) {
-      toast.error('Unable to update sync schedule', {
-        description:
-          error instanceof Error ? error.message : 'Please try again.',
-      });
-    } finally {
-      setSavingAccountId(null);
-    }
-  };
-
   const handleDownloadSetup = async () => {
     setDownloadingSetup(true);
     try {
@@ -670,27 +508,6 @@ export function BankSyncSection() {
     }
   };
 
-  const handleActivityUrlBlur = async (
-    account: BankSyncSetupAccount,
-    nextUrl: string
-  ) => {
-    const trimmedUrl = nextUrl.trim();
-    if (trimmedUrl === account.activity_url) return;
-    setSavingAccountId(account.id);
-    try {
-      await bankSyncApi.updateActivityUrl(account.id, trimmedUrl);
-      toast.success(`${account.name} activity URL updated`);
-      await loadSetup({ silent: true });
-    } catch (error) {
-      toast.error('Unable to update activity URL', {
-        description:
-          error instanceof Error ? error.message : 'Please try again.',
-      });
-    } finally {
-      setSavingAccountId(null);
-    }
-  };
-
   const handleDisconnect = () => {
     setLocalStatus(null);
     setLocalAgentError(null);
@@ -765,7 +582,7 @@ export function BankSyncSection() {
                       <span className="text-xs">
                         · {missingActivityUrlCount} need
                         {missingActivityUrlCount === 1 ? 's' : ''} activity URL
-                        — expand to add
+                        — edit from Accounts
                       </span>
                     )}
                   </>
@@ -774,7 +591,8 @@ export function BankSyncSection() {
                     <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
                     <span className="text-foreground">
                       {agentAccountCount} account
-                      {agentAccountCount === 1 ? '' : 's'} syncing automatically
+                      {agentAccountCount === 1 ? '' : 's'} set to automatic
+                      import
                     </span>
                     <span className="text-xs">
                       · {agentLoginCount} bank login
@@ -782,7 +600,7 @@ export function BankSyncSection() {
                     </span>
                   </>
                 ) : (
-                  <span>No accounts set to auto sync yet.</span>
+                  <span>No accounts set to automatic import yet.</span>
                 )}
                 {duplicateInstitutionLogins.length > 0 && (
                   <span className="text-xs text-amber-700 dark:text-amber-300">
@@ -809,14 +627,7 @@ export function BankSyncSection() {
             ) : (
               <div className="space-y-2">
                 {accounts.map(account => (
-                  <AccountRow
-                    key={account.id}
-                    account={account}
-                    isSaving={savingAccountId === account.id}
-                    onSyncModeChange={handleSyncModeChange}
-                    onScheduleChange={handleScheduleChange}
-                    onActivityUrlBlur={handleActivityUrlBlur}
-                  />
+                  <AccountRow key={account.id} account={account} />
                 ))}
               </div>
             )}
@@ -828,6 +639,16 @@ export function BankSyncSection() {
 
         {/* ── Agent ─────────────────────────────────────────────── */}
         <div className="space-y-4">
+          <div>
+            <h3 className="text-sm font-medium text-foreground">
+              Host Agent Setup
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Account import methods and schedules are managed from Accounts.
+              Apply the generated setup here whenever those settings change.
+            </p>
+          </div>
+
           {/* Actions */}
           <div className="flex flex-wrap gap-2">
             <Button
@@ -857,7 +678,8 @@ export function BankSyncSection() {
 
           {agentAccountCount === 0 && accounts.length > 0 && !loading && (
             <p className="text-sm text-muted-foreground">
-              Set at least one account to Auto sync to enable setup actions.
+              Set at least one account to automatic import to enable setup
+              actions.
             </p>
           )}
 
@@ -870,6 +692,9 @@ export function BankSyncSection() {
           >
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-sm">
+                <span className="font-medium text-foreground">
+                  Local Agent Connection
+                </span>
                 {checkingLocalAgent ? (
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 ) : isConnected ? (

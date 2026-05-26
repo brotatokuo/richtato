@@ -266,7 +266,7 @@ export function StorageLocationPanel({
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground/70">
               {storageReady
-                ? 'Upload here or let the bank agent sync statements into this Google Drive folder.'
+                ? 'Automatic imports and manual fallback uploads both use this statement folder.'
                 : 'Statement storage requires Google Drive. Connect and activate it in Setup → Statements.'}
             </p>
             {driveUrl && (
@@ -298,7 +298,7 @@ export function StorageLocationPanel({
               disabled={!storageReady}
             >
               <Upload className="mr-1 h-3 w-3" />
-              Upload
+              Upload statement
             </Button>
             <Button
               size="sm"

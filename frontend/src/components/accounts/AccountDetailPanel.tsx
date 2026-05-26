@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { transactionsApiService } from '@/lib/api/transactions';
+import type { AgentCadence, SyncMode } from '@/lib/api/bankSync';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { getEntityLogo } from '@/lib/imageMapping';
 import { cn } from '@/lib/utils';
@@ -236,22 +237,26 @@ export function AccountDetailPanel({
     name: string;
     type: string;
     entity: string;
-    image_key?: string | null;
+    shared_with_household?: boolean;
     opening_balance?: number | null;
     opening_balance_date?: string | null;
+    sync_mode?: SyncMode;
+    agent_cadence?: AgentCadence;
+    agent_sync_hour?: number;
+    agent_activity_url?: string;
   }) => {
     if (!account) return;
     setEditLoading(true);
     try {
-      console.info('[AccountEdit] submitting account update', {
-        accountId: account.id,
-        form,
-      });
       const updated = await transactionsApiService.updateAccount(account.id, {
         name: form.name,
         type: form.type,
         entity: form.entity,
-        image_key: form.image_key,
+        shared_with_household: form.shared_with_household,
+        sync_mode: form.sync_mode,
+        agent_cadence: form.agent_cadence,
+        agent_sync_hour: form.agent_sync_hour,
+        agent_activity_url: form.agent_activity_url,
         ...(form.opening_balance !== undefined
           ? {
               opening_balance: form.opening_balance,
@@ -266,10 +271,6 @@ export function AccountDetailPanel({
         (updated.opening_balance === undefined ||
           updated.opening_balance === null)
       ) {
-        console.error(
-          '[AccountEdit] backend response missing opening_balance after PATCH',
-          updated
-        );
         toast.error('Opening balance did not save', {
           description:
             'The server accepted the update but did not persist opening balance. Restart the backend container and try again.',
@@ -285,10 +286,6 @@ export function AccountDetailPanel({
             : Number(String(updated.balance || '0').replace(/[^0-9.-]+/g, '')),
         lastUpdated: String(updated.date || account.lastUpdated || ''),
       };
-      console.info(
-        '[AccountEdit] account update succeeded',
-        updatedWithBalance
-      );
       toast.success('Account updated', {
         description:
           form.opening_balance !== undefined
@@ -298,7 +295,6 @@ export function AccountDetailPanel({
       onAccountUpdated(updatedWithBalance);
       setShowEdit(false);
     } catch (e) {
-      console.error('[AccountEdit] account update failed', e);
       toast.error('Failed to update', {
         description: e instanceof Error ? e.message : undefined,
       });

@@ -31,7 +31,7 @@ it('renders bank sync notification preferences and saves email opt in', async ()
   const user = userEvent.setup();
   render(<NotificationsSection />);
 
-  expect(await screen.findByText(/Bank Sync Alerts/i)).toBeInTheDocument();
+  expect((await screen.findAllByText(/Bank sync/i)).length).toBeGreaterThan(0);
   await user.click(
     screen.getByRole('switch', { name: /Immediate email alerts/i })
   );

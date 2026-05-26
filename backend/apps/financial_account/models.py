@@ -109,14 +109,6 @@ class FinancialAccount(models.Model):
         help_text="Whether this account is visible in household view.",
     )
 
-    # Card customization
-    image_key = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        help_text="Key for custom card image. When null, auto-detect from card name.",
-    )
-
     # Google Drive folder for this account's statement files.
     # Set during Drive activation or when a new account is created while Drive
     # is active. Format: ``gdrive://<folder_id>``.

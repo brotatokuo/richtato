@@ -35,8 +35,8 @@ import os
 import signal
 import sys
 import time
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 from urllib.parse import urljoin
 
 from loguru import logger
@@ -45,12 +45,14 @@ from scripts.bank_sync import agent_store as store_mod
 from scripts.bank_sync.agent_store import (
     AgentStore,
     Login,
-    dumps as agent_dumps,
     export_to_dict,
     import_from_dict,
 )
-from scripts.bank_sync.encryption import MissingAgentKey, generate_key
+from scripts.bank_sync.agent_store import (
+    dumps as agent_dumps,
+)
 from scripts.bank_sync.cli_hints import signin_command_hint
+from scripts.bank_sync.encryption import MissingAgentKey, generate_key
 from scripts.bank_sync.errors import FailureKind, parse_failure_kind, strip_failure_prefix
 
 
@@ -84,19 +86,11 @@ def _failure_action_message(
     if kind is None:
         return None
     messages = {
-        FailureKind.NEEDS_REAUTH: (
-            f"Login needs re-auth; run {signin_command_hint(login_id)} to refresh cookies."
-        ),
-        FailureKind.DOM_BROKEN: (
-            "Bank page layout changed; automation needs an adapter update."
-        ),
+        FailureKind.NEEDS_REAUTH: (f"Login needs re-auth; run {signin_command_hint(login_id)} to refresh cookies."),
+        FailureKind.DOM_BROKEN: ("Bank page layout changed; automation needs an adapter update."),
         FailureKind.NO_DOWNLOAD: "No statement or balance was produced (session looks OK).",
-        FailureKind.IMPORT_REJECTED: (
-            "Download succeeded but Richtato rejected the upload."
-        ),
-        FailureKind.LOGIN_CANCELLED: (
-            f"Sign-in was cancelled; run {signin_command_hint(login_id)} again."
-        ),
+        FailureKind.IMPORT_REJECTED: ("Download succeeded but Richtato rejected the upload."),
+        FailureKind.LOGIN_CANCELLED: (f"Sign-in was cancelled; run {signin_command_hint(login_id)} again."),
         FailureKind.CONFIG: "Fix the bank-agent configuration and retry.",
         FailureKind.UNKNOWN: "Unexpected error; check logs for details.",
     }
@@ -180,11 +174,7 @@ def _print_login_status(login: Login, accounts) -> None:
         enabled = "on" if account.enabled else "off"
         name = account.detected_account_name or "(unset)"
         print(f"    #{account.id}  {name}")
-        print(
-            f"       Flow: {account.flow} | "
-            f"Enabled: {enabled} | "
-            f"Last success: {account.last_success_at or '-'}"
-        )
+        print(f"       Flow: {account.flow} | Enabled: {enabled} | Last success: {account.last_success_at or '-'}")
         if account.richtato_account_id is not None:
             print(f"       Richtato account ID: {account.richtato_account_id}")
         print(f"       Storage URI: {account.storage_uri or '(none)'}")
@@ -205,9 +195,7 @@ def cmd_login_add(args: argparse.Namespace) -> int:
     except Exception as exc:
         print(f"Error adding login: {exc}", file=sys.stderr)
         return 2
-    print(
-        f"Created login {login.id} ({login.institution_slug}/{login.nickname or 'default'})."
-    )
+    print(f"Created login {login.id} ({login.institution_slug}/{login.nickname or 'default'}).")
     print("Next step: bank-agent login signin", login.id)
     return 0
 
@@ -414,9 +402,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 login.institution_slug,
             )
             try:
-                outcome = asyncio.run(
-                    worker.download_login(store, login.id, kind="scheduled_download")
-                )
+                outcome = asyncio.run(worker.download_login(store, login.id, kind="scheduled_download"))
                 if outcome.failure_reason or outcome.account_failures:
                     from scripts.bank_sync.notification_client import post_failure_event
 
@@ -427,9 +413,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                         event_type="scheduled_download",
                     )
             except Exception:
-                logger.exception(
-                    "Unhandled error during scheduled download for login {}", login.id
-                )
+                logger.exception("Unhandled error during scheduled download for login {}", login.id)
         if stop["flag"]:
             break
         time.sleep(poll_seconds)
@@ -490,13 +474,18 @@ def _apply_env_block(env_block) -> None:
 
 
 def _apply_config_payload(raw: dict, store: AgentStore) -> int:
-    """Upsert generated/YAML config into the local vault.
+    """Sync generated/YAML config into the local vault.
 
-    This intentionally preserves stored cookies. The config owns login schedule,
-    account name/flow/storage, and activity URLs when provided.
+    Richtato config is the source of truth: logins and accounts present in
+    the vault but absent from the incoming YAML are deleted so ghost entries
+    from removed accounts or previous users cannot persist. Cookies and
+    sessions for logins that remain are always preserved.
     """
 
-    logins_added = logins_updated = accounts_added = accounts_updated = 0
+    logins_added = logins_updated = logins_removed = 0
+    accounts_added = accounts_updated = accounts_removed = 0
+
+    kept_login_ids: set[int] = set()
 
     for login_cfg in raw.get("logins") or []:
         institution = login_cfg.get("institution", "").strip()
@@ -509,11 +498,7 @@ def _apply_config_payload(raw: dict, store: AgentStore) -> int:
         hour = int(login_cfg.get("hour", 6))
 
         existing_login = next(
-            (
-                lo
-                for lo in store.list_logins()
-                if lo.institution_slug == institution and lo.nickname == nickname
-            ),
+            (lo for lo in store.list_logins() if lo.institution_slug == institution and lo.nickname == nickname),
             None,
         )
 
@@ -532,13 +517,9 @@ def _apply_config_payload(raw: dict, store: AgentStore) -> int:
             )
         else:
             login = existing_login
-            schedule_changed = (
-                login.cadence != cadence or login.preferred_run_hour_local != hour
-            )
+            schedule_changed = login.cadence != cadence or login.preferred_run_hour_local != hour
             if schedule_changed:
-                store.update_login_schedule(
-                    login.id, cadence=cadence, preferred_run_hour_local=hour
-                )
+                store.update_login_schedule(login.id, cadence=cadence, preferred_run_hour_local=hour)
                 logins_updated += 1
                 print(
                     f"  ~ login #{login.id} [{institution}]"
@@ -547,39 +528,29 @@ def _apply_config_payload(raw: dict, store: AgentStore) -> int:
                 )
             else:
                 print(
-                    f"  = login #{login.id} [{institution}]"
-                    + (f" ({nickname})" if nickname else "")
-                    + "  (unchanged)"
+                    f"  = login #{login.id} [{institution}]" + (f" ({nickname})" if nickname else "") + "  (unchanged)"
                 )
 
-        existing_accounts_by_uri = {
-            acc.storage_uri: acc
-            for acc in store.list_accounts(login.id)
-            if acc.storage_uri
-        }
+        kept_login_ids.add(login.id)
+
+        existing_accounts_by_uri = {acc.storage_uri: acc for acc in store.list_accounts(login.id) if acc.storage_uri}
         existing_accounts_by_richtato_id = {
-            acc.richtato_account_id: acc
-            for acc in store.list_accounts(login.id)
-            if acc.richtato_account_id is not None
+            acc.richtato_account_id: acc for acc in store.list_accounts(login.id) if acc.richtato_account_id is not None
         }
+
+        kept_account_ids: set[int] = set()
 
         for acc_cfg in login_cfg.get("accounts") or []:
             storage_uri = str(acc_cfg.get("storage_uri", "") or "").strip()
             name = str(acc_cfg.get("name", "") or "")
             flow = str(acc_cfg.get("flow", "deposit"))
-            activity_url = (
-                str(acc_cfg.get("activity_url", "") or "").strip()
-                if "activity_url" in acc_cfg
-                else None
-            )
+            activity_url = str(acc_cfg.get("activity_url", "") or "").strip() if "activity_url" in acc_cfg else None
             richtato_account_id = acc_cfg.get("richtato_account_id")
             if richtato_account_id is not None:
                 richtato_account_id = int(richtato_account_id)
 
             if not storage_uri and flow != "investment_balance":
-                print(
-                    "  Skipping account entry with no 'storage_uri'.", file=sys.stderr
-                )
+                print("  Skipping account entry with no 'storage_uri'.", file=sys.stderr)
                 continue
             if flow == "investment_balance" and not richtato_account_id:
                 print(
@@ -591,10 +562,7 @@ def _apply_config_payload(raw: dict, store: AgentStore) -> int:
             existing = None
             if storage_uri and storage_uri in existing_accounts_by_uri:
                 existing = existing_accounts_by_uri[storage_uri]
-            elif (
-                richtato_account_id
-                and richtato_account_id in existing_accounts_by_richtato_id
-            ):
+            elif richtato_account_id and richtato_account_id in existing_accounts_by_richtato_id:
                 existing = existing_accounts_by_richtato_id[richtato_account_id]
 
             if existing is None:
@@ -620,10 +588,7 @@ def _apply_config_payload(raw: dict, store: AgentStore) -> int:
                     account.detected_account_name != name
                     or account.flow != flow
                     or account.richtato_account_id != richtato_account_id
-                    or (
-                        activity_url is not None
-                        and account.activity_url != activity_url
-                    )
+                    or (activity_url is not None and account.activity_url != activity_url)
                 )
                 if changed:
                     update_kwargs = {
@@ -639,17 +604,33 @@ def _apply_config_payload(raw: dict, store: AgentStore) -> int:
                 else:
                     print(f"    = account #{account.id} {name!r} (unchanged)")
 
+            kept_account_ids.add(account.id)
+
+        for acc in store.list_accounts(login.id):
+            if acc.id not in kept_account_ids:
+                store.delete_account(acc.id)
+                accounts_removed += 1
+                print(f"    - account #{acc.id} {acc.detected_account_name!r} (removed)")
+
+    for lo in store.list_logins():
+        if lo.id not in kept_login_ids:
+            store.delete_login(lo.id)
+            logins_removed += 1
+            print(
+                f"  - login #{lo.id} [{lo.institution_slug}]"
+                + (f" ({lo.nickname})" if lo.nickname else "")
+                + " (removed)"
+            )
+
     print(
-        f"\nDone: {logins_added} login(s) added, {logins_updated} updated, "
-        f"{accounts_added} account(s) added, {accounts_updated} updated."
+        f"\nDone: {logins_added} login(s) added, {logins_updated} updated, {logins_removed} removed; "
+        f"{accounts_added} account(s) added, {accounts_updated} updated, {accounts_removed} removed."
     )
     pending = [lo for lo in store.list_logins() if lo.status == "pending_login"]
     if pending:
         print("\nLogins awaiting sign-in:")
         for lo in pending:
-            label = f"[{lo.institution_slug}]" + (
-                f" ({lo.nickname})" if lo.nickname else ""
-            )
+            label = f"[{lo.institution_slug}]" + (f" ({lo.nickname})" if lo.nickname else "")
             print(f"  bank-agent login signin {lo.id}   # {label}")
     return 0
 
@@ -671,11 +652,7 @@ def cmd_sync_config(args: argparse.Namespace) -> int:
         )
         return 2
 
-    base_url = (
-        args.api_base
-        or os.environ.get("RICHTATO_API_BASE_URL")
-        or "http://127.0.0.1:8000/api/v1"
-    ).rstrip("/")
+    base_url = (args.api_base or os.environ.get("RICHTATO_API_BASE_URL") or "http://127.0.0.1:8000/api/v1").rstrip("/")
     endpoint = urljoin(base_url + "/", "accounts/bank-agent-config/")
     params = {
         "nickname": args.nickname,
@@ -783,34 +760,24 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_login_add = login_sub.add_parser("add", help="Create a new bank login")
     p_login_add.add_argument("institution", help="Institution slug (e.g. bofa, chase).")
-    p_login_add.add_argument(
-        "--nickname", default="", help="Optional nickname (e.g. 'Personal')."
-    )
+    p_login_add.add_argument("--nickname", default="", help="Optional nickname (e.g. 'Personal').")
     p_login_add.add_argument("--cadence", default="daily", choices=store_mod.CADENCES)
-    p_login_add.add_argument(
-        "--hour", type=int, default=6, help="Preferred local run hour 0-23."
-    )
+    p_login_add.add_argument("--hour", type=int, default=6, help="Preferred local run hour 0-23.")
     p_login_add.set_defaults(func=cmd_login_add)
 
     p_login_list = login_sub.add_parser("list", help="List configured logins")
     p_login_list.set_defaults(func=cmd_login_list)
 
-    p_login_signin = login_sub.add_parser(
-        "signin", help="Open headed Chromium to sign in / re-auth"
-    )
+    p_login_signin = login_sub.add_parser("signin", help="Open headed Chromium to sign in / re-auth")
     p_login_signin.add_argument("login_id", type=int)
     p_login_signin.set_defaults(func=cmd_login_signin)
 
-    p_login_remove = login_sub.add_parser(
-        "remove", help="Delete a login and all its accounts"
-    )
+    p_login_remove = login_sub.add_parser("remove", help="Delete a login and all its accounts")
     p_login_remove.add_argument("login_id", type=int)
     p_login_remove.add_argument("--yes", action="store_true", help="Confirm deletion")
     p_login_remove.set_defaults(func=cmd_login_remove)
 
-    p_login_schedule = login_sub.add_parser(
-        "schedule", help="Update cadence and preferred hour"
-    )
+    p_login_schedule = login_sub.add_parser("schedule", help="Update cadence and preferred hour")
     p_login_schedule.add_argument("login_id", type=int)
     p_login_schedule.add_argument("--cadence", choices=store_mod.CADENCES)
     p_login_schedule.add_argument("--hour", type=int)
@@ -827,15 +794,9 @@ def build_parser() -> argparse.ArgumentParser:
         default="",
         help="Google Drive folder URI (gdrive://<folder_id>) from Richtato account config.",
     )
-    p_account_add.add_argument(
-        "--activity-url", default="", help="Bank-side download URL (encrypted at rest)."
-    )
-    p_account_add.add_argument(
-        "--flow", default="deposit", choices=store_mod.ACCOUNT_FLOWS
-    )
-    p_account_add.add_argument(
-        "--name", default="", help="Detected/account display name."
-    )
+    p_account_add.add_argument("--activity-url", default="", help="Bank-side download URL (encrypted at rest).")
+    p_account_add.add_argument("--flow", default="deposit", choices=store_mod.ACCOUNT_FLOWS)
+    p_account_add.add_argument("--name", default="", help="Detected/account display name.")
     p_account_add.add_argument(
         "--richtato-account-id",
         type=int,
@@ -871,9 +832,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_account_update.set_defaults(func=cmd_account_update)
 
-    p_account_remove = account_sub.add_parser(
-        "remove", help="Delete an account binding"
-    )
+    p_account_remove = account_sub.add_parser("remove", help="Delete an account binding")
     p_account_remove.add_argument("account_id", type=int)
     p_account_remove.set_defaults(func=cmd_account_remove)
 
@@ -887,9 +846,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_sync.set_defaults(func=cmd_sync)
 
-    p_status = sub.add_parser(
-        "status", help="Show all logins, accounts, and schedule state"
-    )
+    p_status = sub.add_parser("status", help="Show all logins, accounts, and schedule state")
     p_status.set_defaults(func=cmd_status)
 
     p_run = sub.add_parser("run", help="Daemon loop: poll due logins and download")
@@ -922,13 +879,9 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Richtato API base URL (default: RICHTATO_API_BASE_URL or http://127.0.0.1:8000/api/v1).",
     )
-    p_sync_config.add_argument(
-        "--token", default=None, help="DRF token (default: RICHTATO_API_TOKEN)."
-    )
+    p_sync_config.add_argument("--token", default=None, help="DRF token (default: RICHTATO_API_TOKEN).")
     p_sync_config.add_argument("--cadence", default="daily", choices=store_mod.CADENCES)
-    p_sync_config.add_argument(
-        "--hour", type=int, default=6, help="Preferred local run hour (0-23)."
-    )
+    p_sync_config.add_argument("--hour", type=int, default=6, help="Preferred local run hour (0-23).")
     p_sync_config.add_argument("--nickname", default="personal")
     p_sync_config.add_argument(
         "--all-supported",
@@ -937,23 +890,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_sync_config.set_defaults(func=cmd_sync_config)
 
-    p_genkey = sub.add_parser(
-        "generate-key", help="Print a fresh BANK_AGENT_FERNET_KEY value"
-    )
+    p_genkey = sub.add_parser("generate-key", help="Print a fresh BANK_AGENT_FERNET_KEY value")
     p_genkey.set_defaults(func=cmd_generate_key)
 
-    p_export = sub.add_parser(
-        "export", help="Dump the agent vault to JSON (encrypted blobs included)"
-    )
+    p_export = sub.add_parser("export", help="Dump the agent vault to JSON (encrypted blobs included)")
     p_export.add_argument("--output", type=str, default=None)
     p_export.set_defaults(func=cmd_export)
 
-    p_import = sub.add_parser(
-        "import", help="Restore the agent vault from a JSON export"
-    )
-    p_import.add_argument(
-        "input", type=str, help="Path to a previously exported JSON file"
-    )
+    p_import = sub.add_parser("import", help="Restore the agent vault from a JSON export")
+    p_import.add_argument("input", type=str, help="Path to a previously exported JSON file")
     p_import.set_defaults(func=cmd_import)
 
     p_api = sub.add_parser(

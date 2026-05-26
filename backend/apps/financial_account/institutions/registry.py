@@ -342,6 +342,17 @@ def _account_type_choices_for_institution(institution: InstitutionDefinition) ->
     ]
 
 
+def _agent_flow_choices_for_institution(institution: InstitutionDefinition) -> list[dict[str, Any]]:
+    return [
+        {
+            "account_type": account_type,
+            "flow": agent_flow_for_account(institution.slug, account_type),
+            "needs_storage": auto_sync_needs_storage_uri(agent_flow_for_account(institution.slug, account_type)),
+        }
+        for account_type in institution.account_types
+    ]
+
+
 def get_institution_field_choices() -> dict[str, Any]:
     """Payload for account form field choices."""
     institutions = []
@@ -351,6 +362,7 @@ def get_institution_field_choices() -> dict[str, Any]:
             "value": institution.slug,
             "label": institution.name,
             "account_types": _account_type_choices_for_institution(institution),
+            "agent_flows": _agent_flow_choices_for_institution(institution),
         }
         institutions.append(payload)
         entity_choices.append({"value": institution.slug, "label": institution.name})

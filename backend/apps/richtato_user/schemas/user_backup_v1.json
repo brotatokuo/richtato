@@ -105,7 +105,6 @@
           "agent_cadence": { "type": "string" },
           "agent_sync_hour": { "type": "integer" },
           "shared_with_household": { "type": "boolean" },
-          "image_key": { "type": ["string", "null"] },
           "account_number_last4": { "type": ["string", "null"] }
         }
       }

@@ -3,6 +3,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Modal } from '@/components/ui/Modal';
 import {
+  AccountSyncSettings,
+  type AccountSyncFormValues,
+} from '@/components/accounts/AccountSyncSettings';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -12,10 +16,11 @@ import {
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { Account, transactionsApiService } from '@/lib/api/transactions';
 import {
-  AVAILABLE_CARD_IMAGES,
-  getAutoDetectedImageKey,
-} from '@/lib/imageMapping';
-import { Calendar, Check, Sparkles, Users } from 'lucide-react';
+  bankSyncApi,
+  type AgentCadence,
+  type SyncMode,
+} from '@/lib/api/bankSync';
+import { Calendar, Users } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { InstitutionFieldChoice } from '@/components/accounts/AccountFormFields';
@@ -28,10 +33,13 @@ interface AccountDetailModalProps {
     name: string;
     type: string;
     entity: string;
-    image_key?: string | null;
     shared_with_household?: boolean;
     opening_balance?: number | null;
     opening_balance_date?: string | null;
+    sync_mode?: SyncMode;
+    agent_cadence?: AgentCadence;
+    agent_sync_hour?: number;
+    agent_activity_url?: string;
   }) => Promise<void>;
   onDelete: () => void;
   accountTypeOptions: Array<{ value: string; label: string }>;
@@ -65,10 +73,14 @@ export function AccountDetailModal({
     name: '',
     type: 'checking',
     entity: '',
-    imageKey: null as string | null,
     sharedWithHousehold: false,
     openingBalance: '',
     openingBalanceDate: defaultOpeningBalanceDate(),
+    syncMode: 'manual' as SyncMode,
+    agentCadence: 'daily' as AgentCadence,
+    agentSyncHour: 6,
+    agentActivityUrl: '',
+    hasStorageUri: false,
   });
   const [initialOpeningBalance, setInitialOpeningBalance] = useState('');
 
@@ -135,38 +147,38 @@ export function AccountDetailModal({
     let cancelled = false;
     setLoadingOpeningBalance(true);
 
-    transactionsApiService
-      .getAccountById(account.id)
-      .then(accountDetail => {
+    Promise.all([
+      transactionsApiService.getAccountById(account.id),
+      bankSyncApi.getSetup().catch(() => null),
+    ])
+      .then(([accountDetail, syncSetup]) => {
         if (cancelled) return;
 
         const openingBalance = accountDetail.opening_balance ?? '';
         const openingBalanceDate =
           accountDetail.opening_balance_date ?? defaultOpeningBalanceDate();
+        const syncAccount = syncSetup?.accounts.find(
+          item => item.id === accountDetail.id
+        );
 
         setInitialOpeningBalance(openingBalance);
         setInitialOpeningBalanceDate(openingBalanceDate);
-        console.info('[AccountEdit] loaded account detail for modal', {
-          accountId: accountDetail.id,
-          openingBalance,
-          openingBalanceDate,
-        });
         setForm({
           name: accountDetail.name || '',
           type: accountDetail.account_type || accountDetail.type || 'checking',
           entity: findEntityValue(accountDetail),
-          imageKey: accountDetail.image_key ?? null,
           sharedWithHousehold: accountDetail.shared_with_household ?? false,
           openingBalance,
           openingBalanceDate,
+          syncMode: accountDetail.sync_mode ?? 'manual',
+          agentCadence: accountDetail.agent_cadence ?? 'daily',
+          agentSyncHour: accountDetail.agent_sync_hour ?? 6,
+          agentActivityUrl: syncAccount?.activity_url ?? '',
+          hasStorageUri: Boolean(accountDetail.resolved_storage_uri),
         });
       })
       .catch(err => {
         if (cancelled) return;
-        console.error(
-          '[AccountEdit] failed to load account detail for modal',
-          err
-        );
         toast.error('Failed to load account details', {
           description: err instanceof Error ? err.message : undefined,
         });
@@ -182,16 +194,19 @@ export function AccountDetailModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account, entityOptions, isOpen]);
 
-  const autoDetectedImageKey = useMemo(
-    () => getAutoDetectedImageKey(form.name),
-    [form.name]
-  );
-
-  const isCreditCard = form.type === 'credit_card';
-
   const handleFieldChange = (
     field: 'name' | 'type' | 'entity' | 'openingBalance' | 'openingBalanceDate',
     value: string
+  ) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSyncChange = (
+    field: keyof Pick<
+      AccountSyncFormValues,
+      'syncMode' | 'agentCadence' | 'agentSyncHour' | 'agentActivityUrl'
+    >,
+    value: string | number
   ) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
@@ -207,16 +222,22 @@ export function AccountDetailModal({
       name: string;
       type: string;
       entity: string;
-      image_key?: string | null;
       shared_with_household?: boolean;
       opening_balance?: number | null;
       opening_balance_date?: string | null;
+      sync_mode?: SyncMode;
+      agent_cadence?: AgentCadence;
+      agent_sync_hour?: number;
+      agent_activity_url?: string;
     } = {
       name: form.name,
       type: form.type,
       entity: form.entity,
-      image_key: form.imageKey,
       shared_with_household: form.sharedWithHousehold,
+      sync_mode: form.syncMode,
+      agent_cadence: form.agentCadence,
+      agent_sync_hour: form.agentSyncHour,
+      agent_activity_url: form.agentActivityUrl,
     };
 
     if (openingBalanceChanged) {
@@ -234,19 +255,7 @@ export function AccountDetailModal({
       }
     }
 
-    console.info('[AccountEdit] modal submit payload', {
-      accountId: account?.id,
-      openingBalanceChanged,
-      initialOpeningBalance,
-      initialOpeningBalanceDate,
-      payload,
-    });
-
     await onSubmit(payload);
-  };
-
-  const handleImageSelect = (key: string | null) => {
-    setForm(prev => ({ ...prev, imageKey: key }));
   };
 
   return (
@@ -367,82 +376,21 @@ export function AccountDetailModal({
             </div>
           </div>
 
-          {isCreditCard && (
-            <div>
-              <Label className="mb-2 block">Card Background</Label>
-              <div className="grid grid-cols-4 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleImageSelect(null)}
-                  className={`relative aspect-[1.586] rounded-lg border-2 transition-all flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 ${
-                    form.imageKey === null
-                      ? 'border-primary ring-2 ring-primary/20'
-                      : 'border-border hover:border-primary/50'
-                  }`}
-                  title="Auto-detect from card name"
-                >
-                  <div className="flex flex-col items-center gap-0.5 text-muted-foreground">
-                    <Sparkles className="h-4 w-4" />
-                    <span className="text-[10px] font-medium">Auto</span>
-                  </div>
-                  {form.imageKey === null && (
-                    <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5">
-                      <Check className="h-3 w-3" />
-                    </div>
-                  )}
-                </button>
-
-                {AVAILABLE_CARD_IMAGES.map(img => {
-                  const isSelected = form.imageKey === img.key;
-                  const isAutoDetected =
-                    form.imageKey === null && autoDetectedImageKey === img.key;
-
-                  return (
-                    <button
-                      key={img.key}
-                      type="button"
-                      onClick={() => handleImageSelect(img.key)}
-                      className={`relative aspect-[1.586] rounded-lg border-2 transition-all overflow-hidden ${
-                        isSelected
-                          ? 'border-primary ring-2 ring-primary/20'
-                          : isAutoDetected
-                            ? 'border-primary/50 ring-1 ring-primary/10'
-                            : 'border-border hover:border-primary/50'
-                      }`}
-                      title={img.label}
-                    >
-                      <img
-                        src={img.path}
-                        alt={img.label}
-                        className="w-full h-full object-cover"
-                      />
-                      {isSelected && (
-                        <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5">
-                          <Check className="h-3 w-3" />
-                        </div>
-                      )}
-                      {isAutoDetected && !isSelected && (
-                        <div className="absolute -top-1 -right-1 bg-muted text-muted-foreground rounded-full p-0.5">
-                          <Sparkles className="h-3 w-3" />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-              {form.imageKey === null && autoDetectedImageKey && (
-                <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" />
-                  Auto-detected from card name
-                </p>
-              )}
-              {form.imageKey === null && !autoDetectedImageKey && (
-                <p className="text-xs text-muted-foreground mt-1.5">
-                  No match found — showing default card
-                </p>
-              )}
-            </div>
-          )}
+          <AccountSyncSettings
+            form={{
+              entity: form.entity,
+              type: form.type,
+              syncMode: form.syncMode,
+              agentCadence: form.agentCadence,
+              agentSyncHour: form.agentSyncHour,
+              agentActivityUrl: form.agentActivityUrl,
+            }}
+            onChange={handleSyncChange}
+            institutions={institutions}
+            hasStorageUri={form.hasStorageUri}
+            idPrefix="detail-sync"
+            disabled={loadingOpeningBalance}
+          />
 
           {account.account_number_last4 && (
             <div className="text-sm text-muted-foreground">

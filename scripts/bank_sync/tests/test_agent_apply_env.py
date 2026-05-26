@@ -6,7 +6,6 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
-
 from scripts.bank_sync.agent import _apply_config_payload, _apply_env_block, cmd_sync
 from scripts.bank_sync.agent_store import AgentStore
 
@@ -49,9 +48,7 @@ class TestApplyEnvBlock:
             )
         )
 
-        with patch(
-            "scripts.bank_sync.agent._apply_config_payload", return_value=0
-        ) as mock_apply:
+        with patch("scripts.bank_sync.agent._apply_config_payload", return_value=0) as mock_apply:
             from argparse import Namespace
 
             from scripts.bank_sync.agent import cmd_apply
@@ -66,9 +63,7 @@ class TestApplyEnvBlock:
 
 class TestApplyActivityUrl:
     def test_apply_writes_activity_url_to_account(self, tmp_path, monkeypatch):
-        monkeypatch.setenv(
-            "BANK_AGENT_FERNET_KEY", "6cbW1FlbhKbMfjnF2hUNMSmti2-5Y9vOwGRmdQvpzBE="
-        )
+        monkeypatch.setenv("BANK_AGENT_FERNET_KEY", "6cbW1FlbhKbMfjnF2hUNMSmti2-5Y9vOwGRmdQvpzBE=")
         store = AgentStore(tmp_path / "agent.db")
 
         result = _apply_config_payload(
@@ -96,15 +91,10 @@ class TestApplyActivityUrl:
 
         assert result == 0
         account = store.list_accounts()[0]
-        assert (
-            account.activity_url
-            == "https://secure.bankofamerica.com/activity?adx=abc123"
-        )
+        assert account.activity_url == "https://secure.bankofamerica.com/activity?adx=abc123"
 
     def test_apply_clears_activity_url_when_yaml_is_blank(self, tmp_path, monkeypatch):
-        monkeypatch.setenv(
-            "BANK_AGENT_FERNET_KEY", "6cbW1FlbhKbMfjnF2hUNMSmti2-5Y9vOwGRmdQvpzBE="
-        )
+        monkeypatch.setenv("BANK_AGENT_FERNET_KEY", "6cbW1FlbhKbMfjnF2hUNMSmti2-5Y9vOwGRmdQvpzBE=")
         store = AgentStore(tmp_path / "agent.db")
         login = store.add_login(institution_slug="bofa", nickname="personal")
         store.add_account(
@@ -142,6 +132,118 @@ class TestApplyActivityUrl:
         assert result == 0
         account = store.list_accounts()[0]
         assert account.activity_url == ""
+
+
+class TestApplySourceOfTruth:
+    def test_apply_removes_stale_login_not_in_yaml(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("BANK_AGENT_FERNET_KEY", "6cbW1FlbhKbMfjnF2hUNMSmti2-5Y9vOwGRmdQvpzBE=")
+        store = AgentStore(tmp_path / "agent.db")
+        store.add_login(institution_slug="chase", nickname="personal")
+
+        result = _apply_config_payload(
+            {
+                "logins": [
+                    {
+                        "institution": "bofa",
+                        "nickname": "personal",
+                        "cadence": "daily",
+                        "hour": 6,
+                        "accounts": [
+                            {
+                                "name": "BofA Checking",
+                                "flow": "deposit",
+                                "storage_uri": "gdrive://folder",
+                                "richtato_account_id": 1,
+                            }
+                        ],
+                    }
+                ],
+            },
+            store,
+        )
+
+        assert result == 0
+        logins = store.list_logins()
+        assert len(logins) == 1
+        assert logins[0].institution_slug == "bofa"
+
+    def test_apply_removes_stale_account_not_in_yaml(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("BANK_AGENT_FERNET_KEY", "6cbW1FlbhKbMfjnF2hUNMSmti2-5Y9vOwGRmdQvpzBE=")
+        store = AgentStore(tmp_path / "agent.db")
+        login = store.add_login(institution_slug="bofa", nickname="personal")
+        store.add_account(
+            login_id=login.id,
+            storage_uri="gdrive://old-folder",
+            flow="deposit",
+            detected_account_name="Old Account",
+            richtato_account_id=999,
+        )
+
+        result = _apply_config_payload(
+            {
+                "logins": [
+                    {
+                        "institution": "bofa",
+                        "nickname": "personal",
+                        "cadence": "daily",
+                        "hour": 6,
+                        "accounts": [
+                            {
+                                "name": "BofA Checking",
+                                "flow": "deposit",
+                                "storage_uri": "gdrive://new-folder",
+                                "richtato_account_id": 1,
+                            }
+                        ],
+                    }
+                ],
+            },
+            store,
+        )
+
+        assert result == 0
+        accounts = store.list_accounts()
+        assert len(accounts) == 1
+        assert accounts[0].storage_uri == "gdrive://new-folder"
+
+    def test_apply_preserves_cookies_for_kept_login(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("BANK_AGENT_FERNET_KEY", "6cbW1FlbhKbMfjnF2hUNMSmti2-5Y9vOwGRmdQvpzBE=")
+        store = AgentStore(tmp_path / "agent.db")
+        login = store.add_login(institution_slug="bofa", nickname="personal")
+        store.set_storage_state(login.id, '{"cookies": [{"name": "session", "value": "abc"}]}')
+        store.add_account(
+            login_id=login.id,
+            storage_uri="gdrive://folder",
+            flow="deposit",
+            detected_account_name="BofA Checking",
+            richtato_account_id=1,
+        )
+
+        _apply_config_payload(
+            {
+                "logins": [
+                    {
+                        "institution": "bofa",
+                        "nickname": "personal",
+                        "cadence": "daily",
+                        "hour": 6,
+                        "accounts": [
+                            {
+                                "name": "BofA Checking",
+                                "flow": "deposit",
+                                "storage_uri": "gdrive://folder",
+                                "richtato_account_id": 1,
+                            }
+                        ],
+                    }
+                ],
+            },
+            store,
+        )
+
+        kept = store.list_logins()[0]
+        assert kept.cookies_captured_at is not None
+        assert "session" in kept.storage_state
 
 
 class TestSyncHeaded:

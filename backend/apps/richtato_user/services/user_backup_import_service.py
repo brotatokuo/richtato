@@ -177,7 +177,6 @@ class UserBackupImportService:
                 agent_cadence=item.get("agent_cadence") or "daily",
                 agent_sync_hour=int(item.get("agent_sync_hour") or 6),
                 shared_with_household=bool(item.get("shared_with_household", False)),
-                image_key=item.get("image_key"),
                 account_number_last4=item.get("account_number_last4") or "",
             )
             account_map[key] = account

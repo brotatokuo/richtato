@@ -67,7 +67,6 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
             "agent_sync_hour",
             "storage_uri",
             "resolved_storage_uri",
-            "image_key",
             "shared_with_household",
             "created_at",
             "updated_at",
@@ -149,6 +148,18 @@ class FinancialAccountCreateSerializer(serializers.Serializer):
     account_number_last4 = serializers.CharField(max_length=4, required=False, allow_blank=True)
     initial_balance = serializers.DecimalField(max_digits=15, decimal_places=2, default=0)
     currency = serializers.CharField(max_length=3, default="USD")
+    sync_mode = serializers.ChoiceField(
+        choices=["auto", "upload", "manual"],
+        default="manual",
+        required=False,
+    )
+    agent_cadence = serializers.ChoiceField(
+        choices=["manual", "daily", "weekly", "monthly"],
+        default="daily",
+        required=False,
+    )
+    agent_sync_hour = serializers.IntegerField(min_value=0, max_value=23, default=6, required=False)
+    agent_activity_url = serializers.URLField(required=False, allow_blank=True, max_length=2048)
 
     def validate(self, attrs):
         institution_slug = attrs.get("institution_slug") or "other"
@@ -158,6 +169,15 @@ class FinancialAccountCreateSerializer(serializers.Serializer):
                 {
                     "account_type": (
                         f"Account type '{account_type}' is not supported for institution '{institution_slug}'."
+                    )
+                }
+            )
+        if attrs.get("sync_mode") == "auto" and agent_flow_for_account(institution_slug, account_type) is None:
+            raise serializers.ValidationError(
+                {
+                    "sync_mode": (
+                        "Auto sync is not available for this institution and account type. "
+                        "Use upload or manual instead."
                     )
                 }
             )
@@ -179,7 +199,6 @@ class FinancialAccountUpdateSerializer(serializers.Serializer):
     account_number_last4 = serializers.CharField(max_length=4, required=False, allow_blank=True)
     balance = serializers.DecimalField(max_digits=15, decimal_places=2, required=False)
     is_active = serializers.BooleanField(required=False)
-    image_key = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
     shared_with_household = serializers.BooleanField(required=False)
     storage_uri = serializers.CharField(max_length=512, required=False, allow_blank=True)
     agent_activity_url = serializers.URLField(required=False, allow_blank=True, max_length=2048)

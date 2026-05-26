@@ -71,6 +71,10 @@ class AccountService:
         account_number_last4: str = "",
         initial_balance: Decimal = Decimal("0"),
         currency: str = "USD",
+        sync_mode: str = "manual",
+        agent_cadence: str = "daily",
+        agent_sync_hour: int = 6,
+        agent_activity_url: str = "",
     ) -> FinancialAccount:
         """
         Create a manually entered account.
@@ -115,7 +119,22 @@ class AccountService:
 
         if account_type == "credit_card":
             account.is_liability = True
-            account.save(update_fields=["is_liability"])
+
+        account.sync_mode = sync_mode
+        account.agent_cadence = agent_cadence
+        account.agent_sync_hour = agent_sync_hour
+        if agent_activity_url:
+            account.agent_activity_url = agent_activity_url
+        account.save(
+            update_fields=[
+                "is_liability",
+                "sync_mode",
+                "agent_cadence",
+                "agent_sync_hour",
+                "agent_activity_url_encrypted",
+                "updated_at",
+            ]
+        )
 
         if initial_balance != Decimal("0"):
             self.upsert_opening_balance(account, initial_balance)

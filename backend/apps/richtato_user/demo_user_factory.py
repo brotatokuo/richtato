@@ -170,7 +170,6 @@ class DemoUserFactory:
             account_type="credit_card",
             balance=Decimal("0"),
             is_liability=True,
-            image_key="bofa_custom_cash",
         )
         self.amex_card = FinancialAccount.objects.create(
             user=self.user,
@@ -179,7 +178,6 @@ class DemoUserFactory:
             account_type="credit_card",
             balance=Decimal("0"),
             is_liability=True,
-            image_key="amex_platinum",
         )
         self.chase_card = FinancialAccount.objects.create(
             user=self.user,
@@ -188,7 +186,6 @@ class DemoUserFactory:
             account_type="credit_card",
             balance=Decimal("0"),
             is_liability=True,
-            image_key="chase_sapphire_preferred",
         )
 
     def _create_income_transactions(self):

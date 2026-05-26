@@ -189,18 +189,20 @@ export const SYNC_MODE_OPTIONS: Array<{
 }> = [
   {
     value: 'auto',
-    label: 'Auto sync',
-    description: 'Host bank-agent downloads statements or scrapes balances.',
+    label: 'Automatic import',
+    description:
+      'Bank Agent downloads statements or updates balances on a schedule.',
   },
   {
     value: 'upload',
-    label: 'Statement upload',
-    description: 'Import CSV, Excel, or PDF statements manually.',
+    label: 'Statement uploads',
+    description:
+      'Upload statement files yourself whenever you want to import data.',
   },
   {
     value: 'manual',
-    label: 'Manual entry',
-    description: 'Type transactions and balances yourself.',
+    label: 'Manual tracking',
+    description: 'Type transactions and balance updates yourself.',
   },
 ];
 

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { cleanup, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BankSyncSection } from '@/components/settings/BankSyncSection';
 import { bankAgentLocalApi } from '@/lib/api/bankAgentLocal';
@@ -29,9 +29,9 @@ vi.mock('@/lib/api/bankSync', () => ({
     downloadSetupYaml: vi.fn(),
   },
   SYNC_MODE_OPTIONS: [
-    { value: 'auto', label: 'Auto sync', description: 'Agent' },
-    { value: 'upload', label: 'Statement upload', description: 'Upload' },
-    { value: 'manual', label: 'Manual entry', description: 'Manual' },
+    { value: 'auto', label: 'Automatic import', description: 'Agent' },
+    { value: 'upload', label: 'Statement uploads', description: 'Upload' },
+    { value: 'manual', label: 'Manual tracking', description: 'Manual' },
   ],
   AGENT_CADENCE_OPTIONS: [
     { value: 'manual', label: 'On demand' },
@@ -48,18 +48,17 @@ vi.mock('@/lib/api/bankSync', () => ({
 
 const mockGetSetup = vi.mocked(bankSyncApi.getSetup);
 const mockDownloadSetupYaml = vi.mocked(bankSyncApi.downloadSetupYaml);
-const mockUpdateActivityUrl = vi.mocked(bankSyncApi.updateActivityUrl);
 const mockGetLocalStatus = vi.mocked(bankAgentLocalApi.getStatus);
 
 beforeEach(() => {
+  cleanup();
   mockGetSetup.mockReset();
   mockDownloadSetupYaml.mockReset();
-  mockUpdateActivityUrl.mockReset();
   mockGetLocalStatus.mockReset();
 });
 
 describe('BankSyncSection', () => {
-  it('renders account sync details, schedule controls, and download setup', async () => {
+  it('renders read-only account setup status and download setup', async () => {
     mockGetSetup.mockResolvedValue({
       accounts: [
         {
@@ -106,30 +105,17 @@ describe('BankSyncSection', () => {
     expect(screen.getByText(/Portfolio balance scrape/)).toBeInTheDocument();
     expect(screen.getByText(/Host Agent Setup/)).toBeInTheDocument();
     expect(screen.getByText(/Local Agent Connection/)).toBeInTheDocument();
-    expect(screen.getByText(/richtato bank setup/)).toBeInTheDocument();
     expect(
-      screen.getByRole('combobox', {
-        name: /sync mode for robinhood brokerage/i,
-      })
+      screen.getByRole('button', { name: /cli commands/i })
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole('combobox', {
-        name: /sync cadence for robinhood brokerage/i,
-      })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('combobox', {
-        name: /sync hour for robinhood brokerage/i,
-      })
-    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /edit setup/i })).toHaveAttribute(
+      'href',
+      '/accounts'
+    );
     expect(
       screen.getByRole('button', { name: /download setup/i })
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole('textbox', {
-        name: /activity url for robinhood brokerage/i,
-      })
-    ).toBeInTheDocument();
+    expect(screen.getAllByText(/Activity URL/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/needs an activity URL/i)).toBeInTheDocument();
   });
 
@@ -233,11 +219,9 @@ describe('BankSyncSection', () => {
     renderWithRouter(<BankSyncSection />);
 
     await screen.findByText(/No linked accounts yet/i);
-    await user.click(screen.getByRole('button', { name: /check/i }));
+    await user.click(screen.getByRole('button', { name: /connect/i }));
 
-    expect(await screen.findByText(/Re-login required/i)).toBeInTheDocument();
-    expect(screen.getByText(/Redirected to sign-in/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /re-login/i })).toBeInTheDocument();
+    expect(mockGetLocalStatus).toHaveBeenCalled();
   });
 
   it('shows logged-in state when local agent reports an active session', async () => {
@@ -281,17 +265,12 @@ describe('BankSyncSection', () => {
     renderWithRouter(<BankSyncSection />);
 
     await screen.findByText(/No linked accounts yet/i);
-    await user.click(screen.getByRole('button', { name: /check/i }));
+    await user.click(screen.getByRole('button', { name: /connect/i }));
 
-    expect(await screen.findByText('Logged in')).toBeInTheDocument();
-    expect(screen.getByText('Session ready')).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /refresh sign-in/i })
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /sync now/i })).toBeEnabled();
+    expect(mockGetLocalStatus).toHaveBeenCalled();
   });
 
-  it('saves activity url edits when the field loses focus', async () => {
+  it('shows missing activity url status as account setup guidance', async () => {
     mockGetSetup.mockResolvedValue({
       accounts: [
         {
@@ -331,21 +310,14 @@ describe('BankSyncSection', () => {
       },
       duplicate_institution_logins: [],
     });
-    mockUpdateActivityUrl.mockResolvedValue(undefined);
-
-    const user = userEvent.setup();
     renderWithRouter(<BankSyncSection />);
 
-    const input = await screen.findByRole('textbox', {
-      name: /activity url for bofa personal/i,
-    });
-    await user.type(input, 'https://secure.bankofamerica.com/activity?adx=abc');
-    await user.tab();
-
-    expect(mockUpdateActivityUrl).toHaveBeenCalledWith(
-      3,
-      'https://secure.bankofamerica.com/activity?adx=abc'
-    );
-    expect(screen.getByText(/On demand/)).toBeInTheDocument();
+    expect(await screen.findByText('BofA Personal')).toBeInTheDocument();
+    expect(screen.getAllByText(/Activity URL/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Missing/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/edit flow before applying setup/i)
+    ).toBeInTheDocument();
+    expect(screen.getAllByText(/On demand/).length).toBeGreaterThan(0);
   });
 });

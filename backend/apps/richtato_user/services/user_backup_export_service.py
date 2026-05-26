@@ -204,7 +204,6 @@ class UserBackupExportService:
                     "agent_cadence": account.agent_cadence,
                     "agent_sync_hour": account.agent_sync_hour,
                     "shared_with_household": account.shared_with_household,
-                    "image_key": account.image_key,
                     "account_number_last4": account.account_number_last4 or "",
                 }
             )

@@ -61,6 +61,49 @@ class TestBankSyncSetupAPIView:
 
 
 class TestAccountSyncModeUpdate:
+    def test_create_account_accepts_auto_sync_settings(self, user, robinhood_institution):
+        client = APIClient()
+        client.force_authenticate(user=user)
+
+        response = client.post(
+            reverse("account-list-create"),
+            {
+                "name": "Robinhood Brokerage",
+                "account_type": "investment",
+                "institution_slug": robinhood_institution.slug,
+                "sync_mode": "auto",
+                "agent_cadence": "weekly",
+                "agent_sync_hour": 9,
+                "agent_activity_url": "https://robinhood.com/account?classic=1",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 201
+        account = FinancialAccount.objects.get(id=response.json()["id"])
+        assert account.sync_mode == "auto"
+        assert account.agent_cadence == "weekly"
+        assert account.agent_sync_hour == 9
+        assert account.agent_activity_url == "https://robinhood.com/account?classic=1"
+
+    def test_create_account_rejects_auto_sync_for_unsupported_institution(self, user, amex_institution):
+        client = APIClient()
+        client.force_authenticate(user=user)
+
+        response = client.post(
+            reverse("account-list-create"),
+            {
+                "name": "Amex Card",
+                "account_type": "credit_card",
+                "institution_slug": amex_institution.slug,
+                "sync_mode": "auto",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "sync_mode" in response.json()
+
     def test_patch_sync_mode_auto_for_supported_account(self, user, robinhood_institution):
         account = FinancialAccount.objects.create(
             user=user,

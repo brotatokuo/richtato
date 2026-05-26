@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { Account, transactionsApiService } from '@/lib/api/transactions';
+import type { AgentCadence, SyncMode } from '@/lib/api/bankSync';
 import { formatCurrency } from '@/lib/format';
 import { getEntityLogo } from '@/lib/imageMapping';
 import { cn } from '@/lib/utils';
@@ -161,13 +162,28 @@ export function AccountsSidebar({
     name: string;
     type: string;
     entity: string;
+    starting_balance?: string;
+    sync_mode: SyncMode;
+    agent_cadence: AgentCadence;
+    agent_sync_hour: number;
+    agent_activity_url?: string;
   }) => {
     setCreating(true);
     try {
+      const startingBalance = form.starting_balance?.trim()
+        ? Number.parseFloat(form.starting_balance)
+        : undefined;
       await transactionsApiService.createAccount({
         name: form.name,
         type: form.type,
         institution_slug: form.entity,
+        starting_balance: Number.isNaN(startingBalance)
+          ? undefined
+          : startingBalance,
+        sync_mode: form.sync_mode,
+        agent_cadence: form.agent_cadence,
+        agent_sync_hour: form.agent_sync_hour,
+        agent_activity_url: form.agent_activity_url,
       });
       await loadAccounts();
       onAccountsChange?.();
