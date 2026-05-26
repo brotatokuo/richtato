@@ -1,6 +1,15 @@
 """Serializers for financial accounts."""
 
+from decimal import Decimal
+
 from rest_framework import serializers
+
+from apps.financial_account.institutions.registry import (
+    ACCOUNT_TYPE_LABELS,
+    agent_flow_for_account,
+    auto_sync_needs_storage_uri,
+    is_valid_account_type,
+)
 
 from .models import AccountBalanceHistory, FinancialAccount, FinancialInstitution
 
@@ -34,12 +43,10 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
     entity = serializers.SerializerMethodField()
     entity_display = serializers.CharField(source="institution.name", read_only=True)
     date = serializers.SerializerMethodField()
-
-    # Sync connection fields
-    has_connection = serializers.SerializerMethodField()
-    connection_id = serializers.SerializerMethodField()
-    connection_status = serializers.SerializerMethodField()
-    last_sync = serializers.SerializerMethodField()
+    resolved_storage_uri = serializers.SerializerMethodField()
+    opening_balance = serializers.SerializerMethodField()
+    opening_balance_date = serializers.SerializerMethodField()
+    sync_capabilities = serializers.SerializerMethodField()
 
     class Meta:
         model = FinancialAccount
@@ -55,6 +62,11 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
             "currency",
             "is_active",
             "sync_source",
+            "sync_mode",
+            "agent_cadence",
+            "agent_sync_hour",
+            "storage_uri",
+            "resolved_storage_uri",
             "image_key",
             "shared_with_household",
             "created_at",
@@ -65,46 +77,15 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
             "entity",
             "entity_display",
             "date",
-            # Sync connection fields
-            "has_connection",
-            "connection_id",
-            "connection_status",
-            "last_sync",
+            "opening_balance",
+            "opening_balance_date",
+            "sync_capabilities",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "sync_source"]
+        read_only_fields = ["id", "created_at", "updated_at", "sync_source", "resolved_storage_uri"]
 
-    def _get_active_connection(self, obj):
-        """Get the active sync connection for this account."""
-        # Use prefetched data if available, otherwise query
-        if hasattr(obj, "_prefetched_objects_cache") and "sync_connections" in obj._prefetched_objects_cache:
-            connections = obj._prefetched_objects_cache["sync_connections"]
-            for conn in connections:
-                if conn.status in ("active", "error"):
-                    return conn
-            return None
-        # Fallback to query
-        return obj.sync_connections.filter(status__in=["active", "error"]).first()
-
-    def get_has_connection(self, obj):
-        """Check if account has an active sync connection."""
-        return self._get_active_connection(obj) is not None
-
-    def get_connection_id(self, obj):
-        """Get the sync connection ID if exists."""
-        conn = self._get_active_connection(obj)
-        return conn.id if conn else None
-
-    def get_connection_status(self, obj):
-        """Get the sync connection status."""
-        conn = self._get_active_connection(obj)
-        return conn.status if conn else None
-
-    def get_last_sync(self, obj):
-        """Get the last sync timestamp."""
-        conn = self._get_active_connection(obj)
-        if conn and conn.last_sync:
-            return conn.last_sync.isoformat()
-        return None
+    def get_resolved_storage_uri(self, obj):
+        """Return the effective storage URI (override or convention default)."""
+        return obj.resolved_storage_uri()
 
     def get_date(self, obj):
         """Return the most recent balance history date, falling back to updated_at."""
@@ -119,6 +100,35 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
             return obj.institution.slug or obj.institution.name.lower().replace(" ", "_")
         return "manual"
 
+    def get_opening_balance(self, obj):
+        from apps.financial_account.services.account_service import AccountService
+
+        balance, _balance_date = AccountService().get_opening_balance(obj)
+        if balance is None:
+            return None
+        return str(balance.quantize(Decimal("0.01")))
+
+    def get_opening_balance_date(self, obj):
+        from apps.financial_account.services.account_service import AccountService
+
+        _balance, balance_date = AccountService().get_opening_balance(obj)
+        if balance_date is None:
+            return None
+        return balance_date.isoformat()
+
+    def get_sync_capabilities(self, obj):
+        """Return UI capabilities derived from the account's sync contract."""
+        institution_slug = obj.institution.slug if obj.institution else None
+        agent_flow = agent_flow_for_account(institution_slug, obj.account_type)
+        is_balance_only_auto = obj.sync_mode == "auto" and agent_flow == "investment_balance"
+
+        return {
+            "transactions": not is_balance_only_auto,
+            "balance_snapshots": True,
+            "statement_files": auto_sync_needs_storage_uri(agent_flow) or bool(obj.resolved_storage_uri()),
+            "agent_flow": agent_flow,
+        }
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         return data
@@ -128,7 +138,7 @@ class FinancialAccountCreateSerializer(serializers.Serializer):
     """Serializer for creating manual financial accounts."""
 
     name = serializers.CharField(max_length=255)
-    account_type = serializers.ChoiceField(choices=["checking", "savings", "credit_card"])
+    account_type = serializers.ChoiceField(choices=list(ACCOUNT_TYPE_LABELS.keys()))
     institution_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     institution_slug = serializers.CharField(
         max_length=255,
@@ -140,14 +150,89 @@ class FinancialAccountCreateSerializer(serializers.Serializer):
     initial_balance = serializers.DecimalField(max_digits=15, decimal_places=2, default=0)
     currency = serializers.CharField(max_length=3, default="USD")
 
+    def validate(self, attrs):
+        institution_slug = attrs.get("institution_slug") or "other"
+        account_type = attrs["account_type"]
+        if not is_valid_account_type(institution_slug, account_type):
+            raise serializers.ValidationError(
+                {
+                    "account_type": (
+                        f"Account type '{account_type}' is not supported for institution '{institution_slug}'."
+                    )
+                }
+            )
+        return attrs
+
 
 class FinancialAccountUpdateSerializer(serializers.Serializer):
     """Serializer for updating financial accounts."""
 
     name = serializers.CharField(max_length=255, required=False)
+    account_type = serializers.ChoiceField(choices=list(ACCOUNT_TYPE_LABELS.keys()), required=False)
     institution_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    institution_slug = serializers.CharField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+        help_text="Slug of preset institution (e.g., 'chase', 'guideline')",
+    )
     account_number_last4 = serializers.CharField(max_length=4, required=False, allow_blank=True)
     balance = serializers.DecimalField(max_digits=15, decimal_places=2, required=False)
     is_active = serializers.BooleanField(required=False)
     image_key = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
     shared_with_household = serializers.BooleanField(required=False)
+    storage_uri = serializers.CharField(max_length=512, required=False, allow_blank=True)
+    agent_activity_url = serializers.URLField(required=False, allow_blank=True, max_length=2048)
+    opening_balance = serializers.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+    )
+    opening_balance_date = serializers.DateField(required=False, allow_null=True)
+    sync_mode = serializers.ChoiceField(
+        choices=["auto", "upload", "manual"],
+        required=False,
+    )
+    agent_cadence = serializers.ChoiceField(
+        choices=["manual", "daily", "weekly", "monthly"],
+        required=False,
+    )
+    agent_sync_hour = serializers.IntegerField(min_value=0, max_value=23, required=False)
+
+    def validate(self, attrs):
+        account = self.context.get("account")
+
+        institution_slug = attrs.get("institution_slug")
+        if institution_slug is None and account and account.institution:
+            institution_slug = account.institution.slug
+        elif institution_slug is None:
+            institution_slug = "other"
+
+        account_type = attrs.get("account_type")
+        if account_type is None and account:
+            account_type = account.account_type
+
+        if attrs.get("institution_slug") is not None or attrs.get("account_type") is not None:
+            if account_type and not is_valid_account_type(institution_slug, account_type):
+                raise serializers.ValidationError(
+                    {
+                        "account_type": (
+                            f"Account type '{account_type}' is not supported for institution '{institution_slug}'."
+                        )
+                    }
+                )
+
+        sync_mode = attrs.get("sync_mode")
+        if sync_mode == "auto":
+            if agent_flow_for_account(institution_slug, account_type or "") is None:
+                raise serializers.ValidationError(
+                    {
+                        "sync_mode": (
+                            "Auto sync is not available for this institution and account type. "
+                            "Use upload or manual instead."
+                        )
+                    }
+                )
+
+        return attrs

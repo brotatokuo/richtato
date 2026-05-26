@@ -1,0 +1,48 @@
+# bank_sync.yml — debug/emergency config for the bank-agent.
+#
+# Normal flow: derive this structure from Richtato accounts instead of editing
+# it by hand:
+#
+#   python -m scripts.bank_sync.agent sync-config --token "$RICHTATO_API_TOKEN"
+#
+# To inspect/export the same shape as YAML:
+#
+#   docker compose exec backend python manage.py export_bank_agent_config --user-id 1
+#
+# You can still run `python -m scripts.bank_sync.agent apply scripts/bank_sync/bank_sync.yml`
+# to upsert this file into the local vault.
+#
+# Secrets (cookies, activity URLs) are never stored here — they live in the
+# encrypted SQLite vault at local_data/bank-agent/agent.db and are captured
+# via `bank-agent login signin <id>` after the first apply.
+#
+# storage_uri must match the Google Drive folder for the corresponding
+# Richtato account (from sync-config or export_bank_agent_config):
+#   gdrive://<folder_id>
+#
+# Supported institution slugs: bofa, bank_of_america, chase, jpmorgan_chase
+# Cadence options: manual, daily, weekly, monthly
+
+logins:
+  - institution: bofa
+    nickname: personal        # optional; used to distinguish multiple logins at the same bank
+    cadence: daily
+    hour: 6                   # preferred local hour (0-23) to run scheduled downloads
+    accounts:
+      - name: "Advantage SafeBalance Checking"
+        flow: deposit
+        storage_uri: "gdrive://REPLACE_WITH_ACCOUNT_FOLDER_ID"
+
+      - name: "Advantage Savings"
+        flow: deposit
+        storage_uri: "gdrive://REPLACE_WITH_ACCOUNT_FOLDER_ID"
+
+  # Uncomment and fill in to add a Chase login:
+  # - institution: chase
+  #   nickname: personal
+  #   cadence: daily
+  #   hour: 7
+  #   accounts:
+  #     - name: "Sapphire Preferred"
+  #       flow: credit_card
+  #       storage_uri: "gdrive://REPLACE_WITH_ACCOUNT_FOLDER_ID"

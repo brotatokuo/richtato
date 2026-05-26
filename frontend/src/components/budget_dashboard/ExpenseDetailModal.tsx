@@ -1,10 +1,10 @@
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { TransactionPreviewList } from '@/components/transactions/TransactionPreviewList';
 import { Modal } from '@/components/ui/Modal';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { formatCurrency, formatDate } from '@/lib/format';
+import { formatCurrency } from '@/lib/format';
 import { Transaction, transactionsApiService } from '@/lib/api/transactions';
 import type { MonthlyBudgetData } from '@/lib/api/budget-dashboard';
-import { AlertTriangle, TrendingDown, TrendingUp } from 'lucide-react';
+import { TrendingDown, TrendingUp } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 interface ExpenseDetailModalProps {
@@ -180,12 +180,14 @@ export function ExpenseDetailModal({
               currency={currency}
             />
           ) : (
-            <TransactionList
+            <TransactionPreviewList
               transactions={transactions}
               loading={loading}
               error={error}
-              currency={currency}
-              dateFormat={preferences.date_format ?? 'MM/DD/YYYY'}
+              emptyMessage="No transactions for this month"
+              showAccount
+              showCategory
+              variant="card"
             />
           )}
         </div>
@@ -253,81 +255,6 @@ function CategorySummary({ categories, currency }: CategorySummaryProps) {
           </div>
         );
       })}
-    </div>
-  );
-}
-
-interface TransactionListProps {
-  transactions: Transaction[];
-  loading: boolean;
-  error: string | null;
-  currency: string;
-  dateFormat: string;
-}
-
-function TransactionList({
-  transactions,
-  loading,
-  error,
-  currency,
-  dateFormat,
-}: TransactionListProps) {
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <LoadingSpinner />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center py-8">
-        <AlertTriangle className="h-8 w-8 text-red-500 mb-2" />
-        <p className="text-red-600 text-sm">{error}</p>
-      </div>
-    );
-  }
-
-  if (transactions.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        No transactions for this month
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      {transactions.map(txn => (
-        <div
-          key={txn.id}
-          className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors"
-        >
-          <div className="flex-1 min-w-0">
-            <div className="font-medium text-foreground truncate">
-              {txn.description}
-            </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>{formatDate(txn.date, dateFormat)}</span>
-              {txn.category_name && (
-                <>
-                  <span>•</span>
-                  <span className="truncate">{txn.category_name}</span>
-                </>
-              )}
-            </div>
-          </div>
-          <div className="text-right ml-4">
-            <div className="font-semibold text-foreground">
-              {formatCurrency(txn.amount, currency)}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {txn.account_name}
-            </div>
-          </div>
-        </div>
-      ))}
     </div>
   );
 }

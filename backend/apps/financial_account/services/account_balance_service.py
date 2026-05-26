@@ -66,7 +66,11 @@ class AccountBalanceService:
         return account
 
     def set_balance_snapshot(
-        self, account: FinancialAccount, new_balance: Decimal, balance_date: date = None
+        self,
+        account: FinancialAccount,
+        new_balance: Decimal,
+        balance_date: date = None,
+        source: str = "manual",
     ) -> FinancialAccount:
         """Set absolute balance and overwrite/create history for the date.
 
@@ -78,7 +82,7 @@ class AccountBalanceService:
             account=account,
             balance=new_balance,
             balance_date=balance_date,
-            source="manual",
+            source=source,
         )
 
         logger.info(

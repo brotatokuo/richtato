@@ -23,4 +23,4 @@ Richtato is an AI-native personal finance app with Monarch Money as the UX north
 - Frontend patterns: `frontend/CLAUDE.md`.
 - Backend patterns: `backend/CLAUDE.md`.
 - HTTP API: `API_REFERENCE.md` and `/api/docs/` Swagger in a running backend.
-- Statement import path: CSV/Excel upload through `/upload`, `/api/v1/accounts/import-statement/`, and stored statement files under `/api/v1/accounts/statements/`.
+- Statement storage path: Google Drive statement storage configured from **Setup → Statements** (`/setup?tab=statements`), backend APIs under `/api/v1/accounts/drive/`, agent uploads through `/api/v1/accounts/agent-statements/`, and stored statement records under `/api/v1/accounts/statements/`. `/upload` is deprecated and removed.

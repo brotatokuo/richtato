@@ -16,9 +16,47 @@ urlpatterns = [
         name="account-field-choices",
     ),
     path(
+        "bank-agent-config/",
+        views.BankAgentConfigAPIView.as_view(),
+        name="account-bank-agent-config",
+    ),
+    path(
+        "sync-setup/",
+        views.BankSyncSetupAPIView.as_view(),
+        name="account-sync-setup",
+    ),
+    path(
+        "bank-agent-setup-export/",
+        views.BankAgentSetupExportAPIView.as_view(),
+        name="account-bank-agent-setup-export",
+    ),
+    path(
+        "bank-agent-events/",
+        views.BankAgentEventAPIView.as_view(),
+        name="account-bank-agent-events",
+    ),
+    path("drive/status/", views.GoogleDriveStatusAPIView.as_view(), name="account-drive-status"),
+    path("drive/oauth/start/", views.GoogleDriveOAuthStartAPIView.as_view(), name="account-drive-oauth-start"),
+    path(
+        "drive/oauth/callback/",
+        views.GoogleDriveOAuthCallbackAPIView.as_view(),
+        name="account-drive-oauth-callback",
+    ),
+    path("drive/picker-token/", views.GoogleDrivePickerTokenAPIView.as_view(), name="account-drive-picker-token"),
+    path("drive/activate/", views.GoogleDriveActivateAPIView.as_view(), name="account-drive-activate"),
+    path("drive/adopt-preview/", views.GoogleDriveAdoptPreviewAPIView.as_view(), name="account-drive-adopt-preview"),
+    path("drive/deactivate/", views.GoogleDriveDeactivateAPIView.as_view(), name="account-drive-deactivate"),
+    path("drive/disconnect/", views.GoogleDriveDisconnectAPIView.as_view(), name="account-drive-disconnect"),
+    path("drive/sync-folders/", views.GoogleDriveSyncFoldersAPIView.as_view(), name="account-drive-sync-folders"),
+    path(
         "<int:pk>/",
         views.FinancialAccountDetailAPIView.as_view(),
         name="account-detail",
+    ),
+    path(
+        "<int:pk>/scan/",
+        views.AccountScanStorageAPIView.as_view(),
+        name="account-scan-storage",
     ),
     path(
         "<int:pk>/balance-history/",
@@ -45,6 +83,16 @@ urlpatterns = [
         "import-statement/",
         views.StatementImportAPIView.as_view(),
         name="account-statement-import",
+    ),
+    path(
+        "agent-statements/",
+        views.AgentStatementUploadAPIView.as_view(),
+        name="account-agent-statement-upload",
+    ),
+    path(
+        "agent-balances/",
+        views.AgentBalanceSnapshotAPIView.as_view(),
+        name="account-agent-balance-snapshot",
     ),
     path(
         "statements/",

@@ -2,11 +2,10 @@ import {
   HeaderSlotProvider,
   useHeaderSlot,
 } from '@/contexts/HeaderSlotContext';
-import { useSyncStatus } from '@/hooks/useSyncStatus';
 import {
   BarChart3,
+  Bot,
   Calculator,
-  CloudUpload,
   Heart,
   Landmark,
   MoreHorizontal,
@@ -16,8 +15,8 @@ import {
   Wallet,
 } from 'lucide-react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { toast } from 'sonner';
 import { BottomTabBar } from './BottomTabBar';
+import { NotificationBell } from './NotificationBell';
 import { Sidebar } from './Sidebar';
 
 // Route to page title and icon mapping
@@ -26,11 +25,11 @@ const routeConfig: Record<
   { title: string; icon: React.ComponentType<{ className?: string }> }
 > = {
   '/accounts': { title: 'Accounts', icon: Landmark },
+  '/bank-agent': { title: 'Bank Agent', icon: Bot },
   '/budget': { title: 'Budget', icon: Wallet },
   '/transactions': { title: 'Transactions', icon: Table },
   '/dashboard': { title: 'Dashboard', icon: BarChart3 },
-  '/upload': { title: 'Upload', icon: CloudUpload },
-  '/preferences': { title: 'Preferences', icon: Settings },
+  '/preferences': { title: 'Settings', icon: Settings },
   '/setup': { title: 'Setup', icon: SlidersHorizontal },
   '/settings': { title: 'Settings', icon: Settings },
   '/more': { title: 'More', icon: MoreHorizontal },
@@ -49,26 +48,6 @@ export function Layout() {
 function LayoutInner() {
   const location = useLocation();
   const { headerSlot } = useHeaderSlot();
-
-  // Global sync status monitoring for toast notifications
-  useSyncStatus({
-    onSyncComplete: newCount => {
-      if (newCount > 0) {
-        toast.success('Sync complete', {
-          description: `${newCount} new transaction${newCount === 1 ? '' : 's'} synced`,
-        });
-      } else {
-        toast.success('Sync complete', {
-          description: 'All accounts are up to date',
-        });
-      }
-    },
-    onSyncError: error => {
-      toast.error('Sync failed', {
-        description: error || 'An error occurred during sync',
-      });
-    },
-  });
 
   // Get the current page config based on the route (supports nested paths)
   const matchedKey = Object.keys(routeConfig).find(
@@ -112,13 +91,14 @@ function LayoutInner() {
               {headerSlot && (
                 <div className="hidden items-center md:flex">{headerSlot}</div>
               )}
+              <NotificationBell />
             </div>
           </div>
         </header>
 
-        {/* Main Content — extra bottom padding on mobile for the tab bar */}
-        <main className="flex-1 overflow-auto scrollbar-thin min-w-0">
-          <div className="w-full max-w-full p-4 md:p-6 pb-20 md:pb-6 overflow-x-hidden">
+        {/* Main Content */}
+        <main className="flex-1 min-h-0 overflow-auto scrollbar-thin min-w-0">
+          <div className="flex h-full min-h-0 w-full max-w-full flex-col p-4 md:p-6 overflow-x-hidden">
             <Outlet />
           </div>
         </main>

@@ -136,6 +136,26 @@ class UserPreference(models.Model):
 
     # Notification preferences
     notifications_enabled = models.BooleanField(default=True, help_text="Whether to receive notifications")
+    bank_sync_in_app_notifications = models.BooleanField(
+        default=True,
+        help_text="Whether to show in-app notifications for bank-sync issues.",
+    )
+    bank_sync_email_notifications = models.BooleanField(
+        default=False,
+        help_text="Whether to send immediate email notifications for bank-sync failures.",
+    )
+    bank_sync_daily_digest = models.BooleanField(
+        default=True,
+        help_text="Whether to include this user in scheduled bank-sync digest emails.",
+    )
+
+    # Host bank-agent encryption key (stable per user; retrieved from Setup → Sync).
+    bank_agent_fernet_key = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="Stable Fernet key for the host bank-agent vault encryption.",
+    )
 
     class Meta:
         verbose_name_plural = "User Preferences"

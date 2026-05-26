@@ -16,6 +16,16 @@ from loguru import logger
 from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
 from apps.transaction.models import Transaction
 
+CATEGORY_ONLY_UPDATE_FIELDS = frozenset({"category", "category_id", "categorization_status"})
+
+
+def _is_category_only_update(kwargs) -> bool:
+    """True when save only touches categorization fields (no balance impact)."""
+    update_fields = kwargs.get("update_fields")
+    if not update_fields:
+        return False
+    return set(update_fields).issubset(CATEGORY_ONLY_UPDATE_FIELDS)
+
 
 def recalculate_balance_for_date(
     account: FinancialAccount, target_date: date, current_balance: Decimal = None
@@ -97,6 +107,8 @@ def update_balances_from_date(account: FinancialAccount, from_date: date) -> Non
 @receiver(pre_save, sender=Transaction)
 def transaction_pre_save(sender, instance: Transaction, **kwargs):
     """Capture old values before update so post_save can compute the delta."""
+    if _is_category_only_update(kwargs):
+        return
     if instance.pk:
         try:
             old = Transaction.objects.get(pk=instance.pk)
@@ -114,6 +126,9 @@ def transaction_post_save(sender, instance: Transaction, created: bool, **kwargs
     1. Adjust the account balance anchor so it stays current.
     2. Recalculate balance history from the affected date forward.
     """
+    if not created and _is_category_only_update(kwargs):
+        return
+
     account = instance.account
 
     if created:

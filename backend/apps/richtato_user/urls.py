@@ -31,5 +31,15 @@ urlpatterns = [
     path("login/", views.APILoginView.as_view(), name="login"),
     path("register/", views.RegisterView.as_view(), name="register"),
     path("logout/", views.APILogoutView.as_view(), name="logout"),
+    path("api-token/", views.APIAgentTokenView.as_view(), name="api_token"),
     path("demo-login/", views.APIDemoLoginView.as_view(), name="demo_login"),
+    path("backup/export/", views.UserBackupExportAPIView.as_view(), name="backup_export"),
+    path(
+        "backup/export/transactions/",
+        views.UserBackupTransactionsExportAPIView.as_view(),
+        name="backup_export_transactions",
+    ),
+    path("backup/import/status/", views.UserBackupImportStatusAPIView.as_view(), name="backup_import_status"),
+    path("backup/import/preview/", views.UserBackupImportPreviewAPIView.as_view(), name="backup_import_preview"),
+    path("backup/import/commit/", views.UserBackupImportCommitAPIView.as_view(), name="backup_import_commit"),
 ]

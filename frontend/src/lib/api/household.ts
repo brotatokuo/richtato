@@ -34,12 +34,15 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 class HouseholdApiService {
-  async getHousehold(): Promise<Household> {
+  async getHousehold(): Promise<Household | null> {
     const response = await fetch(`${API_BASE}/household/`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
+    if (response.status === 404) {
+      return null;
+    }
     return handleResponse<Household>(response);
   }
 

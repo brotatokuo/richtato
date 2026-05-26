@@ -16,6 +16,7 @@ backend/*.db
 # Ignore compiled Python files
 __pycache__/
 *.py[cod]
+scripts/bank_sync/.venv/
 
 .DS_Store
 
@@ -69,3 +70,4 @@ certs/
 
 richtato_tep_data/
 local_data/
+richtato-bank-agent-setup.yml

@@ -5424,7 +5424,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prop-types@npm:^15.7.2, prop-types@npm:^15.8.1":
+"prop-types@npm:^15.8.1":
   version: 15.8.1
   resolution: "prop-types@npm:15.8.1"
   dependencies:
@@ -5484,19 +5484,6 @@ __metadata:
   version: 17.0.2
   resolution: "react-is@npm:17.0.2"
   checksum: 10c0/2bdb6b93fbb1820b024b496042cce405c57e2f85e777c9aabd55f9b26d145408f9f74f5934676ffdc46f3dcff656d78413a6e43968e7b3f92eea35b3052e9053
-  languageName: node
-  linkType: hard
-
-"react-plaid-link@npm:^3.5.2":
-  version: 3.6.1
-  resolution: "react-plaid-link@npm:3.6.1"
-  dependencies:
-    prop-types: "npm:^15.7.2"
-    react-script-hook: "npm:^1.7.2"
-  peerDependencies:
-    react: ^16.8.0 || ^17.0.0 || ^18.0.0
-    react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0
-  checksum: 10c0/89ec6fd4869e6875c6e2179c0a018fcd3014e8b4ea5ffa7175eb25fffbdf58c38c423cd0908589173662c832fd3722d7324fc5677958f09bc3322fdf34bd3498
   languageName: node
   linkType: hard
 
@@ -5567,16 +5554,6 @@ __metadata:
     react-dom:
       optional: true
   checksum: 10c0/27448e4c84199d240f6a15d503cf26509320fd4ea31aec6f12a427ac4a560a320321e9b119981eddad25801c062be0f814d4461174f69efdc9f9e5af14cf6915
-  languageName: node
-  linkType: hard
-
-"react-script-hook@npm:^1.7.2":
-  version: 1.7.2
-  resolution: "react-script-hook@npm:1.7.2"
-  peerDependencies:
-    react: ^16.8.6 || 17 - 18
-    react-dom: ^16.8.6 || 17 - 18
-  checksum: 10c0/20f63c9d2ca697b6756fabf49e4d5ea52f1dde44c1f03910e1c513f20f840f991192338895b2456635cbf2965db5b2adead0e62e6ce3fc04178938daeb3fdffe
   languageName: node
   linkType: hard
 
@@ -5775,7 +5752,6 @@ __metadata:
     react: "npm:^19.1.1"
     react-day-picker: "npm:^9.13.0"
     react-dom: "npm:^19.1.1"
-    react-plaid-link: "npm:^3.5.2"
     react-router-dom: "npm:^7.1.1"
     sonner: "npm:^2.0.7"
     tailwind-merge: "npm:^2.6.0"

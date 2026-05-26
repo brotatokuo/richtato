@@ -21,16 +21,25 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - ./local_data:/local_data
       - static_volume:/app/staticfiles
       - media_volume:/app/media
       - ./.cursor:/app/.cursor_logs
     depends_on:
       db:
         condition: service_healthy
+    command: >
+      sh -c "find /app -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true &&
+      python manage.py collectstatic --noinput &&
+      python manage.py migrate &&
+      python manage.py createsuperuser --noinput || true &&
+      python manage.py runserver 0.0.0.0:8000"
 
   # React Frontend
   frontend:
@@ -45,28 +54,13 @@ services:
       - "3000:3000"
     volumes:
       - ./frontend:/app
-      - /app/node_modules
+      - frontend_node_modules:/app/node_modules
     depends_on:
       - backend
-    command: yarn dev --host 0.0.0.0
-
-  # Statement download automation (Playwright + scheduler)
-  automation:
-    build:
-      context: ./scripts/automation
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-    volumes:
-      - ./local_data:/app/local_data
-      - ./scripts/automation:/app/scripts/automation
-    depends_on:
-      backend:
-        condition: service_started
-    restart: unless-stopped
-    command: python -m scripts.automation.scheduler
+    command: sh -c "corepack enable && yarn install && yarn dev --host 0.0.0.0"
 
 volumes:
   postgres_data:
   static_volume:
   media_volume:
+  frontend_node_modules:

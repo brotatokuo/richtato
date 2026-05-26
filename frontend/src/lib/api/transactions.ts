@@ -63,12 +63,23 @@ export interface Account {
   image_key?: string | null;
   // Household sharing
   shared_with_household?: boolean;
-  // Sync connection fields
+  // Sync source: 'manual' or 'csv'
   sync_source?: string;
-  has_connection?: boolean;
-  connection_id?: number | null;
-  connection_status?: 'active' | 'disconnected' | 'error' | null;
-  last_sync?: string | null;
+  // Sync mode controls how the account receives transactions: auto (bank-sync
+  // agent), upload (statement file upload), or manual (typed entries).
+  sync_mode?: 'auto' | 'upload' | 'manual';
+  // Google Drive folder URI for this account's statement files (gdrive://...).
+  // Empty until Drive is activated in Setup → Statements.
+  storage_uri?: string;
+  resolved_storage_uri?: string;
+  opening_balance?: string | null;
+  opening_balance_date?: string | null;
+  sync_capabilities?: {
+    transactions: boolean;
+    balance_snapshots: boolean;
+    statement_files: boolean;
+    agent_flow: 'deposit' | 'credit_card' | 'investment_balance' | null;
+  };
 }
 
 export interface Category {
@@ -105,12 +116,40 @@ class TransactionsApiService {
     };
   }
 
+  private formatApiError(
+    errorData: Record<string, unknown>,
+    status: number
+  ): string {
+    if (typeof errorData.error === 'string' && errorData.error) {
+      return errorData.error;
+    }
+
+    const fieldMessages = Object.entries(errorData)
+      .filter(([, value]) => value !== undefined && value !== null)
+      .map(([field, value]) => {
+        if (Array.isArray(value)) {
+          return `${field}: ${value.join(', ')}`;
+        }
+        if (typeof value === 'string') {
+          return `${field}: ${value}`;
+        }
+        return `${field}: ${JSON.stringify(value)}`;
+      });
+
+    if (fieldMessages.length > 0) {
+      return fieldMessages.join('; ');
+    }
+
+    return `HTTP error! status: ${status}`;
+  }
+
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.error || `HTTP error! status: ${response.status}`
-      );
+      const errorData = (await response.json().catch(() => ({}))) as Record<
+        string,
+        unknown
+      >;
+      throw new Error(this.formatApiError(errorData, response.status));
     }
     return response.json();
   }
@@ -297,6 +336,18 @@ class TransactionsApiService {
   }
 
   /**
+   * Get a single account by ID
+   */
+  async getAccountById(id: number): Promise<Account> {
+    const response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include',
+    });
+    return this.handleResponse<Account>(response);
+  }
+
+  /**
    * Get transactions for an account
    */
   async getAccountTransactions(
@@ -457,30 +508,64 @@ class TransactionsApiService {
     input: Partial<{
       name: string;
       type: string;
+      entity: string;
+      institution_slug: string;
       asset_entity_name: string;
       image_key: string | null;
       shared_with_household: boolean;
+      opening_balance: number | null;
+      opening_balance_date: string | null;
     }>
   ): Promise<Account> {
+    const body: Record<string, unknown> = {};
+    if (input.name !== undefined) body.name = input.name;
+    if (input.type !== undefined) body.account_type = input.type;
+    if (input.institution_slug !== undefined) {
+      body.institution_slug = input.institution_slug;
+    } else if (input.entity !== undefined) {
+      body.institution_slug = input.entity;
+    }
+    if (input.image_key !== undefined) body.image_key = input.image_key;
+    if (input.shared_with_household !== undefined) {
+      body.shared_with_household = input.shared_with_household;
+    }
+    if (input.opening_balance !== undefined) {
+      body.opening_balance = input.opening_balance;
+    }
+    if (input.opening_balance_date !== undefined) {
+      body.opening_balance_date = input.opening_balance_date;
+    }
+
+    console.info('[AccountEdit] PATCH /accounts/%s payload:', id, body);
+
     let response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
       method: 'PATCH',
       headers: await csrfService.getHeaders(),
       credentials: 'include',
-      body: JSON.stringify(input),
+      body: JSON.stringify(body),
     });
 
     // If CSRF token is invalid, refresh it and retry once
     if (response.status === 403) {
+      console.warn(
+        '[AccountEdit] CSRF rejected, refreshing token and retrying'
+      );
       await csrfService.refreshToken();
       response = await fetch(`${this.baseUrl}/accounts/${id}/`, {
         method: 'PATCH',
         headers: await csrfService.getHeaders(),
         credentials: 'include',
-        body: JSON.stringify(input),
+        body: JSON.stringify(body),
       });
     }
 
-    return this.handleResponse<Account>(response);
+    const account = await this.handleResponse<Account>(response);
+    console.info('[AccountEdit] PATCH /accounts/%s response:', id, {
+      balance: account.balance,
+      opening_balance: account.opening_balance,
+      opening_balance_date: account.opening_balance_date,
+    });
+    return account;
   }
 
   /**
@@ -798,6 +883,11 @@ class TransactionsApiService {
   async getAccountFieldChoices(): Promise<{
     type: Array<{ value: string; label: string }>;
     entity: Array<{ value: string; label: string }>;
+    institutions?: Array<{
+      value: string;
+      label: string;
+      account_types: Array<{ value: string; label: string }>;
+    }>;
   }> {
     const response = await fetch(`${this.baseUrl}/accounts/field-choices/`, {
       method: 'GET',

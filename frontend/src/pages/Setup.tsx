@@ -1,34 +1,51 @@
+import { DataPortabilitySection } from '@/components/settings/DataPortabilitySection';
 import { HouseholdSettings } from '@/components/household/HouseholdSettings';
 import { BudgetsSection } from '@/components/settings/BudgetsSection';
 import { CategoriesSection } from '@/components/settings/CategoriesSection';
-import { SyncHistorySection } from '@/components/settings/SyncHistorySection';
-import { UnifiedAccountsSection } from '@/components/settings/UnifiedAccountsSection';
+import { DriveStatementsSection } from '@/components/settings/DriveStatementsSection';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Landmark, PiggyBank, Tag, Users } from 'lucide-react';
+import { Cloud, Database, PiggyBank, Tag, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 
-type TabValue = 'accounts' | 'categories' | 'budgets' | 'household';
+type TabValue = 'categories' | 'budgets' | 'household' | 'statements' | 'data';
 
 const VALID_TABS: TabValue[] = [
-  'accounts',
+  'statements',
   'categories',
   'budgets',
   'household',
+  'data',
 ];
 
 export function Setup() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const tabParam = searchParams.get('tab') as TabValue | null;
+  const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState<TabValue>(
-    tabParam && VALID_TABS.includes(tabParam) ? tabParam : 'accounts'
+    tabParam && VALID_TABS.includes(tabParam as TabValue)
+      ? (tabParam as TabValue)
+      : 'statements'
   );
 
   useEffect(() => {
-    if (tabParam && VALID_TABS.includes(tabParam) && tabParam !== activeTab) {
-      setActiveTab(tabParam);
+    if (
+      tabParam &&
+      VALID_TABS.includes(tabParam as TabValue) &&
+      tabParam !== activeTab
+    ) {
+      setActiveTab(tabParam as TabValue);
     }
   }, [tabParam, activeTab]);
+
+  // Legacy /setup?tab=accounts now lives at /accounts.
+  if (tabParam === 'accounts') {
+    return <Navigate to="/accounts" replace />;
+  }
+
+  // Legacy /setup?tab=sync now lives at /bank-agent.
+  if (tabParam === 'sync') {
+    return <Navigate to="/bank-agent" replace />;
+  }
 
   const handleTabChange = (value: string) => {
     const tab = value as TabValue;
@@ -42,10 +59,10 @@ export function Setup() {
       onValueChange={handleTabChange}
       className="space-y-4"
     >
-      <TabsList className="grid w-full grid-cols-4 sm:w-auto sm:inline-grid">
-        <TabsTrigger value="accounts" className="flex items-center gap-2">
-          <Landmark className="h-4 w-4" />
-          <span>Accounts</span>
+      <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 sm:w-auto sm:inline-grid">
+        <TabsTrigger value="statements" className="flex items-center gap-2">
+          <Cloud className="h-4 w-4" />
+          <span>Statements</span>
         </TabsTrigger>
         <TabsTrigger value="categories" className="flex items-center gap-2">
           <Tag className="h-4 w-4" />
@@ -59,11 +76,14 @@ export function Setup() {
           <Users className="h-4 w-4" />
           <span>Household</span>
         </TabsTrigger>
+        <TabsTrigger value="data" className="flex items-center gap-2">
+          <Database className="h-4 w-4" />
+          <span>Data</span>
+        </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="accounts" className="space-y-6">
-        <UnifiedAccountsSection />
-        <SyncHistorySection />
+      <TabsContent value="statements">
+        <DriveStatementsSection />
       </TabsContent>
 
       <TabsContent value="categories">
@@ -76,6 +96,10 @@ export function Setup() {
 
       <TabsContent value="household">
         <HouseholdSettings />
+      </TabsContent>
+
+      <TabsContent value="data">
+        <DataPortabilitySection />
       </TabsContent>
     </Tabs>
   );

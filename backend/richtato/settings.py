@@ -28,13 +28,32 @@ load_dotenv(_PROJECT_ROOT / ".env")
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-only-change-me-in-production")
 
-# Plaid API Configuration
-PLAID_CLIENT_ID = os.getenv("PLAID_CLIENT_ID")
-
 # Cron Job Security
 CRON_SECRET_KEY = os.getenv("CRON_SECRET_KEY")
-PLAID_SECRET = os.getenv("PLAID_SECRET")
-PLAID_ENV = os.getenv("PLAID_ENV", "sandbox")  # sandbox, development, production
+
+# Bank Sync Encryption Key
+# Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# Required in production. In development we derive a deterministic key from
+# SECRET_KEY when this is unset.
+BANK_SYNC_FERNET_KEY = os.getenv("BANK_SYNC_FERNET_KEY", "")
+
+# Google Drive statement storage
+GOOGLE_DRIVE_CLIENT_ID = os.getenv("GOOGLE_DRIVE_CLIENT_ID", "")
+GOOGLE_DRIVE_CLIENT_SECRET = os.getenv("GOOGLE_DRIVE_CLIENT_SECRET", "")
+GOOGLE_DRIVE_REDIRECT_URI = os.getenv("GOOGLE_DRIVE_REDIRECT_URI", "")
+GOOGLE_DRIVE_PICKER_API_KEY = os.getenv("GOOGLE_DRIVE_PICKER_API_KEY", "")
+GOOGLE_DRIVE_PICKER_APP_ID = os.getenv("GOOGLE_DRIVE_PICKER_APP_ID", "")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+# Resend transactional email (daily sync digest, etc.)
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "")
+
+# Host bank-agent SQLite vault (mounted at /local_data in Docker)
+_default_agent_db = _PROJECT_ROOT / "local_data" / "bank-agent" / "agent.db"
+if Path("/local_data").is_dir():
+    _default_agent_db = Path("/local_data/bank-agent/agent.db")
+BANK_AGENT_DB_PATH = os.getenv("BANK_AGENT_DB_PATH", str(_default_agent_db))
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
@@ -59,7 +78,7 @@ INSTALLED_APPS = [
     "apps.financial_account",
     "apps.transaction",
     "apps.categorization",
-    "apps.sync",
+    "apps.bank_sync",
     "apps.budget",
     "apps.household",
     "django.contrib.humanize",
@@ -86,7 +105,6 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.richtato_user.middleware.CleanupDemoUsersMiddleware",
     "apps.richtato_user.middleware.ResetDemoUserMiddleware",
-    "apps.sync.middleware.AutoSyncMiddleware",
     "apps.core.middleware.SelfPingMiddleware",
 ]
 

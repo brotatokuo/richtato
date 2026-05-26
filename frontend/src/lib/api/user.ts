@@ -279,6 +279,9 @@ export interface UserPreferencesPayload {
   date_format?: string;
   timezone?: string;
   notifications_enabled?: boolean;
+  bank_sync_in_app_notifications?: boolean;
+  bank_sync_email_notifications?: boolean;
+  bank_sync_daily_digest?: boolean;
 }
 
 export interface FieldChoice {

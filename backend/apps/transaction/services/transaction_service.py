@@ -9,7 +9,7 @@ from loguru import logger
 
 from apps.financial_account.models import FinancialAccount
 from apps.richtato_user.models import User
-from apps.transaction.models import CategoryKeyword, Transaction, TransactionCategory
+from apps.transaction.models import Transaction, TransactionCategory
 from apps.transaction.repositories.category_repository import CategoryRepository
 from apps.transaction.repositories.transaction_repository import TransactionRepository
 
@@ -172,7 +172,12 @@ class TransactionService:
         if not category:
             raise ValueError(f"Category {category_id} not found")
 
-        return self.transaction_repository.update_transaction(transaction, category=category)
+        return self.transaction_repository.update_transaction(
+            transaction,
+            category=category,
+            categorization_status="categorized",
+            update_fields=["category", "categorization_status"],
+        )
 
     def get_transaction_summary(self, user: User, start_date: date, end_date: date) -> dict:
         """
@@ -288,14 +293,9 @@ class TransactionService:
 
     def _match_category_via_keywords(self, user: User, description: str) -> TransactionCategory | None:
         """Try to match a category using user keyword rules."""
-        text_parts = [description or ""]
-        haystack = " ".join(text_parts).lower()
+        from apps.transaction.services.keyword_matching import (
+            load_user_keywords,
+            match_category_from_keywords,
+        )
 
-        # Query keywords for user's categories
-        keywords = CategoryKeyword.objects.filter(user=user).select_related("category").order_by("-match_count")
-
-        for keyword_obj in keywords:
-            kw = keyword_obj.keyword.strip().lower()
-            if kw and kw in haystack:
-                return keyword_obj.category
-        return None
+        return match_category_from_keywords(description, load_user_keywords(user))

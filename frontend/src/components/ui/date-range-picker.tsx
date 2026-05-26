@@ -12,21 +12,6 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 
-// #region agent log
-fetch('http://127.0.0.1:7242/ingest/865d0811-47b7-40c2-94b4-9a9a09a7dc1a', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    location: 'date-range-picker.tsx:1',
-    message: 'Module loaded',
-    data: { hasFormat: typeof format, hasCalendar: typeof Calendar },
-    timestamp: Date.now(),
-    sessionId: 'debug-session',
-    hypothesisId: 'H2,H4',
-  }),
-}).catch(() => {});
-// #endregion
-
 interface DateRangePickerProps {
   dateRange?: DateRange;
   onDateRangeChange?: (range: DateRange | undefined) => void;
@@ -40,25 +25,6 @@ export function DateRangePicker({
   className,
   disabled,
 }: DateRangePickerProps) {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/865d0811-47b7-40c2-94b4-9a9a09a7dc1a', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      location: 'date-range-picker.tsx:28',
-      message: 'DateRangePicker rendered',
-      data: {
-        dateRange: dateRange
-          ? { from: dateRange.from?.toString(), to: dateRange.to?.toString() }
-          : null,
-        disabled,
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      hypothesisId: 'H3,H4',
-    }),
-  }).catch(() => {});
-  // #endregion
   const [open, setOpen] = React.useState(false);
 
   return (
@@ -78,29 +44,6 @@ export function DateRangePicker({
             {dateRange?.from ? (
               dateRange.to ? (
                 <>
-                  {/* #region agent log */}
-                  {(() => {
-                    fetch(
-                      'http://127.0.0.1:7242/ingest/865d0811-47b7-40c2-94b4-9a9a09a7dc1a',
-                      {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          location: 'date-range-picker.tsx:48',
-                          message: 'Formatting date range',
-                          data: {
-                            from: dateRange.from?.toString(),
-                            to: dateRange.to?.toString(),
-                          },
-                          timestamp: Date.now(),
-                          sessionId: 'debug-session',
-                          hypothesisId: 'H2,H3',
-                        }),
-                      }
-                    ).catch(() => {});
-                    return null;
-                  })()}
-                  {/* #endregion */}
                   {format(dateRange.from, 'LLL dd, y')} -{' '}
                   {format(dateRange.to, 'LLL dd, y')}
                 </>
@@ -113,30 +56,6 @@ export function DateRangePicker({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          {/* #region agent log */}
-          {(() => {
-            fetch(
-              'http://127.0.0.1:7242/ingest/865d0811-47b7-40c2-94b4-9a9a09a7dc1a',
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  location: 'date-range-picker.tsx:62',
-                  message: 'Rendering Calendar',
-                  data: {
-                    hasCalendar: typeof Calendar,
-                    mode: 'range',
-                    dateRangeFrom: dateRange?.from?.toString(),
-                  },
-                  timestamp: Date.now(),
-                  sessionId: 'debug-session',
-                  hypothesisId: 'H4',
-                }),
-              }
-            ).catch(() => {});
-            return null;
-          })()}
-          {/* #endregion */}
           <Calendar
             initialFocus
             mode="range"
