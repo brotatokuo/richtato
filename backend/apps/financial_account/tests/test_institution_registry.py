@@ -5,8 +5,6 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 
 from apps.financial_account.institutions.registry import (
-    agent_flow_for_account,
-    get_agent_institution_slug,
     get_institution_field_choices,
     get_supported_institutions,
     is_valid_account_type,
@@ -59,19 +57,6 @@ def test_parser_key_for_slug(slug, expected_parser):
 )
 def test_is_valid_account_type(slug, account_type, expected):
     assert is_valid_account_type(slug, account_type) is expected
-
-
-def test_get_agent_institution_slug_supports_legacy_aliases():
-    assert get_agent_institution_slug("bank_of_america") == "bofa"
-    assert get_agent_institution_slug("jpmorgan_chase") == "chase"
-    assert get_agent_institution_slug("guideline") == "guideline"
-    assert get_agent_institution_slug("robinhood") == "robinhood"
-    assert get_agent_institution_slug("marcus") == "marcus"
-    assert get_agent_institution_slug("american_express") is None
-
-
-def test_marcus_savings_uses_investment_balance_flow():
-    assert agent_flow_for_account("marcus", "savings") == "investment_balance"
 
 
 def test_get_supported_institutions_uses_account_types():

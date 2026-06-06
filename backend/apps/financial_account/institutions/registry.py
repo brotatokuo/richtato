@@ -153,7 +153,6 @@ class InstitutionDefinition:
     name: str
     account_types: tuple[str, ...]
     parser_key: str | None = None
-    auto_sync_key: str | None = None
     parser_config: dict[str, Any] = field(default_factory=dict)
 
 
@@ -163,7 +162,6 @@ def _inst(
     account_types: tuple[str, ...],
     *,
     parser_key: str | None = None,
-    auto_sync_key: str | None = None,
 ) -> InstitutionDefinition:
     resolved_parser_key = parser_key
     parser_config: dict[str, Any] = {}
@@ -174,7 +172,6 @@ def _inst(
         name=name,
         account_types=account_types,
         parser_key=resolved_parser_key,
-        auto_sync_key=auto_sync_key,
         parser_config=parser_config,
     )
 
@@ -187,14 +184,12 @@ INSTITUTIONS: dict[str, InstitutionDefinition] = {
             "Bank of America",
             ("checking", "savings", "credit_card"),
             parser_key="bofa",
-            auto_sync_key="bofa",
         ),
         _inst(
             "chase",
             "Chase",
             ("checking", "savings", "credit_card"),
             parser_key="chase",
-            auto_sync_key="chase",
         ),
         _inst("citibank", "Citibank", ("credit_card",), parser_key="citi"),
         _inst("american_express", "American Express", ("checking", "credit_card"), parser_key="amex"),
@@ -203,14 +198,12 @@ INSTITUTIONS: dict[str, InstitutionDefinition] = {
             "Marcus by Goldman Sachs",
             ("savings",),
             parser_key="marcus",
-            auto_sync_key="marcus",
         ),
         _inst(
             "robinhood",
             "Robinhood",
             ("checking", "savings", "credit_card", "investment"),
             parser_key="robinhood_bank",
-            auto_sync_key="robinhood",
         ),
         _inst("fidelity", "Fidelity", ("investment",), parser_key="fidelity"),
         _inst(
@@ -218,13 +211,12 @@ INSTITUTIONS: dict[str, InstitutionDefinition] = {
             "Guideline",
             ("investment",),
             parser_key="guideline",
-            auto_sync_key="guideline",
         ),
         _inst("other", "Other", ALL_ACCOUNT_TYPES),
     ]
 }
 
-# Legacy slugs that should still resolve to the same parser / auto-sync key.
+# Legacy slugs that should still resolve to the same parser key.
 _LEGACY_SLUG_ALIASES: dict[str, str] = {
     "bofa": "bank_of_america",
     "jpmorgan_chase": "chase",
@@ -302,36 +294,6 @@ def supported_extensions_for_parser(parser_key: str | None) -> set[str]:
     return {f".{file_type}" for file_type in supported_file_types_for_parser(parser_key)}
 
 
-def get_agent_institution_slug(account_institution_slug: str | None) -> str | None:
-    institution = get_institution(account_institution_slug)
-    if institution is None or institution.auto_sync_key is None:
-        return None
-    return institution.auto_sync_key
-
-
-def institution_supports_agent_sync(account_institution_slug: str | None) -> bool:
-    """Return True when the institution has a host bank-agent adapter."""
-    return get_agent_institution_slug(account_institution_slug) is not None
-
-
-def agent_flow_for_account(account_institution_slug: str | None, account_type: str) -> str | None:
-    """Return the bank-agent flow for an account, or None when unsupported."""
-    if not institution_supports_agent_sync(account_institution_slug):
-        return None
-    if account_type == "credit_card":
-        return "credit_card"
-    if account_institution_slug in {"guideline", "robinhood"} and account_type == "investment":
-        return "investment_balance"
-    if account_institution_slug == "marcus" and account_type == "savings":
-        return "investment_balance"
-    return "deposit"
-
-
-def auto_sync_needs_storage_uri(flow: str | None) -> bool:
-    """Statement download flows require a Google Drive folder per account."""
-    return flow in {"deposit", "credit_card"}
-
-
 def is_valid_account_type(slug: str | None, account_type: str) -> bool:
     institution = get_institution(slug)
     if institution is None:
@@ -350,17 +312,6 @@ def _account_type_choices_for_institution(institution: InstitutionDefinition) ->
     ]
 
 
-def _agent_flow_choices_for_institution(institution: InstitutionDefinition) -> list[dict[str, Any]]:
-    return [
-        {
-            "account_type": account_type,
-            "flow": agent_flow_for_account(institution.slug, account_type),
-            "needs_storage": auto_sync_needs_storage_uri(agent_flow_for_account(institution.slug, account_type)),
-        }
-        for account_type in institution.account_types
-    ]
-
-
 def get_institution_field_choices() -> dict[str, Any]:
     """Payload for account form field choices."""
     institutions = []
@@ -370,7 +321,6 @@ def get_institution_field_choices() -> dict[str, Any]:
             "value": institution.slug,
             "label": institution.name,
             "account_types": _account_type_choices_for_institution(institution),
-            "agent_flows": _agent_flow_choices_for_institution(institution),
         }
         institutions.append(payload)
         entity_choices.append({"value": institution.slug, "label": institution.name})

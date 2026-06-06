@@ -3,8 +3,11 @@ import type { InstitutionFieldChoice } from '@/components/accounts/AccountFormFi
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { Account, transactionsApiService } from '@/lib/api/transactions';
-import type { AgentCadence, SyncMode } from '@/lib/api/bankSync';
+import {
+  Account,
+  transactionsApiService,
+  type SyncMode,
+} from '@/lib/api/transactions';
 import { formatCurrency } from '@/lib/format';
 import { getEntityLogo } from '@/lib/imageMapping';
 import { cn } from '@/lib/utils';
@@ -164,9 +167,6 @@ export function AccountsSidebar({
     entity: string;
     starting_balance?: string;
     sync_mode: SyncMode;
-    agent_cadence: AgentCadence;
-    agent_sync_hour: number;
-    agent_activity_url?: string;
   }) => {
     setCreating(true);
     try {
@@ -181,9 +181,6 @@ export function AccountsSidebar({
           ? undefined
           : startingBalance,
         sync_mode: form.sync_mode,
-        agent_cadence: form.agent_cadence,
-        agent_sync_hour: form.agent_sync_hour,
-        agent_activity_url: form.agent_activity_url,
       });
       await loadAccounts();
       onAccountsChange?.();
@@ -244,6 +241,7 @@ export function AccountsSidebar({
           size="sm"
           variant="outline"
           className="flex-1 h-8 text-xs"
+          data-tour="add-account"
           onClick={() => setShowCreate(true)}
         >
           <Plus className="h-3.5 w-3.5 mr-1" />

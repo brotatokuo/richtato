@@ -1,15 +1,15 @@
 /**
  * Storage location surface for an account's statement-file directory.
  *
- * Shows the resolved ``storage_uri`` (where statement files are synced,
- * locally or through Google Drive) and the
- * most recent ``StatementFile`` rows the backend scanner has discovered
- * for the account, with their source (manual vs agent drop) and import
- * status.
+ * Shows the resolved ``storage_uri`` (the Google Drive folder where
+ * statement files are stored) and the most recent ``StatementFile`` rows the
+ * backend scanner has discovered for the account, with their source and
+ * import status.
  *
- * Users can upload statements in-app; the agent and scanner orchestration
- * also runs out-of-band via the host ``bank-agent`` CLI.
+ * Users upload statements in-app; the Google Drive folder scanner can also
+ * pick up files dropped directly into the account's Drive folder.
  */
+import { DriveRequiredPrompt } from '@/components/DriveRequiredPrompt';
 import { StatementUploadDialog } from '@/components/accounts/StatementUploadDialog';
 import { shouldShowReconciliationWarnings } from '@/components/accounts/statementReconciliation';
 import { StatementReconciliationSummary } from '@/components/accounts/StatementReconciliationSummary';
@@ -267,8 +267,13 @@ export function StorageLocationPanel({
             <p className="mt-1 text-[11px] text-muted-foreground/70">
               {storageReady
                 ? 'Automatic imports and manual fallback uploads both use this statement folder.'
-                : 'Statement storage requires Google Drive. Connect and activate it in Setup → Statements.'}
+                : 'Connect Google Drive to enable statement uploads and automatic imports.'}
             </p>
+            {!storageReady && (
+              <div className="mt-2">
+                <DriveRequiredPrompt description="Statement storage requires Google Drive. Connect and activate it before uploading or syncing files." />
+              </div>
+            )}
             {driveUrl && (
               <a
                 href={driveUrl}
@@ -295,7 +300,6 @@ export function StorageLocationPanel({
               variant="outline"
               className="h-6 px-2 text-[11px]"
               onClick={() => setUploadOpen(true)}
-              disabled={!storageReady}
             >
               <Upload className="mr-1 h-3 w-3" />
               Upload statement
@@ -482,6 +486,7 @@ export function StorageLocationPanel({
         onOpenChange={setUploadOpen}
         accountId={accountId}
         accountName={accountName}
+        storageReady={storageReady}
         onComplete={() => {
           loadFiles();
           onUploadComplete?.();

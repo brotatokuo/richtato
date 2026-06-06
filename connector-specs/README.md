@@ -1,6 +1,6 @@
 # Bank connector specs
 
-Drop sample statement exports here when building parsers or download adapters.
+Drop sample statement exports here when building statement parsers.
 One folder per institution + account type; any reasonable filename is fine.
 
 ## Scope
@@ -44,34 +44,23 @@ amount sign convention) — no per-folder README required.
 
 ## Implementation status
 
-| Institution | Type | Parser | Download adapter |
-| --- | --- | --- | --- |
-| BoFA | Checking | Done | Done |
-| BoFA | Savings | Partial | Done |
-| BoFA | Credit | Partial | Done |
-| Amex | Checking | Needed | Needed (PDF not supported yet) |
-| Amex | Credit | Partial | Needed |
-| Chase | Checking | Done | Done |
-| Chase | Savings | Partial | Done |
-| Chase | Credit | Partial | Done |
-| Citi | Credit | Done | Needed |
-| Marcus | Savings | Partial | Done (aggregated balance scrape) |
-| Robinhood | Checking/Savings | Done (PDF + CSV, balance reconciliation) | Needed |
-| Robinhood | Credit | Done (PDF) | Needed |
-| Robinhood | Investment | Done (CSV) | Done (balance scrape) |
-| Guideline | Investment | Done (CSV) | Done (balance scrape) |
+| Institution | Type | Parser |
+| --- | --- | --- |
+| BoFA | Checking | Done |
+| BoFA | Savings | Partial |
+| BoFA | Credit | Partial |
+| Amex | Checking | Needed |
+| Amex | Credit | Partial |
+| Chase | Checking | Done |
+| Chase | Savings | Partial |
+| Chase | Credit | Partial |
+| Citi | Credit | Done |
+| Marcus | Savings | Partial |
+| Robinhood | Checking/Savings | Done (PDF + CSV, balance reconciliation) |
+| Robinhood | Credit | Done (PDF) |
+| Robinhood | Investment | Done (CSV) |
+| Guideline | Investment | Done (CSV) |
 
 **Parser** → `backend/apps/financial_account/institutions/parsers/` and `backend/apps/financial_account/services/statement_import_service.py`
-**Download adapter** → `scripts/bank_sync/institutions/` (statement download or balance scrape)
 
-Parsers can ship before Playwright automation (manual upload / Drive drop works first).
-
-## Agent `flow` mapping
-
-| Account types | Agent `flow` |
-| --- | --- |
-| Checking, Savings (except Marcus) | `deposit` |
-| Credit | `credit_card` |
-| Marcus savings | `investment_balance` (sums savings + CDs on dashboard) |
-| Guideline investment | `investment_balance` |
-| Robinhood investment | `investment_balance` |
+Statements arrive via in-app upload or by dropping files into the account's Google Drive folder for the storage scanner to import.

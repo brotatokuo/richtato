@@ -172,9 +172,8 @@ export function DataPortabilitySection() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Backups exclude Google Drive OAuth tokens, bank-agent secrets, and
-            household membership. Reconfigure those after restoring on a new
-            account.
+            Backups exclude Google Drive OAuth tokens and household membership.
+            Reconfigure those after restoring on a new account.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button onClick={handleDownloadJson} disabled={exportingJson}>

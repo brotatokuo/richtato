@@ -34,9 +34,7 @@
         "date_format": { "type": "string" },
         "timezone": { "type": "string" },
         "notifications_enabled": { "type": "boolean" },
-        "bank_sync_in_app_notifications": { "type": "boolean" },
-        "bank_sync_email_notifications": { "type": "boolean" },
-        "bank_sync_daily_digest": { "type": "boolean" }
+        "platform_tour_completed": { "type": "boolean" }
       }
     },
     "categories": {
@@ -102,8 +100,6 @@
           "is_liability": { "type": "boolean" },
           "balance": { "type": "string" },
           "sync_mode": { "type": "string" },
-          "agent_cadence": { "type": "string" },
-          "agent_sync_hour": { "type": "integer" },
           "shared_with_household": { "type": "boolean" },
           "account_number_last4": { "type": ["string", "null"] }
         }

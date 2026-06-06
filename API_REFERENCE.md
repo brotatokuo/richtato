@@ -65,9 +65,9 @@ Common date filters:
 | `POST` | `/backup/import/preview/` | Validate backup file and return import summary |
 | `POST` | `/backup/import/commit/` | Import backup onto a fresh account (`confirm: true`) |
 
-Backup JSON bundles include preferences, categories, keywords, budgets, accounts, and transactions. They exclude Google Drive OAuth tokens, bank-agent secrets, household membership, and statement files. Import is only allowed before the target account has any financial accounts or transactions.
+Backup JSON bundles include preferences, categories, keywords, budgets, accounts, and transactions. They exclude Google Drive OAuth tokens, household membership, and statement files. Import is only allowed before the target account has any financial accounts or transactions.
 
-Preferences include bank-sync notification controls: in-app alerts default on, immediate email alerts are opt-in, and daily digest email can be toggled separately.
+Preferences include the master `notifications_enabled` switch for in-app notifications.
 
 ## Core (`/api/v1/core/`)
 
@@ -99,11 +99,6 @@ Preferences include bank-sync notification controls: in-app alerts default on, i
 | `POST` | `/drive/adopt-preview/` | Preview adopting an existing Drive root with Richtato-style account subfolders |
 | `POST` | `/drive/deactivate/` | Unlink an active Drive folder and clear account storage URIs |
 | `POST` | `/drive/disconnect/` | Disconnect inactive Drive OAuth credentials |
-| `GET` | `/sync-setup/` | Get Setup → Sync account readiness and generated agent config |
-| `GET` | `/bank-agent-setup-export/` | Download host bank-agent setup YAML with token/key/env and auto-sync account config |
-| `POST` | `/bank-agent-events/` | Bank agent failure event endpoint for in-app alerts and opt-in immediate email |
-| `POST` | `/agent-statements/` | Agent upload endpoint for Drive-backed statement downloads |
-| `POST` | `/agent-balances/` | Agent balance snapshot endpoint for investment balance sync (Token auth) |
 | `POST` | `/import-csv/` | Import statement CSV |
 | `GET` | `/import-statement/` | List supported statement import institutions |
 | `POST` | `/import-statement/` | Preview or commit CSV/Excel/PDF statement import |
@@ -219,37 +214,9 @@ Budget analytics and spending breakdown data.
 
 Common query parameters: `year`, `month`, `start_date`, `end_date`, and optional `scope=household`.
 
-## Bank Sync (`/api/v1/bank-sync/`)
+## Statement Ingestion
 
-Cookie-only Playwright agent. The user opens a headed Chromium window from the Connect-bank wizard, signs in to their bank directly, and the agent captures only the resulting browser cookies (no passwords). Headless scheduled runs reuse the cookies to download statements.
-
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `GET` | `/logins/` | List the user's bank logins |
-| `POST` | `/logins/` | Create a `pending_login` row (institution + cadence) |
-| `GET` | `/logins/{id}/` | Get one login with its synced accounts |
-| `PATCH` | `/logins/{id}/` | Update cadence, run hour, nickname, enabled |
-| `DELETE` | `/logins/{id}/` | Remove a login and its stored cookies |
-| `POST` | `/logins/{id}/begin-login/` | Queue an interactive_login (agent pops a headed browser) |
-| `POST` | `/logins/{id}/sync-now/` | Queue an immediate headless download |
-| `POST` | `/logins/{id}/disable/` | Pause automation without dropping cookies |
-| `GET` | `/logins/{id}/runs/` | Recent SyncRun history for a login |
-| `GET` | `/synced-accounts/` | List per-Richtato-account sync bindings |
-| `PATCH` | `/synced-accounts/{id}/` | Toggle `enabled` or change `flow` |
-| `DELETE` | `/synced-accounts/{id}/` | Unbind one account |
-| `POST` | `/synced-accounts/bulk-bind/` | Wizard step 3: bind discovered accounts to Richtato accounts |
-| `GET` | `/supported-institutions/` | List institutions with a Playwright adapter (BoFA, Chase) |
-| `GET` | `/bindable-accounts/` | List Richtato accounts a user can bind for a given institution slug |
-
-Agent-only endpoints (Token auth, `automation_runner` service account):
-
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `GET` | `/runner/due-tasks/` | Lease all queued tasks; returns decrypted storage_state + activity URLs |
-| `POST` | `/runner/runs/{id}/captured-session/` | Report a successful interactive_login (storage_state + discovered accounts) |
-| `POST` | `/runner/runs/{id}/outcome/` | Report final success or failure (failure_kind drives status transitions) |
-
-CSV/Excel statement import (under `/api/v1/accounts/import-statement/` and `/api/v1/accounts/statements/`) is the manual ingestion path that complements automated bank sync. Accounts can pick `auto` (bank-sync agent), `upload` (statement file upload), or `manual` (typed entries) via the `sync_mode` field on `FinancialAccount`.
+CSV/Excel/PDF statement import (under `/api/v1/accounts/import-statement/` and `/api/v1/accounts/statements/`) with Google Drive statement storage is the no-aggregator ingestion path. The Google Drive folder scanner (`/api/v1/accounts/{id}/scan/` and the `scan_statement_storage` management command) imports files dropped directly into an account's Drive folder. Accounts pick `upload` (statement file upload) or `manual` (typed entries) via the `sync_mode` field on `FinancialAccount`.
 
 ## Household (`/api/v1/household/`)
 

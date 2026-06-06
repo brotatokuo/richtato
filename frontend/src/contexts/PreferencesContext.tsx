@@ -12,6 +12,7 @@ interface PreferencesContextType {
   preferences: UserPreferencesPayload;
   currencySymbols: Record<string, string>;
   loading: boolean;
+  initialized: boolean;
   error: string | null;
   refetch: () => Promise<void>;
   updatePreferences: (
@@ -31,16 +32,19 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     currency: 'USD',
     date_format: 'MM/DD/YYYY',
     timezone: 'UTC',
+    platform_tour_completed: false,
   });
   const [currencySymbols, setCurrencySymbols] = useState<
     Record<string, string>
   >({});
   const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchPreferences = async () => {
     if (!isAuthenticated) {
       setLoading(false);
+      setInitialized(false);
       return;
     }
 
@@ -57,6 +61,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         currency: prefs.currency || 'USD',
         date_format: prefs.date_format || 'MM/DD/YYYY',
         timezone: prefs.timezone || 'UTC',
+        platform_tour_completed: prefs.platform_tour_completed ?? false,
       });
 
       // Parse currency symbols from field choices
@@ -69,6 +74,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         }
       });
       setCurrencySymbols(symbols);
+      setInitialized(true);
     } catch (e: unknown) {
       setError((e as Error)?.message ?? 'Failed to load preferences');
       console.error('Failed to load preferences:', e);
@@ -92,6 +98,10 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         currency: updated.currency || 'USD',
         date_format: updated.date_format || 'MM/DD/YYYY',
         timezone: updated.timezone || 'UTC',
+        platform_tour_completed:
+          updated.platform_tour_completed ??
+          preferences.platform_tour_completed ??
+          false,
       });
     } catch (e: unknown) {
       const errorMsg = (e as Error)?.message ?? 'Failed to update preferences';
@@ -116,6 +126,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         preferences,
         currencySymbols,
         loading,
+        initialized,
         error,
         refetch: fetchPreferences,
         updatePreferences,

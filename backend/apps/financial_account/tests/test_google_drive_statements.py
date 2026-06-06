@@ -27,7 +27,7 @@ def account(user):
         name="Drive Checking",
         account_type="checking",
         balance=Decimal("0"),
-        sync_mode="auto",
+        sync_mode="upload",
     )
 
 
@@ -228,7 +228,7 @@ class TestGoogleDriveActivationService:
             name="Drive Savings",
             account_type="savings",
             balance=Decimal("0"),
-            sync_mode="auto",
+            sync_mode="upload",
         )
         FakeDriveService.existing_subfolders["root-folder"] = [
             DriveFileMetadata(

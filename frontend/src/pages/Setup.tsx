@@ -42,9 +42,9 @@ export function Setup() {
     return <Navigate to="/accounts" replace />;
   }
 
-  // Legacy /setup?tab=sync now lives at /bank-agent.
+  // Legacy /setup?tab=sync now redirects to the statements tab.
   if (tabParam === 'sync') {
-    return <Navigate to="/bank-agent" replace />;
+    return <Navigate to="/setup?tab=statements" replace />;
   }
 
   const handleTabChange = (value: string) => {
@@ -60,7 +60,11 @@ export function Setup() {
       className="space-y-4"
     >
       <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 sm:w-auto sm:inline-grid">
-        <TabsTrigger value="statements" className="flex items-center gap-2">
+        <TabsTrigger
+          value="statements"
+          className="flex items-center gap-2"
+          data-tour="setup-statements-tab"
+        >
           <Cloud className="h-4 w-4" />
           <span>Statements</span>
         </TabsTrigger>

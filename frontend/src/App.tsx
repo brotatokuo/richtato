@@ -1,7 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
-import { DriveSetupGate } from './components/DriveSetupGate';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
@@ -41,9 +40,6 @@ const HouseholdDashboard = lazy(() =>
 const Formulas = lazy(() =>
   import('./pages/Formulas').then(m => ({ default: m.Formulas }))
 );
-const BankAgent = lazy(() =>
-  import('./pages/BankAgent').then(m => ({ default: m.BankAgent }))
-);
 function App() {
   return (
     <AuthProvider>
@@ -60,9 +56,7 @@ function App() {
                   path="/"
                   element={
                     <ProtectedRoute>
-                      <DriveSetupGate>
-                        <Layout />
-                      </DriveSetupGate>
+                      <Layout />
                     </ProtectedRoute>
                   }
                 >
@@ -138,18 +132,6 @@ function App() {
                         <Formulas />
                       </Suspense>
                     }
-                  />
-                  <Route
-                    path="bank-agent"
-                    element={
-                      <Suspense fallback={null}>
-                        <BankAgent />
-                      </Suspense>
-                    }
-                  />
-                  <Route
-                    path="bank-automation"
-                    element={<Navigate to="/bank-agent" replace />}
                   />
                   <Route
                     path="settings"

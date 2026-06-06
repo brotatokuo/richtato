@@ -351,7 +351,7 @@ export function ReportPage() {
   const totalOutflow = data.totalExpenses + data.totalInvestments;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-tour="dashboard-overview">
       {/* Dashboard year filter */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>

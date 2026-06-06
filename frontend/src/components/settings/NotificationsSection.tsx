@@ -56,9 +56,6 @@ export function NotificationsSection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [bankSyncInApp, setBankSyncInApp] = useState(true);
-  const [bankSyncEmail, setBankSyncEmail] = useState(false);
-  const [bankSyncDailyDigest, setBankSyncDailyDigest] = useState(true);
 
   useEffect(() => {
     (async () => {
@@ -66,9 +63,6 @@ export function NotificationsSection() {
         setLoading(true);
         const pref = await preferencesApi.get();
         setNotificationsEnabled(pref.notifications_enabled ?? true);
-        setBankSyncInApp(pref.bank_sync_in_app_notifications ?? true);
-        setBankSyncEmail(pref.bank_sync_email_notifications ?? false);
-        setBankSyncDailyDigest(pref.bank_sync_daily_digest ?? true);
       } catch (e: unknown) {
         setError((e as Error)?.message ?? 'Failed to load preferences');
       } finally {
@@ -78,32 +72,17 @@ export function NotificationsSection() {
   }, []);
 
   const updatePreference = async (
-    key:
-      | 'notifications_enabled'
-      | 'bank_sync_in_app_notifications'
-      | 'bank_sync_email_notifications'
-      | 'bank_sync_daily_digest',
+    key: 'notifications_enabled',
     value: boolean
   ) => {
-    const previous = {
-      notifications_enabled: notificationsEnabled,
-      bank_sync_in_app_notifications: bankSyncInApp,
-      bank_sync_email_notifications: bankSyncEmail,
-      bank_sync_daily_digest: bankSyncDailyDigest,
-    };
-    if (key === 'notifications_enabled') setNotificationsEnabled(value);
-    if (key === 'bank_sync_in_app_notifications') setBankSyncInApp(value);
-    if (key === 'bank_sync_email_notifications') setBankSyncEmail(value);
-    if (key === 'bank_sync_daily_digest') setBankSyncDailyDigest(value);
+    const previous = notificationsEnabled;
+    setNotificationsEnabled(value);
     try {
       await preferencesApi.update({ [key]: value });
       toast.success('Notification preference saved');
     } catch (e: unknown) {
       setError((e as Error)?.message ?? 'Failed to save preferences');
-      setNotificationsEnabled(previous.notifications_enabled);
-      setBankSyncInApp(previous.bank_sync_in_app_notifications);
-      setBankSyncEmail(previous.bank_sync_email_notifications);
-      setBankSyncDailyDigest(previous.bank_sync_daily_digest);
+      setNotificationsEnabled(previous);
     }
   };
 
@@ -114,9 +93,7 @@ export function NotificationsSection() {
           <Bell className="h-4 w-4" />
           Alerts
         </CardTitle>
-        <CardDescription>
-          Master notification switch plus bank sync delivery options
-        </CardDescription>
+        <CardDescription>Master notification switch</CardDescription>
       </CardHeader>
       <CardContent>
         {error && <div className="mb-4 text-sm text-destructive">{error}</div>}
@@ -132,45 +109,6 @@ export function NotificationsSection() {
               void updatePreference('notifications_enabled', value)
             }
           />
-
-          <div className="py-4">
-            <p className="text-sm font-medium">Bank sync</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              In-app alerts are on by default. Email alerts are opt-in.
-            </p>
-            <div className="mt-2 divide-y divide-border">
-              <NotificationRow
-                id="bank-sync-in-app"
-                label="In-app alerts"
-                description="Failed sync, setup gaps, and re-login prompts in Richtato"
-                checked={bankSyncInApp}
-                disabled={loading || !notificationsEnabled}
-                onCheckedChange={value =>
-                  void updatePreference('bank_sync_in_app_notifications', value)
-                }
-              />
-              <NotificationRow
-                id="bank-sync-email"
-                label="Immediate email alerts"
-                description="Email when polling fails or a bank login needs re-auth"
-                checked={bankSyncEmail}
-                disabled={loading || !notificationsEnabled}
-                onCheckedChange={value =>
-                  void updatePreference('bank_sync_email_notifications', value)
-                }
-              />
-              <NotificationRow
-                id="bank-sync-digest"
-                label="Daily digest"
-                description="Include bank sync health in the scheduled summary email"
-                checked={bankSyncDailyDigest}
-                disabled={loading || !notificationsEnabled}
-                onCheckedChange={value =>
-                  void updatePreference('bank_sync_daily_digest', value)
-                }
-              />
-            </div>
-          </div>
         </div>
       </CardContent>
     </Card>

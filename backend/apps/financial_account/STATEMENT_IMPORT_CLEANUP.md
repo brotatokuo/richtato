@@ -101,12 +101,11 @@ Remove only if you are not using it for manual/demo data loads.
 | Item | Role |
 |------|------|
 | `StatementImportService` | Single parse/normalize/dedup/commit engine |
-| `StatementFileService` | Drive storage + import orchestration (agent, scanner, UI) |
+| `StatementFileService` | Drive storage + import orchestration (scanner, UI) |
 | `bulk_transaction_service.py` | Fast `bulk_create` + one balance-history pass |
 | `institutions/registry.py` | Parser configs + `PARSER_READERS` |
 | `institutions/parsers/*` | Format-specific readers (PDF, Amex XLSX, …) |
 | `POST /import-statement/` | Primary import API |
-| `POST /agent-statements/` | Bank agent upload |
 | Storage scanner + `scan_statement_storage` command | Auto-import dropped Drive files |
 
 ---

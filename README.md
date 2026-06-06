@@ -1,6 +1,6 @@
 # Richtato
 
-Richtato is an AI-native personal finance app for tracking transactions, budgets, account balances, net worth, household finances, bank sync, and AI-powered categorization.
+Richtato is an AI-native personal finance app for tracking transactions, budgets, account balances, net worth, household finances, statement uploads, and AI-powered categorization.
 
 The product goal is Monarch Money quality: clean financial dashboards, fast transaction workflows, helpful automation, responsive desktop/mobile navigation, and strong dark/light mode parity.
 

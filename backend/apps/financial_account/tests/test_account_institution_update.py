@@ -93,37 +93,14 @@ class TestAccountInstitutionUpdate:
 
         assert response.status_code == 400
 
-    def test_balance_only_investment_account_reports_sync_capabilities(self, user, guideline_institution):
-        account = FinancialAccount.objects.create(
-            user=user,
-            name="401(k)",
-            account_type="investment",
-            institution=guideline_institution,
-            balance=Decimal("1000.00"),
-            sync_mode="auto",
-        )
-        client = APIClient()
-        client.force_authenticate(user=user)
-
-        response = client.get(reverse("account-detail", kwargs={"pk": account.id}))
-
-        assert response.status_code == 200
-        capabilities = response.json()["sync_capabilities"]
-        assert capabilities == {
-            "transactions": False,
-            "balance_snapshots": True,
-            "statement_files": False,
-            "agent_flow": "investment_balance",
-        }
-
-    def test_deposit_account_reports_transaction_capability(self, user, other_institution):
+    def test_account_reports_sync_capabilities(self, user, other_institution):
         account = FinancialAccount.objects.create(
             user=user,
             name="Checking",
             account_type="checking",
             institution=other_institution,
             balance=Decimal("100.00"),
-            sync_mode="auto",
+            sync_mode="upload",
         )
         client = APIClient()
         client.force_authenticate(user=user)
@@ -134,5 +111,5 @@ class TestAccountInstitutionUpdate:
         capabilities = response.json()["sync_capabilities"]
         assert capabilities["transactions"] is True
         assert capabilities["balance_snapshots"] is True
-        assert capabilities["statement_files"] is True
-        assert capabilities["agent_flow"] == "deposit"
+        assert capabilities["statement_files"] is False
+        assert "agent_flow" not in capabilities

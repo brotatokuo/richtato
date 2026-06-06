@@ -13,18 +13,6 @@ def sync_institutions_from_registry(apps, schema_editor):
 
     registry_slugs = set(INSTITUTIONS.keys())
     orphan_qs = FinancialInstitution.objects.filter(accounts__isnull=True).exclude(slug__in=registry_slugs)
-
-    # Legacy bank_sync rows still PROTECT institution FKs; skip those orphans.
-    try:
-        BankLogin = apps.get_model("bank_sync", "BankLogin")
-    except LookupError:
-        BankLogin = None
-    if BankLogin is not None:
-        protected_ids = set(
-            BankLogin.objects.exclude(institution_id__isnull=True).values_list("institution_id", flat=True)
-        )
-        orphan_qs = orphan_qs.exclude(id__in=protected_ids)
-
     orphan_qs.delete()
 
 
@@ -35,7 +23,6 @@ def reverse_sync_institutions(apps, schema_editor):
 class Migration(migrations.Migration):
     dependencies = [
         ("financial_account", "0019_add_investment_account_type"),
-        ("bank_sync", "0001_initial"),
     ]
 
     operations = [

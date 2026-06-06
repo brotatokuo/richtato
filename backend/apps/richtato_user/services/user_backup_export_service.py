@@ -110,9 +110,7 @@ class UserBackupExportService:
                 "date_format": "MM/DD/YYYY",
                 "timezone": "UTC",
                 "notifications_enabled": True,
-                "bank_sync_in_app_notifications": True,
-                "bank_sync_email_notifications": False,
-                "bank_sync_daily_digest": True,
+                "platform_tour_completed": False,
             }
 
         return {
@@ -121,9 +119,7 @@ class UserBackupExportService:
             "date_format": prefs.date_format,
             "timezone": prefs.timezone,
             "notifications_enabled": prefs.notifications_enabled,
-            "bank_sync_in_app_notifications": prefs.bank_sync_in_app_notifications,
-            "bank_sync_email_notifications": prefs.bank_sync_email_notifications,
-            "bank_sync_daily_digest": prefs.bank_sync_daily_digest,
+            "platform_tour_completed": prefs.platform_tour_completed,
         }
 
     def _export_categories(self, user: User) -> list[dict]:
@@ -201,8 +197,6 @@ class UserBackupExportService:
                     "is_liability": account.is_liability,
                     "balance": str(account.balance),
                     "sync_mode": account.sync_mode,
-                    "agent_cadence": account.agent_cadence,
-                    "agent_sync_hour": account.agent_sync_hour,
                     "shared_with_household": account.shared_with_household,
                     "account_number_last4": account.account_number_last4 or "",
                 }

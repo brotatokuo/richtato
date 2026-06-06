@@ -18,7 +18,6 @@ const primaryTabs = [
 
 const moreRoutes = [
   '/household',
-  '/bank-agent',
   '/setup',
   '/preferences',
   '/formulas',
@@ -49,6 +48,7 @@ export function BottomTabBar() {
             <Link
               key={tab.name}
               to={tab.href}
+              data-tour={tab.name === 'More' ? 'nav-more-mobile' : undefined}
               className={cn(
                 'relative flex flex-1 flex-col items-center justify-center gap-1 text-xs font-medium transition-colors',
                 isActive

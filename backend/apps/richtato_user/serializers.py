@@ -23,7 +23,5 @@ class UserPreferenceSerializer(serializers.ModelSerializer):
             "date_format",
             "timezone",
             "notifications_enabled",
-            "bank_sync_in_app_notifications",
-            "bank_sync_email_notifications",
-            "bank_sync_daily_digest",
+            "platform_tour_completed",
         ]

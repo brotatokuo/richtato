@@ -2,7 +2,8 @@
  * Transactions API service for fetching transaction data
  */
 import { csrfService } from './csrf';
-import type { AgentCadence, SyncMode } from './bankSync';
+
+export type SyncMode = 'upload' | 'manual';
 
 export interface Transaction {
   id: number;
@@ -64,11 +65,9 @@ export interface Account {
   shared_with_household?: boolean;
   // Sync source: 'manual' or 'csv'
   sync_source?: string;
-  // Sync mode controls how the account receives transactions: auto (bank-sync
-  // agent), upload (statement file upload), or manual (typed entries).
-  sync_mode?: 'auto' | 'upload' | 'manual';
-  agent_cadence?: AgentCadence;
-  agent_sync_hour?: number;
+  // Sync mode controls how the account receives transactions: upload
+  // (statement file upload) or manual (typed entries).
+  sync_mode?: SyncMode;
   // Google Drive folder URI for this account's statement files (gdrive://...).
   // Empty until Drive is activated in Setup → Statements.
   storage_uri?: string;
@@ -79,7 +78,6 @@ export interface Account {
     transactions: boolean;
     balance_snapshots: boolean;
     statement_files: boolean;
-    agent_flow: 'deposit' | 'credit_card' | 'investment_balance' | null;
   };
 }
 
@@ -471,9 +469,6 @@ class TransactionsApiService {
     asset_entity_name?: string;
     starting_balance?: number;
     sync_mode?: SyncMode;
-    agent_cadence?: AgentCadence;
-    agent_sync_hour?: number;
-    agent_activity_url?: string;
   }): Promise<Account> {
     const body: Record<string, unknown> = {
       name: input.name,
@@ -484,15 +479,6 @@ class TransactionsApiService {
       body.initial_balance = input.starting_balance;
     }
     if (input.sync_mode !== undefined) body.sync_mode = input.sync_mode;
-    if (input.agent_cadence !== undefined) {
-      body.agent_cadence = input.agent_cadence;
-    }
-    if (input.agent_sync_hour !== undefined) {
-      body.agent_sync_hour = input.agent_sync_hour;
-    }
-    if (input.agent_activity_url !== undefined) {
-      body.agent_activity_url = input.agent_activity_url;
-    }
 
     let response = await fetch(`${this.baseUrl}/accounts/`, {
       method: 'POST',
@@ -530,9 +516,6 @@ class TransactionsApiService {
       opening_balance: number | null;
       opening_balance_date: string | null;
       sync_mode: SyncMode;
-      agent_cadence: AgentCadence;
-      agent_sync_hour: number;
-      agent_activity_url: string;
     }>
   ): Promise<Account> {
     const body: Record<string, unknown> = {};
@@ -553,15 +536,6 @@ class TransactionsApiService {
       body.opening_balance_date = input.opening_balance_date;
     }
     if (input.sync_mode !== undefined) body.sync_mode = input.sync_mode;
-    if (input.agent_cadence !== undefined) {
-      body.agent_cadence = input.agent_cadence;
-    }
-    if (input.agent_sync_hour !== undefined) {
-      body.agent_sync_hour = input.agent_sync_hour;
-    }
-    if (input.agent_activity_url !== undefined) {
-      body.agent_activity_url = input.agent_activity_url;
-    }
 
     console.info('[AccountEdit] PATCH /accounts/%s payload:', id, body);
 
@@ -914,11 +888,6 @@ class TransactionsApiService {
       value: string;
       label: string;
       account_types: Array<{ value: string; label: string }>;
-      agent_flows?: Array<{
-        account_type: string;
-        flow: 'deposit' | 'credit_card' | 'investment_balance' | null;
-        needs_storage: boolean;
-      }>;
     }>;
   }> {
     const response = await fetch(`${this.baseUrl}/accounts/field-choices/`, {

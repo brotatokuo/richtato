@@ -6,8 +6,6 @@ from rest_framework import serializers
 
 from apps.financial_account.institutions.registry import (
     ACCOUNT_TYPE_LABELS,
-    agent_flow_for_account,
-    auto_sync_needs_storage_uri,
     is_valid_account_type,
 )
 
@@ -63,8 +61,6 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
             "is_active",
             "sync_source",
             "sync_mode",
-            "agent_cadence",
-            "agent_sync_hour",
             "storage_uri",
             "resolved_storage_uri",
             "shared_with_household",
@@ -117,15 +113,10 @@ class FinancialAccountSerializer(serializers.ModelSerializer):
 
     def get_sync_capabilities(self, obj):
         """Return UI capabilities derived from the account's sync contract."""
-        institution_slug = obj.institution.slug if obj.institution else None
-        agent_flow = agent_flow_for_account(institution_slug, obj.account_type)
-        is_balance_only_auto = obj.sync_mode == "auto" and agent_flow == "investment_balance"
-
         return {
-            "transactions": not is_balance_only_auto,
+            "transactions": True,
             "balance_snapshots": True,
-            "statement_files": auto_sync_needs_storage_uri(agent_flow) or bool(obj.resolved_storage_uri()),
-            "agent_flow": agent_flow,
+            "statement_files": bool(obj.resolved_storage_uri()),
         }
 
     def to_representation(self, instance):
@@ -149,17 +140,10 @@ class FinancialAccountCreateSerializer(serializers.Serializer):
     initial_balance = serializers.DecimalField(max_digits=15, decimal_places=2, default=0)
     currency = serializers.CharField(max_length=3, default="USD")
     sync_mode = serializers.ChoiceField(
-        choices=["auto", "upload", "manual"],
+        choices=["upload", "manual"],
         default="manual",
         required=False,
     )
-    agent_cadence = serializers.ChoiceField(
-        choices=["manual", "daily", "weekly", "monthly"],
-        default="daily",
-        required=False,
-    )
-    agent_sync_hour = serializers.IntegerField(min_value=0, max_value=23, default=6, required=False)
-    agent_activity_url = serializers.URLField(required=False, allow_blank=True, max_length=2048)
 
     def validate(self, attrs):
         institution_slug = attrs.get("institution_slug") or "other"
@@ -169,15 +153,6 @@ class FinancialAccountCreateSerializer(serializers.Serializer):
                 {
                     "account_type": (
                         f"Account type '{account_type}' is not supported for institution '{institution_slug}'."
-                    )
-                }
-            )
-        if attrs.get("sync_mode") == "auto" and agent_flow_for_account(institution_slug, account_type) is None:
-            raise serializers.ValidationError(
-                {
-                    "sync_mode": (
-                        "Auto sync is not available for this institution and account type. "
-                        "Use upload or manual instead."
                     )
                 }
             )
@@ -201,7 +176,6 @@ class FinancialAccountUpdateSerializer(serializers.Serializer):
     is_active = serializers.BooleanField(required=False)
     shared_with_household = serializers.BooleanField(required=False)
     storage_uri = serializers.CharField(max_length=512, required=False, allow_blank=True)
-    agent_activity_url = serializers.URLField(required=False, allow_blank=True, max_length=2048)
     opening_balance = serializers.DecimalField(
         max_digits=15,
         decimal_places=2,
@@ -210,14 +184,9 @@ class FinancialAccountUpdateSerializer(serializers.Serializer):
     )
     opening_balance_date = serializers.DateField(required=False, allow_null=True)
     sync_mode = serializers.ChoiceField(
-        choices=["auto", "upload", "manual"],
+        choices=["upload", "manual"],
         required=False,
     )
-    agent_cadence = serializers.ChoiceField(
-        choices=["manual", "daily", "weekly", "monthly"],
-        required=False,
-    )
-    agent_sync_hour = serializers.IntegerField(min_value=0, max_value=23, required=False)
 
     def validate(self, attrs):
         account = self.context.get("account")
@@ -238,18 +207,6 @@ class FinancialAccountUpdateSerializer(serializers.Serializer):
                     {
                         "account_type": (
                             f"Account type '{account_type}' is not supported for institution '{institution_slug}'."
-                        )
-                    }
-                )
-
-        sync_mode = attrs.get("sync_mode")
-        if sync_mode == "auto":
-            if agent_flow_for_account(institution_slug, account_type or "") is None:
-                raise serializers.ValidationError(
-                    {
-                        "sync_mode": (
-                            "Auto sync is not available for this institution and account type. "
-                            "Use upload or manual instead."
                         )
                     }
                 )

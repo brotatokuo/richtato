@@ -173,9 +173,7 @@ class UserBackupImportService:
                 currency=item.get("currency") or "USD",
                 is_liability=bool(item.get("is_liability", False)),
                 balance=balance,
-                sync_mode=item.get("sync_mode") or "manual",
-                agent_cadence=item.get("agent_cadence") or "daily",
-                agent_sync_hour=int(item.get("agent_sync_hour") or 6),
+                sync_mode=(item.get("sync_mode") if item.get("sync_mode") in {"upload", "manual"} else "manual"),
                 shared_with_household=bool(item.get("shared_with_household", False)),
                 account_number_last4=item.get("account_number_last4") or "",
             )

@@ -55,7 +55,7 @@ frontend/src/
 │   ├── settings/              # Preferences sections
 │   └── household/             # Household controls such as ScopeToggle
 ├── contexts/                  # Auth, Household, Preferences, Theme, HeaderSlot
-├── hooks/                     # useAuth, useBankAutomationStatus, useBankAutomationConnections, usePolling
+├── hooks/                     # useAuth, usePolling, usePlatformTourResume
 ├── lib/
 │   ├── api/                   # API service singletons
 │   ├── echarts.ts             # Tree-shaken ECharts exports
@@ -85,7 +85,6 @@ Current protected routes:
 | --------------- | ----------------------------------------- |
 | `/dashboard`    | `ReportPage`                              |
 | `/accounts`     | `Accounts`                                |
-| `/bank-agent`   | `BankAgent`                               |
 | `/budget`       | `BudgetDashboard` exported as `Dashboard` |
 | `/transactions` | `DataTable`                               |
 | `/setup`        | `Setup`                                   |

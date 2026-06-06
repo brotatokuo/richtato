@@ -2,10 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Modal } from '@/components/ui/Modal';
-import {
-  AccountSyncSettings,
-  type AccountSyncFormValues,
-} from '@/components/accounts/AccountSyncSettings';
+import { AccountSyncSettings } from '@/components/accounts/AccountSyncSettings';
 import {
   Select,
   SelectContent,
@@ -14,12 +11,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useHousehold } from '@/contexts/HouseholdContext';
-import { Account, transactionsApiService } from '@/lib/api/transactions';
 import {
-  bankSyncApi,
-  type AgentCadence,
+  Account,
+  transactionsApiService,
   type SyncMode,
-} from '@/lib/api/bankSync';
+} from '@/lib/api/transactions';
 import { Calendar, Users } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -37,9 +33,6 @@ interface AccountDetailModalProps {
     opening_balance?: number | null;
     opening_balance_date?: string | null;
     sync_mode?: SyncMode;
-    agent_cadence?: AgentCadence;
-    agent_sync_hour?: number;
-    agent_activity_url?: string;
   }) => Promise<void>;
   onDelete: () => void;
   accountTypeOptions: Array<{ value: string; label: string }>;
@@ -77,9 +70,6 @@ export function AccountDetailModal({
     openingBalance: '',
     openingBalanceDate: defaultOpeningBalanceDate(),
     syncMode: 'manual' as SyncMode,
-    agentCadence: 'daily' as AgentCadence,
-    agentSyncHour: 6,
-    agentActivityUrl: '',
     hasStorageUri: false,
   });
   const [initialOpeningBalance, setInitialOpeningBalance] = useState('');
@@ -147,19 +137,14 @@ export function AccountDetailModal({
     let cancelled = false;
     setLoadingOpeningBalance(true);
 
-    Promise.all([
-      transactionsApiService.getAccountById(account.id),
-      bankSyncApi.getSetup().catch(() => null),
-    ])
-      .then(([accountDetail, syncSetup]) => {
+    transactionsApiService
+      .getAccountById(account.id)
+      .then(accountDetail => {
         if (cancelled) return;
 
         const openingBalance = accountDetail.opening_balance ?? '';
         const openingBalanceDate =
           accountDetail.opening_balance_date ?? defaultOpeningBalanceDate();
-        const syncAccount = syncSetup?.accounts.find(
-          item => item.id === accountDetail.id
-        );
 
         setInitialOpeningBalance(openingBalance);
         setInitialOpeningBalanceDate(openingBalanceDate);
@@ -171,9 +156,6 @@ export function AccountDetailModal({
           openingBalance,
           openingBalanceDate,
           syncMode: accountDetail.sync_mode ?? 'manual',
-          agentCadence: accountDetail.agent_cadence ?? 'daily',
-          agentSyncHour: accountDetail.agent_sync_hour ?? 6,
-          agentActivityUrl: syncAccount?.activity_url ?? '',
           hasStorageUri: Boolean(accountDetail.resolved_storage_uri),
         });
       })
@@ -201,14 +183,8 @@ export function AccountDetailModal({
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSyncChange = (
-    field: keyof Pick<
-      AccountSyncFormValues,
-      'syncMode' | 'agentCadence' | 'agentSyncHour' | 'agentActivityUrl'
-    >,
-    value: string | number
-  ) => {
-    setForm(prev => ({ ...prev, [field]: value }));
+  const handleSyncChange = (_field: 'syncMode', value: SyncMode) => {
+    setForm(prev => ({ ...prev, syncMode: value }));
   };
 
   const handleSubmit = async () => {
@@ -226,18 +202,12 @@ export function AccountDetailModal({
       opening_balance?: number | null;
       opening_balance_date?: string | null;
       sync_mode?: SyncMode;
-      agent_cadence?: AgentCadence;
-      agent_sync_hour?: number;
-      agent_activity_url?: string;
     } = {
       name: form.name,
       type: form.type,
       entity: form.entity,
       shared_with_household: form.sharedWithHousehold,
       sync_mode: form.syncMode,
-      agent_cadence: form.agentCadence,
-      agent_sync_hour: form.agentSyncHour,
-      agent_activity_url: form.agentActivityUrl,
     };
 
     if (openingBalanceChanged) {
@@ -381,12 +351,8 @@ export function AccountDetailModal({
               entity: form.entity,
               type: form.type,
               syncMode: form.syncMode,
-              agentCadence: form.agentCadence,
-              agentSyncHour: form.agentSyncHour,
-              agentActivityUrl: form.agentActivityUrl,
             }}
             onChange={handleSyncChange}
-            institutions={institutions}
             hasStorageUri={form.hasStorageUri}
             idPrefix="detail-sync"
             disabled={loadingOpeningBalance}

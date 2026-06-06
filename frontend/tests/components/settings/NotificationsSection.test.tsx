@@ -19,24 +19,20 @@ beforeEach(() => {
   mockUpdate.mockReset();
 });
 
-it('renders bank sync notification preferences and saves email opt in', async () => {
+it('renders the master notification switch and saves toggles', async () => {
   mockGet.mockResolvedValue({
     notifications_enabled: true,
-    bank_sync_in_app_notifications: true,
-    bank_sync_email_notifications: false,
-    bank_sync_daily_digest: true,
   });
   mockUpdate.mockResolvedValue({});
 
   const user = userEvent.setup();
   render(<NotificationsSection />);
 
-  expect((await screen.findAllByText(/Bank sync/i)).length).toBeGreaterThan(0);
   await user.click(
-    screen.getByRole('switch', { name: /Immediate email alerts/i })
+    await screen.findByRole('switch', { name: /Enable notifications/i })
   );
 
   expect(mockUpdate).toHaveBeenCalledWith({
-    bank_sync_email_notifications: true,
+    notifications_enabled: false,
   });
 });

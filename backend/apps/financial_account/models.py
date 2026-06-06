@@ -4,7 +4,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
-from apps.bank_sync.encryption import decrypt_text, encrypt_text
+from apps.financial_account.encryption import decrypt_text, encrypt_text
 
 
 class FinancialInstitution(models.Model):
@@ -41,16 +41,8 @@ class FinancialAccount(models.Model):
     ]
 
     SYNC_MODE_CHOICES = [
-        ("auto", "Auto Sync via Bank Login"),
         ("upload", "Statement Upload"),
         ("manual", "Manual Entry"),
-    ]
-
-    AGENT_CADENCE_CHOICES = [
-        ("manual", "Manual"),
-        ("daily", "Daily"),
-        ("weekly", "Weekly"),
-        ("monthly", "Monthly"),
     ]
 
     user = models.ForeignKey(
@@ -87,20 +79,7 @@ class FinancialAccount(models.Model):
         max_length=16,
         choices=SYNC_MODE_CHOICES,
         default="manual",
-        help_text=(
-            "How this account receives transactions: auto (Playwright bank sync), "
-            "upload (statement file upload), or manual (typed entries)."
-        ),
-    )
-    agent_cadence = models.CharField(
-        max_length=16,
-        choices=AGENT_CADENCE_CHOICES,
-        default="daily",
-        help_text="Host bank-agent sync cadence when sync_mode is auto.",
-    )
-    agent_sync_hour = models.PositiveSmallIntegerField(
-        default=6,
-        help_text="Preferred local hour (0-23) for host bank-agent scheduled sync.",
+        help_text=("How this account receives transactions: upload (statement file upload) or manual (typed entries)."),
     )
 
     # Household sharing
@@ -117,11 +96,6 @@ class FinancialAccount(models.Model):
         blank=True,
         default="",
         help_text="Google Drive folder URI for this account's statement files (gdrive://<folder_id>).",
-    )
-    agent_activity_url_encrypted = models.TextField(
-        blank=True,
-        default="",
-        help_text="Encrypted bank-side activity URL used by the host bank-agent.",
     )
 
     # Metadata
@@ -160,20 +134,6 @@ class FinancialAccount(models.Model):
                 "Activate Drive in Setup → Statements."
             )
         return uri
-
-    @property
-    def agent_activity_url(self) -> str:
-        """Return the decrypted host bank-agent activity URL."""
-        from apps.bank_sync.encryption import decrypt_text
-
-        return decrypt_text(self.agent_activity_url_encrypted, user_id=self.user_id)
-
-    @agent_activity_url.setter
-    def agent_activity_url(self, value: str) -> None:
-        """Encrypt and store the host bank-agent activity URL."""
-        from apps.bank_sync.encryption import encrypt_text
-
-        self.agent_activity_url_encrypted = encrypt_text((value or "").strip(), user_id=self.user_id)
 
 
 class AccountBalanceHistory(models.Model):
@@ -268,7 +228,7 @@ class StatementFile(models.Model):
         default="manual_upload",
         help_text=(
             "How this statement entered the library: manual_upload via the "
-            "UI, agent_drop via the host bank-agent + storage scanner, or "
+            "UI, agent_drop via the Google Drive folder storage scanner, or "
             "unknown."
         ),
     )

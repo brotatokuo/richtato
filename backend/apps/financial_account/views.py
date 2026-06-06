@@ -3,7 +3,6 @@
 from urllib.parse import urlencode
 
 from django.conf import settings
-from django.http import HttpResponse
 from django.shortcuts import redirect
 from loguru import logger
 from rest_framework import status
@@ -12,7 +11,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.core.services.notification_service import NotificationService
 from apps.financial_account.serializers import (
     FinancialAccountCreateSerializer,
     FinancialAccountSerializer,
@@ -22,9 +20,6 @@ from apps.financial_account.services.account_balance_service import (
     AccountBalanceService,
 )
 from apps.financial_account.services.account_service import AccountService
-from apps.financial_account.services.bank_agent_config_service import BankAgentConfigOptions, BankAgentConfigService
-from apps.financial_account.services.bank_agent_setup_export_service import BankAgentSetupExportService
-from apps.financial_account.services.bank_sync_setup_service import BankSyncSetupService
 from apps.financial_account.services.google_drive_activation_service import GoogleDriveActivationService
 from apps.financial_account.services.google_drive_service import GoogleDriveError, GoogleDriveService
 from apps.financial_account.services.statement_file_service import (
@@ -37,13 +32,6 @@ from apps.financial_account.services.storage_scanner_service import (
     StorageScannerService,
     parser_key_for_account,
 )
-
-SENSITIVE_ACCOUNT_FIELDS = {"agent_activity_url"}
-
-
-def _redact_account_payload(payload):
-    """Return a log-safe copy of an account mutation payload."""
-    return {key: ("[redacted]" if key in SENSITIVE_ACCOUNT_FIELDS else value) for key, value in payload.items()}
 
 
 class FinancialAccountListCreateAPIView(APIView):
@@ -128,7 +116,7 @@ class FinancialAccountDetailAPIView(APIView):
             "Account PATCH request",
             account_id=pk,
             user_id=request.user.id,
-            payload=_redact_account_payload(dict(request.data)),
+            payload=dict(request.data),
         )
 
         serializer = FinancialAccountUpdateSerializer(
@@ -141,7 +129,7 @@ class FinancialAccountDetailAPIView(APIView):
                 account_id=pk,
                 user_id=request.user.id,
                 errors=serializer.errors,
-                payload=_redact_account_payload(dict(request.data)),
+                payload=dict(request.data),
             )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -149,9 +137,7 @@ class FinancialAccountDetailAPIView(APIView):
             logger.info(
                 "Account PATCH validated",
                 account_id=pk,
-                validated_data=_redact_account_payload(
-                    {key: str(value) for key, value in serializer.validated_data.items()}
-                ),
+                validated_data={key: str(value) for key, value in serializer.validated_data.items()},
             )
             updated_account = self.account_service.update_account(account, **serializer.validated_data)
             updated_account.refresh_from_db()
@@ -244,109 +230,6 @@ class AccountFieldChoicesAPIView(APIView):
         from apps.financial_account.institutions.registry import get_institution_field_choices
 
         return Response(get_institution_field_choices())
-
-
-class BankAgentConfigAPIView(APIView):
-    """Return generated host bank-agent config for the authenticated user's accounts."""
-
-    authentication_classes = [TokenAuthentication, SessionAuthentication, BasicAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.config_service = BankAgentConfigService()
-
-    def get(self, request):
-        options = BankAgentConfigOptions(
-            nickname=request.query_params.get("nickname", "personal"),
-            include_all_supported=request.query_params.get("include") == "all-supported",
-        )
-
-        return Response(self.config_service.build_for_user(request.user, options), status=status.HTTP_200_OK)
-
-
-class BankAgentSetupExportAPIView(APIView):
-    """Download a host bank-agent setup YAML file with credentials and login config."""
-
-    authentication_classes = [TokenAuthentication, SessionAuthentication, BasicAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.export_service = BankAgentSetupExportService()
-
-    def get(self, request):
-        include_credentials = request.query_params.get("include_credentials", "1") != "0"
-        yaml_text = self.export_service.build_yaml_for_user(
-            request.user,
-            include_credentials=include_credentials,
-            include_all_supported=request.query_params.get("include") == "all-supported",
-            nickname=request.query_params.get("nickname", "personal"),
-        )
-        response = HttpResponse(yaml_text, content_type="text/yaml; charset=utf-8")
-        response["Content-Disposition"] = 'attachment; filename="richtato-bank-agent-setup.yml"'
-        return response
-
-
-class BankSyncSetupAPIView(APIView):
-    """Return per-account sync settings and generated bank-agent config for Setup → Sync."""
-
-    authentication_classes = [TokenAuthentication, SessionAuthentication, BasicAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.setup_service = BankSyncSetupService()
-
-    def get(self, request):
-        return Response(self.setup_service.build_for_user(request.user), status=status.HTTP_200_OK)
-
-
-class BankAgentEventAPIView(APIView):
-    """Receive local bank-agent failure events and create user notifications."""
-
-    authentication_classes = [TokenAuthentication, SessionAuthentication, BasicAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.notification_service = NotificationService()
-
-    def post(self, request):
-        event_type = str(request.data.get("event_type") or "sync_failed")
-        failure_kind = str(request.data.get("failure_kind") or "unknown")
-        login_id = request.data.get("login_id")
-        account_id = request.data.get("richtato_account_id") or request.data.get("account_id")
-        institution = str(request.data.get("institution_slug") or request.data.get("institution") or "bank")
-        nickname = str(request.data.get("nickname") or "")
-        message = str(request.data.get("message") or request.data.get("failure_reason") or "Bank sync failed.")
-
-        label = institution + (f" ({nickname})" if nickname else "")
-        title = "Bank login needs re-auth" if failure_kind == "needs_reauth" else "Bank sync failed"
-        body = f"{label}: {message}"
-        source_key_parts = [event_type, failure_kind, str(login_id or ""), str(account_id or "")]
-        notification = self.notification_service.notify_bank_sync_failure(
-            user=request.user,
-            title=title,
-            body=body[:1000],
-            severity="warning" if failure_kind == "needs_reauth" else "error",
-            source_key=":".join(source_key_parts),
-            metadata={
-                "event_type": event_type,
-                "failure_kind": failure_kind,
-                "login_id": login_id,
-                "account_id": account_id,
-                "institution": institution,
-                "nickname": nickname,
-            },
-        )
-        return Response(
-            {
-                "created": notification is not None,
-                "notification_id": notification.id if notification else None,
-            },
-            status=status.HTTP_201_CREATED,
-        )
 
 
 class GoogleDriveStatusAPIView(APIView):
@@ -1024,147 +907,6 @@ class StatementImportAPIView(APIView):
         if value in (None, ""):
             return False
         return str(value).strip().lower() in {"1", "true", "yes", "on"}
-
-
-class AgentStatementUploadAPIView(APIView):
-    """Accept a bank-agent downloaded statement and store/import it through Richtato."""
-
-    authentication_classes = [TokenAuthentication, SessionAuthentication, BasicAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.statement_file_service = StatementFileService()
-
-    def post(self, request):
-        statement_file = request.FILES.get("file")
-        if not statement_file:
-            return Response({"error": "Statement file is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        storage_uri = request.data.get("storage_uri", "")
-        if not storage_uri:
-            return Response({"error": "storage_uri is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        from apps.financial_account.models import FinancialAccount
-
-        account = (
-            FinancialAccount.objects.select_related("institution", "user")
-            .filter(
-                user=request.user,
-                storage_uri=storage_uri,
-                is_active=True,
-            )
-            .first()
-        )
-        if not account:
-            return Response({"error": "Account not found for storage_uri"}, status=status.HTTP_404_NOT_FOUND)
-
-        institution = parser_key_for_account(account)
-        if not institution:
-            return Response({"error": "No statement parser configured for account"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            year = self._int_or_none(request.data.get("statement_year"))
-            month = self._int_or_none(request.data.get("statement_month"))
-            statement_period = request.data.get("statement_period") or (f"{year}-{month:02d}" if year and month else "")
-            upload = self.statement_file_service.save_upload(
-                user=request.user,
-                account=account,
-                uploaded_file=statement_file,
-                institution=institution,
-                statement_period=statement_period,
-                statement_status="provisional",
-                statement_year=year,
-                statement_month=month,
-                source="agent_drop",
-            )
-            result = None
-            if upload.statement.import_status != "imported":
-                result = self.statement_file_service.import_statement(upload.statement)
-                upload.statement.refresh_from_db()
-        except ValueError as exc:
-            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as exc:
-            logger.exception("Agent statement upload failed")
-            return Response({"error": f"Upload failed: {exc}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        return Response(
-            {
-                "statement": self.statement_file_service.serialize(upload.statement),
-                "created": upload.created,
-                "result": result.as_dict() if result else upload.statement.last_import_result,
-            },
-            status=status.HTTP_201_CREATED if upload.created else status.HTTP_200_OK,
-        )
-
-    def _int_or_none(self, value):
-        if value in (None, ""):
-            return None
-        return int(value)
-
-
-class AgentBalanceSnapshotAPIView(APIView):
-    """Accept a bank-agent scraped balance snapshot for an investment account."""
-
-    authentication_classes = [TokenAuthentication, SessionAuthentication, BasicAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.account_service = AccountService()
-        self.balance_service = AccountBalanceService()
-
-    def post(self, request):
-        from datetime import date as date_type
-        from decimal import Decimal
-
-        account_id = request.data.get("account_id")
-        balance = request.data.get("balance")
-        balance_date = request.data.get("date")
-
-        if not all([account_id, balance is not None, balance_date]):
-            return Response(
-                {"error": "account_id, balance, and date are required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        account = self.account_service.get_account_by_id(int(account_id), request.user)
-        if not account:
-            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        try:
-            balance_decimal = Decimal(str(balance))
-        except Exception:
-            return Response(
-                {"error": "Invalid balance value"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            parsed_balance_date = date_type.fromisoformat(str(balance_date))
-        except ValueError:
-            return Response(
-                {"error": "Invalid date format (use YYYY-MM-DD)"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        old_balance = account.balance
-        updated_account = self.balance_service.set_balance_snapshot(
-            account=account,
-            new_balance=balance_decimal,
-            balance_date=parsed_balance_date,
-            source="agent_sync",
-        )
-
-        return Response(
-            {
-                "balance": str(updated_account.balance),
-                "date": str(parsed_balance_date),
-                "previous_balance": str(old_balance),
-                "adjustment": str(updated_account.balance - old_balance),
-            },
-            status=status.HTTP_200_OK,
-        )
 
 
 class StatementFileListCreateAPIView(APIView):

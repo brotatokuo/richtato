@@ -4,7 +4,7 @@ This file documents the current Richtato backend patterns for agents and develop
 
 ## Overview
 
-The backend is a Django 5.x and Django REST Framework API for personal finance data, budgets, dashboards, household sharing, Playwright cookie-only bank sync, and AI categorization.
+The backend is a Django 5.x and Django REST Framework API for personal finance data, budgets, dashboards, household sharing, manual statement uploads with Google Drive storage, and AI categorization.
 
 ## Stack
 
@@ -13,7 +13,6 @@ The backend is a Django 5.x and Django REST Framework API for personal finance d
 - SQLite test settings for the default pytest path.
 - Gunicorn for production serving.
 - Loguru for logging.
-- Playwright cookie-only agent for automated bank statement sync.
 - OpenAI for AI categorization.
 
 ## Commands
@@ -57,7 +56,6 @@ backend/
 │   ├── budget/
 │   ├── budget_dashboard/
 │   ├── asset_dashboard/
-│   ├── bank_sync/  # legacy export-only; see scripts/bank_sync agent CLI
 │   ├── categorization/
 │   ├── household/
 │   ├── richtato_user/
@@ -105,8 +103,7 @@ Service errors commonly use `ValueError` for domain issues. Views should catch e
 - `transaction.CategoryKeyword`: keyword rules for categorization.
 - `budget.Budget`: budget period and household flag.
 - `budget.BudgetCategory`: per-category budget amounts.
-- `financial_account.StatementFile`: original CSV/XLSX uploaded or dropped into an account's `storage_uri`, with import status, parser key, and origin (`source`: manual_upload, agent_drop, unknown).
-- `bank_sync.BankLogin`, `bank_sync.SyncedAccount`, `bank_sync.SyncRun`: legacy bank-sync models retained solely for the `export_bank_sync_to_agent` migration command. The active automation now runs out of `scripts/bank_sync/` (`bank-agent` CLI) with its own SQLite vault.
+- `financial_account.StatementFile`: original CSV/XLSX uploaded in-app or dropped into an account's Google Drive `storage_uri`, with import status, parser key, and origin (`source`: manual_upload, agent_drop, unknown).
 - `household.Household`: household membership for shared finance views.
 
 ## URLs
@@ -153,17 +150,16 @@ Use `TransactionService` for manual transaction flows so categorization and side
 - Dashboard services should perform calculations; repositories should perform queries.
 - Budget uses `Budget` and `BudgetCategory` rows, not JSON allocation blobs.
 
-## Sync And Integrations
+## Statement Ingestion And Integrations
 
-Google Drive statement storage plus the Playwright bank-agent is the primary no-aggregator ingestion path for new bank data work.
+Manual statement uploads with Google Drive statement storage are the primary no-aggregator ingestion path for new bank data work. There is no automated bank sync or browser automation.
 
 - `apps/financial_account/services/statement_import_service.py` parses CSV/XLS/XLSX statements through institution adapters.
 - `apps/financial_account/services/statement_file_service.py` stores original statement files in Google Drive through the `StatementStorage` abstraction (`apps/financial_account/storage/`). Google Drive activation sets each account to a `gdrive://<folder_id>` folder with a flat file list.
-- `apps/financial_account/services/storage_scanner_service.py` plus the `scan_statement_storage` management command discovers files dropped into an account's `storage_uri`, creates `StatementFile` rows with `source="agent_drop"`, and auto-imports them via `StatementImportService`.
+- `apps/financial_account/services/storage_scanner_service.py` plus the `scan_statement_storage` management command discovers files dropped directly into an account's Google Drive `storage_uri`, creates `StatementFile` rows with `source="agent_drop"`, and auto-imports them via `StatementImportService`.
 - Statement imports should preview before commit and classify rows as new, duplicate, invalid, or possible changed.
 - Deduplication is row-level so current/open statements can overlap later closed statements.
 - Current/open statement exports are provisional; closed statements are authoritative and should flag changed provisional rows for review.
-- Browser automation is now an independent host CLI at `scripts/bank_sync/agent.py` (`bank-agent`). It owns its own SQLite vault, Fernet key (`BANK_AGENT_FERNET_KEY`), and drops statement files directly into each account's `storage_uri`. The backend has zero runtime coupling to it.
 
 Do not document or add Plaid, Teller, or other third-party aggregator code paths unless the task is explicitly to implement them.
 

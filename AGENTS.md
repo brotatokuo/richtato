@@ -4,7 +4,7 @@ Use this file as the starting point for AI-agent work in Richtato. Keep it conci
 
 ## What This Repo Is
 
-Richtato is an AI-native personal finance app for spending, budgets, net worth, bank sync, household sharing, and AI categorization. The UX target is Monarch Money: clear financial data, low-friction transaction workflows, polished responsive layouts, and dark/light parity.
+Richtato is an AI-native personal finance app for spending, budgets, net worth, statement uploads, household sharing, and AI categorization. The UX target is Monarch Money: clear financial data, low-friction transaction workflows, polished responsive layouts, and dark/light parity.
 
 ## Read This First
 
@@ -36,8 +36,8 @@ Richtato is an AI-native personal finance app for spending, budgets, net worth, 
 - The Vite dev server runs on port `3000`.
 - Budgets use `/api/v1/budgets/`, not `/api/v1/budget/`.
 - User profile, preferences, and category settings live under `/api/v1/auth/`.
-- Google Drive statement storage plus the Playwright bank-agent is the primary no-aggregator ingestion path.
-- Automated bank sync uses a cookie-only Playwright agent (`scripts/bank_sync/`). Configure per-account sync on **Bank Agent** (`/bank-agent`). The full app stack is Docker-only (`db`, `backend`, `frontend`); bank automation is a separate host runtime (`./scripts/bank_sync/start-headed.sh`). Daily sync digest email: `docs/sync-digest-email.md` and `python manage.py send_sync_digest`.
+- Manual statement uploads with Google Drive statement storage are the primary no-aggregator ingestion path. There is no automated bank sync or Playwright agent; transactions arrive via statement uploads or manual entry.
+- The full app stack is Docker-only (`db`, `backend`, `frontend`).
 - Do not document Plaid, Teller, or other paid aggregators as active unless you implement them.
 - Statement imports must be row-level idempotent; current/open statements are provisional and may overlap later closed statements.
 - Original statement files are stored in Google Drive after activation, under one flat folder per account. Activate Drive in **Setup → Statements** before uploading or syncing statements.

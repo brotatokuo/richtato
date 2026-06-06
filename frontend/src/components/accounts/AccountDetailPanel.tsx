@@ -8,8 +8,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { transactionsApiService } from '@/lib/api/transactions';
-import type { AgentCadence, SyncMode } from '@/lib/api/bankSync';
+import { transactionsApiService, type SyncMode } from '@/lib/api/transactions';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { getEntityLogo } from '@/lib/imageMapping';
 import { cn } from '@/lib/utils';
@@ -241,9 +240,6 @@ export function AccountDetailPanel({
     opening_balance?: number | null;
     opening_balance_date?: string | null;
     sync_mode?: SyncMode;
-    agent_cadence?: AgentCadence;
-    agent_sync_hour?: number;
-    agent_activity_url?: string;
   }) => {
     if (!account) return;
     setEditLoading(true);
@@ -254,9 +250,6 @@ export function AccountDetailPanel({
         entity: form.entity,
         shared_with_household: form.shared_with_household,
         sync_mode: form.sync_mode,
-        agent_cadence: form.agent_cadence,
-        agent_sync_hour: form.agent_sync_hour,
-        agent_activity_url: form.agent_activity_url,
         ...(form.opening_balance !== undefined
           ? {
               opening_balance: form.opening_balance,

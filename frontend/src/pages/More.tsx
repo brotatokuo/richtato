@@ -2,7 +2,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { cn } from '@/lib/utils';
 import {
-  Bot,
   Calculator,
   ChevronRight,
   Heart,
@@ -17,6 +16,7 @@ interface MenuRowProps {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   destructive?: boolean;
+  dataTour?: string;
 }
 
 function MenuRow({
@@ -25,6 +25,7 @@ function MenuRow({
   icon: Icon,
   label,
   destructive,
+  dataTour,
 }: MenuRowProps) {
   const className = cn(
     'flex items-center gap-3 px-4 py-3.5 text-sm font-medium transition-colors active:bg-muted',
@@ -55,7 +56,7 @@ function MenuRow({
   }
 
   return (
-    <Link to={href!} className={className}>
+    <Link to={href!} className={className} data-tour={dataTour}>
       {inner}
     </Link>
   );
@@ -121,8 +122,12 @@ export function More() {
       )}
 
       <Section title="Settings">
-        <MenuRow href="/bank-agent" icon={Bot} label="Bank Agent" />
-        <MenuRow href="/setup" icon={SlidersHorizontal} label="Setup" />
+        <MenuRow
+          href="/setup"
+          icon={SlidersHorizontal}
+          label="Setup"
+          dataTour="nav-setup-mobile"
+        />
         <MenuRow href="/formulas" icon={Calculator} label="Formulas" />
       </Section>
 

@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useDrive } from '@/contexts/DriveContext';
+import { usePlatformTour } from '@/contexts/PlatformTourContext';
 import {
   driveStatementsApi,
   type DriveAdoptPreview,
@@ -93,6 +94,7 @@ export function DriveStatementsSection() {
     isLoading: loading,
     refreshDriveStatus,
   } = useDrive();
+  const { markOAuthResume, isRunning: isTourRunning } = usePlatformTour();
   const [busy, setBusy] = useState(false);
   const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
   const [adoptPreview, setAdoptPreview] = useState<DriveAdoptPreview | null>(
@@ -120,6 +122,9 @@ export function DriveStatementsSection() {
   }, [searchParams, setSearchParams, refreshDriveStatus]);
 
   const connectDrive = async () => {
+    if (isTourRunning) {
+      markOAuthResume();
+    }
     setBusy(true);
     try {
       const { auth_url } = await driveStatementsApi.startOAuth();
@@ -323,7 +328,10 @@ export function DriveStatementsSection() {
           </div>
         ) : (
           <>
-            <div className="rounded-lg border border-border bg-muted/20 p-4">
+            <div
+              className="rounded-lg border border-border bg-muted/20 p-4"
+              data-tour="drive-status"
+            >
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={isActive ? 'default' : 'outline'}>
                   {isActive
@@ -365,11 +373,15 @@ export function DriveStatementsSection() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div
+              className="flex flex-wrap gap-2"
+              data-tour="drive-folder-actions"
+            >
               {!isConnected && (
                 <Button
                   onClick={connectDrive}
                   disabled={busy || !status?.configured}
+                  data-tour="drive-connect"
                 >
                   {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Connect Google Drive

@@ -13,11 +13,6 @@ export interface InstitutionFieldChoice {
   value: string;
   label: string;
   account_types: Array<{ value: string; label: string }>;
-  agent_flows?: Array<{
-    account_type: string;
-    flow: 'deposit' | 'credit_card' | 'investment_balance' | null;
-    needs_storage: boolean;
-  }>;
 }
 
 interface AccountFormFieldsProps {

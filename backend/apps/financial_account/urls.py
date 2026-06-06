@@ -15,26 +15,6 @@ urlpatterns = [
         views.AccountFieldChoicesAPIView.as_view(),
         name="account-field-choices",
     ),
-    path(
-        "bank-agent-config/",
-        views.BankAgentConfigAPIView.as_view(),
-        name="account-bank-agent-config",
-    ),
-    path(
-        "sync-setup/",
-        views.BankSyncSetupAPIView.as_view(),
-        name="account-sync-setup",
-    ),
-    path(
-        "bank-agent-setup-export/",
-        views.BankAgentSetupExportAPIView.as_view(),
-        name="account-bank-agent-setup-export",
-    ),
-    path(
-        "bank-agent-events/",
-        views.BankAgentEventAPIView.as_view(),
-        name="account-bank-agent-events",
-    ),
     path("drive/status/", views.GoogleDriveStatusAPIView.as_view(), name="account-drive-status"),
     path("drive/oauth/start/", views.GoogleDriveOAuthStartAPIView.as_view(), name="account-drive-oauth-start"),
     path(
@@ -83,16 +63,6 @@ urlpatterns = [
         "import-statement/",
         views.StatementImportAPIView.as_view(),
         name="account-statement-import",
-    ),
-    path(
-        "agent-statements/",
-        views.AgentStatementUploadAPIView.as_view(),
-        name="account-agent-statement-upload",
-    ),
-    path(
-        "agent-balances/",
-        views.AgentBalanceSnapshotAPIView.as_view(),
-        name="account-agent-balance-snapshot",
     ),
     path(
         "statements/",

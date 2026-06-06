@@ -1,5 +1,6 @@
 import { AppearanceSection } from '@/components/settings/AppearanceSection';
 import { NotificationsSection } from '@/components/settings/NotificationsSection';
+import { ProductTourSection } from '@/components/settings/ProductTourSection';
 import { ProfileSection } from '@/components/settings/ProfileSection';
 
 function SettingsGroup({
@@ -41,9 +42,16 @@ export function Preferences() {
 
       <SettingsGroup
         title="Notifications"
-        description="Choose how Richtato alerts you about bank sync and account activity."
+        description="Choose how Richtato alerts you about account activity."
       >
         <NotificationsSection />
+      </SettingsGroup>
+
+      <SettingsGroup
+        title="Help"
+        description="Learn how to set up accounts and Google Drive statement storage."
+      >
+        <ProductTourSection />
       </SettingsGroup>
     </div>
   );

@@ -12,7 +12,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import {
   BarChart3,
-  Bot,
   Calculator,
   ChevronLeft,
   ChevronRight,
@@ -54,7 +53,6 @@ export function Sidebar({
     const items: NavItem[] = [
       { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
       { name: 'Accounts', href: '/accounts', icon: Landmark },
-      { name: 'Bank Agent', href: '/bank-agent', icon: Bot },
       { name: 'Budget', href: '/budget', icon: Wallet },
     ];
     if (isInHousehold) {
@@ -155,6 +153,7 @@ export function Sidebar({
             <Link
               key={item.name}
               to={item.href}
+              data-tour={item.name === 'Accounts' ? 'nav-accounts' : undefined}
               aria-label={isCollapsed ? item.name : undefined}
               className={cn(
                 'group/sidebar-item flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200',
@@ -193,6 +192,7 @@ export function Sidebar({
                 isCollapsed && 'relative justify-center'
               )}
               aria-label="Open user menu"
+              data-tour="sidebar-user-menu"
             >
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-500 text-xs font-medium text-white shadow-lg">
                 {initial}
@@ -230,7 +230,7 @@ export function Sidebar({
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/setup" className="gap-2">
+              <Link to="/setup" className="gap-2" data-tour="nav-setup">
                 <SlidersHorizontal className="h-4 w-4" />
                 Setup
               </Link>
