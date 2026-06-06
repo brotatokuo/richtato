@@ -18,7 +18,6 @@ import { formatCurrency } from '@/lib/format';
 import echarts, { type ECharts, type EChartsOption } from '@/lib/echarts';
 import { cn } from '@/lib/utils';
 import {
-  AlertTriangle,
   ArrowDownRight,
   ArrowUpRight,
   PiggyBank,
@@ -331,17 +330,41 @@ export function ReportPage() {
 
   if (loading) {
     return (
-      <div className="flex h-96 items-center justify-center">
-        <LoadingSpinner />
+      <div className="space-y-6">
+        <div
+          className="flex flex-wrap items-center justify-between gap-3"
+          data-tour="dashboard-overview"
+        >
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">
+              Dashboard Overview
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Loading your dashboard...
+            </p>
+          </div>
+        </div>
+        <div className="flex h-96 items-center justify-center">
+          <LoadingSpinner />
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex h-96 flex-col items-center justify-center gap-4">
-        <AlertTriangle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive">{error}</p>
+      <div className="space-y-6">
+        <div
+          className="flex flex-wrap items-center justify-between gap-3"
+          data-tour="dashboard-overview"
+        >
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">
+              Dashboard Overview
+            </h1>
+            <p className="text-sm text-destructive">{error}</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -351,9 +374,12 @@ export function ReportPage() {
   const totalOutflow = data.totalExpenses + data.totalInvestments;
 
   return (
-    <div className="space-y-6" data-tour="dashboard-overview">
+    <div className="space-y-6">
       {/* Dashboard year filter */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div
+        className="flex flex-wrap items-center justify-between gap-3"
+        data-tour="dashboard-overview"
+      >
         <div>
           <h1 className="text-xl font-semibold text-foreground">
             Dashboard Overview

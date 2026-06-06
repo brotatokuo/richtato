@@ -2,11 +2,11 @@ import { PlatformTour } from '@/components/tour/PlatformTour';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlatformTourResumeEffect } from '@/hooks/usePlatformTourResume';
 import { usePreferences } from '@/contexts/PreferencesContext';
+import { cleanupJoyridePortal } from '@/lib/tour/platformTourEvents';
 import {
   getPlatformTourStepIndex,
   PLATFORM_TOUR_RESUME_KEY,
 } from '@/lib/tour/platformTourSteps';
-import { cleanupJoyridePortal } from '@/lib/tour/platformTourEvents';
 import {
   createContext,
   useCallback,
@@ -37,14 +37,13 @@ export function PlatformTourProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [run, setRun] = useState(false);
   const [initialStepIndex, setInitialStepIndex] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
+  const [tourSession, setTourSession] = useState(0);
   const autoStartedRef = useRef(false);
 
   const completeTour = useCallback(async () => {
     setRun(false);
-    setIsRunning(false);
-    sessionStorage.removeItem(PLATFORM_TOUR_RESUME_KEY);
     cleanupJoyridePortal();
+    sessionStorage.removeItem(PLATFORM_TOUR_RESUME_KEY);
 
     if (preferences.platform_tour_completed) {
       return;
@@ -59,18 +58,27 @@ export function PlatformTourProvider({ children }: { children: ReactNode }) {
 
   const startTour = useCallback(
     (stepIndex = 0) => {
+      cleanupJoyridePortal();
+      sessionStorage.removeItem(PLATFORM_TOUR_RESUME_KEY);
+      setRun(false);
       setInitialStepIndex(stepIndex);
-      setRun(true);
+      setTourSession(session => session + 1);
+
       if (stepIndex === 0) {
         navigate('/dashboard');
       }
+
+      window.requestAnimationFrame(() => {
+        setRun(true);
+      });
     },
     [navigate]
   );
 
   const stopTour = useCallback(() => {
     setRun(false);
-    setIsRunning(false);
+    cleanupJoyridePortal();
+    sessionStorage.removeItem(PLATFORM_TOUR_RESUME_KEY);
   }, []);
 
   const markOAuthResume = useCallback(() => {
@@ -80,7 +88,7 @@ export function PlatformTourProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  usePlatformTourResumeEffect(startTour, isRunning);
+  usePlatformTourResumeEffect(startTour, run);
 
   useEffect(() => {
     if (
@@ -89,7 +97,6 @@ export function PlatformTourProvider({ children }: { children: ReactNode }) {
       loading ||
       preferences.platform_tour_completed ||
       autoStartedRef.current ||
-      isRunning ||
       run
     ) {
       return;
@@ -104,7 +111,6 @@ export function PlatformTourProvider({ children }: { children: ReactNode }) {
   }, [
     isAuthenticated,
     initialized,
-    isRunning,
     loading,
     preferences.platform_tour_completed,
     run,
@@ -113,24 +119,24 @@ export function PlatformTourProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
-      isRunning,
+      isRunning: run,
       startTour,
       stopTour,
       markOAuthResume,
     }),
-    [isRunning, markOAuthResume, startTour, stopTour]
+    [markOAuthResume, run, startTour, stopTour]
   );
 
   return (
     <PlatformTourContext.Provider value={value}>
       {children}
       <PlatformTour
+        key={tourSession}
         run={run}
         initialStepIndex={initialStepIndex}
         onComplete={() => {
           void completeTour();
         }}
-        onRunningChange={setIsRunning}
       />
     </PlatformTourContext.Provider>
   );

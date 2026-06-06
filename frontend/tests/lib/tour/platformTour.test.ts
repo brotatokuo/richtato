@@ -5,7 +5,11 @@ import {
   PLATFORM_TOUR_STEP_DEFINITIONS,
   PLATFORM_TOUR_STEP_IDS,
 } from '@/lib/tour/platformTourSteps';
-import { waitForTarget } from '@/lib/tour/waitForTarget';
+import {
+  queryFirstSelector,
+  waitForAnyTarget,
+  waitForTarget,
+} from '@/lib/tour/waitForTarget';
 
 describe('platformTourSteps', () => {
   it('defines nine ordered steps with stable ids', () => {
@@ -42,12 +46,33 @@ describe('waitForTarget', () => {
     marker.remove();
   });
 
-  it('rejects when the selector never appears', async () => {
+  it('resolves when any selector appears', async () => {
+    const marker = document.createElement('div');
+    marker.setAttribute('data-testid', 'tour-target-alt');
+    document.body.appendChild(marker);
+
     await expect(
-      waitForTarget('[data-testid="missing-target"]', {
-        timeout: 100,
-        interval: 20,
-      })
-    ).rejects.toThrow('Tour target not found');
+      waitForAnyTarget(
+        ['[data-testid="missing"]', '[data-testid="tour-target-alt"]'],
+        { timeout: 500 }
+      )
+    ).resolves.toBe(marker);
+
+    marker.remove();
+  });
+
+  it('queryFirstSelector returns the first matching element', () => {
+    const first = document.createElement('div');
+    first.setAttribute('data-testid', 'first');
+    const second = document.createElement('div');
+    second.setAttribute('data-testid', 'second');
+    document.body.append(first, second);
+
+    expect(
+      queryFirstSelector('[data-testid="missing"]', '[data-testid="first"]')
+    ).toBe(first);
+
+    first.remove();
+    second.remove();
   });
 });

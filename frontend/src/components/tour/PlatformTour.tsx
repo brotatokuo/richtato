@@ -16,14 +16,12 @@ interface PlatformTourProps {
   run: boolean;
   initialStepIndex?: number;
   onComplete: () => void;
-  onRunningChange?: (running: boolean) => void;
 }
 
 export function PlatformTour({
   run,
   initialStepIndex = 0,
   onComplete,
-  onRunningChange,
 }: PlatformTourProps) {
   const navigate = useNavigate();
   const [stepIndex, setStepIndex] = useState(initialStepIndex);
@@ -35,21 +33,19 @@ export function PlatformTour({
   );
 
   useEffect(() => {
-    onRunningChange?.(run);
-  }, [onRunningChange, run]);
-
-  useEffect(() => {
-    if (run) {
-      finishedRef.current = false;
-      setStepIndex(initialStepIndex);
-    }
-  }, [initialStepIndex, run]);
+    finishedRef.current = false;
+    setStepIndex(initialStepIndex);
+  }, [initialStepIndex]);
 
   useEffect(() => {
     if (!run) {
       cleanupJoyridePortal();
+      return;
     }
-  }, [run]);
+
+    finishedRef.current = false;
+    setStepIndex(initialStepIndex);
+  }, [initialStepIndex, run]);
 
   const endTour = useCallback(() => {
     if (finishedRef.current) {
@@ -74,6 +70,10 @@ export function PlatformTour({
     },
     [endTour, steps.length]
   );
+
+  if (!run) {
+    return null;
+  }
 
   const theme = getJoyrideThemeOptions();
 
@@ -117,7 +117,7 @@ export function PlatformTour({
           fontSize: '0.875rem',
           lineHeight: 1.5,
         },
-        buttonPrimary: {
+        buttonNext: {
           borderRadius: 8,
           fontSize: '0.875rem',
         },

@@ -48,7 +48,13 @@ export function BottomTabBar() {
             <Link
               key={tab.name}
               to={tab.href}
-              data-tour={tab.name === 'More' ? 'nav-more-mobile' : undefined}
+              data-tour={
+                tab.name === 'Accounts'
+                  ? 'nav-accounts-mobile'
+                  : tab.name === 'More'
+                    ? 'nav-more-mobile'
+                    : undefined
+              }
               className={cn(
                 'relative flex flex-1 flex-col items-center justify-center gap-1 text-xs font-medium transition-colors',
                 isActive

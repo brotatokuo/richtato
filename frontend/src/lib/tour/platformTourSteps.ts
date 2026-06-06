@@ -1,11 +1,16 @@
 import type { Step } from 'react-joyride';
-import { waitForTarget } from '@/lib/tour/waitForTarget';
+import {
+  queryFirstSelector,
+  waitForAnyTarget,
+  waitForTarget,
+} from '@/lib/tour/waitForTarget';
 
 export const PLATFORM_TOUR_RESUME_KEY = 'platform_tour_resume_step';
 
 export const TOUR_TARGETS = {
   dashboardOverview: '[data-tour="dashboard-overview"]',
   navAccounts: '[data-tour="nav-accounts"]',
+  navAccountsMobile: '[data-tour="nav-accounts-mobile"]',
   addAccount: '[data-tour="add-account"]',
   navSetup: '[data-tour="nav-setup"]',
   navSetupMobile: '[data-tour="nav-setup-mobile"]',
@@ -64,6 +69,30 @@ async function ensureRoute(
   await waitForTarget(targetSelector);
 }
 
+async function ensureRouteAny(
+  navigate: (path: string) => void,
+  route: string,
+  targetSelectors: string[]
+): Promise<void> {
+  const url = new URL(route, window.location.origin);
+  const needsNavigation =
+    window.location.pathname !== url.pathname ||
+    window.location.search !== url.search;
+
+  if (needsNavigation) {
+    navigate(`${url.pathname}${url.search}`);
+  }
+
+  await waitForAnyTarget(targetSelectors);
+}
+
+function accountsNavTarget(): Element | null {
+  return queryFirstSelector(
+    TOUR_TARGETS.navAccounts,
+    TOUR_TARGETS.navAccountsMobile
+  );
+}
+
 export function getPlatformTourStepIndex(stepId: PlatformTourStepId): number {
   return PLATFORM_TOUR_STEP_IDS.indexOf(stepId);
 }
@@ -88,22 +117,27 @@ export function createPlatformTourSteps(
     {
       id: 'dashboard-overview',
       target: TOUR_TARGETS.dashboardOverview,
-      placement: 'bottom',
+      placement: 'bottom-start',
       title: 'Your financial dashboard',
       content:
         'See income, spending, net worth, and trends at a glance. Data fills in once you add accounts and import statements.',
       skipBeacon: true,
+      offset: 12,
       before: () => goTo('/dashboard', TOUR_TARGETS.dashboardOverview),
     },
     {
       id: 'nav-accounts',
-      target: TOUR_TARGETS.navAccounts,
+      target: accountsNavTarget,
       placement: 'right',
       title: 'Accounts',
       content:
         'Start by adding your bank, credit card, and investment accounts. Each account gets its own folder in Google Drive later.',
       skipBeacon: true,
-      before: () => goTo('/dashboard', TOUR_TARGETS.navAccounts),
+      before: () =>
+        ensureRouteAny(navigate, '/dashboard', [
+          TOUR_TARGETS.navAccounts,
+          TOUR_TARGETS.navAccountsMobile,
+        ]),
     },
     {
       id: 'add-account',
