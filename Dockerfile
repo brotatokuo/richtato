@@ -4,9 +4,11 @@
 FROM node:20-bullseye-slim AS frontend
 WORKDIR /frontend
 
+RUN corepack enable
+
 # Install deps first (better layer caching)
-COPY frontend/package.json frontend/yarn.lock ./
-RUN yarn install --frozen-lockfile
+COPY frontend/package.json frontend/yarn.lock frontend/.yarnrc.yml ./
+RUN yarn install --immutable
 
 # Allow Vite base API URL to be injected at build time
 ARG VITE_API_BASE_URL=/api

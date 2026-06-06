@@ -1,6 +1,7 @@
 import type { Step } from 'react-joyride';
 import {
-  queryFirstSelector,
+  queryFirstHTMLElement,
+  queryHTMLElement,
   waitForAnyTarget,
   waitForTarget,
 } from '@/lib/tour/waitForTarget';
@@ -86,8 +87,8 @@ async function ensureRouteAny(
   await waitForAnyTarget(targetSelectors);
 }
 
-function accountsNavTarget(): Element | null {
-  return queryFirstSelector(
+function accountsNavTarget(): HTMLElement | null {
+  return queryFirstHTMLElement(
     TOUR_TARGETS.navAccounts,
     TOUR_TARGETS.navAccountsMobile
   );
@@ -173,9 +174,9 @@ export function createPlatformTourSteps(
     {
       id: 'drive-connect',
       target: () =>
-        document.querySelector(TOUR_TARGETS.driveConnect) ??
-        document.querySelector(TOUR_TARGETS.driveFolderActions) ??
-        document.querySelector(TOUR_TARGETS.driveStatus),
+        queryHTMLElement(TOUR_TARGETS.driveConnect) ??
+        queryHTMLElement(TOUR_TARGETS.driveFolderActions) ??
+        queryHTMLElement(TOUR_TARGETS.driveStatus),
       placement: 'top',
       title: 'Connect Google Drive',
       content:
@@ -187,8 +188,8 @@ export function createPlatformTourSteps(
     {
       id: 'drive-folder-actions',
       target: () =>
-        document.querySelector(TOUR_TARGETS.driveFolderActions) ??
-        document.querySelector(TOUR_TARGETS.driveStatus),
+        queryHTMLElement(TOUR_TARGETS.driveFolderActions) ??
+        queryHTMLElement(TOUR_TARGETS.driveStatus),
       placement: 'top',
       title: 'Choose a folder structure',
       content:

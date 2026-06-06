@@ -1,8 +1,23 @@
-export function queryFirstSelector(
-  ...selectors: string[]
-): Element | null {
+export function queryHTMLElement(selector: string): HTMLElement | null {
+  const element = document.querySelector(selector);
+  return element instanceof HTMLElement ? element : null;
+}
+
+export function queryFirstSelector(...selectors: string[]): Element | null {
   for (const selector of selectors) {
     const element = document.querySelector(selector);
+    if (element) {
+      return element;
+    }
+  }
+  return null;
+}
+
+export function queryFirstHTMLElement(
+  ...selectors: string[]
+): HTMLElement | null {
+  for (const selector of selectors) {
+    const element = queryHTMLElement(selector);
     if (element) {
       return element;
     }

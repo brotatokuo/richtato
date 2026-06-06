@@ -1,4 +1,7 @@
-import { PlatformTourProvider, usePlatformTour } from '@/contexts/PlatformTourContext';
+import {
+  PlatformTourProvider,
+  usePlatformTour,
+} from '@/contexts/PlatformTourContext';
 import { PreferencesProvider } from '@/contexts/PreferencesContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { cleanupJoyridePortal } from '@/lib/tour/platformTourEvents';

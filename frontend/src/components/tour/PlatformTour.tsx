@@ -117,7 +117,7 @@ export function PlatformTour({
           fontSize: '0.875rem',
           lineHeight: 1.5,
         },
-        buttonNext: {
+        buttonPrimary: {
           borderRadius: 8,
           fontSize: '0.875rem',
         },
