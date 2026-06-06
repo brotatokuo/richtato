@@ -13,21 +13,13 @@ class FinancialAccountRepository:
     def get_by_id(self, account_id: int) -> FinancialAccount | None:
         """Get account by ID."""
         try:
-            return (
-                FinancialAccount.objects.select_related("institution", "user")
-                .prefetch_related("sync_connections")
-                .get(id=account_id)
-            )
+            return FinancialAccount.objects.select_related("institution", "user").get(id=account_id)
         except FinancialAccount.DoesNotExist:
             return None
 
     def get_by_user(self, user: User, is_active: bool | None = None) -> list[FinancialAccount]:
         """Get all accounts for a user."""
-        queryset = (
-            FinancialAccount.objects.filter(user=user)
-            .select_related("institution")
-            .prefetch_related("sync_connections")
-        )
+        queryset = FinancialAccount.objects.filter(user=user).select_related("institution")
         if is_active is not None:
             queryset = queryset.filter(is_active=is_active)
         return list(queryset.all())
@@ -38,14 +30,10 @@ class FinancialAccountRepository:
         is_active: bool | None = None,
     ) -> list[FinancialAccount]:
         """Get shared accounts for multiple users (household scope)."""
-        queryset = (
-            FinancialAccount.objects.filter(
-                user_id__in=user_ids,
-                shared_with_household=True,
-            )
-            .select_related("institution", "user")
-            .prefetch_related("sync_connections")
-        )
+        queryset = FinancialAccount.objects.filter(
+            user_id__in=user_ids,
+            shared_with_household=True,
+        ).select_related("institution", "user")
         if is_active is not None:
             queryset = queryset.filter(is_active=is_active)
         return list(queryset.all())
@@ -55,7 +43,6 @@ class FinancialAccountRepository:
         return list(
             FinancialAccount.objects.filter(user=user, account_type=account_type, is_active=is_active)
             .select_related("institution")
-            .prefetch_related("sync_connections")
             .all()
         )
 

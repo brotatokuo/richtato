@@ -133,12 +133,21 @@ class TransactionRepository:
         )
         return transaction
 
-    def update_transaction(self, transaction: Transaction, **kwargs) -> Transaction:
+    def update_transaction(
+        self,
+        transaction: Transaction,
+        *,
+        update_fields: list[str] | None = None,
+        **kwargs,
+    ) -> Transaction:
         """Update transaction fields."""
         for key, value in kwargs.items():
             if hasattr(transaction, key):
                 setattr(transaction, key, value)
-        transaction.save()
+        if update_fields is not None:
+            transaction.save(update_fields=update_fields)
+        else:
+            transaction.save()
         return transaction
 
     def delete_transaction(self, transaction: Transaction) -> None:

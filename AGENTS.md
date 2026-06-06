@@ -4,7 +4,7 @@ Use this file as the starting point for AI-agent work in Richtato. Keep it conci
 
 ## What This Repo Is
 
-Richtato is an AI-native personal finance app for spending, budgets, net worth, bank sync, household sharing, and AI categorization. The UX target is Monarch Money: clear financial data, low-friction transaction workflows, polished responsive layouts, and dark/light parity.
+Richtato is an AI-native personal finance app for spending, budgets, net worth, statement uploads, household sharing, and AI categorization. The UX target is Monarch Money: clear financial data, low-friction transaction workflows, polished responsive layouts, and dark/light parity.
 
 ## Read This First
 
@@ -36,11 +36,11 @@ Richtato is an AI-native personal finance app for spending, budgets, net worth, 
 - The Vite dev server runs on port `3000`.
 - Budgets use `/api/v1/budgets/`, not `/api/v1/budget/`.
 - User profile, preferences, and category settings live under `/api/v1/auth/`.
-- CSV/Excel statement import is the primary no-aggregator ingestion path.
-- Plaid code may exist for legacy sync, but do not make it the default product path for new import work.
-- Do not document Teller as active unless you implement it.
+- Manual statement uploads with Google Drive statement storage are the primary no-aggregator ingestion path. There is no automated bank sync or Playwright agent; transactions arrive via statement uploads or manual entry.
+- The full app stack is Docker-only (`db`, `backend`, `frontend`).
+- Do not document Plaid, Teller, or other paid aggregators as active unless you implement them.
 - Statement imports must be row-level idempotent; current/open statements are provisional and may overlap later closed statements.
-- Original statement files are stored locally under ignored `local_data/statements/<user>/<account>/<year>/<month>/` when using the statement library.
+- Original statement files are stored in Google Drive after activation, under one flat folder per account. Activate Drive in **Setup → Statements** before uploading or syncing statements.
 - Household-aware reads should omit `scope` for personal data and send `scope=household` only for household scope.
 - Transaction create/update/delete paths can affect account balances through signals.
 

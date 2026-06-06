@@ -6,24 +6,6 @@ import 'react-day-picker/dist/style.css';
 import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button-variants';
 
-// #region agent log
-fetch('http://127.0.0.1:7242/ingest/865d0811-47b7-40c2-94b4-9a9a09a7dc1a', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    location: 'calendar.tsx:9',
-    message: 'Calendar module loaded',
-    data: {
-      hasDayPicker: typeof DayPicker,
-      hasButtonVariants: typeof buttonVariants,
-    },
-    timestamp: Date.now(),
-    sessionId: 'debug-session',
-    hypothesisId: 'H1,H4',
-  }),
-}).catch(() => {});
-// #endregion
-
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
 function Calendar({
@@ -32,20 +14,6 @@ function Calendar({
   showOutsideDays = true,
   ...props
 }: CalendarProps) {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/865d0811-47b7-40c2-94b4-9a9a09a7dc1a', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      location: 'calendar.tsx:23',
-      message: 'Calendar component rendering',
-      data: { mode: props.mode, showOutsideDays },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      hypothesisId: 'H4',
-    }),
-  }).catch(() => {});
-  // #endregion
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}

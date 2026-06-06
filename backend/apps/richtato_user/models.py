@@ -137,6 +137,12 @@ class UserPreference(models.Model):
     # Notification preferences
     notifications_enabled = models.BooleanField(default=True, help_text="Whether to receive notifications")
 
+    # Onboarding
+    platform_tour_completed = models.BooleanField(
+        default=False,
+        help_text="Whether the user has completed the first-run platform tour",
+    )
+
     class Meta:
         verbose_name_plural = "User Preferences"
 

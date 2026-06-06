@@ -167,7 +167,6 @@ export interface CardAccountItem {
   id: number;
   name: string;
   bank: string;
-  imageKey?: string | null;
 }
 
 // API response format (snake_case from backend)
@@ -175,7 +174,6 @@ interface CardAccountApiResponse {
   id: number;
   name: string;
   entity: string;
-  image_key?: string | null;
 }
 
 // Transform API response to frontend format
@@ -186,7 +184,6 @@ function transformCardAccount(
     id: apiItem.id,
     name: apiItem.name,
     bank: apiItem.entity,
-    imageKey: apiItem.image_key ?? null,
   };
 }
 
@@ -236,7 +233,7 @@ class CardsApiService {
 
   async update(
     id: number,
-    payload: Partial<{ name: string; bank: string; image_key: string | null }>
+    payload: Partial<{ name: string; bank: string }>
   ): Promise<CardAccountItem> {
     const res = await fetch(`${this.baseUrl}/${id}/`, {
       method: 'PATCH',
@@ -279,6 +276,7 @@ export interface UserPreferencesPayload {
   date_format?: string;
   timezone?: string;
   notifications_enabled?: boolean;
+  platform_tour_completed?: boolean;
 }
 
 export interface FieldChoice {

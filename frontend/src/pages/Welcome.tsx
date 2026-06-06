@@ -23,9 +23,9 @@ import { useAuth } from '../hooks/useAuth';
 const features = [
   {
     icon: Link2,
-    title: 'Bank Sync',
+    title: 'Statement Uploads',
     description:
-      'Connect 12,000+ financial institutions with Plaid. Your accounts sync automatically.',
+      'Upload bank and card statements and store the originals in your own Google Drive. No third-party aggregator required.',
     gradient: 'from-emerald-500 to-teal-600',
     delay: 'delay-100',
   },
@@ -297,8 +297,8 @@ export function Welcome() {
               </span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              From automatic bank syncing to AI-powered insights, we've built
-              the tools you need to take control.
+              From statement uploads to AI-powered insights, we've built the
+              tools you need to take control.
             </p>
           </div>
 

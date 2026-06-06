@@ -4,7 +4,7 @@ import json
 import pytz
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
-from django.http import HttpRequest, JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
@@ -23,6 +23,8 @@ from apps.richtato_user.serializers import UserPreferenceSerializer
 from apps.richtato_user.services.category_settings_service import (
     CategorySettingsService,
 )
+from apps.richtato_user.services.user_backup_export_service import UserBackupExportService
+from apps.richtato_user.services.user_backup_import_service import UserBackupImportService
 from apps.richtato_user.services.user_service import UserService
 from apps.transaction.models import TransactionCategory
 
@@ -515,3 +517,154 @@ class CategoriesAPIView(APIView):
             for cat in categories
         ]
         return Response({"results": results})
+
+
+def _parse_backup_upload(request) -> dict:
+    if request.content_type and "multipart/form-data" in request.content_type:
+        uploaded = request.FILES.get("file")
+        if not uploaded:
+            raise ValueError("Missing backup file")
+        raw = uploaded.read().decode("utf-8")
+        return json.loads(raw)
+
+    if isinstance(request.data, dict) and request.data:
+        bundle = dict(request.data)
+        bundle.pop("confirm", None)
+        if not bundle:
+            raise ValueError("Missing backup payload")
+        return bundle
+
+    raise ValueError("Missing backup payload")
+
+
+def _is_confirmed(value) -> bool:
+    return value in (True, "true", "True", "1", 1)
+
+
+class UserBackupExportAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.export_service = UserBackupExportService()
+
+    @swagger_auto_schema(
+        operation_summary="Download full user backup JSON",
+        responses={200: openapi.Response("JSON backup file")},
+    )
+    def get(self, request):
+        bundle = self.export_service.build_json_bundle(request.user)
+        payload = json.dumps(bundle, indent=2)
+        exported_date = bundle.get("exported_at", "")[:10] or "backup"
+        response = HttpResponse(payload, content_type="application/json; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="richtato-backup-{exported_date}.json"'
+        return response
+
+
+class UserBackupTransactionsExportAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.export_service = UserBackupExportService()
+
+    @swagger_auto_schema(
+        operation_summary="Download transactions CSV",
+        manual_parameters=[
+            openapi.Parameter("start_date", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("end_date", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("account_id", openapi.IN_QUERY, type=openapi.TYPE_INTEGER),
+        ],
+        responses={200: openapi.Response("CSV file")},
+    )
+    def get(self, request):
+        from datetime import date
+
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+        account_id = request.query_params.get("account_id")
+
+        parsed_start = date.fromisoformat(start_date) if start_date else None
+        parsed_end = date.fromisoformat(end_date) if end_date else None
+        parsed_account_id = int(account_id) if account_id else None
+
+        csv_text = self.export_service.build_transactions_csv(
+            request.user,
+            start_date=parsed_start,
+            end_date=parsed_end,
+            account_id=parsed_account_id,
+        )
+        response = HttpResponse(csv_text, content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = 'attachment; filename="richtato-transactions.csv"'
+        return response
+
+
+class UserBackupImportStatusAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.import_service = UserBackupImportService()
+
+    @swagger_auto_schema(
+        operation_summary="Check whether backup import is available",
+        responses={200: openapi.Response("Import availability")},
+    )
+    def get(self, request):
+        can_import, reason = self.import_service.can_import(request.user)
+        return Response({"can_import": can_import, "reason": reason})
+
+
+class UserBackupImportPreviewAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.import_service = UserBackupImportService()
+
+    @swagger_auto_schema(
+        operation_summary="Preview backup import",
+        responses={
+            200: openapi.Response("Preview summary"),
+            400: openapi.Response("Invalid backup"),
+        },
+    )
+    def post(self, request):
+        try:
+            bundle = _parse_backup_upload(request)
+        except (ValueError, json.JSONDecodeError) as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        preview = self.import_service.preview(request.user, bundle)
+        return Response(preview)
+
+
+class UserBackupImportCommitAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.import_service = UserBackupImportService()
+
+    @swagger_auto_schema(
+        operation_summary="Commit backup import",
+        responses={
+            200: openapi.Response("Import completed"),
+            400: openapi.Response("Invalid backup or account not empty"),
+        },
+    )
+    def post(self, request):
+        if not _is_confirmed(request.data.get("confirm")):
+            return Response({"error": "confirm must be true"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            bundle = _parse_backup_upload(request)
+        except (ValueError, json.JSONDecodeError) as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            result = self.import_service.commit(request.user, bundle)
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(result)

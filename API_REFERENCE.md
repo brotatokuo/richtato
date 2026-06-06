@@ -59,6 +59,23 @@ Common date filters:
 | `GET` | `/preferences/` | Get preferences |
 | `PUT` | `/preferences/` | Update preferences |
 | `GET` | `/preferences/field-choices/` | Get preference field choices |
+| `GET` | `/backup/export/` | Download full user backup JSON |
+| `GET` | `/backup/export/transactions/` | Download transactions CSV (`start_date`, `end_date`, `account_id` optional) |
+| `GET` | `/backup/import/status/` | Check whether backup import is available on this account |
+| `POST` | `/backup/import/preview/` | Validate backup file and return import summary |
+| `POST` | `/backup/import/commit/` | Import backup onto a fresh account (`confirm: true`) |
+
+Backup JSON bundles include preferences, categories, keywords, budgets, accounts, and transactions. They exclude Google Drive OAuth tokens, household membership, and statement files. Import is only allowed before the target account has any financial accounts or transactions.
+
+Preferences include the master `notifications_enabled` switch for in-app notifications.
+
+## Core (`/api/v1/core/`)
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/notifications/` | List in-app notifications (`unread=1`, `limit=N`) |
+| `PATCH` | `/notifications/{id}/` | Mark one notification read with `{ "read": true }` |
+| `POST` | `/notifications/mark-all-read/` | Mark all current user's notifications read |
 
 ## Accounts (`/api/v1/accounts/`)
 
@@ -74,11 +91,19 @@ Common date filters:
 | `GET` | `/{id}/transactions/` | List account transactions |
 | `GET` | `/summary/` | Get account summary |
 | `POST` | `/details/` | Add balance update entry |
+| `GET` | `/drive/status/` | Get Google Drive statement storage status |
+| `POST` | `/drive/oauth/start/` | Start Google Drive OAuth |
+| `GET` | `/drive/oauth/callback/` | Complete Google Drive OAuth callback |
+| `GET` | `/drive/picker-token/` | Get short-lived token/config for Google Drive Picker |
+| `POST` | `/drive/activate/` | Activate a Drive folder and create or adopt account folders (`adopt_existing: true` to link existing `{account_id}-{name}` subfolders) |
+| `POST` | `/drive/adopt-preview/` | Preview adopting an existing Drive root with Richtato-style account subfolders |
+| `POST` | `/drive/deactivate/` | Unlink an active Drive folder and clear account storage URIs |
+| `POST` | `/drive/disconnect/` | Disconnect inactive Drive OAuth credentials |
 | `POST` | `/import-csv/` | Import statement CSV |
-| `GET` | `/import-statement/` | List supported CSV/Excel statement institutions |
-| `POST` | `/import-statement/` | Preview or commit CSV/Excel statement import |
-| `GET` | `/statements/` | List locally stored statement files and account/year/month tree |
-| `POST` | `/statements/` | Upload a statement file into local account/year/month storage |
+| `GET` | `/import-statement/` | List supported statement import institutions |
+| `POST` | `/import-statement/` | Preview or commit CSV/Excel/PDF statement import |
+| `GET` | `/statements/` | List stored statement records and folder summary |
+| `POST` | `/statements/` | Legacy statement file upload into the configured account storage |
 | `GET` | `/statements/{id}/` | Get statement file metadata |
 | `PATCH` | `/statements/{id}/` | Update statement metadata and move folders if account/period changes |
 | `DELETE` | `/statements/{id}/` | Soft-delete statement file metadata |
@@ -94,16 +119,16 @@ Card-specific account routes are mounted at `/api/v1/card-accounts/`.
 
 `POST /api/v1/accounts/import-statement/` accepts multipart form data:
 
-- `file`: CSV, XLS, or XLSX statement export.
+- `file`: CSV, XLS, XLSX, or PDF statement export (PDF currently supported for `robinhood_credit` only).
 - `account`: target account ID.
-- `institution`: one of `bofa`, `marcus`, `amex`, `robinhood_bank`, `fidelity`, `robinhood_investments`, `guideline`, or `chase`.
+- `institution`: one of `bofa`, `marcus`, `amex`, `robinhood_bank`, `robinhood_credit`, `fidelity`, `robinhood_investments`, `guideline`, `citi`, or `chase`. Robinhood checking/savings accepts CSV/XLS/XLSX or PDF; Robinhood credit card accepts PDF only.
 - `mode`: `preview` or `commit`.
 - `statement_status`: `provisional` for current/open exports or `closed` for final statements.
 - `statement_period`: optional label such as `2025-06`.
 
 Statement imports use row-level deduplication. Current/open statement exports are provisional and may overlap later closed statements; duplicates are skipped and changed provisional rows are flagged for review.
 
-Statement files uploaded through `/statements/` are stored locally under `local_data/statements/<user_id>/<account_id>/<year>/<month>/`. The database stores metadata, file hash, account, institution, period, status, and the latest preview/import summary.
+Google Drive statement storage is configured from **Setup → Statements** (`/setup?tab=statements`). The user connects Google Drive, then either selects an empty root folder (Richtato creates one flat folder per active account) or links an existing root that already contains `{account_id}-{name}` subfolders. Adopting an existing root runs a preview, links matched folders by account ID prefix, creates folders for unmatched accounts, and scans for statement files to import. Statement records store metadata, file hash, account, institution, period, status, and the latest preview/import summary in Google Drive.
 
 ## Transactions (`/api/v1/transactions/`)
 
@@ -189,26 +214,9 @@ Budget analytics and spending breakdown data.
 
 Common query parameters: `year`, `month`, `start_date`, `end_date`, and optional `scope=household`.
 
-## Sync (`/api/v1/sync/`)
+## Statement Ingestion
 
-Sync is currently Plaid/manual through `SyncConnection`.
-
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `GET` | `/connections/` | List sync connections |
-| `POST` | `/connections/` | Create sync connection |
-| `GET` | `/connections/{id}/` | Get sync connection |
-| `PUT/PATCH` | `/connections/{id}/` | Update sync connection |
-| `DELETE` | `/connections/{id}/` | Disconnect |
-| `POST` | `/connections/{id}/sync/` | Trigger sync |
-| `GET` | `/connections/{id}/jobs/` | List jobs for connection |
-| `GET` | `/connections/{id}/progress/` | Get active job progress |
-| `POST` | `/plaid/link-token/` | Create Plaid Link token |
-| `POST` | `/plaid/exchange-token/` | Exchange Plaid public token |
-| `GET` | `/status/` | Get user sync status |
-| `GET` | `/jobs/` | Get user sync job history |
-
-Cron sync is mounted separately at `/api/cron/sync/`.
+CSV/Excel/PDF statement import (under `/api/v1/accounts/import-statement/` and `/api/v1/accounts/statements/`) with Google Drive statement storage is the no-aggregator ingestion path. The Google Drive folder scanner (`/api/v1/accounts/{id}/scan/` and the `scan_statement_storage` management command) imports files dropped directly into an account's Drive folder. Accounts pick `upload` (statement file upload) or `manual` (typed entries) via the `sync_mode` field on `FinancialAccount`.
 
 ## Household (`/api/v1/household/`)
 

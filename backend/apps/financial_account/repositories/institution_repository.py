@@ -1,5 +1,6 @@
 """Repository for FinancialInstitution model."""
 
+from apps.financial_account.institutions.registry import get_institution
 from apps.financial_account.models import FinancialInstitution
 
 
@@ -48,3 +49,18 @@ class FinancialInstitutionRepository:
 
         institution, created = FinancialInstitution.objects.get_or_create(name=name, defaults={"slug": slug, **kwargs})
         return institution
+
+    def resolve_for_slug(self, slug: str) -> FinancialInstitution | None:
+        """Return a DB institution row for a registry slug, creating it if needed."""
+        if not slug:
+            return None
+
+        institution = self.get_by_slug(slug)
+        if institution is not None:
+            return institution
+
+        definition = get_institution(slug)
+        if definition is None:
+            return None
+
+        return self.get_or_create_institution(name=definition.name, slug=definition.slug)

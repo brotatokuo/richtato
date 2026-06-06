@@ -1,27 +1,26 @@
 import { AccountCreateModal } from '@/components/accounts/AccountCreateModal';
+import type { InstitutionFieldChoice } from '@/components/accounts/AccountFormFields';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { syncService } from '@/lib/api/sync';
-import { Account, transactionsApiService } from '@/lib/api/transactions';
+import {
+  Account,
+  transactionsApiService,
+  type SyncMode,
+} from '@/lib/api/transactions';
 import { formatCurrency } from '@/lib/format';
 import { getEntityLogo } from '@/lib/imageMapping';
 import { cn } from '@/lib/utils';
 import {
-  AlertCircle,
   Building2,
   ChevronDown,
   ChevronRight,
   CreditCard,
   Landmark,
-  Loader2,
   Plus,
-  RefreshCw,
   Wallet,
-  Wifi,
-  WifiOff,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 export interface AccountWithBalance extends Account {
@@ -43,28 +42,17 @@ interface AccountsSidebarProps {
   onAccountsChange?: () => void;
 }
 
-function timeAgo(isoString: string | null | undefined): string {
-  if (!isoString) return '';
-  const diff = Date.now() - new Date(isoString).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
 function AccountIcon({ type }: { type: string }) {
   const t = (type || '').toLowerCase();
   if (t === 'credit_card' || t === 'credit')
     return <CreditCard className="h-4 w-4" />;
   if (t === 'savings' || t === 'savings_account')
     return <Wallet className="h-4 w-4" />;
+  if (t === 'investment') return <Landmark className="h-4 w-4" />;
   return <Building2 className="h-4 w-4" />;
 }
 
-const GROUP_ORDER = ['checking', 'savings', 'credit_card'];
+const GROUP_ORDER = ['checking', 'savings', 'investment', 'credit_card'];
 
 export function AccountsSidebar({
   selectedAccountId,
@@ -74,7 +62,6 @@ export function AccountsSidebar({
   const { preferences } = usePreferences();
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
   const [loading, setLoading] = useState(true);
-  const [syncingAll, setSyncingAll] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
     new Set()
   );
@@ -85,8 +72,10 @@ export function AccountsSidebar({
   const [entityOptions, setEntityOptions] = useState<
     Array<{ value: string; label: string }>
   >([]);
+  const [institutions, setInstitutions] = useState<InstitutionFieldChoice[]>(
+    []
+  );
   const [creating, setCreating] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadAccounts = useCallback(async () => {
     try {
@@ -117,15 +106,10 @@ export function AccountsSidebar({
       .then(c => {
         setAccountTypeOptions(c.type || []);
         setEntityOptions(c.entity || []);
+        setInstitutions(c.institutions || []);
       })
       .catch(() => {});
   }, [loadAccounts]);
-
-  useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
 
   const groups = useMemo<AccountGroup[]>(() => {
     const map: Record<string, AccountWithBalance[]> = {};
@@ -149,9 +133,11 @@ export function AccountsSidebar({
             ? 'Checking'
             : type === 'savings'
               ? 'Savings'
-              : type === 'credit_card'
-                ? 'Credit Cards'
-                : 'Other';
+              : type === 'investment'
+                ? 'Investments'
+                : type === 'credit_card'
+                  ? 'Credit Cards'
+                  : 'Other';
         return { label, type, accounts: accs, total, isLiability };
       });
   }, [accounts]);
@@ -175,46 +161,26 @@ export function AccountsSidebar({
     });
   };
 
-  const handleSyncAll = async () => {
-    setSyncingAll(true);
-    try {
-      const result = await syncService.triggerSyncAll();
-      if (result.status === 'sync_started') {
-        toast.info('Sync started', {
-          description: 'Syncing all connected accounts...',
-        });
-        pollRef.current = setInterval(async () => {
-          await loadAccounts();
-        }, 3000);
-        setTimeout(() => {
-          if (pollRef.current) clearInterval(pollRef.current);
-          setSyncingAll(false);
-          loadAccounts();
-          onAccountsChange?.();
-        }, 15000);
-      } else if (result.status === 'no_connections') {
-        toast.warning('No connected accounts');
-        setSyncingAll(false);
-      } else {
-        setSyncingAll(false);
-      }
-    } catch {
-      toast.error('Sync failed');
-      setSyncingAll(false);
-    }
-  };
-
   const handleCreate = async (form: {
     name: string;
     type: string;
     entity: string;
+    starting_balance?: string;
+    sync_mode: SyncMode;
   }) => {
     setCreating(true);
     try {
+      const startingBalance = form.starting_balance?.trim()
+        ? Number.parseFloat(form.starting_balance)
+        : undefined;
       await transactionsApiService.createAccount({
         name: form.name,
         type: form.type,
         institution_slug: form.entity,
+        starting_balance: Number.isNaN(startingBalance)
+          ? undefined
+          : startingBalance,
+        sync_mode: form.sync_mode,
       });
       await loadAccounts();
       onAccountsChange?.();
@@ -235,8 +201,6 @@ export function AccountsSidebar({
       </div>
     );
   }
-
-  const hasConnectedAccounts = accounts.some(a => a.has_connection);
 
   return (
     <div className="flex flex-col h-full">
@@ -277,24 +241,11 @@ export function AccountsSidebar({
           size="sm"
           variant="outline"
           className="flex-1 h-8 text-xs"
+          data-tour="add-account"
           onClick={() => setShowCreate(true)}
         >
           <Plus className="h-3.5 w-3.5 mr-1" />
           Add Account
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="flex-1 h-8 text-xs"
-          onClick={handleSyncAll}
-          disabled={syncingAll || !hasConnectedAccounts}
-        >
-          {syncingAll ? (
-            <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-          ) : (
-            <RefreshCw className="h-3.5 w-3.5 mr-1" />
-          )}
-          Sync All
         </Button>
       </div>
 
@@ -352,8 +303,6 @@ export function AccountsSidebar({
                     {group.accounts.map(account => {
                       const isSelected = selectedAccountId === account.id;
                       const entityLogo = getEntityLogo(account.entity || '');
-                      const hasError = account.connection_status === 'error';
-                      const isActive = account.connection_status === 'active';
 
                       return (
                         <button
@@ -408,9 +357,6 @@ export function AccountsSidebar({
                               >
                                 {account.name}
                               </span>
-                              {hasError && (
-                                <AlertCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
-                              )}
                             </div>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               {account.account_number_last4 && (
@@ -418,15 +364,10 @@ export function AccountsSidebar({
                                   ····{account.account_number_last4}
                                 </span>
                               )}
-                              {account.has_connection && account.last_sync && (
-                                <span className="text-xs text-muted-foreground/60">
-                                  {timeAgo(account.last_sync)}
-                                </span>
-                              )}
                             </div>
                           </div>
 
-                          {/* Balance + sync dot */}
+                          {/* Balance */}
                           <div className="flex-shrink-0 flex flex-col items-end gap-1">
                             <span
                               className={cn(
@@ -447,23 +388,6 @@ export function AccountsSidebar({
                                 0
                               )}
                             </span>
-                            {account.has_connection && (
-                              <span
-                                title={
-                                  hasError
-                                    ? 'Sync error'
-                                    : isActive
-                                      ? 'Connected'
-                                      : 'Disconnected'
-                                }
-                              >
-                                {hasError ? (
-                                  <WifiOff className="h-3 w-3 text-red-500" />
-                                ) : (
-                                  <Wifi className="h-3 w-3 text-green-500" />
-                                )}
-                              </span>
-                            )}
                           </div>
                         </button>
                       );
@@ -483,6 +407,7 @@ export function AccountsSidebar({
         onSubmit={handleCreate}
         accountTypeOptions={accountTypeOptions}
         entityOptions={entityOptions}
+        institutions={institutions}
         loading={creating}
       />
     </div>

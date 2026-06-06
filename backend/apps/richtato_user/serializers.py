@@ -23,4 +23,5 @@ class UserPreferenceSerializer(serializers.ModelSerializer):
             "date_format",
             "timezone",
             "notifications_enabled",
+            "platform_tour_completed",
         ]

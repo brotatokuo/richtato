@@ -69,6 +69,9 @@ export function TransactionTable({
   onLoadMore,
   onRefresh,
   onRecategorizeClick,
+  defaultAccountId,
+  hiddenColumns = [],
+  filterScope,
 }: TransactionTableProps & {
   accounts: Account[];
   categories: Category[];
@@ -78,8 +81,18 @@ export function TransactionTable({
   totalCount?: number;
   onLoadMore?: () => void;
   onRefresh: () => void;
+  defaultAccountId?: number;
+  hiddenColumns?: Array<keyof DisplayTransaction>;
+  filterScope?: {
+    startDate?: string;
+    endDate?: string;
+    type?: 'debit' | 'credit';
+    accountId?: number;
+    categoryId?: number;
+  };
 }) {
   const { preferences } = usePreferences();
+  const defaultAccountValue = defaultAccountId ? String(defaultAccountId) : '';
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategories, setFilterCategories] = useState<string[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -101,8 +114,8 @@ export function TransactionTable({
   } | null>(null);
 
   useEffect(() => {
-    transactionsApiService.getFilterOptions().then(setFilterOptions);
-  }, []);
+    transactionsApiService.getFilterOptions(filterScope).then(setFilterOptions);
+  }, [filterScope]);
 
   // Additional filters (now arrays for multi-select)
   const [dateFilters, setDateFilters] = useState<string[]>([]);
@@ -123,7 +136,7 @@ export function TransactionTable({
     description: '',
     date: getLocalDateString(),
     amount: '',
-    account_name: '',
+    account_name: defaultAccountValue,
     category: '',
     notes: '',
     transactionType: 'debit',
@@ -156,6 +169,13 @@ export function TransactionTable({
       return value;
     }
   };
+
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      account_name: defaultAccountValue,
+    }));
+  }, [defaultAccountValue]);
 
   const filteredTransactions = transactions
     .filter(transaction => {
@@ -347,6 +367,11 @@ export function TransactionTable({
     }));
   }, [filterOptions?.amounts, preferences.currency]);
 
+  const formAccounts = useMemo(() => {
+    if (!defaultAccountId) return accounts;
+    return accounts.filter(account => account.id === defaultAccountId);
+  }, [accounts, defaultAccountId]);
+
   const handleSort = (field: keyof DisplayTransaction) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -405,7 +430,7 @@ export function TransactionTable({
         description: '',
         date: getLocalDateString(),
         amount: '',
-        account_name: '',
+        account_name: defaultAccountValue,
         category: '',
         notes: '',
         transactionType: 'debit',
@@ -533,7 +558,7 @@ export function TransactionTable({
         label: 'Amount',
         filterable: false,
       },
-    ];
+    ].filter(header => !hiddenColumns.includes(header.field));
   };
 
   const renderTableCell = (
@@ -787,7 +812,7 @@ export function TransactionTable({
           formData={formData}
           onFormChange={setFormData}
           onSubmit={handleSubmit}
-          accounts={accounts}
+          accounts={formAccounts}
           categories={categories}
         />
       </Modal>
@@ -817,8 +842,11 @@ export function TransactionTable({
                           {t.description}
                         </div>
                         <div className="text-xs text-muted-foreground whitespace-normal break-words">
-                          {formatDate(t.date, preferences.date_format)} •{' '}
-                          {t.account} • {t.category}
+                          {formatDate(t.date, preferences.date_format)}
+                          {!hiddenColumns.includes('account') &&
+                            ` • ${t.account}`}
+                          {' • '}
+                          {t.category}
                         </div>
                       </div>
                       <div
@@ -1014,7 +1042,7 @@ export function TransactionTable({
           onFormChange={setEditFormData}
           onSubmit={handleEditSubmit}
           onDelete={handleDelete}
-          accounts={accounts}
+          accounts={formAccounts}
           categories={categories}
           submitLabel="Save"
         />

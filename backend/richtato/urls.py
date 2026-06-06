@@ -24,7 +24,6 @@ from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 
 from apps.richtato_user import views as user_views
-from apps.sync import views as sync_views
 
 # Swagger schema view
 schema_view = get_schema_view(
@@ -54,7 +53,6 @@ urlpatterns = [
     # New Unified API URLs
     path("api/accounts/", include("apps.financial_account.urls")),
     path("api/transactions/", include("apps.transaction.urls")),
-    path("api/sync/", include("apps.sync.urls")),
     path("api/budgets/", include("apps.budget.urls")),
     # V1 API URLs (for frontend compatibility)
     path("api/v1/accounts/", include("apps.financial_account.urls")),
@@ -64,6 +62,8 @@ urlpatterns = [
     # Auth and User management
     path("api/auth/", include("apps.richtato_user.urls")),
     path("api/v1/auth/", include("apps.richtato_user.urls")),
+    path("api/core/", include("apps.core.urls")),
+    path("api/v1/core/", include("apps.core.urls")),
     # Dashboard endpoints
     path("api/budget-dashboard/", include("apps.budget_dashboard.urls")),
     path("api/asset-dashboard/", include("apps.asset_dashboard.urls")),
@@ -71,12 +71,8 @@ urlpatterns = [
     path("api/v1/asset-dashboard/", include("apps.asset_dashboard.urls")),
     # Demo login for development
     path("demo-login/", user_views.demo_login, name="demo_login"),
-    # Cron endpoint for scheduled sync (used by Render Cron Jobs)
-    path("api/cron/sync/", sync_views.CronSyncAPIView.as_view(), name="cron-sync"),
     # Household endpoints
     path("api/v1/household/", include("apps.household.urls")),
-    # Add sync status endpoint at both /api/sync/ and /api/v1/sync/
-    path("api/v1/sync/", include("apps.sync.urls")),
 ]
 
 # Serve static files during development

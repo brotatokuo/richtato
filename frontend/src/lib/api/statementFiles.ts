@@ -9,6 +9,7 @@ export type StatementFileImportStatus =
   | 'previewed'
   | 'imported'
   | 'failed';
+export type StatementFileSource = 'manual_upload' | 'agent_drop' | 'unknown';
 
 export interface StatementFileRecord {
   id: number;
@@ -30,6 +31,10 @@ export interface StatementFileRecord {
   invalid_count: number;
   possible_changed_count: number;
   last_import_result: StatementImportResult | Record<string, never>;
+  reconciliation_acknowledged_at: string | null;
+  source: StatementFileSource;
+  stored_path: string;
+  drive_file_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -65,7 +70,7 @@ export interface StatementFileActionResponse {
 export interface StatementFileUploadInput {
   file: File;
   account: number;
-  institution: string;
+  institution?: string;
   statementPeriod?: string;
   statementStatus: StatementStatus;
   statementYear?: number;
@@ -106,7 +111,7 @@ class StatementFileService {
     const formData = new FormData();
     formData.append('file', input.file);
     formData.append('account', String(input.account));
-    formData.append('institution', input.institution);
+    if (input.institution) formData.append('institution', input.institution);
     formData.append('statement_period', input.statementPeriod ?? '');
     formData.append('statement_status', input.statementStatus);
     if (input.statementYear)
@@ -133,6 +138,7 @@ class StatementFileService {
       statement_status: StatementStatus;
       statement_year: number;
       statement_month: number;
+      reconciliation_acknowledged: boolean;
     }>
   ): Promise<StatementFileRecord> {
     const response = await csrfService.fetchWithCsrf(
@@ -156,6 +162,10 @@ class StatementFileService {
     }
   }
 
+  async acknowledgeReconciliation(id: number): Promise<StatementFileRecord> {
+    return this.update(id, { reconciliation_acknowledged: true });
+  }
+
   async preview(id: number): Promise<StatementFileActionResponse> {
     const response = await csrfService.fetchWithCsrf(
       `${API_BASE}/accounts/statements/${id}/preview/`,
@@ -164,16 +174,44 @@ class StatementFileService {
     return this.handleResponse(response);
   }
 
-  async import(id: number): Promise<StatementFileActionResponse> {
+  async import(
+    id: number,
+    options?: { applyOpeningBalance?: boolean }
+  ): Promise<StatementFileActionResponse> {
     const response = await csrfService.fetchWithCsrf(
       `${API_BASE}/accounts/statements/${id}/import/`,
-      { method: 'POST' }
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          apply_opening_balance: Boolean(options?.applyOpeningBalance),
+        }),
+      }
     );
     return this.handleResponse(response);
   }
 
   getDownloadUrl(id: number): string {
     return `${API_BASE}/accounts/statements/${id}/download/`;
+  }
+
+  async scanAccount(accountId: number): Promise<{
+    files_seen: number;
+    files_imported: number;
+    files_skipped: number;
+    files_failed: number;
+    files_removed: number;
+    outcomes: {
+      relative_path: string;
+      status: string;
+      detail: string;
+      imported_count: number;
+    }[];
+  }> {
+    const response = await csrfService.fetchWithCsrf(
+      `${API_BASE}/accounts/${accountId}/scan/`,
+      { method: 'POST' }
+    );
+    return this.handleResponse(response);
   }
 
   private async fetchWithCsrf(

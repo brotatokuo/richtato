@@ -83,17 +83,17 @@ export function AppearanceSection() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Palette className="h-5 w-5" />
+    <Card className="h-full">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Palette className="h-4 w-4" />
           Appearance
         </CardTitle>
-        <CardDescription>Customize the look and feel</CardDescription>
+        <CardDescription>Theme, currency, dates, and timezone</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {error && <div className="text-sm text-red-600">{error}</div>}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {error && <div className="text-sm text-destructive">{error}</div>}
+        <div className="grid grid-cols-1 gap-4">
           <div>
             <Label htmlFor="theme">Theme</Label>
             <Select

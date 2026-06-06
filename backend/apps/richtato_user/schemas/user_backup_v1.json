@@ -1,0 +1,130 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://richtato.app/schemas/user-backup-v1.json",
+  "title": "Richtato User Backup v1",
+  "type": "object",
+  "required": [
+    "format_version",
+    "exported_at",
+    "app",
+    "profile",
+    "preferences",
+    "categories",
+    "budgets",
+    "accounts",
+    "transactions"
+  ],
+  "properties": {
+    "format_version": { "type": "integer", "const": 1 },
+    "exported_at": { "type": "string", "format": "date-time" },
+    "app": { "type": "string", "const": "richtato" },
+    "profile": {
+      "type": "object",
+      "required": ["username", "email"],
+      "properties": {
+        "username": { "type": "string" },
+        "email": { "type": "string" }
+      }
+    },
+    "preferences": {
+      "type": "object",
+      "properties": {
+        "theme": { "type": "string" },
+        "currency": { "type": "string" },
+        "date_format": { "type": "string" },
+        "timezone": { "type": "string" },
+        "notifications_enabled": { "type": "boolean" },
+        "platform_tour_completed": { "type": "boolean" }
+      }
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["slug", "name", "type"],
+        "properties": {
+          "slug": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "type": "string" },
+          "icon": { "type": "string" },
+          "color": { "type": "string" },
+          "parent_slug": { "type": ["string", "null"] },
+          "expense_priority": { "type": ["string", "null"] },
+          "is_deleted": { "type": "boolean" },
+          "keywords": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "budgets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "period_type", "start_date", "end_date"],
+        "properties": {
+          "name": { "type": "string" },
+          "period_type": { "type": "string" },
+          "start_date": { "type": "string", "format": "date" },
+          "end_date": { "type": "string", "format": "date" },
+          "is_active": { "type": "boolean" },
+          "is_household": { "type": "boolean" },
+          "allocations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["category_slug", "allocated_amount"],
+              "properties": {
+                "category_slug": { "type": "string" },
+                "allocated_amount": { "type": "string" },
+                "rollover_enabled": { "type": "boolean" },
+                "rollover_amount": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "accounts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "name", "account_type"],
+        "properties": {
+          "key": { "type": "string" },
+          "name": { "type": "string" },
+          "institution": { "type": ["string", "null"] },
+          "account_type": { "type": "string" },
+          "currency": { "type": "string" },
+          "is_liability": { "type": "boolean" },
+          "balance": { "type": "string" },
+          "sync_mode": { "type": "string" },
+          "shared_with_household": { "type": "boolean" },
+          "account_number_last4": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "transactions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["account_key", "date", "amount", "description", "transaction_type"],
+        "properties": {
+          "account_key": { "type": "string" },
+          "date": { "type": "string", "format": "date" },
+          "amount": { "type": "string" },
+          "description": { "type": "string" },
+          "transaction_type": { "type": "string" },
+          "category_slug": { "type": ["string", "null"] },
+          "status": { "type": "string" },
+          "notes": { "type": "string" },
+          "sync_source": { "type": "string" },
+          "external_id": { "type": "string" },
+          "is_recurring": { "type": "boolean" },
+          "categorization_status": { "type": "string" }
+        }
+      }
+    }
+  }
+}

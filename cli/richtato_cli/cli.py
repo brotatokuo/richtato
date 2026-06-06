@@ -5,10 +5,6 @@ Usage:
     richtato              # Interactive menu
     richtato build        # Build Docker image
     richtato publish      # Build & push to Docker Hub
-    richtato dev          # Start dev environment
-    richtato logs         # View container logs
-    richtato shell        # Open container shell
-    richtato migrate      # Run Django migrations
 """
 
 import os
@@ -123,10 +119,14 @@ def confirm(text: str, default: bool = True) -> bool:
     return selected == "Yes"
 
 
-def run_cmd(cmd: list[str], cwd: Optional[str] = None) -> int:
+def run_cmd(
+    cmd: list[str],
+    cwd: Optional[str] = None,
+    env: Optional[dict[str, str]] = None,
+) -> int:
     """Run a command and return exit code."""
     print(f"{Colors.DIM}$ {' '.join(cmd)}{Colors.END}")
-    result = subprocess.run(cmd, cwd=cwd)
+    result = subprocess.run(cmd, cwd=cwd, env=env)
     return result.returncode
 
 
@@ -439,19 +439,11 @@ def show_menu():
     print(f"{Colors.DIM}Use ↑↓ arrows to navigate, Enter to select{Colors.END}\n")
 
     options = [
-        "[dev]      Start/stop dev containers",
-        "[logs]     View container logs",
-        "[shell]    Open container shell",
-        "[migrate]  Run Django migrations",
-        "───────────────────────────────",
         "[build]    Build Docker image locally",
         "[publish]  Build & push to Docker Hub",
         "───────────────────────────────",
         "[quit]     Exit",
     ]
-
-    # Separator indices (non-selectable)
-    skip_indices = [4, 7]
 
     menu = TerminalMenu(
         options,
@@ -462,20 +454,15 @@ def show_menu():
 
     idx = menu.show()
 
-    if idx is None or idx == 8:  # quit
+    if idx is None or idx == 3:  # quit
         print_info("Goodbye!")
         sys.exit(0)
 
     handlers = [
-        cmd_dev,  # 0
-        cmd_logs,  # 1
-        cmd_shell,  # 2
-        cmd_migrate,  # 3
-        None,  # 4 (separator)
-        cmd_build,  # 5
-        cmd_publish,  # 6
-        None,  # 7 (separator)
-        None,  # 8 (quit)
+        cmd_build,  # 0
+        cmd_publish,  # 1
+        None,  # 2 (separator)
+        None,  # 3 (quit)
     ]
 
     handler = handlers[idx]
@@ -490,10 +477,6 @@ def main():
         handlers = {
             "build": cmd_build,
             "publish": cmd_publish,
-            "dev": cmd_dev,
-            "logs": cmd_logs,
-            "shell": cmd_shell,
-            "migrate": cmd_migrate,
             "help": lambda: print(__doc__),
             "--help": lambda: print(__doc__),
             "-h": lambda: print(__doc__),

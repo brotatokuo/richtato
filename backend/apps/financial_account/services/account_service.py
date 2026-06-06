@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from loguru import logger
 
+from apps.financial_account.institutions.registry import is_valid_account_type
 from apps.financial_account.models import FinancialAccount
 from apps.financial_account.repositories.account_repository import (
     FinancialAccountRepository,
@@ -13,6 +14,9 @@ from apps.financial_account.repositories.institution_repository import (
     FinancialInstitutionRepository,
 )
 from apps.richtato_user.models import User
+
+OPENING_BALANCE_DESCRIPTION = "Opening Balance"
+_MISSING = object()
 
 
 class AccountService:
@@ -67,6 +71,7 @@ class AccountService:
         account_number_last4: str = "",
         initial_balance: Decimal = Decimal("0"),
         currency: str = "USD",
+        sync_mode: str = "manual",
     ) -> FinancialAccount:
         """
         Create a manually entered account.
@@ -86,10 +91,12 @@ class AccountService:
         """
         # Get or create institution if provided
         institution = None
+        institution_slug = institution_slug or "other"
 
-        # First try to look up by slug (for preset banks selected from dropdown)
-        if institution_slug and institution_slug != "other":
-            institution = self.institution_repository.get_by_slug(institution_slug)
+        if not is_valid_account_type(institution_slug, account_type):
+            raise ValueError(f"Account type '{account_type}' is not supported for institution '{institution_slug}'.")
+
+        institution = self.institution_repository.resolve_for_slug(institution_slug)
 
         # If no slug match, try by name (for synced accounts or custom entries)
         if not institution and institution_name:
@@ -109,40 +116,127 @@ class AccountService:
 
         if account_type == "credit_card":
             account.is_liability = True
-            account.save(update_fields=["is_liability"])
+
+        account.sync_mode = sync_mode
+        account.save(
+            update_fields=[
+                "is_liability",
+                "sync_mode",
+                "updated_at",
+            ]
+        )
 
         if initial_balance != Decimal("0"):
-            self._create_opening_balance_transaction(account, initial_balance)
+            self.upsert_opening_balance(account, initial_balance)
 
         logger.info(f"Created manual account {account.id} for user {user.username}: {name}")
 
+        self._provision_drive_folder(user, account)
+
         return account
 
-    def _create_opening_balance_transaction(self, account: FinancialAccount, initial_balance: Decimal) -> None:
-        """Create an Opening Balance transaction so the initial balance appears in history."""
+    def _provision_drive_folder(self, user: User, account: FinancialAccount) -> None:
+        """Create a Google Drive folder for a new account if Drive storage is active."""
+        from apps.financial_account.models import GoogleDriveConnection
+        from apps.financial_account.services.google_drive_activation_service import (
+            GoogleDriveActivationService,
+        )
+
+        connection = GoogleDriveConnection.objects.filter(user=user, is_active=True).first()
+        if not connection:
+            return
+        try:
+            drive_svc = GoogleDriveActivationService()
+            folder = drive_svc._create_account_folder(connection, account)
+            account.storage_uri = f"gdrive://{folder.folder_id}"
+            account.save(update_fields=["storage_uri", "updated_at"])
+            logger.info(
+                "Provisioned Drive folder {} for new account {}",
+                folder.folder_id,
+                account.id,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to create Drive folder for account {}",
+                account.id,
+            )
+
+    def get_opening_balance_transaction(self, account: FinancialAccount):
+        """Return the account's Opening Balance transaction, if one exists."""
         from apps.transaction.models import Transaction
 
-        if initial_balance > 0:
-            txn_type = "credit"
-            amount = initial_balance
-        else:
-            txn_type = "debit"
-            amount = abs(initial_balance)
-
-        Transaction.objects.create(
-            user=account.user,
+        return Transaction.objects.filter(
             account=account,
-            date=date.today(),
-            amount=amount,
-            transaction_type=txn_type,
-            description="Opening Balance",
-            sync_source="manual",
-            status="reconciled",
-        )
+            description=OPENING_BALANCE_DESCRIPTION,
+        ).first()
+
+    def get_opening_balance(self, account: FinancialAccount) -> tuple[Decimal | None, date | None]:
+        """Return signed opening balance amount and its date."""
+        transaction = self.get_opening_balance_transaction(account)
+        if transaction is None:
+            return None, None
+        return transaction.signed_amount, transaction.date
+
+    def upsert_opening_balance(
+        self,
+        account: FinancialAccount,
+        balance: Decimal,
+        balance_date: date | None = None,
+    ):
+        """Create or update the Opening Balance transaction for an account."""
+        from apps.transaction.models import Transaction
+
+        if balance_date is None:
+            balance_date = date.today()
+
+        if balance > 0:
+            txn_type = "credit"
+            amount = balance
+        elif balance < 0:
+            txn_type = "debit"
+            amount = abs(balance)
+        else:
+            self.delete_opening_balance(account)
+            return None
+
+        existing = self.get_opening_balance_transaction(account)
+        if existing is None:
+            return Transaction.objects.create(
+                user=account.user,
+                account=account,
+                date=balance_date,
+                amount=amount,
+                transaction_type=txn_type,
+                description=OPENING_BALANCE_DESCRIPTION,
+                sync_source="manual",
+                status="reconciled",
+            )
+
+        existing.date = balance_date
+        existing.amount = amount
+        existing.transaction_type = txn_type
+        existing.save(update_fields=["date", "amount", "transaction_type", "updated_at"])
+        return existing
+
+    def delete_opening_balance(self, account: FinancialAccount) -> None:
+        """Remove the Opening Balance transaction for an account."""
+        existing = self.get_opening_balance_transaction(account)
+        if existing is not None:
+            existing.delete()
 
     def update_account(self, account: FinancialAccount, **kwargs) -> FinancialAccount:
         """Update account fields."""
-        # Handle institution name update
+        opening_balance = kwargs.pop("opening_balance", _MISSING)
+        opening_balance_date = kwargs.pop("opening_balance_date", None)
+
+        institution_slug = kwargs.pop("institution_slug", None)
+        if institution_slug is not None:
+            if institution_slug:
+                kwargs["institution"] = self.institution_repository.resolve_for_slug(institution_slug)
+            else:
+                kwargs["institution"] = None
+
+        # Handle institution name update (legacy/custom entries)
         if "institution_name" in kwargs:
             institution_name = kwargs.pop("institution_name")
             if institution_name:
@@ -152,7 +246,51 @@ class AccountService:
             else:
                 kwargs["institution"] = None
 
-        return self.account_repository.update_account(account, **kwargs)
+        account_type = kwargs.pop("account_type", None)
+        if account_type is not None:
+            kwargs["account_type"] = account_type
+            kwargs["is_liability"] = account_type == "credit_card"
+
+        updated_account = self.account_repository.update_account(account, **kwargs)
+
+        if opening_balance is not _MISSING:
+            if opening_balance is None:
+                logger.info(
+                    "Deleting opening balance",
+                    account_id=updated_account.id,
+                )
+                self.delete_opening_balance(updated_account)
+            else:
+                parsed_date = opening_balance_date
+                if isinstance(parsed_date, str):
+                    parsed_date = date.fromisoformat(parsed_date)
+                logger.info(
+                    "Upserting opening balance",
+                    account_id=updated_account.id,
+                    opening_balance=str(opening_balance),
+                    opening_balance_date=str(parsed_date),
+                )
+                self.upsert_opening_balance(
+                    updated_account,
+                    Decimal(str(opening_balance)),
+                    parsed_date,
+                )
+            updated_account.refresh_from_db()
+            balance, balance_date = self.get_opening_balance(updated_account)
+            logger.info(
+                "Opening balance persisted",
+                account_id=updated_account.id,
+                account_balance=str(updated_account.balance),
+                opening_balance=str(balance) if balance is not None else None,
+                opening_balance_date=balance_date.isoformat() if balance_date else None,
+            )
+        else:
+            logger.debug(
+                "Account update without opening balance change",
+                account_id=updated_account.id,
+            )
+
+        return updated_account
 
     def delete_account(self, account: FinancialAccount) -> bool:
         """

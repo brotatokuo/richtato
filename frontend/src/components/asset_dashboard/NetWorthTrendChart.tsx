@@ -198,7 +198,7 @@ export function NetWorthTrendChart() {
   if (loading) {
     return (
       <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+        <CardHeader className="pb-2 flex flex-row flex-wrap items-center justify-between gap-3">
           <CardTitle className="flex items-center gap-2 text-lg">
             <TrendingUp className="h-5 w-5 text-primary" />
             Net Worth Trend
@@ -249,7 +249,7 @@ export function NetWorthTrendChart() {
             Net Worth Trend
           </CardTitle>
           <Select value={period} onValueChange={v => setPeriod(v as Period)}>
-            <SelectTrigger className="w-24">
+            <SelectTrigger className="w-36">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -278,13 +278,13 @@ export function NetWorthTrendChart() {
 
   return (
     <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+      <CardHeader className="pb-2 flex flex-row flex-wrap items-center justify-between gap-3">
         <CardTitle className="flex items-center gap-2 text-lg">
           <TrendingUp className="h-5 w-5 text-primary" />
           Net Worth Trend
         </CardTitle>
         <Select value={period} onValueChange={v => setPeriod(v as Period)}>
-          <SelectTrigger className="w-24">
+          <SelectTrigger className="w-36">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

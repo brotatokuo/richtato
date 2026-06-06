@@ -4,8 +4,9 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 export interface StatementInstitution {
   id: string;
+  slug: string;
   display_name: string;
-  domains: string[];
+  account_types: string[];
   file_types: string[];
 }
 
@@ -37,6 +38,39 @@ export interface StatementImportResult {
   institution: string;
   statement_status: 'provisional' | 'closed';
   rows: StatementImportRow[];
+  balance_summary?: {
+    beginning_balance: string;
+    ending_balance: string;
+    beginning_date?: string;
+    ending_date?: string;
+  };
+  reconciliation?: {
+    statement_internal_ok?: boolean;
+    statement_internal_discrepancy?: string;
+    computed_ending_balance?: string;
+    statement_ending_balance?: string;
+    net_activity?: string;
+    running_balance_errors?: string[];
+    opening_balance_action?:
+      | 'none'
+      | 'available_create'
+      | 'available_update'
+      | 'matched'
+      | 'create'
+      | 'update';
+    statement_beginning_balance?: string;
+    statement_beginning_date?: string;
+    account_opening_balance_current?: string;
+    account_opening_balance_date_current?: string;
+    opening_balance_amount?: string;
+    opening_balance_previous_amount?: string;
+    opening_balance_date?: string;
+    opening_balance_applied?: boolean;
+    account_balance?: string;
+    account_ending_discrepancy?: string;
+    account_ending_ok?: boolean;
+  };
+  reconciliation_warnings?: string[];
 }
 
 export interface StatementImportInput {
@@ -46,6 +80,7 @@ export interface StatementImportInput {
   statementPeriod?: string;
   statementStatus: 'provisional' | 'closed';
   mode: 'preview' | 'commit';
+  applyOpeningBalance?: boolean;
 }
 
 class StatementImportService {
@@ -70,6 +105,9 @@ class StatementImportService {
     formData.append('statement_period', input.statementPeriod ?? '');
     formData.append('statement_status', input.statementStatus);
     formData.append('mode', input.mode);
+    if (input.mode === 'commit' && input.applyOpeningBalance) {
+      formData.append('apply_opening_balance', 'true');
+    }
 
     const csrfToken = await csrfService.getCSRFToken();
     let response = await fetch(`${API_BASE}/accounts/import-statement/`, {

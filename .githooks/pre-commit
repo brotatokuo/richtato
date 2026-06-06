@@ -2,55 +2,63 @@
 set -e
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
+FRONTEND_DIR="$REPO_ROOT/frontend"
+FRONTEND_BIN="$FRONTEND_DIR/node_modules/.bin"
 FAILED=0
+
+frontend_tool() {
+  local tool="$1"
+  shift
+  if [ -x "$FRONTEND_BIN/$tool" ]; then
+    (cd "$FRONTEND_DIR" && "$FRONTEND_BIN/$tool" "$@")
+    return $?
+  fi
+  if command -v corepack &>/dev/null; then
+    corepack enable >/dev/null 2>&1 || true
+  fi
+  if command -v yarn &>/dev/null; then
+    (cd "$FRONTEND_DIR" && yarn "$tool" "$@")
+    return $?
+  fi
+  if command -v npx &>/dev/null; then
+    (cd "$FRONTEND_DIR" && npx "$tool" "$@")
+    return $?
+  fi
+  echo "  $tool not found — install frontend dependencies first"
+  return 127
+}
 
 echo "Running pre-commit linting..."
 
 # Auto-format staged frontend files with Prettier (then re-stage)
 echo ""
 echo "→ Frontend (Prettier — write staged files)..."
-if command -v yarn &>/dev/null; then
-  PRETTIER_REL=()
-  while IFS= read -r line; do
-    [[ "$line" == frontend/* ]] || continue
-    rel="${line#frontend/}"
-    # Prettier-supported extensions in this project
-    if [[ "$rel" =~ \.(ts|tsx|js|jsx|json|css|scss|html|md|yaml|yml|mjs|cjs)$ ]]; then
-      PRETTIER_REL+=("$rel")
-    fi
-  done < <(git diff --cached --name-only --diff-filter=ACM)
-
-  if [ ${#PRETTIER_REL[@]} -gt 0 ]; then
-    (cd "$REPO_ROOT/frontend" && yarn prettier --write "${PRETTIER_REL[@]}")
-    for rel in "${PRETTIER_REL[@]}"; do
-      git add "$REPO_ROOT/frontend/$rel"
-    done
-  else
-    echo "  (no matching staged files — skip)"
+PRETTIER_REL=()
+while IFS= read -r line; do
+  [[ "$line" == frontend/* ]] || continue
+  rel="${line#frontend/}"
+  # Prettier-supported extensions in this project
+  if [[ "$rel" =~ \.(ts|tsx|js|jsx|json|css|scss|html|md|yaml|yml|mjs|cjs)$ ]]; then
+    PRETTIER_REL+=("$rel")
   fi
+done < <(git diff --cached --name-only --diff-filter=ACM)
+
+if [ ${#PRETTIER_REL[@]} -gt 0 ]; then
+  frontend_tool prettier --write "${PRETTIER_REL[@]}"
+  for rel in "${PRETTIER_REL[@]}"; do
+    git add "$FRONTEND_DIR/$rel"
+  done
 else
-  echo "  yarn not found — skipping Prettier write"
+  echo "  (no matching staged files — skip)"
 fi
 
 echo ""
 echo "→ Frontend (ESLint)..."
-if command -v yarn &>/dev/null; then
-  (cd "$REPO_ROOT/frontend" && yarn lint) || FAILED=1
-elif command -v npx &>/dev/null; then
-  (cd "$REPO_ROOT/frontend" && npx eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0) || FAILED=1
-else
-  echo "  yarn/npx not found — skipping frontend lint"
-fi
+frontend_tool eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0 || FAILED=1
 
 echo ""
 echo "→ Frontend (Prettier — check)..."
-if command -v yarn &>/dev/null; then
-  (cd "$REPO_ROOT/frontend" && yarn prettier --check .) || FAILED=1
-elif command -v npx &>/dev/null; then
-  (cd "$REPO_ROOT/frontend" && npx prettier --check .) || FAILED=1
-else
-  echo "  yarn/npx not found — skipping prettier check"
-fi
+frontend_tool prettier --check . || FAILED=1
 
 # Backend lint
 echo ""

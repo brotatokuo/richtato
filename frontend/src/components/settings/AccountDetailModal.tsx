@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Modal } from '@/components/ui/Modal';
+import { AccountSyncSettings } from '@/components/accounts/AccountSyncSettings';
 import {
   Select,
   SelectContent,
@@ -10,21 +11,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useHousehold } from '@/contexts/HouseholdContext';
-import { Account } from '@/lib/api/transactions';
 import {
-  AVAILABLE_CARD_IMAGES,
-  getAutoDetectedImageKey,
-} from '@/lib/imageMapping';
-import {
-  Check,
-  Cloud,
-  Lock,
-  RefreshCw,
-  Sparkles,
-  Unlink,
-  Users,
-} from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+  Account,
+  transactionsApiService,
+  type SyncMode,
+} from '@/lib/api/transactions';
+import { Calendar, Users } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
+import type { InstitutionFieldChoice } from '@/components/accounts/AccountFormFields';
 
 interface AccountDetailModalProps {
   isOpen: boolean;
@@ -34,15 +29,24 @@ interface AccountDetailModalProps {
     name: string;
     type: string;
     entity: string;
-    image_key?: string | null;
     shared_with_household?: boolean;
+    opening_balance?: number | null;
+    opening_balance_date?: string | null;
+    sync_mode?: SyncMode;
   }) => Promise<void>;
   onDelete: () => void;
-  onSync: () => void;
-  onDisconnect: () => void;
   accountTypeOptions: Array<{ value: string; label: string }>;
   entityOptions: Array<{ value: string; label: string }>;
+  institutions?: InstitutionFieldChoice[];
   loading: boolean;
+}
+
+function defaultOpeningBalanceDate(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function AccountDetailModal({
@@ -51,131 +55,177 @@ export function AccountDetailModal({
   account,
   onSubmit,
   onDelete,
-  onSync,
-  onDisconnect,
   accountTypeOptions,
   entityOptions,
+  institutions = [],
   loading,
 }: AccountDetailModalProps) {
   const { isInHousehold } = useHousehold();
+  const dateInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     name: '',
     type: 'checking',
     entity: '',
-    imageKey: null as string | null,
     sharedWithHousehold: false,
+    openingBalance: '',
+    openingBalanceDate: defaultOpeningBalanceDate(),
+    syncMode: 'manual' as SyncMode,
+    hasStorageUri: false,
   });
+  const [initialOpeningBalance, setInitialOpeningBalance] = useState('');
 
-  // Find the matching entity option value for this account
-  const findEntityValue = (account: Account): string => {
-    // First try to match by entity slug
-    if (account.entity) {
+  const filteredTypeOptions = useMemo(() => {
+    const institution = institutions.find(item => item.value === form.entity);
+    if (institution?.account_types?.length) {
+      return institution.account_types;
+    }
+    return accountTypeOptions;
+  }, [accountTypeOptions, form.entity, institutions]);
+
+  const handleEntityChange = (value: string) => {
+    setForm(prev => {
+      const institution = institutions.find(item => item.value === value);
+      const nextTypeOptions = institution?.account_types?.length
+        ? institution.account_types
+        : accountTypeOptions;
+      let nextType = prev.type;
+      if (nextTypeOptions.length === 1) {
+        nextType = nextTypeOptions[0].value;
+      } else if (!nextTypeOptions.some(option => option.value === prev.type)) {
+        nextType = nextTypeOptions[0]?.value ?? 'checking';
+      }
+      return { ...prev, entity: value, type: nextType };
+    });
+  };
+  const [initialOpeningBalanceDate, setInitialOpeningBalanceDate] = useState(
+    defaultOpeningBalanceDate()
+  );
+  const [loadingOpeningBalance, setLoadingOpeningBalance] = useState(false);
+
+  const findEntityValue = (accountRecord: Account): string => {
+    if (accountRecord.entity) {
       const matchBySlug = entityOptions.find(
         e =>
-          e.value === account.entity ||
-          e.label.toLowerCase().replace(/\s+/g, '_') === account.entity
+          e.value === accountRecord.entity ||
+          e.label.toLowerCase().replace(/\s+/g, '_') === accountRecord.entity
       );
       if (matchBySlug) return matchBySlug.value;
     }
 
-    // Try to match by institution name
-    if (account.institution_name) {
+    if (accountRecord.institution_name) {
       const matchByName = entityOptions.find(
-        e => e.label.toLowerCase() === account.institution_name?.toLowerCase()
+        e =>
+          e.label.toLowerCase() ===
+          accountRecord.institution_name?.toLowerCase()
       );
       if (matchByName) return matchByName.value;
     }
 
-    // Try to match by entity_display
-    if (account.entity_display) {
+    if (accountRecord.entity_display) {
       const matchByDisplay = entityOptions.find(
-        e => e.label === account.entity_display
+        e => e.label === accountRecord.entity_display
       );
       if (matchByDisplay) return matchByDisplay.value;
     }
 
-    return account.entity || '';
+    return accountRecord.entity || '';
   };
 
   useEffect(() => {
-    if (account && entityOptions.length > 0) {
-      setForm({
-        name: account.name || '',
-        type: account.account_type || account.type || 'checking',
-        entity: findEntityValue(account),
-        imageKey: account.image_key ?? null,
-        sharedWithHousehold: account.shared_with_household ?? false,
+    if (!account || entityOptions.length === 0 || !isOpen) return;
+
+    let cancelled = false;
+    setLoadingOpeningBalance(true);
+
+    transactionsApiService
+      .getAccountById(account.id)
+      .then(accountDetail => {
+        if (cancelled) return;
+
+        const openingBalance = accountDetail.opening_balance ?? '';
+        const openingBalanceDate =
+          accountDetail.opening_balance_date ?? defaultOpeningBalanceDate();
+
+        setInitialOpeningBalance(openingBalance);
+        setInitialOpeningBalanceDate(openingBalanceDate);
+        setForm({
+          name: accountDetail.name || '',
+          type: accountDetail.account_type || accountDetail.type || 'checking',
+          entity: findEntityValue(accountDetail),
+          sharedWithHousehold: accountDetail.shared_with_household ?? false,
+          openingBalance,
+          openingBalanceDate,
+          syncMode: accountDetail.sync_mode ?? 'manual',
+          hasStorageUri: Boolean(accountDetail.resolved_storage_uri),
+        });
+      })
+      .catch(err => {
+        if (cancelled) return;
+        toast.error('Failed to load account details', {
+          description: err instanceof Error ? err.message : undefined,
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingOpeningBalance(false);
       });
-    }
+
+    return () => {
+      cancelled = true;
+    };
     // findEntityValue depends on entityOptions which is already in deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [account, entityOptions]);
-
-  // Compute auto-detected image key based on current name (for credit cards)
-  const autoDetectedImageKey = useMemo(
-    () => getAutoDetectedImageKey(form.name),
-    [form.name]
-  );
-
-  const isCreditCard = form.type === 'credit_card';
+  }, [account, entityOptions, isOpen]);
 
   const handleFieldChange = (
-    field: 'name' | 'type' | 'entity',
+    field: 'name' | 'type' | 'entity' | 'openingBalance' | 'openingBalanceDate',
     value: string
   ) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleSyncChange = (_field: 'syncMode', value: SyncMode) => {
+    setForm(prev => ({ ...prev, syncMode: value }));
+  };
+
   const handleSubmit = async () => {
-    await onSubmit({
+    const trimmedOpeningBalance = form.openingBalance.trim();
+    const openingBalanceChanged =
+      trimmedOpeningBalance !== initialOpeningBalance.trim() ||
+      (trimmedOpeningBalance !== '' &&
+        form.openingBalanceDate !== initialOpeningBalanceDate);
+
+    const payload: {
+      name: string;
+      type: string;
+      entity: string;
+      shared_with_household?: boolean;
+      opening_balance?: number | null;
+      opening_balance_date?: string | null;
+      sync_mode?: SyncMode;
+    } = {
       name: form.name,
       type: form.type,
       entity: form.entity,
-      image_key: form.imageKey,
       shared_with_household: form.sharedWithHousehold,
-    });
-  };
+      sync_mode: form.syncMode,
+    };
 
-  const handleImageSelect = (key: string | null) => {
-    setForm(prev => ({ ...prev, imageKey: key }));
-  };
-
-  const formatLastSync = (lastSync: string | null | undefined) => {
-    if (!lastSync) return 'Never';
-    try {
-      const date = new Date(lastSync);
-      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-    } catch {
-      return 'Unknown';
+    if (openingBalanceChanged) {
+      if (!trimmedOpeningBalance) {
+        payload.opening_balance = null;
+        payload.opening_balance_date = null;
+      } else {
+        const parsed = Number.parseFloat(trimmedOpeningBalance);
+        if (Number.isNaN(parsed)) {
+          toast.error('Enter a valid opening balance');
+          return;
+        }
+        payload.opening_balance = parsed;
+        payload.opening_balance_date = form.openingBalanceDate || null;
+      }
     }
-  };
 
-  const statusColors: Record<string, string> = {
-    active: 'text-green-600',
-    error: 'text-red-600',
-    disconnected: 'text-gray-500',
-  };
-
-  const isConnected = account?.has_connection;
-
-  // Format provider name for display (e.g., "plaid" -> "Plaid")
-  const getProviderDisplayName = () => {
-    const source = account?.sync_source;
-    if (!source) return 'Bank';
-    return source.charAt(0).toUpperCase() + source.slice(1);
-  };
-
-  // Get display values for locked fields
-  const getTypeDisplayValue = () => {
-    const option = accountTypeOptions.find(t => t.value === form.type);
-    return option?.label || form.type;
-  };
-
-  const getEntityDisplayValue = () => {
-    if (account?.institution_name) return account.institution_name;
-    if (account?.entity_display) return account.entity_display;
-    const option = entityOptions.find(e => e.value === form.entity);
-    return option?.label || form.entity || 'Unknown';
+    await onSubmit(payload);
   };
 
   return (
@@ -186,54 +236,7 @@ export function AccountDetailModal({
     >
       {account && (
         <div className="space-y-6">
-          {/* Sync Status Section */}
-          {isConnected && (
-            <div className="p-4 bg-muted/50 rounded-lg space-y-3">
-              <div className="flex items-center gap-2">
-                <Cloud
-                  className={`h-5 w-5 ${statusColors[account.connection_status || 'active']}`}
-                />
-                <span className="font-medium">
-                  Connected via {getProviderDisplayName()}
-                </span>
-                <span
-                  className={`text-sm ${statusColors[account.connection_status || 'active']}`}
-                >
-                  ({account.connection_status || 'active'})
-                </span>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Last synced: {formatLastSync(account.last_sync)}
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onSync}
-                  disabled={
-                    loading || account.connection_status === 'disconnected'
-                  }
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Sync Now
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onDisconnect}
-                  disabled={loading}
-                  className="text-orange-600 hover:text-orange-700"
-                >
-                  <Unlink className="h-4 w-4 mr-2" />
-                  Disconnect
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Account Form Fields */}
           <div className="space-y-4">
-            {/* Name - Always Editable */}
             <div>
               <Label htmlFor="detail-acc-name">Name</Label>
               <Input
@@ -244,152 +247,117 @@ export function AccountDetailModal({
               />
             </div>
 
-            {/* Type - Locked for connected accounts */}
             <div>
               <Label htmlFor="detail-acc-type">Type</Label>
-              {isConnected ? (
-                <div
-                  className="flex items-center justify-between h-10 w-full rounded-md border border-input bg-muted/50 px-3 py-2 text-sm cursor-not-allowed"
-                  title={`This field cannot be edited because the account is synced via ${getProviderDisplayName()}`}
-                >
-                  <span className="text-muted-foreground">
-                    {getTypeDisplayValue()}
-                  </span>
-                  <Lock className="h-4 w-4 text-muted-foreground" />
-                </div>
-              ) : (
-                <Select
-                  value={form.type}
-                  onValueChange={v => handleFieldChange('type', v)}
-                >
-                  <SelectTrigger id="detail-acc-type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {accountTypeOptions.map(t => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <Select
+                value={form.type}
+                onValueChange={v => handleFieldChange('type', v)}
+              >
+                <SelectTrigger id="detail-acc-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredTypeOptions.map(t => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Entity - Locked for connected accounts */}
             <div>
               <Label htmlFor="detail-acc-entity">Bank/Entity</Label>
-              {isConnected ? (
-                <div
-                  className="flex items-center justify-between h-10 w-full rounded-md border border-input bg-muted/50 px-3 py-2 text-sm cursor-not-allowed"
-                  title={`This field cannot be edited because the account is synced via ${getProviderDisplayName()}`}
+              <Select value={form.entity} onValueChange={handleEntityChange}>
+                <SelectTrigger id="detail-acc-entity">
+                  <SelectValue placeholder="Select a bank" />
+                </SelectTrigger>
+                <SelectContent>
+                  {entityOptions.map(e => (
+                    <SelectItem key={e.value} value={String(e.value)}>
+                      {e.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="detail-acc-opening-balance">
+                Opening Balance{' '}
+                <span className="text-muted-foreground font-normal">
+                  (optional)
+                </span>
+              </Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                  $
+                </span>
+                <Input
+                  id="detail-acc-opening-balance"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={form.openingBalance}
+                  onChange={e =>
+                    handleFieldChange('openingBalance', e.target.value)
+                  }
+                  className="pl-7"
+                  disabled={loadingOpeningBalance}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Balance this account had when you started tracking it. Leave
+                blank to remove an existing opening balance.
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="detail-acc-opening-date">
+                Opening Balance Date
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  ref={dateInputRef}
+                  id="detail-acc-opening-date"
+                  type="date"
+                  value={form.openingBalanceDate}
+                  onChange={e =>
+                    handleFieldChange('openingBalanceDate', e.target.value)
+                  }
+                  className="flex-1"
+                  disabled={
+                    loadingOpeningBalance || !form.openingBalance.trim()
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => dateInputRef.current?.showPicker?.()}
+                  title="Open calendar"
+                  disabled={
+                    loadingOpeningBalance || !form.openingBalance.trim()
+                  }
                 >
-                  <span className="text-muted-foreground">
-                    {getEntityDisplayValue()}
-                  </span>
-                  <Lock className="h-4 w-4 text-muted-foreground" />
-                </div>
-              ) : (
-                <Select
-                  value={form.entity}
-                  onValueChange={v => handleFieldChange('entity', v)}
-                >
-                  <SelectTrigger id="detail-acc-entity">
-                    <SelectValue placeholder="Select a bank" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {entityOptions.map(e => (
-                      <SelectItem key={e.value} value={String(e.value)}>
-                        {e.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+                  <Calendar className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
 
-          {/* Card Image Picker (for credit cards only) */}
-          {isCreditCard && (
-            <div>
-              <Label className="mb-2 block">Card Background</Label>
-              <div className="grid grid-cols-4 gap-2">
-                {/* Auto-detect option */}
-                <button
-                  type="button"
-                  onClick={() => handleImageSelect(null)}
-                  className={`relative aspect-[1.586] rounded-lg border-2 transition-all flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 ${
-                    form.imageKey === null
-                      ? 'border-primary ring-2 ring-primary/20'
-                      : 'border-border hover:border-primary/50'
-                  }`}
-                  title="Auto-detect from card name"
-                >
-                  <div className="flex flex-col items-center gap-0.5 text-muted-foreground">
-                    <Sparkles className="h-4 w-4" />
-                    <span className="text-[10px] font-medium">Auto</span>
-                  </div>
-                  {form.imageKey === null && (
-                    <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5">
-                      <Check className="h-3 w-3" />
-                    </div>
-                  )}
-                </button>
+          <AccountSyncSettings
+            form={{
+              entity: form.entity,
+              type: form.type,
+              syncMode: form.syncMode,
+            }}
+            onChange={handleSyncChange}
+            hasStorageUri={form.hasStorageUri}
+            idPrefix="detail-sync"
+            disabled={loadingOpeningBalance}
+          />
 
-                {/* Card image options */}
-                {AVAILABLE_CARD_IMAGES.map(img => {
-                  const isSelected = form.imageKey === img.key;
-                  const isAutoDetected =
-                    form.imageKey === null && autoDetectedImageKey === img.key;
-
-                  return (
-                    <button
-                      key={img.key}
-                      type="button"
-                      onClick={() => handleImageSelect(img.key)}
-                      className={`relative aspect-[1.586] rounded-lg border-2 transition-all overflow-hidden ${
-                        isSelected
-                          ? 'border-primary ring-2 ring-primary/20'
-                          : isAutoDetected
-                            ? 'border-primary/50 ring-1 ring-primary/10'
-                            : 'border-border hover:border-primary/50'
-                      }`}
-                      title={img.label}
-                    >
-                      <img
-                        src={img.path}
-                        alt={img.label}
-                        className="w-full h-full object-cover"
-                      />
-                      {isSelected && (
-                        <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5">
-                          <Check className="h-3 w-3" />
-                        </div>
-                      )}
-                      {isAutoDetected && !isSelected && (
-                        <div className="absolute -top-1 -right-1 bg-muted text-muted-foreground rounded-full p-0.5">
-                          <Sparkles className="h-3 w-3" />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-              {form.imageKey === null && autoDetectedImageKey && (
-                <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" />
-                  Auto-detected from card name
-                </p>
-              )}
-              {form.imageKey === null && !autoDetectedImageKey && (
-                <p className="text-xs text-muted-foreground mt-1.5">
-                  No match found — showing default card
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Account Info */}
           {account.account_number_last4 && (
             <div className="text-sm text-muted-foreground">
               Account ending in:{' '}
@@ -399,7 +367,6 @@ export function AccountDetailModal({
             </div>
           )}
 
-          {/* Household Sharing Toggle */}
           {isInHousehold && (
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="flex items-center gap-2">
@@ -434,7 +401,6 @@ export function AccountDetailModal({
             </div>
           )}
 
-          {/* Actions */}
           <div className="flex justify-between gap-2 pt-4 border-t">
             <Button
               variant="destructive"
@@ -450,7 +416,10 @@ export function AccountDetailModal({
               <Button variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button onClick={handleSubmit} disabled={!form.name || loading}>
+              <Button
+                onClick={handleSubmit}
+                disabled={!form.name || loading || loadingOpeningBalance}
+              >
                 Save Changes
               </Button>
             </div>

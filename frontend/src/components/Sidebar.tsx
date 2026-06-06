@@ -1,4 +1,3 @@
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -10,22 +9,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { useAuth } from '@/hooks/useAuth';
-import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { cn } from '@/lib/utils';
 import {
   BarChart3,
   Calculator,
   ChevronLeft,
   ChevronRight,
-  CloudUpload,
   Heart,
   Landmark,
-  Loader2,
   LogOut,
   Settings as SettingsIcon,
   SlidersHorizontal,
   Table,
-  User,
   Wallet,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -42,6 +37,9 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
 }
 
+const collapsedLabelClass =
+  'pointer-events-none absolute left-full top-1/2 z-[60] ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-2.5 py-1.5 text-sm font-medium text-popover-foreground opacity-0 shadow-md transition-opacity duration-150 group-hover/sidebar-item:opacity-100';
+
 export function Sidebar({
   className,
   hideCollapseToggle = false,
@@ -49,22 +47,22 @@ export function Sidebar({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { status: syncStatus } = useSyncStatus();
   const { isInHousehold } = useHousehold();
 
   const navigationItems: NavItem[] = useMemo(() => {
     const items: NavItem[] = [
       { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
-      { name: 'Transactions', href: '/transactions', icon: Table },
       { name: 'Accounts', href: '/accounts', icon: Landmark },
-      { name: 'Upload', href: '/upload', icon: CloudUpload },
       { name: 'Budget', href: '/budget', icon: Wallet },
     ];
     if (isInHousehold) {
       items.push({ name: 'Household', href: '/household', icon: Heart });
     }
+    items.push({ name: 'Transactions', href: '/transactions', icon: Table });
     return items;
   }, [isInHousehold]);
+
+  const pathOf = (href: string): string => href.split('?')[0] ?? href;
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
@@ -85,7 +83,7 @@ export function Sidebar({
   return (
     <div
       className={cn(
-        'group relative z-50 flex h-dvh flex-col border-r',
+        'relative z-50 flex h-dvh flex-col overflow-visible border-r',
         isCollapsed ? 'w-16' : 'w-64',
         className
       )}
@@ -100,8 +98,8 @@ export function Sidebar({
         <Link
           to="/dashboard"
           className={cn(
-            'flex min-w-0 items-center rounded-xl transition-colors hover:bg-muted/70',
-            isCollapsed ? 'justify-center p-2' : 'gap-3 py-2 pl-2 pr-3'
+            'group/sidebar-item flex min-w-0 items-center rounded-xl transition-colors hover:bg-muted/70',
+            isCollapsed ? 'relative justify-center p-2' : 'gap-3 py-2 pl-2 pr-3'
           )}
           aria-label="Go to dashboard"
         >
@@ -117,13 +115,14 @@ export function Sidebar({
               Richtato
             </span>
           )}
+          {isCollapsed && <span className={collapsedLabelClass}>Richtato</span>}
         </Link>
         {!hideCollapseToggle && (
           <Button
             variant="ghost"
             size="icon"
             className={cn(
-              'text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-0',
+              'group/sidebar-item text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-0',
               isCollapsed
                 ? 'absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border border-border bg-background shadow-sm'
                 : 'h-9 w-9'
@@ -136,6 +135,9 @@ export function Sidebar({
             ) : (
               <ChevronLeft className="h-4 w-4 opacity-70" />
             )}
+            {isCollapsed && (
+              <span className={collapsedLabelClass}>Expand sidebar</span>
+            )}
           </Button>
         )}
       </div>
@@ -143,54 +145,37 @@ export function Sidebar({
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-3" role="navigation">
         {navigationItems.map(item => {
-          const isActive = location.pathname === item.href;
+          const itemPath = pathOf(item.href);
+          const isActive = location.pathname === itemPath;
           const Icon = item.icon;
-
-          // Show sync indicator and badge on Data page
-          const isDataPage = item.href === '/transactions';
-          const isSyncing = isDataPage && syncStatus?.is_syncing;
-          const newTransactionCount =
-            isDataPage && syncStatus?.new_transaction_count
-              ? syncStatus.new_transaction_count
-              : 0;
 
           return (
             <Link
               key={item.name}
               to={item.href}
+              data-tour={item.name === 'Accounts' ? 'nav-accounts' : undefined}
+              aria-label={isCollapsed ? item.name : undefined}
               className={cn(
-                'flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200 group',
+                'group/sidebar-item flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200',
                 isActive
                   ? 'bg-primary text-primary-foreground shadow-lg'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white',
-                isCollapsed && 'justify-center px-2'
+                isCollapsed && 'relative justify-center px-2'
               )}
             >
-              {isSyncing ? (
-                <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
-              ) : (
-                <Icon
-                  className={cn(
-                    'h-5 w-5 shrink-0 transition-transform group-hover:scale-110',
-                    isActive && 'text-white'
-                  )}
-                />
-              )}
+              <Icon
+                className={cn(
+                  'h-5 w-5 shrink-0 transition-transform group-hover/sidebar-item:scale-110',
+                  isActive && 'text-white'
+                )}
+              />
               {!isCollapsed && (
                 <span className="flex-1 flex items-center justify-between">
                   <span>{item.name}</span>
-                  {newTransactionCount > 0 && (
-                    <Badge
-                      variant="default"
-                      className="ml-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs px-1.5 py-0.5"
-                    >
-                      {newTransactionCount > 99 ? '99+' : newTransactionCount}
-                    </Badge>
-                  )}
                 </span>
               )}
-              {isCollapsed && newTransactionCount > 0 && (
-                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-emerald-500" />
+              {isCollapsed && (
+                <span className={collapsedLabelClass}>{item.name}</span>
               )}
             </Link>
           );
@@ -203,10 +188,11 @@ export function Sidebar({
           <DropdownMenuTrigger asChild>
             <button
               className={cn(
-                'flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-slate-800',
-                isCollapsed && 'justify-center'
+                'group/sidebar-item flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-slate-800',
+                isCollapsed && 'relative justify-center'
               )}
               aria-label="Open user menu"
+              data-tour="sidebar-user-menu"
             >
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-500 text-xs font-medium text-white shadow-lg">
                 {initial}
@@ -221,6 +207,11 @@ export function Sidebar({
                   </span>
                 </span>
               )}
+              {isCollapsed && (
+                <span className={collapsedLabelClass}>
+                  {user ? user.username : 'Account'}
+                </span>
+              )}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -233,19 +224,13 @@ export function Sidebar({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link to="/profile" className="gap-2">
-                <User className="h-4 w-4" />
-                Profile
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
               <Link to="/preferences" className="gap-2">
                 <SettingsIcon className="h-4 w-4" />
-                Preferences
+                Settings
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/setup" className="gap-2">
+              <Link to="/setup" className="gap-2" data-tour="nav-setup">
                 <SlidersHorizontal className="h-4 w-4" />
                 Setup
               </Link>

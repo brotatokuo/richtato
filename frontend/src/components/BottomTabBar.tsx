@@ -1,9 +1,6 @@
-import { Badge } from '@/components/ui/badge';
-import { useSyncStatus } from '@/hooks/useSyncStatus';
 import { cn } from '@/lib/utils';
 import {
   BarChart3,
-  CloudUpload,
   Landmark,
   MoreHorizontal,
   Table,
@@ -14,7 +11,6 @@ import { Link, useLocation } from 'react-router-dom';
 const primaryTabs = [
   { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
   { name: 'Accounts', href: '/accounts', icon: Landmark },
-  { name: 'Upload', href: '/upload', icon: CloudUpload },
   { name: 'Budget', href: '/budget', icon: Wallet },
   { name: 'Transactions', href: '/transactions', icon: Table },
   { name: 'More', href: '/more', icon: MoreHorizontal },
@@ -24,16 +20,12 @@ const moreRoutes = [
   '/household',
   '/setup',
   '/preferences',
-  '/profile',
   '/formulas',
   '/more',
 ];
 
 export function BottomTabBar() {
   const location = useLocation();
-  const { status: syncStatus } = useSyncStatus();
-
-  const newTransactionCount = syncStatus?.new_transaction_count ?? 0;
 
   const isMoreActive = moreRoutes.some(r => location.pathname.startsWith(r));
 
@@ -51,13 +43,18 @@ export function BottomTabBar() {
             ? isMoreActive
             : location.pathname === tab.href ||
               location.pathname.startsWith(`${tab.href}/`);
-          const isData = tab.href === '/transactions';
-          const isSyncing = isData && syncStatus?.is_syncing;
 
           return (
             <Link
               key={tab.name}
               to={tab.href}
+              data-tour={
+                tab.name === 'Accounts'
+                  ? 'nav-accounts-mobile'
+                  : tab.name === 'More'
+                    ? 'nav-more-mobile'
+                    : undefined
+              }
               className={cn(
                 'relative flex flex-1 flex-col items-center justify-center gap-1 text-xs font-medium transition-colors',
                 isActive
@@ -66,17 +63,7 @@ export function BottomTabBar() {
               )}
               aria-current={isActive ? 'page' : undefined}
             >
-              <div className="relative">
-                <Icon className={cn('h-5 w-5', isSyncing && 'animate-spin')} />
-                {isData && newTransactionCount > 0 && (
-                  <Badge
-                    variant="default"
-                    className="absolute -top-2 -right-3 min-w-[1.1rem] h-[1.1rem] px-1 py-0 text-[10px] leading-none flex items-center justify-center bg-emerald-500 hover:bg-emerald-500 text-white"
-                  >
-                    {newTransactionCount > 99 ? '99+' : newTransactionCount}
-                  </Badge>
-                )}
-              </div>
+              <Icon className="h-5 w-5" />
               <span>{tab.name}</span>
             </Link>
           );

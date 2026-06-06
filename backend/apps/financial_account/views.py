@@ -1,8 +1,12 @@
 """Views for financial accounts API."""
 
+from urllib.parse import urlencode
+
+from django.conf import settings
+from django.shortcuts import redirect
 from loguru import logger
 from rest_framework import status
-from rest_framework.authentication import BasicAuthentication, SessionAuthentication
+from rest_framework.authentication import BasicAuthentication, SessionAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -16,12 +20,17 @@ from apps.financial_account.services.account_balance_service import (
     AccountBalanceService,
 )
 from apps.financial_account.services.account_service import AccountService
-from apps.financial_account.services.csv_import_service import CSVImportService
+from apps.financial_account.services.google_drive_activation_service import GoogleDriveActivationService
+from apps.financial_account.services.google_drive_service import GoogleDriveError, GoogleDriveService
 from apps.financial_account.services.statement_file_service import (
     StatementFileService,
 )
 from apps.financial_account.services.statement_import_service import (
     StatementImportService,
+)
+from apps.financial_account.services.storage_scanner_service import (
+    StorageScannerService,
+    parser_key_for_account,
 )
 
 
@@ -103,17 +112,47 @@ class FinancialAccountDetailAPIView(APIView):
         if not account:
             return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = FinancialAccountUpdateSerializer(data=request.data)
+        logger.info(
+            "Account PATCH request",
+            account_id=pk,
+            user_id=request.user.id,
+            payload=dict(request.data),
+        )
+
+        serializer = FinancialAccountUpdateSerializer(
+            data=request.data,
+            context={"account": account},
+        )
         if not serializer.is_valid():
+            logger.warning(
+                "Account PATCH validation failed",
+                account_id=pk,
+                user_id=request.user.id,
+                errors=serializer.errors,
+                payload=dict(request.data),
+            )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         try:
+            logger.info(
+                "Account PATCH validated",
+                account_id=pk,
+                validated_data={key: str(value) for key, value in serializer.validated_data.items()},
+            )
             updated_account = self.account_service.update_account(account, **serializer.validated_data)
+            updated_account.refresh_from_db()
             response_serializer = FinancialAccountSerializer(updated_account)
+            logger.info(
+                "Account PATCH succeeded",
+                account_id=pk,
+                balance=str(updated_account.balance),
+                opening_balance=response_serializer.data.get("opening_balance"),
+                opening_balance_date=response_serializer.data.get("opening_balance_date"),
+            )
             return Response(response_serializer.data)
 
         except Exception as e:
-            logger.error(f"Error updating account {pk}: {str(e)}")
+            logger.exception(f"Error updating account {pk}: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete(self, request, pk):
@@ -188,29 +227,274 @@ class AccountFieldChoicesAPIView(APIView):
 
     def get(self, request):
         """Get available account types and entities."""
-        from apps.financial_account.models import FinancialAccount, FinancialInstitution
+        from apps.financial_account.institutions.registry import get_institution_field_choices
 
-        # Account type choices
-        type_choices = [{"value": choice[0], "label": choice[1]} for choice in FinancialAccount.ACCOUNT_TYPE_CHOICES]
+        return Response(get_institution_field_choices())
 
-        # Entity/institution choices - use slug as value for consistency with frontend
-        # Sort alphabetically but keep "Other" at the end
-        institutions = FinancialInstitution.objects.all().order_by("name")
-        entity_choices = []
-        other_choice = None
 
-        for inst in institutions:
-            choice = {"value": inst.slug, "label": inst.name}
-            if inst.slug == "other":
-                other_choice = choice
-            else:
-                entity_choices.append(choice)
+class GoogleDriveStatusAPIView(APIView):
+    """Return Google Drive statement storage connection status."""
 
-        # Add "Other" at the end if it exists
-        if other_choice:
-            entity_choices.append(other_choice)
+    authentication_classes = [SessionAuthentication, TokenAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
 
-        return Response({"type": type_choices, "entity": entity_choices})
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.activation_service = GoogleDriveActivationService()
+
+    def get(self, request):
+        return Response(self.activation_service.status(request.user), status=status.HTTP_200_OK)
+
+
+class GoogleDriveOAuthStartAPIView(APIView):
+    """Start Google OAuth for statement storage."""
+
+    authentication_classes = [SessionAuthentication, TokenAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.drive_service = GoogleDriveService()
+
+    def post(self, request):
+        try:
+            auth_url, state = self.drive_service.build_authorization_url(request)
+        except GoogleDriveError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        request.session["google_drive_oauth_state"] = state
+        return Response({"auth_url": auth_url}, status=status.HTTP_200_OK)
+
+
+class GoogleDriveOAuthCallbackAPIView(APIView):
+    """Handle Google OAuth callback and redirect back to setup."""
+
+    authentication_classes = [SessionAuthentication, TokenAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.drive_service = GoogleDriveService()
+
+    def get(self, request):
+        frontend_url = settings.FRONTEND_URL.rstrip("/") + "/setup"
+        callback_params = {"tab": "statements"}
+        expected_state = request.session.get("google_drive_oauth_state")
+        received_state = request.query_params.get("state")
+        if expected_state and received_state != expected_state:
+            return redirect(f"{frontend_url}?{urlencode({**callback_params, 'drive_error': 'Invalid OAuth state'})}")
+
+        code = request.query_params.get("code")
+        if not code:
+            message = request.query_params.get("error") or "Missing OAuth code"
+            return redirect(f"{frontend_url}?{urlencode({**callback_params, 'drive_error': message})}")
+
+        try:
+            self.drive_service.exchange_code(user=request.user, code=code, request=request)
+        except GoogleDriveError as exc:
+            return redirect(f"{frontend_url}?{urlencode({**callback_params, 'drive_error': str(exc)})}")
+
+        request.session.pop("google_drive_oauth_state", None)
+        return redirect(f"{frontend_url}?{urlencode({**callback_params, 'drive': 'connected'})}")
+
+
+class GoogleDrivePickerTokenAPIView(APIView):
+    """Return a short-lived access token for Google Drive Picker."""
+
+    authentication_classes = [SessionAuthentication, TokenAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.drive_service = GoogleDriveService()
+
+    def get(self, request):
+        connection = getattr(request.user, "google_drive_connection", None)
+        if not connection or not connection.refresh_token_encrypted:
+            return Response({"error": "Google Drive is not connected"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            return Response(self.drive_service.get_picker_token(connection), status=status.HTTP_200_OK)
+        except GoogleDriveError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GoogleDriveActivateAPIView(APIView):
+    """Activate a Drive folder as the statement root."""
+
+    authentication_classes = [SessionAuthentication, TokenAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.activation_service = GoogleDriveActivationService()
+
+    def post(self, request):
+        folder_id = request.data.get("folder_id")
+        if not folder_id:
+            return Response({"error": "folder_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        adopt_existing = bool(request.data.get("adopt_existing"))
+        try:
+            result = self.activation_service.activate(
+                request.user,
+                root_folder_id=folder_id,
+                root_folder_name=request.data.get("folder_name", ""),
+                adopt_existing=adopt_existing,
+                scan_after_adopt=adopt_existing,
+            )
+        except GoogleDriveError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "status": self.activation_service.status(request.user),
+                "account_folders_created": result.account_folders_created,
+                "account_folders_adopted": result.account_folders_adopted,
+                "unmatched_drive_folders": result.unmatched_drive_folders,
+                "scan_summary": result.scan_summary,
+                "errors": result.errors,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class GoogleDriveAdoptPreviewAPIView(APIView):
+    """Preview adopting an existing Drive root with Richtato-style account folders."""
+
+    authentication_classes = [SessionAuthentication, TokenAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.activation_service = GoogleDriveActivationService()
+
+    def post(self, request):
+        folder_id = request.data.get("folder_id")
+        if not folder_id:
+            return Response({"error": "folder_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            preview = self.activation_service.preview_adopt_existing(request.user, root_folder_id=folder_id)
+        except GoogleDriveError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "root_folder_id": preview.root_folder_id,
+                "root_folder_name": preview.root_folder_name,
+                "adopted": preview.adopted,
+                "would_create": preview.would_create,
+                "unmatched": preview.unmatched,
+                "statement_file_counts": preview.statement_file_counts,
+                "errors": preview.errors,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class GoogleDriveDeactivateAPIView(APIView):
+    """Unlink an active Drive statement root and clear account storage URIs."""
+
+    authentication_classes = [SessionAuthentication, TokenAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.activation_service = GoogleDriveActivationService()
+
+    def post(self, request):
+        try:
+            result = self.activation_service.deactivate(request.user)
+        except GoogleDriveError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "status": self.activation_service.status(request.user),
+                "account_folders_removed": result.account_folders_removed,
+                "errors": result.errors,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class GoogleDriveDisconnectAPIView(APIView):
+    """Disconnect inactive Google Drive OAuth credentials."""
+
+    authentication_classes = [SessionAuthentication, TokenAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.activation_service = GoogleDriveActivationService()
+
+    def post(self, request):
+        try:
+            self.activation_service.disconnect_if_inactive(request.user)
+        except GoogleDriveError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(self.activation_service.status(request.user), status=status.HTTP_200_OK)
+
+
+class GoogleDriveSyncFoldersAPIView(APIView):
+    """Create Drive folders for any active accounts that are missing one."""
+
+    authentication_classes = [SessionAuthentication, TokenAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.activation_service = GoogleDriveActivationService()
+
+    def post(self, request):
+        try:
+            result = self.activation_service.sync_missing_folders(request.user)
+        except GoogleDriveError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "status": self.activation_service.status(request.user),
+                "account_folders_created": result.account_folders_created,
+                "errors": result.errors,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class AccountScanStorageAPIView(APIView):
+    """Scan an account's storage URI for new statement files and auto-import them."""
+
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.account_service = AccountService()
+        self.scanner = StorageScannerService()
+
+    def post(self, request, pk):
+        account = self.account_service.get_account_by_id(pk, request.user)
+        if not account:
+            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        result = self.scanner.scan_account(account.id)
+        return Response(
+            {
+                "accounts_scanned": result.accounts_scanned,
+                "files_seen": result.files_seen,
+                "files_imported": result.files_imported,
+                "files_skipped": result.files_skipped,
+                "files_failed": result.files_failed,
+                "files_removed": result.files_removed,
+                "outcomes": [
+                    {
+                        "relative_path": o.relative_path,
+                        "status": o.status,
+                        "detail": o.detail,
+                        "imported_count": o.imported_count,
+                    }
+                    for o in result.outcomes
+                ],
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class AccountTransactionsAPIView(APIView):
@@ -428,7 +712,10 @@ class CardAccountFieldChoicesAPIView(APIView):
 
 
 class CSVStatementImportAPIView(APIView):
-    """Import transactions from a CSV statement file."""
+    """Import transactions from a CSV statement file.
+
+    Deprecated: prefer ``POST /import-statement/`` with ``institution=generic``.
+    """
 
     authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
@@ -436,7 +723,7 @@ class CSVStatementImportAPIView(APIView):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.account_service = AccountService()
-        self.csv_service = CSVImportService()
+        self.statement_service = StatementImportService()
 
     def post(self, request):
         """Import a CSV statement into an account.
@@ -492,9 +779,11 @@ class CSVStatementImportAPIView(APIView):
                 )
 
         try:
-            result = self.csv_service.import_statement(
+            result = self.statement_service.import_statement(
                 account=account,
-                csv_file=csv_file,
+                statement_file=csv_file,
+                institution="generic",
+                statement_status="closed",
                 ending_balance=ending_balance,
                 ending_date=ending_date,
             )
@@ -505,18 +794,19 @@ class CSVStatementImportAPIView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+        account.refresh_from_db(fields=["balance"])
         response_data = {
             "imported": result.imported_count,
-            "skipped_duplicates": result.skipped_duplicates,
+            "skipped_duplicates": result.duplicate_count,
             "errors": result.errors,
-            "balance_after_import": (
-                str(result.balance_after_import) if result.balance_after_import is not None else None
-            ),
+            "balance_after_import": str(account.balance),
         }
 
-        if result.discrepancy is not None:
-            response_data["discrepancy"] = str(result.discrepancy)
-            response_data["adjustment"] = str(result.adjustment_amount)
+        if ending_balance is not None:
+            discrepancy = result.reconciliation.get("account_ending_discrepancy")
+            if discrepancy is not None:
+                response_data["discrepancy"] = discrepancy
+            response_data["reconciliation_warnings"] = result.reconciliation_warnings
 
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -524,7 +814,7 @@ class CSVStatementImportAPIView(APIView):
 class StatementImportAPIView(APIView):
     """Preview or import CSV/Excel statements for supported institutions."""
 
-    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    authentication_classes = [SessionAuthentication, TokenAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
 
     def __init__(self, **kwargs):
@@ -554,9 +844,11 @@ class StatementImportAPIView(APIView):
             return Response({"error": "institution is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            account = self.account_service.get_account_by_id(int(account_id), request.user)
+            raw_account_id = int(account_id)
         except (TypeError, ValueError):
             return Response({"error": "Invalid account"}, status=status.HTTP_400_BAD_REQUEST)
+
+        account = self.account_service.get_account_by_id(raw_account_id, request.user)
 
         if not account:
             return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -572,13 +864,20 @@ class StatementImportAPIView(APIView):
 
         try:
             if mode == "commit":
+                apply_opening_balance = self._bool_from_request(request, "apply_opening_balance")
                 result = self.statement_service.import_statement(
                     account=account,
                     statement_file=statement_file,
                     institution=institution,
                     statement_period=statement_period,
                     statement_status=statement_status,
+                    apply_opening_balance=apply_opening_balance,
                 )
+                # User-driven uploads of statement files bump a manual account
+                # into the "upload" sync mode so the UI badge stays accurate.
+                if account.sync_mode == "manual":
+                    account.sync_mode = "upload"
+                    account.save(update_fields=["sync_mode", "updated_at"])
             elif mode == "preview":
                 result = self.statement_service.preview_statement(
                     account=account,
@@ -601,9 +900,17 @@ class StatementImportAPIView(APIView):
 
         return Response(result.as_dict(), status=status.HTTP_200_OK)
 
+    def _bool_from_request(self, request, key: str) -> bool:
+        value = request.data.get(key)
+        if isinstance(value, bool):
+            return value
+        if value in (None, ""):
+            return False
+        return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
 
 class StatementFileListCreateAPIView(APIView):
-    """List statement library files or upload a new local statement file."""
+    """List statement library files or upload a new Google Drive statement file."""
 
     authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
@@ -634,7 +941,7 @@ class StatementFileListCreateAPIView(APIView):
         )
 
     def post(self, request):
-        """Store an uploaded statement in local account/year/month folders."""
+        """Store an uploaded statement in the account's Google Drive folder."""
         statement_file = request.FILES.get("file")
         if not statement_file:
             return Response({"error": "Statement file is required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -643,9 +950,9 @@ class StatementFileListCreateAPIView(APIView):
         if isinstance(account, Response):
             return account
 
-        institution = request.data.get("institution")
+        institution = request.data.get("institution") or parser_key_for_account(account)
         if not institution:
-            return Response({"error": "institution is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "No statement parser configured for account"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             result = self.statement_file_service.save_upload(
@@ -673,6 +980,8 @@ class StatementFileListCreateAPIView(APIView):
         )
 
     def _get_account(self, request):
+        from apps.financial_account.models import FinancialAccount
+
         account_id = request.data.get("account")
         if not account_id:
             return Response({"error": "account is required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -682,7 +991,7 @@ class StatementFileListCreateAPIView(APIView):
             return Response({"error": "Invalid account"}, status=status.HTTP_400_BAD_REQUEST)
         if not account:
             return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
-        return account
+        return FinancialAccount.objects.select_related("institution").get(pk=account.pk)
 
     def _int_or_none(self, value):
         if value in (None, ""):
@@ -722,6 +1031,10 @@ class StatementFileDetailAPIView(APIView):
                 return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
 
         try:
+            if request.data.get("reconciliation_acknowledged") is True:
+                updated = self.statement_file_service.acknowledge_reconciliation(statement)
+                return Response(self.statement_file_service.serialize(updated), status=status.HTTP_200_OK)
+
             updated = self.statement_file_service.update_statement(
                 statement,
                 account=account,
@@ -750,7 +1063,7 @@ class StatementFileDetailAPIView(APIView):
 
 
 class StatementFileDownloadAPIView(APIView):
-    """Download a locally stored statement file."""
+    """Download a stored Google Drive statement file."""
 
     authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
@@ -770,7 +1083,7 @@ class StatementFileDownloadAPIView(APIView):
 
 
 class StatementFilePreviewAPIView(APIView):
-    """Preview import from a locally stored statement file."""
+    """Preview import from a stored Google Drive statement file."""
 
     authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
@@ -799,7 +1112,7 @@ class StatementFilePreviewAPIView(APIView):
 
 
 class StatementFileImportAPIView(APIView):
-    """Commit import from a locally stored statement file."""
+    """Commit import from a stored Google Drive statement file."""
 
     authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
@@ -813,7 +1126,11 @@ class StatementFileImportAPIView(APIView):
         if not statement:
             return Response({"error": "Statement not found"}, status=status.HTTP_404_NOT_FOUND)
         try:
-            result = self.statement_file_service.import_statement(statement)
+            apply_opening_balance = self._bool_from_request(request, "apply_opening_balance")
+            result = self.statement_file_service.import_statement(
+                statement,
+                apply_opening_balance=apply_opening_balance,
+            )
         except Exception as e:
             logger.error(f"Statement import failed for {pk}: {str(e)}")
             return Response({"error": f"Import failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -825,3 +1142,11 @@ class StatementFileImportAPIView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+    def _bool_from_request(self, request, key: str) -> bool:
+        value = request.data.get(key)
+        if isinstance(value, bool):
+            return value
+        if value in (None, ""):
+            return False
+        return str(value).strip().lower() in {"1", "true", "yes", "on"}

@@ -55,7 +55,7 @@ frontend/src/
 │   ├── settings/              # Preferences sections
 │   └── household/             # Household controls such as ScopeToggle
 ├── contexts/                  # Auth, Household, Preferences, Theme, HeaderSlot
-├── hooks/                     # useAuth, useSyncStatus, usePlaidLink, usePolling
+├── hooks/                     # useAuth, usePolling, usePlatformTourResume
 ├── lib/
 │   ├── api/                   # API service singletons
 │   ├── echarts.ts             # Tree-shaken ECharts exports
@@ -90,12 +90,11 @@ Current protected routes:
 | `/setup`        | `Setup`                                   |
 | `/preferences`  | `Preferences`                             |
 | `/profile`      | `Profile`                                 |
-| `/upload`       | `Upload`                                  |
 | `/household`    | `HouseholdDashboard`                      |
 | `/formulas`     | `Formulas`                                |
 | `/more`         | `More`                                    |
 
-`/upload` is the CSV/Excel statement import and statement library workflow. It should use `frontend/src/lib/api/statementImport.ts` for parser metadata and `frontend/src/lib/api/statementFiles.ts` for local statement storage, preview/import from stored files, download, remove, and account/year/month folder browsing. Treat row-level duplicate/possible-changed status as user-facing review information.
+Statement storage is configured from **Setup → Statements** (`/setup?tab=statements`) through the Google Drive statements section. `/upload` has been removed; statement records still use `frontend/src/lib/api/statementFiles.ts` for account-level recent file display and backend statement actions.
 
 Redirects:
 

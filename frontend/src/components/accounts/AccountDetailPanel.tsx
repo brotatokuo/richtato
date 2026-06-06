@@ -1,66 +1,46 @@
+import { StorageLocationPanel } from '@/components/accounts/StorageLocationPanel';
+import { BaseChart } from '@/components/asset_dashboard/BaseChart';
 import { AccountDetailModal } from '@/components/settings/AccountDetailModal';
+import { TransactionsPanel } from '@/components/transactions/TransactionsPanel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { Modal } from '@/components/ui/Modal';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useHousehold } from '@/contexts/HouseholdContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { bankConnectionsApiService } from '@/lib/api/bankConnections';
-import { transactionsApiService } from '@/lib/api/transactions';
+import { transactionsApiService, type SyncMode } from '@/lib/api/transactions';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { getEntityLogo } from '@/lib/imageMapping';
 import { cn } from '@/lib/utils';
-import { useHousehold } from '@/contexts/HouseholdContext';
 import {
-  ArrowRight,
   ArrowUpDown,
   Edit2,
+  FileText,
   Landmark,
-  Loader2,
-  RefreshCw,
-  Scale,
+  LineChart,
   TrendingDown,
   TrendingUp,
-  Unlink,
   Users,
-  Wifi,
-  WifiOff,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { AccountWithBalance } from './AccountsSidebar';
-import { AccountBalanceForm } from './AccountBalanceForm';
-import { BaseChart } from '@/components/asset_dashboard/BaseChart';
-import { DisconnectConfirmModal } from '@/components/settings/DisconnectConfirmModal';
-
-interface TransactionRow {
-  id: number;
-  date: string;
-  description: string;
-  amount: string;
-  transaction_type: 'credit' | 'debit';
-}
+import type { InstitutionFieldChoice } from './AccountFormFields';
 
 interface BalancePoint {
   date: string;
   balance: number;
 }
 
-interface AccountDetailPanelProps {
-  account: AccountWithBalance | null;
-  onAccountUpdated: () => void;
+interface BalanceSnapshotRow extends BalancePoint {
+  change: number | null;
 }
 
-function timeAgo(isoString: string | null | undefined): string {
-  if (!isoString) return '';
-  const diff = Date.now() - new Date(isoString).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+type AccountDetailTab = 'balance' | 'transactions' | 'statements';
+
+interface AccountDetailPanelProps {
+  account: AccountWithBalance | null;
+  onAccountUpdated: (updatedAccount?: AccountWithBalance | null) => void;
 }
 
 export function AccountDetailPanel({
@@ -69,16 +49,11 @@ export function AccountDetailPanel({
 }: AccountDetailPanelProps) {
   const { preferences } = usePreferences();
   const { isInHousehold } = useHousehold();
-  const navigate = useNavigate();
-  const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [balanceHistory, setBalanceHistory] = useState<BalancePoint[]>([]);
-  const [txLoading, setTxLoading] = useState(false);
   const [chartLoading, setChartLoading] = useState(false);
-  const [syncing, setSyncing] = useState(false);
 
+  const [activeTab, setActiveTab] = useState<AccountDetailTab>('balance');
   const [showEdit, setShowEdit] = useState(false);
-  const [showSetBalance, setShowSetBalance] = useState(false);
-  const [showDisconnect, setShowDisconnect] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [isShared, setIsShared] = useState(
     account?.shared_with_household ?? false
@@ -90,8 +65,15 @@ export function AccountDetailPanel({
   const [entityOptions, setEntityOptions] = useState<
     Array<{ value: string; label: string }>
   >([]);
-
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [institutions, setInstitutions] = useState<InstitutionFieldChoice[]>(
+    []
+  );
+  const canShowTransactions =
+    account?.sync_capabilities?.transactions !== false;
+  const canShowStatements =
+    account?.sync_capabilities?.statement_files !== false;
+  const visibleTabCount =
+    1 + (canShowTransactions ? 1 : 0) + (canShowStatements ? 1 : 0);
 
   useEffect(() => {
     transactionsApiService
@@ -99,19 +81,13 @@ export function AccountDetailPanel({
       .then(c => {
         setAccountTypeOptions(c.type || []);
         setEntityOptions(c.entity || []);
+        setInstitutions(c.institutions || []);
       })
       .catch(() => {});
   }, []);
 
-  const fetchData = useCallback(async (accountId: number) => {
-    setTxLoading(true);
+  const fetchBalanceHistory = useCallback(async (accountId: number) => {
     setChartLoading(true);
-
-    transactionsApiService
-      .getAccountTransactions(accountId, { page: 1, pageSize: 10 })
-      .then(d => setTransactions(d.rows || []))
-      .catch(() => setTransactions([]))
-      .finally(() => setTxLoading(false));
 
     transactionsApiService
       .getAccountBalanceHistory(accountId)
@@ -122,17 +98,21 @@ export function AccountDetailPanel({
 
   useEffect(() => {
     if (!account) return;
-    setTransactions([]);
+    setActiveTab('balance');
     setBalanceHistory([]);
     setIsShared(account.shared_with_household ?? false);
-    fetchData(account.id);
-  }, [account, fetchData]);
+    fetchBalanceHistory(account.id);
+  }, [account, fetchBalanceHistory]);
 
   useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
+    if (!account) return;
+    if (
+      (activeTab === 'transactions' && !canShowTransactions) ||
+      (activeTab === 'statements' && !canShowStatements)
+    ) {
+      setActiveTab('balance');
+    }
+  }, [account, activeTab, canShowTransactions, canShowStatements]);
 
   const chartData = useMemo(() => {
     if (!balanceHistory.length) return { series: [], dates: [] };
@@ -228,7 +208,20 @@ export function AccountDetailPanel({
     [chartData, preferences.currency]
   );
 
-  // Balance change from history
+  const balanceRows = useMemo<BalanceSnapshotRow[]>(() => {
+    const sorted = [...balanceHistory].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+
+    return sorted.map((point, index) => {
+      const previousPoint = sorted[index + 1];
+      return {
+        ...point,
+        change: previousPoint ? point.balance - previousPoint.balance : null,
+      };
+    });
+  }, [balanceHistory]);
+
   const balanceChange = useMemo(() => {
     if (balanceHistory.length < 2) return null;
     const sorted = [...balanceHistory].sort(
@@ -239,52 +232,60 @@ export function AccountDetailPanel({
     return latest - oldest;
   }, [balanceHistory]);
 
-  const handleSync = async () => {
-    if (!account?.connection_id) return;
-    setSyncing(true);
-    try {
-      await bankConnectionsApiService.syncConnection(account.connection_id);
-      toast.info('Sync started', { description: 'Syncing transactions...' });
-      pollRef.current = setInterval(async () => {
-        const progress = await bankConnectionsApiService
-          .getSyncJobProgress(account.connection_id!)
-          .catch(() => null);
-        if (progress && progress.status !== 'running') {
-          if (pollRef.current) clearInterval(pollRef.current);
-          setSyncing(false);
-          if (progress.status === 'completed') {
-            toast.success('Sync completed', {
-              description: `${progress.transactions_synced} transactions synced`,
-            });
-            fetchData(account.id);
-            onAccountUpdated();
-          } else {
-            toast.error('Sync failed', { description: progress.errors?.[0] });
-          }
-        }
-      }, 1500);
-    } catch (e) {
-      toast.error('Sync failed', {
-        description: e instanceof Error ? e.message : undefined,
-      });
-      setSyncing(false);
-    }
-  };
-
   const handleEdit = async (form: {
     name: string;
     type: string;
     entity: string;
-    image_key?: string | null;
+    shared_with_household?: boolean;
+    opening_balance?: number | null;
+    opening_balance_date?: string | null;
+    sync_mode?: SyncMode;
   }) => {
     if (!account) return;
     setEditLoading(true);
     try {
-      await transactionsApiService.updateAccount(account.id, {
+      const updated = await transactionsApiService.updateAccount(account.id, {
         name: form.name,
-        image_key: form.image_key,
+        type: form.type,
+        entity: form.entity,
+        shared_with_household: form.shared_with_household,
+        sync_mode: form.sync_mode,
+        ...(form.opening_balance !== undefined
+          ? {
+              opening_balance: form.opening_balance,
+              opening_balance_date: form.opening_balance_date,
+            }
+          : {}),
       });
-      onAccountUpdated();
+
+      if (
+        form.opening_balance !== undefined &&
+        form.opening_balance !== null &&
+        (updated.opening_balance === undefined ||
+          updated.opening_balance === null)
+      ) {
+        toast.error('Opening balance did not save', {
+          description:
+            'The server accepted the update but did not persist opening balance. Restart the backend container and try again.',
+        });
+        return;
+      }
+
+      const updatedWithBalance: AccountWithBalance = {
+        ...updated,
+        balance:
+          typeof updated.balance === 'number'
+            ? updated.balance
+            : Number(String(updated.balance || '0').replace(/[^0-9.-]+/g, '')),
+        lastUpdated: String(updated.date || account.lastUpdated || ''),
+      };
+      toast.success('Account updated', {
+        description:
+          form.opening_balance !== undefined
+            ? `Opening balance: ${updated.opening_balance ?? 'removed'}`
+            : undefined,
+      });
+      onAccountUpdated(updatedWithBalance);
       setShowEdit(false);
     } catch (e) {
       toast.error('Failed to update', {
@@ -311,37 +312,6 @@ export function AccountDetailPanel({
     }
   };
 
-  const handleSetBalance = async (data: { balance: number; date: string }) => {
-    if (!account) return;
-    await transactionsApiService.setAccountBalance({
-      account: account.id,
-      balance: data.balance,
-      date: data.date,
-    });
-    fetchData(account.id);
-    onAccountUpdated();
-    setShowSetBalance(false);
-  };
-
-  const handleDisconnect = async (deleteData: boolean) => {
-    if (!account?.connection_id) return;
-    setEditLoading(true);
-    try {
-      await bankConnectionsApiService.deleteConnection(
-        account.connection_id,
-        deleteData
-      );
-      onAccountUpdated();
-      setShowDisconnect(false);
-    } catch (e) {
-      toast.error('Failed to disconnect', {
-        description: e instanceof Error ? e.message : undefined,
-      });
-    } finally {
-      setEditLoading(false);
-    }
-  };
-
   if (!account) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center px-8">
@@ -350,8 +320,8 @@ export function AccountDetailPanel({
           Select an account
         </p>
         <p className="text-sm text-muted-foreground/60 mt-1">
-          Choose an account from the list to view details, balance history, and
-          recent transactions.
+          Choose an account from the list to view balance history, transactions,
+          and statements.
         </p>
       </div>
     );
@@ -359,295 +329,321 @@ export function AccountDetailPanel({
 
   const entityLogo = getEntityLogo(account.entity || '');
   const isLiability = (account.account_type || account.type) === 'credit_card';
-  const hasError = account.connection_status === 'error';
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Account header */}
-      <div className="px-6 pt-5 pb-4 border-b border-border/60">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-              {entityLogo ? (
-                <img
-                  src={entityLogo}
-                  alt={account.institution_name || ''}
-                  className="w-6 h-6 object-contain"
-                />
-              ) : (
-                <Landmark className="h-5 w-5 text-muted-foreground" />
-              )}
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-foreground leading-tight flex items-center gap-2">
-                {account.name}
+      <div className="flex-shrink-0 px-6 py-3 border-b border-border/60">
+        <div className="flex items-start gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+            {entityLogo ? (
+              <img
+                src={entityLogo}
+                alt={account.institution_name || ''}
+                className="w-5 h-5 object-contain"
+              />
+            ) : (
+              <Landmark className="h-4 w-4 text-muted-foreground" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0 space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-base font-semibold text-foreground leading-tight flex items-center gap-1.5 min-w-0">
+                <span className="truncate">{account.name}</span>
                 {isShared && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                    <Users className="h-3 w-3" />
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-primary/10 px-1.5 py-px text-[10px] font-medium text-primary flex-shrink-0">
+                    <Users className="h-2.5 w-2.5" />
                     Shared
                   </span>
                 )}
               </h2>
-              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                <span className="text-sm text-muted-foreground">
-                  {account.institution_name ||
-                    account.entity_display ||
-                    'Manual'}
+              <div className="flex items-center gap-0.5 flex-shrink-0">
+                {isInHousehold && (
+                  <Button
+                    size="sm"
+                    variant={isShared ? 'secondary' : 'ghost'}
+                    onClick={async () => {
+                      const newValue = !isShared;
+                      setIsShared(newValue);
+                      try {
+                        await transactionsApiService.updateAccount(account.id, {
+                          shared_with_household: newValue,
+                        });
+                        onAccountUpdated();
+                        toast.success(
+                          newValue
+                            ? 'Account shared with household'
+                            : 'Account is now personal'
+                        );
+                      } catch (e) {
+                        setIsShared(!newValue);
+                        toast.error('Failed to update sharing', {
+                          description:
+                            e instanceof Error ? e.message : undefined,
+                        });
+                      }
+                    }}
+                    className="h-7 px-2 text-xs"
+                  >
+                    <Users className="h-3 w-3 mr-1" />
+                    {isShared ? 'Shared' : 'Share'}
+                  </Button>
+                )}
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setShowEdit(true)}
+                  className="h-7 w-7"
+                  title="Edit account"
+                >
+                  <Edit2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted-foreground flex-wrap">
+              <span className="truncate">
+                {account.institution_name || account.entity_display || 'Manual'}
+              </span>
+              {account.account_number_last4 && (
+                <span className="text-muted-foreground/60 font-mono flex-shrink-0">
+                  ····{account.account_number_last4}
                 </span>
-                {account.account_number_last4 && (
-                  <span className="text-sm text-muted-foreground/60 font-mono">
-                    ····{account.account_number_last4}
-                  </span>
-                )}
-                <Badge variant="secondary" className="text-xs h-5">
-                  {account.account_type_display ||
-                    account.type_display ||
-                    'Account'}
-                </Badge>
-              </div>
-            </div>
-          </div>
-
-          {/* Sync status chip */}
-          {account.has_connection && (
-            <div
-              className={cn(
-                'flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium flex-shrink-0',
-                hasError
-                  ? 'bg-red-500/10 text-red-500'
-                  : 'bg-green-500/10 text-green-600'
               )}
-            >
-              {hasError ? (
-                <WifiOff className="h-3 w-3" />
-              ) : (
-                <Wifi className="h-3 w-3" />
-              )}
-              {hasError
-                ? 'Sync error'
-                : account.last_sync
-                  ? `Synced ${timeAgo(account.last_sync)}`
-                  : 'Connected'}
-            </div>
-          )}
-        </div>
-
-        {/* Hero balance */}
-        <div className="mt-4">
-          <p className="text-xs text-muted-foreground mb-1">Current Balance</p>
-          <div className="flex items-end gap-3">
-            <p
-              className={cn(
-                'text-3xl font-bold tabular-nums',
-                isLiability ? 'text-red-500' : 'text-foreground'
-              )}
-            >
-              {isLiability && account.balance < 0 ? '-' : ''}
-              {formatCurrency(Math.abs(account.balance), preferences.currency)}
-            </p>
-            {balanceChange !== null && (
-              <div
-                className={cn(
-                  'flex items-center gap-1 text-sm font-medium pb-1',
-                  balanceChange >= 0 ? 'text-green-600' : 'text-red-500'
-                )}
+              <Badge
+                variant="secondary"
+                className="text-[10px] h-4 px-1.5 flex-shrink-0"
               >
-                {balanceChange >= 0 ? (
-                  <TrendingUp className="h-4 w-4" />
-                ) : (
-                  <TrendingDown className="h-4 w-4" />
-                )}
-                {balanceChange >= 0 ? '+' : '-'}
-                {formatCurrency(
-                  Math.abs(balanceChange),
-                  preferences.currency,
-                  0
-                )}
-              </div>
-            )}
-          </div>
-          {account.lastUpdated && (
-            <p className="text-xs text-muted-foreground/60 mt-1">
-              Last updated{' '}
-              {new Date(account.lastUpdated + 'T00:00:00').toLocaleDateString(
-                undefined,
-                {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                }
-              )}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Balance chart */}
-      <div className="px-6 py-4 border-b border-border/40">
-        <p className="text-sm font-medium text-muted-foreground mb-3">
-          Balance History
-        </p>
-        {chartLoading ? (
-          <div className="h-32 flex items-center justify-center">
-            <LoadingSpinner />
-          </div>
-        ) : balanceHistory.length < 2 ? (
-          <div className="h-32 flex items-center justify-center">
-            <p className="text-sm text-muted-foreground/60">
-              Not enough data to show chart
-            </p>
-          </div>
-        ) : (
-          <BaseChart
-            type="line"
-            data={chartData}
-            options={chartOptions}
-            height="140px"
-          />
-        )}
-      </div>
-
-      {/* Recent Transactions */}
-      <div className="px-6 py-4 flex-1">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-medium text-muted-foreground">
-            Recent Transactions
-          </p>
-          <button
-            onClick={() => navigate(`/transactions?account=${account.id}`)}
-            className="text-xs text-primary hover:underline flex items-center gap-1"
-          >
-            View all
-            <ArrowRight className="h-3 w-3" />
-          </button>
-        </div>
-
-        {txLoading ? (
-          <div className="flex items-center justify-center h-24">
-            <LoadingSpinner />
-          </div>
-        ) : transactions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-24 text-center">
-            <ArrowUpDown className="h-6 w-6 text-muted-foreground/30 mb-2" />
-            <p className="text-sm text-muted-foreground/60">
-              No transactions found
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-0">
-            {transactions.map((tx, i) => {
-              const amount = parseFloat(tx.amount);
-              const isDebit = tx.transaction_type === 'debit';
-              return (
-                <div
-                  key={tx.id}
+                {account.account_type_display ||
+                  account.type_display ||
+                  'Account'}
+              </Badge>
+            </div>
+            <div className="mt-2.5 pt-2.5 border-t border-border/40">
+              <p className="text-xs text-muted-foreground mb-0.5">
+                Current Balance
+              </p>
+              <div className="flex items-end gap-2.5">
+                <p
                   className={cn(
-                    'flex items-center justify-between py-2.5',
-                    i < transactions.length - 1 && 'border-b border-border/30'
+                    'text-3xl font-bold tabular-nums leading-none',
+                    isLiability ? 'text-red-500' : 'text-foreground'
                   )}
                 >
-                  <div className="flex-1 min-w-0 mr-4">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {tx.description || '—'}
-                    </p>
-                    <p className="text-xs text-muted-foreground/70">
-                      {formatDate(tx.date, preferences.date_format)}
-                    </p>
-                  </div>
-                  <span
+                  {isLiability && account.balance < 0 ? '-' : ''}
+                  {formatCurrency(
+                    Math.abs(account.balance),
+                    preferences.currency
+                  )}
+                </p>
+                {balanceChange !== null && (
+                  <div
                     className={cn(
-                      'text-sm font-semibold tabular-nums flex-shrink-0',
-                      isDebit ? 'text-red-500' : 'text-green-600'
+                      'flex items-center gap-1 text-sm font-medium pb-0.5',
+                      balanceChange >= 0 ? 'text-green-600' : 'text-red-500'
                     )}
                   >
-                    {isDebit ? '-' : '+'}
-                    {formatCurrency(amount, preferences.currency)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Quick actions */}
-      <div className="px-6 py-4 border-t border-border/40 flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setShowEdit(true)}
-          className="h-8 text-xs"
-        >
-          <Edit2 className="h-3.5 w-3.5 mr-1.5" />
-          Edit
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setShowSetBalance(true)}
-          className="h-8 text-xs"
-        >
-          <Scale className="h-3.5 w-3.5 mr-1.5" />
-          Set Balance
-        </Button>
-        {isInHousehold && (
-          <Button
-            size="sm"
-            variant={isShared ? 'default' : 'outline'}
-            onClick={async () => {
-              const newValue = !isShared;
-              setIsShared(newValue);
-              try {
-                await transactionsApiService.updateAccount(account.id, {
-                  shared_with_household: newValue,
-                });
-                onAccountUpdated();
-                toast.success(
-                  newValue
-                    ? 'Account shared with household'
-                    : 'Account is now personal'
-                );
-              } catch (e) {
-                setIsShared(!newValue);
-                toast.error('Failed to update sharing', {
-                  description: e instanceof Error ? e.message : undefined,
-                });
-              }
-            }}
-            className="h-8 text-xs"
-          >
-            <Users className="h-3.5 w-3.5 mr-1.5" />
-            {isShared ? 'Shared' : 'Share'}
-          </Button>
-        )}
-        {account.has_connection && (
-          <>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleSync}
-              disabled={syncing}
-              className="h-8 text-xs"
-            >
-              {syncing ? (
-                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-              ) : (
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                    {balanceChange >= 0 ? (
+                      <TrendingUp className="h-4 w-4" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4" />
+                    )}
+                    {balanceChange >= 0 ? '+' : '-'}
+                    {formatCurrency(
+                      Math.abs(balanceChange),
+                      preferences.currency,
+                      0
+                    )}
+                  </div>
+                )}
+              </div>
+              {account.lastUpdated && (
+                <p className="text-xs text-muted-foreground/60 mt-1">
+                  Last updated{' '}
+                  {new Date(
+                    account.lastUpdated + 'T00:00:00'
+                  ).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </p>
               )}
-              Sync
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowDisconnect(true)}
-              className="h-8 text-xs text-muted-foreground hover:text-red-500 hover:border-red-500/40"
-            >
-              <Unlink className="h-3.5 w-3.5 mr-1.5" />
-              Disconnect
-            </Button>
-          </>
-        )}
+            </div>
+          </div>
+        </div>
       </div>
+      <Tabs
+        value={activeTab}
+        onValueChange={value => setActiveTab(value as AccountDetailTab)}
+        className="flex flex-col flex-1 min-h-0"
+      >
+        <div className="flex-shrink-0 border-b border-border/40 px-6 pt-3 pb-0">
+          <TabsList
+            className={cn(
+              'grid w-full sm:w-auto sm:inline-grid',
+              visibleTabCount === 3
+                ? 'grid-cols-3'
+                : visibleTabCount === 2
+                  ? 'grid-cols-2'
+                  : 'grid-cols-1'
+            )}
+          >
+            <TabsTrigger
+              value="balance"
+              className="flex items-center gap-2 text-xs sm:text-sm"
+            >
+              <LineChart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>Balance History</span>
+            </TabsTrigger>
+            {canShowTransactions && (
+              <TabsTrigger
+                value="transactions"
+                className="flex items-center gap-2 text-xs sm:text-sm"
+              >
+                <ArrowUpDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span>Transactions</span>
+              </TabsTrigger>
+            )}
+            {canShowStatements && (
+              <TabsTrigger
+                value="statements"
+                className="flex items-center gap-2 text-xs sm:text-sm"
+              >
+                <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span>Statements</span>
+              </TabsTrigger>
+            )}
+          </TabsList>
+        </div>
+
+        <TabsContent
+          value="balance"
+          className="mt-0 flex-1 overflow-y-auto px-6 py-4 focus-visible:outline-none"
+        >
+          {chartLoading ? (
+            <div className="h-48 flex items-center justify-center">
+              <LoadingSpinner />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {balanceHistory.length < 2 ? (
+                <div className="h-48 flex flex-col items-center justify-center text-center">
+                  <LineChart className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                  <p className="text-sm text-muted-foreground/60">
+                    {balanceHistory.length === 0
+                      ? 'No balance history yet'
+                      : 'Not enough data to show balance history'}
+                  </p>
+                </div>
+              ) : (
+                <BaseChart
+                  type="line"
+                  data={chartData}
+                  options={chartOptions}
+                  height="280px"
+                />
+              )}
+
+              {balanceRows.length > 0 && (
+                <div className="rounded-lg border border-border/60 bg-card/50">
+                  <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+                    <div>
+                      <h3 className="text-sm font-medium text-foreground">
+                        Balance Snapshots
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Dated balance records for this account
+                      </p>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {balanceRows.length} snapshot
+                      {balanceRows.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/30 text-xs uppercase text-muted-foreground">
+                        <tr>
+                          <th className="px-4 py-2 text-left font-medium">
+                            Date
+                          </th>
+                          <th className="px-4 py-2 text-right font-medium">
+                            Balance
+                          </th>
+                          <th className="px-4 py-2 text-right font-medium">
+                            Change
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/60">
+                        {balanceRows.map(row => (
+                          <tr key={row.date} className="hover:bg-muted/20">
+                            <td className="px-4 py-2 text-muted-foreground">
+                              {formatDate(row.date, preferences.date_format)}
+                            </td>
+                            <td className="px-4 py-2 text-right font-medium tabular-nums text-foreground">
+                              {formatCurrency(
+                                row.balance,
+                                preferences.currency
+                              )}
+                            </td>
+                            <td
+                              className={cn(
+                                'px-4 py-2 text-right font-medium tabular-nums',
+                                row.change === null
+                                  ? 'text-muted-foreground'
+                                  : row.change >= 0
+                                    ? 'text-green-600'
+                                    : 'text-red-500'
+                              )}
+                            >
+                              {row.change === null
+                                ? '—'
+                                : `${row.change >= 0 ? '+' : '-'}${formatCurrency(
+                                    Math.abs(row.change),
+                                    preferences.currency
+                                  )}`}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </TabsContent>
+
+        {canShowTransactions && (
+          <TabsContent
+            value="transactions"
+            className="mt-0 flex-1 overflow-y-auto px-6 py-4 focus-visible:outline-none"
+          >
+            <TransactionsPanel
+              accountId={account.id}
+              defaultAccountId={account.id}
+              hiddenColumns={['account']}
+              className="min-w-0"
+            />
+          </TabsContent>
+        )}
+
+        {canShowStatements && (
+          <TabsContent
+            value="statements"
+            className="mt-0 flex-1 overflow-y-auto px-6 py-4 focus-visible:outline-none"
+          >
+            <StorageLocationPanel
+              accountId={account.id}
+              accountName={account.name}
+              storageUri={account.storage_uri}
+              resolvedStorageUri={account.resolved_storage_uri}
+              onUploadComplete={onAccountUpdated}
+            />
+          </TabsContent>
+        )}
+      </Tabs>
 
       {/* Edit modal */}
       <AccountDetailModal
@@ -656,37 +652,10 @@ export function AccountDetailPanel({
         account={account}
         onSubmit={handleEdit}
         onDelete={handleDelete}
-        onSync={handleSync}
-        onDisconnect={() => {
-          setShowEdit(false);
-          setShowDisconnect(true);
-        }}
         accountTypeOptions={accountTypeOptions}
         entityOptions={entityOptions}
+        institutions={institutions}
         loading={editLoading}
-      />
-
-      {/* Set balance modal */}
-      <Modal
-        isOpen={showSetBalance}
-        onClose={() => setShowSetBalance(false)}
-        title="Set Balance"
-      >
-        <AccountBalanceForm
-          accountId={account.id}
-          accountName={account.name}
-          onSubmit={handleSetBalance}
-          onCancel={() => setShowSetBalance(false)}
-        />
-      </Modal>
-
-      {/* Disconnect modal */}
-      <DisconnectConfirmModal
-        isOpen={showDisconnect}
-        onClose={() => setShowDisconnect(false)}
-        onConfirm={handleDisconnect}
-        loading={editLoading}
-        accountName={account.name}
       />
     </div>
   );

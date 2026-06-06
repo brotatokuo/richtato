@@ -16,10 +16,6 @@ pip install -e .
 richtato
 
 # Direct commands
-richtato dev        # Start/stop dev containers
-richtato logs       # View container logs
-richtato shell      # Open container shell
-richtato migrate    # Run Django migrations
 richtato build      # Build Docker image locally
 richtato publish    # Build & push to Docker Hub
 ```
