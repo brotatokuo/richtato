@@ -67,6 +67,7 @@ class NormalizedStatementRow:
     activity_type: str = ""
     symbol: str = ""
     quantity: str = ""
+    running_balance: str = ""
     status: str = "new"
     raw_data: dict[str, Any] = field(default_factory=dict)
 
@@ -86,6 +87,7 @@ class NormalizedStatementRow:
             "activity_type": self.activity_type,
             "symbol": self.symbol,
             "quantity": self.quantity,
+            "running_balance": self.running_balance,
             "status": self.status,
         }
 
@@ -213,6 +215,7 @@ class StatementImportService:
                         "activity_type": row.activity_type,
                         "symbol": row.symbol,
                         "quantity": row.quantity,
+                        "running_balance": row.running_balance,
                         "raw_row": row.raw_data,
                     },
                 )
@@ -881,6 +884,10 @@ class StatementImportService:
             activity_type = self._first_value(raw_row, config.get("activity", []))
             symbol = self._first_value(raw_row, config.get("symbol", []))
             quantity = self._first_value(raw_row, config.get("quantity", []))
+        running_balance = self._first_value(
+            raw_row,
+            ["Running Bal.", "Running Bal", "Running Balance", "Balance"],
+        )
 
         posted_date = self._parse_date(date_value)
         amount, transaction_type = self._parse_amount(
@@ -918,6 +925,7 @@ class StatementImportService:
             activity_type=activity_type,
             symbol=symbol,
             quantity=quantity,
+            running_balance=running_balance,
             raw_data={key: self._stringify_value(value) for key, value in raw_row.items()},
         )
 

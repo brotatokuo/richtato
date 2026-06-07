@@ -13,6 +13,9 @@ export interface Transaction {
   date: string;
   amount: number;
   signed_amount: number;
+  statement_running_balance?: string | null;
+  computed_running_balance?: string | null;
+  running_balance_diff?: string | null;
   description: string;
   transaction_type: 'debit' | 'credit';
   transaction_type_display: string;

@@ -34,8 +34,14 @@ SUMMARY_ENDING_RE = re.compile(
 TRANSACTION_HEADER_RE = re.compile(
     r"^(\d{1,2}/\d{1,2}/\d{4})\s+"
     r"(.+?)\s+"
-    r"(-?\$[\d,]+\.\d{2})\s+"
+    r"(\(?-?\$[\d,]+\.\d{2}\)?)\s+"
     r"\$([\d,]+\.\d{2})$",
+)
+TRANSACTION_START_RE = re.compile(
+    r"^(\d{1,2}/\d{1,2}/\d{4})\s+(.+)$",
+)
+AMOUNT_BALANCE_RE = re.compile(
+    r"^(\(?-?\$[\d,]+\.\d{2}\)?)\s+\$([\d,]+\.\d{2})$",
 )
 BALANCE_ONLY_RE = re.compile(
     r"^(\d{1,2}/\d{1,2}/\d{4})\s+"
@@ -70,7 +76,7 @@ SKIP_LINE_PREFIXES = (
     "visit membershiprewards",
     "p.o. box",
 )
-CONTINUATION_STOP_PREFIXES = ("continued on next page", *SKIP_LINE_PREFIXES)
+CONTINUATION_STOP_PREFIXES = ("continued on next page", "continued on reverse", *SKIP_LINE_PREFIXES)
 
 
 def parse_amex_checking_pdf(content: bytes) -> pd.DataFrame:
@@ -200,7 +206,7 @@ def _extract_activity_lines(text: str) -> list[str]:
             continue
         if lowered.startswith("important notice"):
             break
-        if lowered.startswith("continued on next page"):
+        if lowered.startswith("continued on"):
             skip_until_next_transaction = True
             continue
         if skip_until_next_transaction:
@@ -258,22 +264,63 @@ def _parse_activity_lines(
             continue
 
         header_match = TRANSACTION_HEADER_RE.match(normalized)
-        if not header_match:
+        if header_match:
+            posted_date, description, amount_text, balance = header_match.groups()
+            if description.strip().lower() in SKIP_DESCRIPTIONS:
+                index += 1
+                continue
+
+            continuation_parts: list[str] = []
+            index += 1
+            while index < len(lines):
+                next_line = lines[index].strip()
+                if not next_line:
+                    index += 1
+                    continue
+                next_normalized = " ".join(next_line.split())
+                if DATE_PREFIX_RE.match(next_normalized):
+                    break
+                if _should_stop_continuation(next_line):
+                    break
+                if _should_skip_activity_line(next_line):
+                    index += 1
+                    continue
+                continuation_parts.append(next_normalized)
+                index += 1
+
+            full_description = " ".join([description.strip(), *continuation_parts]).strip()
+            rows.append(
+                _build_row(
+                    posted_date=posted_date,
+                    description=full_description,
+                    amount_text=amount_text,
+                    balance=balance,
+                    statement_year=statement_year,
+                    account_hint=account_hint,
+                )
+            )
+            continue
+
+        start_match = TRANSACTION_START_RE.match(normalized)
+        if not start_match:
             index += 1
             continue
 
-        posted_date, description, amount_text, balance = header_match.groups()
+        posted_date, description = start_match.groups()
         if description.strip().lower() in SKIP_DESCRIPTIONS:
             index += 1
             continue
 
         continuation_parts: list[str] = []
+        amount_text = ""
+        balance = ""
         index += 1
         while index < len(lines):
             next_line = lines[index].strip()
             if not next_line:
                 index += 1
                 continue
+
             next_normalized = " ".join(next_line.split())
             if DATE_PREFIX_RE.match(next_normalized):
                 break
@@ -282,8 +329,18 @@ def _parse_activity_lines(
             if _should_skip_activity_line(next_line):
                 index += 1
                 continue
+
+            amount_balance = AMOUNT_BALANCE_RE.match(next_normalized)
+            if amount_balance:
+                amount_text, balance = amount_balance.groups()
+                index += 1
+                break
+
             continuation_parts.append(next_normalized)
             index += 1
+
+        if not amount_text or not balance:
+            continue
 
         full_description = " ".join([description.strip(), *continuation_parts]).strip()
         rows.append(

@@ -1,5 +1,6 @@
 """Views for financial accounts API."""
 
+from decimal import Decimal, InvalidOperation
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -526,6 +527,15 @@ class AccountTransactionsAPIView(APIView):
         start = (page - 1) * page_size
         end = start + page_size
         transactions = queryset[start:end]
+        running_map: dict[int, Decimal] = {}
+        running_total = Decimal("0")
+        ordered_all = queryset.order_by("date", "created_at", "id").only()
+        for transaction in ordered_all:
+            signed = transaction.amount
+            if transaction.transaction_type == "debit":
+                signed = -signed
+            running_total = (running_total + signed).quantize(Decimal("0.01"))
+            running_map[transaction.id] = running_total
 
         columns = [
             {"field": "id", "title": "ID"},
@@ -535,16 +545,46 @@ class AccountTransactionsAPIView(APIView):
             {"field": "transaction_type", "title": "Type"},
         ]
 
-        rows = [
-            {
-                "id": t.id,
-                "date": t.date.isoformat() if t.date else None,
-                "description": t.description or "",
-                "amount": str(t.amount),
-                "transaction_type": t.transaction_type,
-            }
-            for t in transactions
-        ]
+        rows = []
+        for transaction in transactions:
+            raw_data = transaction.raw_data or {}
+            statement_running = raw_data.get("running_balance")
+            if statement_running in (None, ""):
+                raw_row = raw_data.get("raw_row") or {}
+                statement_running = (
+                    raw_row.get("Running Bal.")
+                    or raw_row.get("Running Bal")
+                    or raw_row.get("Running Balance")
+                    or raw_row.get("Balance")
+                )
+            computed_running = running_map.get(transaction.id)
+            diff_value = None
+            if computed_running is not None and statement_running not in (None, ""):
+                normalized = (
+                    str(statement_running).replace("$", "").replace(",", "").replace("(", "-").replace(")", "").strip()
+                )
+                try:
+                    statement_decimal = Decimal(normalized).quantize(Decimal("0.01"))
+                    diff_value = str((statement_decimal - computed_running).quantize(Decimal("0.01")))
+                except (InvalidOperation, ValueError):
+                    diff_value = None
+
+            rows.append(
+                {
+                    "id": transaction.id,
+                    "date": transaction.date.isoformat() if transaction.date else None,
+                    "description": transaction.description or "",
+                    "amount": str(transaction.amount),
+                    "transaction_type": transaction.transaction_type,
+                    "statement_running_balance": str(statement_running)
+                    if statement_running not in (None, "")
+                    else None,
+                    "computed_running_balance": (
+                        str(computed_running.quantize(Decimal("0.01"))) if computed_running is not None else None
+                    ),
+                    "running_balance_diff": diff_value,
+                }
+            )
 
         return Response(
             {

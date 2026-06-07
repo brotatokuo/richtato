@@ -24,6 +24,7 @@ import {
   transactionsApiService,
 } from '@/lib/api/transactions';
 import { formatCurrency, formatDate } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import {
   DisplayTransaction,
   TransactionFormData,
@@ -93,6 +94,7 @@ export function TransactionTable({
 }) {
   const { preferences } = usePreferences();
   const defaultAccountValue = defaultAccountId ? String(defaultAccountId) : '';
+  const showLedgerBalanceColumns = Boolean(defaultAccountId);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategories, setFilterCategories] = useState<string[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -558,6 +560,20 @@ export function TransactionTable({
         label: 'Amount',
         filterable: false,
       },
+      ...(showLedgerBalanceColumns
+        ? [
+            {
+              field: 'computedRunningBalance' as keyof DisplayTransaction,
+              label: 'Running Balance',
+              filterable: false,
+            },
+            {
+              field: 'runningBalanceDiff' as keyof DisplayTransaction,
+              label: 'Balance Diff',
+              filterable: false,
+            },
+          ]
+        : []),
     ].filter(header => !hiddenColumns.includes(header.field));
   };
 
@@ -656,6 +672,45 @@ export function TransactionTable({
           >
             {sign}
             {formatCurrency(Math.abs(transaction.amount), preferences.currency)}
+          </TableCell>
+        );
+      }
+      case 'computedRunningBalance': {
+        return (
+          <TableCell
+            key={String(field)}
+            className="text-right tabular-nums text-muted-foreground"
+          >
+            {transaction.computedRunningBalance == null
+              ? '—'
+              : formatCurrency(
+                  transaction.computedRunningBalance,
+                  preferences.currency
+                )}
+          </TableCell>
+        );
+      }
+      case 'runningBalanceDiff': {
+        const diff = transaction.runningBalanceDiff;
+        const hasDiff = diff != null;
+        const positive = (diff ?? 0) > 0;
+        const negative = (diff ?? 0) < 0;
+        return (
+          <TableCell
+            key={String(field)}
+            className={cn(
+              'text-right tabular-nums',
+              !hasDiff && 'text-muted-foreground',
+              positive && 'text-emerald-600 dark:text-emerald-300',
+              negative && 'text-destructive'
+            )}
+          >
+            {!hasDiff
+              ? '—'
+              : `${positive ? '+' : negative ? '-' : ''}${formatCurrency(
+                  Math.abs(diff),
+                  preferences.currency
+                )}`}
           </TableCell>
         );
       }
@@ -848,6 +903,22 @@ export function TransactionTable({
                           {' • '}
                           {t.category}
                         </div>
+                        {showLedgerBalanceColumns && (
+                          <div className="text-[11px] text-muted-foreground whitespace-normal break-words">
+                            Running:{' '}
+                            {t.computedRunningBalance == null
+                              ? '—'
+                              : formatCurrency(
+                                  t.computedRunningBalance,
+                                  preferences.currency
+                                )}
+                            {' • '}
+                            Diff:{' '}
+                            {t.runningBalanceDiff == null
+                              ? '—'
+                              : `${t.runningBalanceDiff > 0 ? '+' : t.runningBalanceDiff < 0 ? '-' : ''}${formatCurrency(Math.abs(t.runningBalanceDiff), preferences.currency)}`}
+                          </div>
+                        )}
                       </div>
                       <div
                         className={`sm:ml-4 sm:text-right text-sm font-semibold ${color}`}

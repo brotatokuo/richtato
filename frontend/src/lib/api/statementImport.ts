@@ -25,6 +25,7 @@ export interface StatementImportRow {
   activity_type: string;
   symbol: string;
   quantity: string;
+  running_balance?: string;
   status: 'new' | 'duplicate' | 'possible_changed';
 }
 

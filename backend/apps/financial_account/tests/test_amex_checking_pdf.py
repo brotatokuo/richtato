@@ -8,6 +8,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
+from rest_framework.test import APIClient
 
 from apps.financial_account.institutions.parsers.amex_checking_pdf import (
     parse_amex_checking_balance_summary,
@@ -65,6 +66,61 @@ class TestAmexCheckingPdfParser:
         assert frame.iloc[0]["Balance"] == "8998.61"
         assert frame.iloc[-1]["Balance"] == "10280.56"
 
+    def test_parse_split_rows_with_trailing_amount_balance(self, monkeypatch):
+        sample_text = """
+American Express Rewards Checking
+Statement Date: 08/31/2024 Account Ending: *0118
+Account Activity
+Date Description Credits Debits Balance
+08/09/2024 Online Transfer / Payment: Credit
+LG ENERGY SOLUTI DIRECT DEP *****0019
+$2,308.26 $7,259.65
+08/27/2024 Online Transfer / Payment: Debit
+AMEX EPAYMENT ACH PMT *****0019
+($185.97) $7,073.68
+08/31/2024 Ending Balance $7,073.68
+""".strip()
+        monkeypatch.setattr(
+            "apps.financial_account.institutions.parsers.amex_checking_pdf._extract_pdf_text",
+            lambda _content: sample_text,
+        )
+
+        frame = parse_amex_checking_pdf(b"%PDF-1.4")
+
+        assert len(frame) == 2
+        assert frame.iloc[0]["Amount"] == "2308.26"
+        assert frame.iloc[0]["Balance"] == "7259.65"
+        assert frame.iloc[1]["Amount"] == "(185.97)"
+        assert frame.iloc[1]["Balance"] == "7073.68"
+
+    def test_parse_inline_parenthesized_debits_with_continuation(self, monkeypatch):
+        sample_text = """
+American Express Rewards Checking
+Statement Date: 05/31/2025 Account Ending: *0118
+Account Activity
+Date Description Credits Debits Balance
+05/01/2025 Beginning Balance $4,259.75
+05/01/2025 Online Transfer / Payment: Debit ($69.37) $4,190.38
+CITI CARD ONLINE PAYMENT *****9681
+ID 009002315550209
+05/02/2025 Online Transfer / Payment: Credit $2,849.90 $6,940.01
+GUSTO PAY 516812 *****0021
+ID 009002315986217
+05/31/2025 Ending Balance $6,940.01
+""".strip()
+        monkeypatch.setattr(
+            "apps.financial_account.institutions.parsers.amex_checking_pdf._extract_pdf_text",
+            lambda _content: sample_text,
+        )
+
+        frame = parse_amex_checking_pdf(b"%PDF-1.4")
+
+        assert len(frame) == 2
+        assert frame.iloc[0]["Amount"] == "(69.37)"
+        assert frame.iloc[0]["Balance"] == "4190.38"
+        assert "CITI CARD ONLINE PAYMENT" in frame.iloc[0]["Description"]
+        assert frame.iloc[1]["Amount"] == "2849.90"
+
 
 class TestAmexCheckingBalanceSummary:
     def test_extract_balance_summary_from_january_fixture(self):
@@ -104,10 +160,12 @@ class TestAmexCheckingPdfImport:
         payroll = next(row for row in result.rows if "GUSTO PAY" in row.description)
         assert payroll.transaction_type == "credit"
         assert payroll.amount == Decimal("4012.45")
+        assert payroll.running_balance
 
         interest = next(row for row in result.rows if row.description.startswith("Interest Deposit"))
         assert interest.transaction_type == "credit"
         assert interest.amount == Decimal("4.03")
+        assert interest.running_balance == "10280.56"
 
         assert result.balance_summary == {
             "beginning_balance": "9005.23",
@@ -144,6 +202,12 @@ class TestAmexCheckingPdfImport:
         )
         assert opening_balance.amount == Decimal("9005.23")
         assert opening_balance.date.isoformat() == "2026-01-01"
+
+        imported_interest = Transaction.objects.get(
+            account=amex_checking_account,
+            description__startswith="Interest Deposit",
+        )
+        assert imported_interest.raw_data["running_balance"] == "10280.56"
 
     def test_preview_offers_opening_balance_update_when_account_differs(self, amex_checking_account):
         AccountService().upsert_opening_balance(
@@ -185,3 +249,54 @@ class TestAmexCheckingPdfImport:
 def test_supported_extensions_for_amex_checking_is_pdf_only():
     extensions = supported_extensions_for_parser("amex_checking")
     assert extensions == {".pdf"}
+
+
+@pytest.mark.django_db
+def test_transactions_api_returns_computed_and_statement_running_balances(amex_checking_account):
+    user = amex_checking_account.user
+    Transaction.objects.create(
+        user=user,
+        account=amex_checking_account,
+        date=date(2026, 1, 1),
+        amount=Decimal("1000.00"),
+        transaction_type="credit",
+        description=OPENING_BALANCE_DESCRIPTION,
+        sync_source="manual",
+        status="reconciled",
+    )
+    Transaction.objects.create(
+        user=user,
+        account=amex_checking_account,
+        date=date(2026, 1, 2),
+        amount=Decimal("120.00"),
+        transaction_type="debit",
+        description="Imported debit",
+        sync_source="csv",
+        status="posted",
+        raw_data={"running_balance": "880.00"},
+    )
+    Transaction.objects.create(
+        user=user,
+        account=amex_checking_account,
+        date=date(2026, 1, 3),
+        amount=Decimal("50.00"),
+        transaction_type="debit",
+        description="Manual debit",
+        sync_source="manual",
+        status="posted",
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+    response = client.get(f"/api/v1/transactions/?account_id={amex_checking_account.id}&page_size=100")
+    assert response.status_code == 200
+
+    payload = response.json()["transactions"]
+    by_description = {row["description"]: row for row in payload}
+    assert by_description[OPENING_BALANCE_DESCRIPTION]["computed_running_balance"] == "1000.00"
+    assert by_description["Imported debit"]["computed_running_balance"] == "880.00"
+    assert by_description["Imported debit"]["statement_running_balance"] == "880.00"
+    assert by_description["Imported debit"]["running_balance_diff"] == "0.00"
+    assert by_description["Manual debit"]["computed_running_balance"] == "830.00"
+    assert by_description["Manual debit"]["statement_running_balance"] is None
+    assert by_description["Manual debit"]["running_balance_diff"] is None

@@ -91,9 +91,34 @@ export function StatementUploadDialog({
   const openingBalanceAction = preview?.reconciliation?.opening_balance_action;
   const showOpeningBalanceConfirmation =
     needsOpeningBalanceConfirmation(openingBalanceAction);
+  const previewSampleRows = useMemo(
+    () => (preview ? preview.rows.slice(0, 8) : []),
+    [preview]
+  );
 
   const formatOpeningBalance = (value: string | undefined) => {
     if (!value) return 'None set';
+    const parsed = Number(value.replace(/,/g, ''));
+    if (Number.isNaN(parsed)) return `$${value}`;
+    return formatCurrency(parsed);
+  };
+
+  const formatSignedStatementAmount = (
+    amount: string | undefined,
+    transactionType: 'debit' | 'credit'
+  ) => {
+    if (!amount) return '—';
+    const parsed = Number(amount.replace(/,/g, ''));
+    if (Number.isNaN(parsed)) {
+      return `${transactionType === 'credit' ? '+' : '-'}$${amount}`;
+    }
+    const signed = transactionType === 'credit' ? parsed : -parsed;
+    const prefix = signed >= 0 ? '+' : '-';
+    return `${prefix}${formatCurrency(Math.abs(signed))}`;
+  };
+
+  const formatRunningBalance = (value: string | undefined) => {
+    if (!value) return '—';
     const parsed = Number(value.replace(/,/g, ''));
     if (Number.isNaN(parsed)) return `$${value}`;
     return formatCurrency(parsed);
@@ -429,6 +454,71 @@ export function StatementUploadDialog({
                 <div className="mt-3">
                   <StatementReconciliationSummary result={preview} />
                 </div>
+                {previewSampleRows.length > 0 && (
+                  <div className="mt-3 overflow-x-auto rounded-md border border-border/70">
+                    <table className="w-full min-w-[560px] text-xs">
+                      <thead className="bg-muted/30 text-muted-foreground">
+                        <tr>
+                          <th className="px-2 py-1.5 text-left font-medium">
+                            Date
+                          </th>
+                          <th className="px-2 py-1.5 text-left font-medium">
+                            Description
+                          </th>
+                          <th className="px-2 py-1.5 text-right font-medium">
+                            Amount
+                          </th>
+                          <th className="px-2 py-1.5 text-right font-medium">
+                            Running balance
+                          </th>
+                          <th className="px-2 py-1.5 text-left font-medium">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewSampleRows.map(row => (
+                          <tr
+                            key={row.source_row_hash}
+                            className="border-t border-border/50"
+                          >
+                            <td className="px-2 py-1.5 text-muted-foreground">
+                              {formatDate(row.posted_date)}
+                            </td>
+                            <td className="max-w-[280px] truncate px-2 py-1.5 text-foreground">
+                              {row.description}
+                            </td>
+                            <td
+                              className={cn(
+                                'px-2 py-1.5 text-right tabular-nums font-medium',
+                                row.transaction_type === 'credit'
+                                  ? 'text-emerald-600 dark:text-emerald-300'
+                                  : 'text-destructive'
+                              )}
+                            >
+                              {formatSignedStatementAmount(
+                                row.amount,
+                                row.transaction_type
+                              )}
+                            </td>
+                            <td className="px-2 py-1.5 text-right tabular-nums text-muted-foreground">
+                              {formatRunningBalance(row.running_balance)}
+                            </td>
+                            <td className="px-2 py-1.5 capitalize text-muted-foreground">
+                              {row.status.replace('_', ' ')}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {preview.rows.length > previewSampleRows.length && (
+                      <p className="border-t border-border/50 px-2 py-1.5 text-[11px] text-muted-foreground">
+                        Showing first {previewSampleRows.length} of{' '}
+                        {preview.rows.length} parsed rows.
+                      </p>
+                    )}
+                  </div>
+                )}
                 {showOpeningBalanceConfirmation && (
                   <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
                     <p className="text-sm font-medium text-foreground">
