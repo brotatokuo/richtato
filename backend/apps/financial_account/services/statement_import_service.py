@@ -935,11 +935,12 @@ class StatementImportService:
         seen_hashes = set()
 
         for row in result.rows:
-            if row.source_row_hash in seen_hashes:
+            within_file_key = f"{row.source_row_hash}:{row.row_number}"
+            if within_file_key in seen_hashes:
                 row.status = "duplicate"
                 result.duplicate_count += 1
                 continue
-            seen_hashes.add(row.source_row_hash)
+            seen_hashes.add(within_file_key)
 
             if row.source_row_hash in existing_hashes:
                 row.status = "duplicate"
@@ -1046,6 +1047,14 @@ class StatementImportService:
             if amount is None:
                 return None, "debit"
             return amount, type_normalized
+
+        if type_normalized in ("sale", "return", "payment"):
+            amount = self._decimal(amount_value)
+            if amount is None:
+                return None, "debit"
+            if type_normalized == "sale":
+                return amount, "debit"
+            return amount, "credit"
 
         if debit_value:
             amount = self._decimal(debit_value)

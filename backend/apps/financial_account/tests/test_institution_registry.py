@@ -154,6 +154,30 @@ def test_parser_key_for_account_routes_robinhood_credit_card():
 
 
 @pytest.mark.django_db
+def test_parser_key_for_account_routes_chase_credit_card():
+    user = User.objects.create_user(username="chase-registry", email="chase@test.com", password="x")
+    institution, _ = FinancialInstitution.objects.get_or_create(
+        slug="chase",
+        defaults={"name": "Chase"},
+    )
+    credit_account = FinancialAccount.objects.create(
+        user=user,
+        name="Sapphire Reserve",
+        account_type="credit_card",
+        institution=institution,
+    )
+    checking_account = FinancialAccount.objects.create(
+        user=user,
+        name="Chase Checking",
+        account_type="checking",
+        institution=institution,
+    )
+
+    assert parser_key_for_account(credit_account) == "chase_credit"
+    assert parser_key_for_account(checking_account) == "chase"
+
+
+@pytest.mark.django_db
 def test_parser_key_for_account_routes_robinhood_investment():
     user = User.objects.create_user(username="robinhood-inv", email="rh-inv@test.com", password="x")
     institution, _ = FinancialInstitution.objects.get_or_create(
@@ -174,6 +198,8 @@ def test_supported_file_types_for_robinhood_credit():
     assert supported_file_types_for_parser("robinhood_credit") == ["pdf"]
     assert supported_extensions_for_parser("robinhood_credit") == {".pdf"}
     assert ".pdf" not in supported_extensions_for_parser("chase")
+    assert supported_file_types_for_parser("chase_credit") == ["pdf"]
+    assert supported_extensions_for_parser("chase_credit") == {".pdf"}
 
 
 def test_supported_file_types_for_robinhood_bank():
@@ -208,6 +234,15 @@ def test_get_supported_institutions_includes_amex_checking_pdf():
     assert amex_checking["slug"] == "american_express"
     assert amex_checking["account_types"] == ["checking"]
     assert amex_checking["file_types"] == ["pdf"]
+
+
+def test_get_supported_institutions_includes_chase_credit_pdf():
+    institutions = get_supported_institutions()
+    chase_credit = next(item for item in institutions if item["id"] == "chase_credit")
+
+    assert chase_credit["slug"] == "chase"
+    assert chase_credit["account_types"] == ["credit_card"]
+    assert chase_credit["file_types"] == ["pdf"]
 
 
 def test_create_serializer_accepts_amex_checking():
