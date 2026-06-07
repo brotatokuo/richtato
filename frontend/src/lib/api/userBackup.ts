@@ -1,4 +1,5 @@
 import { csrfService } from './csrf';
+import { fetchWithAuth } from './fetchClient';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -45,7 +46,7 @@ class UserBackupApi {
     options: RequestInit
   ): Promise<Response> {
     const csrfToken = await csrfService.getCSRFToken();
-    let response = await fetch(url, {
+    let response = await fetchWithAuth(url, {
       ...options,
       credentials: 'include',
       headers: {
@@ -57,7 +58,7 @@ class UserBackupApi {
 
     if (response.status === 403) {
       const refreshedToken = await csrfService.refreshToken();
-      response = await fetch(url, {
+      response = await fetchWithAuth(url, {
         ...options,
         credentials: 'include',
         headers: {
@@ -96,14 +97,17 @@ class UserBackupApi {
   }
 
   async getImportStatus(): Promise<BackupImportStatus> {
-    const response = await fetch(`${API_BASE}/auth/backup/import/status/`, {
-      credentials: 'include',
-    });
+    const response = await fetchWithAuth(
+      `${API_BASE}/auth/backup/import/status/`,
+      {
+        credentials: 'include',
+      }
+    );
     return this.handleJsonResponse<BackupImportStatus>(response);
   }
 
   async downloadJsonBackup(): Promise<void> {
-    const response = await fetch(`${API_BASE}/auth/backup/export/`, {
+    const response = await fetchWithAuth(`${API_BASE}/auth/backup/export/`, {
       credentials: 'include',
     });
     if (!response.ok) {
@@ -138,7 +142,7 @@ class UserBackupApi {
     if (filters.accountId)
       url.searchParams.set('account_id', String(filters.accountId));
 
-    const response = await fetch(url.toString(), {
+    const response = await fetchWithAuth(url.toString(), {
       credentials: 'include',
     });
     if (!response.ok) {

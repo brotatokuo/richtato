@@ -4,6 +4,8 @@
  * Subclass this in each service to eliminate repeated getHeaders /
  * handleResponse / fetch boilerplate.
  */
+import { fetchWithAuth } from './fetchClient';
+
 export class BaseApiClient {
   protected baseUrl: string;
 
@@ -29,7 +31,7 @@ export class BaseApiClient {
   }
 
   protected async get<T>(path: string): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
+    const response = await fetchWithAuth(`${this.baseUrl}${path}`, {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',

@@ -2,6 +2,8 @@
  * CSRF token utility for Django session authentication
  */
 
+import { fetchWithAuth } from './fetchClient';
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 class CSRFService {
@@ -39,7 +41,7 @@ class CSRFService {
     // read it back. Cache the result in case the cookie still isn't readable
     // (e.g. HttpOnly misconfiguration).
     try {
-      const response = await fetch(`${API_BASE}/auth/csrf/`, {
+      const response = await fetchWithAuth(`${API_BASE}/auth/csrf/`, {
         method: 'GET',
         credentials: 'include',
       });
@@ -98,7 +100,7 @@ class CSRFService {
    *   });
    */
   async fetchWithCsrf(url: string, options: RequestInit): Promise<Response> {
-    let response = await fetch(url, {
+    let response = await fetchWithAuth(url, {
       ...options,
       headers: {
         ...(options.headers ?? {}),
@@ -109,7 +111,7 @@ class CSRFService {
 
     if (response.status === 403) {
       await this.refreshToken();
-      response = await fetch(url, {
+      response = await fetchWithAuth(url, {
         ...options,
         headers: {
           ...(options.headers ?? {}),

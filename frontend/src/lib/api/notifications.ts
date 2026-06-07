@@ -1,4 +1,5 @@
 import { csrfService } from './csrf';
+import { fetchWithAuth } from './fetchClient';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -26,7 +27,7 @@ class NotificationsApi {
     if (options?.unread) params.set('unread', '1');
     if (options?.limit) params.set('limit', String(options.limit));
     const query = params.toString();
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${API_BASE}/core/notifications/${query ? `?${query}` : ''}`,
       { credentials: 'include' }
     );

@@ -1,4 +1,5 @@
 import { csrfService } from '@/lib/api/csrf';
+import { fetchWithAuth } from '@/lib/api/fetchClient';
 
 export type CategoryType =
   | 'income'
@@ -62,7 +63,7 @@ export class CategorySettingsApi {
   }
 
   async getCatalog(): Promise<{ categories: CategoryCatalogItem[] }> {
-    const res = await fetch(`${this.baseUrl}/`, {
+    const res = await fetchWithAuth(`${this.baseUrl}/`, {
       method: 'GET',
       headers: await this.getHeaders(),
       credentials: 'include',
@@ -74,7 +75,7 @@ export class CategorySettingsApi {
   async updateSettings(
     payload: CategorySettingsPayload
   ): Promise<{ success: boolean }> {
-    const res = await fetch(`${this.baseUrl}/`, {
+    const res = await fetchWithAuth(`${this.baseUrl}/`, {
       method: 'PUT',
       headers: await this.getHeaders(),
       credentials: 'include',
@@ -87,11 +88,14 @@ export class CategorySettingsApi {
   async getCategoryKeywords(categoryId: number): Promise<{
     keywords: CategoryKeyword[];
   }> {
-    const res = await fetch(`${this.keywordBase}/${categoryId}/keywords/`, {
-      method: 'GET',
-      headers: await this.getHeaders(),
-      credentials: 'include',
-    });
+    const res = await fetchWithAuth(
+      `${this.keywordBase}/${categoryId}/keywords/`,
+      {
+        method: 'GET',
+        headers: await this.getHeaders(),
+        credentials: 'include',
+      }
+    );
     if (!res.ok) throw new Error('Failed to load keywords');
     return res.json();
   }
@@ -191,7 +195,7 @@ class CardsApiService {
   private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/card-accounts`;
 
   async list(): Promise<CardAccountItem[]> {
-    const res = await fetch(`${this.baseUrl}/`, {
+    const res = await fetchWithAuth(`${this.baseUrl}/`, {
       method: 'GET',
       credentials: 'include',
     });
@@ -221,7 +225,7 @@ class CardsApiService {
     name: string;
     bank: string;
   }): Promise<CardAccountItem> {
-    const res = await fetch(`${this.baseUrl}/`, {
+    const res = await fetchWithAuth(`${this.baseUrl}/`, {
       method: 'POST',
       credentials: 'include',
       headers: await csrfService.getHeaders(),
@@ -235,7 +239,7 @@ class CardsApiService {
     id: number,
     payload: Partial<{ name: string; bank: string }>
   ): Promise<CardAccountItem> {
-    const res = await fetch(`${this.baseUrl}/${id}/`, {
+    const res = await fetchWithAuth(`${this.baseUrl}/${id}/`, {
       method: 'PATCH',
       credentials: 'include',
       headers: await csrfService.getHeaders(),
@@ -246,7 +250,7 @@ class CardsApiService {
   }
 
   async remove(id: number): Promise<void> {
-    const res = await fetch(`${this.baseUrl}/${id}/`, {
+    const res = await fetchWithAuth(`${this.baseUrl}/${id}/`, {
       method: 'DELETE',
       credentials: 'include',
       headers: await csrfService.getHeaders(),
@@ -257,7 +261,7 @@ class CardsApiService {
   async getFieldChoices(): Promise<{
     bank: Array<{ value: string; label: string }>;
   }> {
-    const res = await fetch(`${this.baseUrl}/field-choices/`, {
+    const res = await fetchWithAuth(`${this.baseUrl}/field-choices/`, {
       method: 'GET',
       credentials: 'include',
     });
@@ -295,7 +299,7 @@ class PreferencesApiService {
   private baseUrl = `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/auth/preferences`;
 
   async get(): Promise<UserPreferencesPayload> {
-    const res = await fetch(`${this.baseUrl}/`, {
+    const res = await fetchWithAuth(`${this.baseUrl}/`, {
       method: 'GET',
       credentials: 'include',
       headers: await csrfService.getHeaders(),
@@ -311,7 +315,7 @@ class PreferencesApiService {
     await csrfService.refreshToken();
     const csrfHeaders = await csrfService.getHeaders();
 
-    const res = await fetch(`${this.baseUrl}/`, {
+    const res = await fetchWithAuth(`${this.baseUrl}/`, {
       method: 'PUT',
       credentials: 'include',
       headers: csrfHeaders,
@@ -325,7 +329,7 @@ class PreferencesApiService {
   }
 
   async getFieldChoices(): Promise<PreferenceFieldChoices> {
-    const res = await fetch(`${this.baseUrl}/field-choices/`, {
+    const res = await fetchWithAuth(`${this.baseUrl}/field-choices/`, {
       method: 'GET',
       credentials: 'include',
       headers: await csrfService.getHeaders(),

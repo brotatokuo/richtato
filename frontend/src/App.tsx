@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { SessionExpiredHandler } from './components/SessionExpiredHandler';
 import { AuthProvider } from './contexts/AuthContext';
 import { DriveProvider } from './contexts/DriveContext';
 import { HouseholdProvider } from './contexts/HouseholdContext';
@@ -48,6 +49,7 @@ function App() {
           <PreferencesProvider>
             <Toaster position="top-right" richColors closeButton />
             <BrowserRouter>
+              <SessionExpiredHandler />
               <Routes>
                 <Route path="/welcome" element={<Welcome />} />
                 <Route path="/login" element={<Login />} />

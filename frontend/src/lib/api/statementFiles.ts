@@ -1,4 +1,5 @@
 import { csrfService } from './csrf';
+import { fetchWithAuth } from './fetchClient';
 import type { StatementImportResult } from './statementImport';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -97,7 +98,7 @@ class StatementFileService {
     if (input?.importStatus)
       url.searchParams.set('import_status', input.importStatus);
 
-    const response = await fetch(url.toString(), {
+    const response = await fetchWithAuth(url.toString(), {
       method: 'GET',
       credentials: 'include',
     });
@@ -219,7 +220,7 @@ class StatementFileService {
     options: RequestInit
   ): Promise<Response> {
     const csrfToken = await csrfService.getCSRFToken();
-    let response = await fetch(url, {
+    let response = await fetchWithAuth(url, {
       ...options,
       credentials: 'include',
       headers: {
@@ -231,7 +232,7 @@ class StatementFileService {
 
     if (response.status === 403) {
       const refreshedToken = await csrfService.refreshToken();
-      response = await fetch(url, {
+      response = await fetchWithAuth(url, {
         ...options,
         credentials: 'include',
         headers: {

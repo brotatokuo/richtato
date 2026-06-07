@@ -1,4 +1,5 @@
 import { csrfService } from './csrf';
+import { fetchWithAuth } from './fetchClient';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -66,7 +67,7 @@ export interface DriveScanSummary {
 
 class DriveStatementsApi {
   async getStatus(): Promise<DriveStatus> {
-    const response = await fetch(`${API_BASE}/accounts/drive/status/`, {
+    const response = await fetchWithAuth(`${API_BASE}/accounts/drive/status/`, {
       credentials: 'include',
     });
     return this.handleResponse(response);
@@ -81,9 +82,12 @@ class DriveStatementsApi {
   }
 
   async getPickerToken(): Promise<PickerTokenResponse> {
-    const response = await fetch(`${API_BASE}/accounts/drive/picker-token/`, {
-      credentials: 'include',
-    });
+    const response = await fetchWithAuth(
+      `${API_BASE}/accounts/drive/picker-token/`,
+      {
+        credentials: 'include',
+      }
+    );
     return this.handleResponse(response);
   }
 

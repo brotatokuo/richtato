@@ -2,6 +2,7 @@
  * Household API service for couples/family finance tracking.
  */
 import { csrfService } from './csrf';
+import { fetchWithAuth } from './fetchClient';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -35,7 +36,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 class HouseholdApiService {
   async getHousehold(): Promise<Household | null> {
-    const response = await fetch(`${API_BASE}/household/`, {
+    const response = await fetchWithAuth(`${API_BASE}/household/`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -85,7 +86,7 @@ class HouseholdApiService {
   }
 
   async getMembers(): Promise<{ members: HouseholdMember[] }> {
-    const response = await fetch(`${API_BASE}/household/members/`, {
+    const response = await fetchWithAuth(`${API_BASE}/household/members/`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

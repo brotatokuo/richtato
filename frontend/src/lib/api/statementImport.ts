@@ -1,4 +1,5 @@
 import { csrfService } from './csrf';
+import { fetchWithAuth } from './fetchClient';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -85,10 +86,13 @@ export interface StatementImportInput {
 
 class StatementImportService {
   async getInstitutions(): Promise<StatementInstitution[]> {
-    const response = await fetch(`${API_BASE}/accounts/import-statement/`, {
-      method: 'GET',
-      credentials: 'include',
-    });
+    const response = await fetchWithAuth(
+      `${API_BASE}/accounts/import-statement/`,
+      {
+        method: 'GET',
+        credentials: 'include',
+      }
+    );
     const data = await this.handleResponse<{
       institutions: StatementInstitution[];
     }>(response);
@@ -110,19 +114,22 @@ class StatementImportService {
     }
 
     const csrfToken = await csrfService.getCSRFToken();
-    let response = await fetch(`${API_BASE}/accounts/import-statement/`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'X-CSRFToken': csrfToken,
-        'X-Requested-With': 'XMLHttpRequest',
-      },
-      body: formData,
-    });
+    let response = await fetchWithAuth(
+      `${API_BASE}/accounts/import-statement/`,
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'X-CSRFToken': csrfToken,
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: formData,
+      }
+    );
 
     if (response.status === 403) {
       const refreshedToken = await csrfService.refreshToken();
-      response = await fetch(`${API_BASE}/accounts/import-statement/`, {
+      response = await fetchWithAuth(`${API_BASE}/accounts/import-statement/`, {
         method: 'POST',
         credentials: 'include',
         headers: {
