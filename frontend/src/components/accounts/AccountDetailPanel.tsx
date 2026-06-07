@@ -14,6 +14,7 @@ import { getEntityLogo } from '@/lib/imageMapping';
 import { cn } from '@/lib/utils';
 import {
   ArrowUpDown,
+  ChevronLeft,
   Edit2,
   FileText,
   Landmark,
@@ -41,11 +42,15 @@ type AccountDetailTab = 'balance' | 'transactions' | 'statements';
 interface AccountDetailPanelProps {
   account: AccountWithBalance | null;
   onAccountUpdated: (updatedAccount?: AccountWithBalance | null) => void;
+  showBackButton?: boolean;
+  onBack?: () => void;
 }
 
 export function AccountDetailPanel({
   account,
   onAccountUpdated,
+  showBackButton = false,
+  onBack,
 }: AccountDetailPanelProps) {
   const { preferences } = usePreferences();
   const { isInHousehold } = useHousehold();
@@ -332,8 +337,22 @@ export function AccountDetailPanel({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {showBackButton && onBack && (
+        <div className="flex-shrink-0 border-b border-border/40 px-4 py-2 md:hidden">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onBack}
+            className="h-8 px-2 text-xs"
+          >
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            Accounts
+          </Button>
+        </div>
+      )}
+
       {/* Account header */}
-      <div className="flex-shrink-0 px-6 py-3 border-b border-border/60">
+      <div className="flex-shrink-0 border-b border-border/60 px-4 py-3 md:px-6">
         <div className="flex items-start gap-2.5">
           <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
             {entityLogo ? (
@@ -347,7 +366,7 @@ export function AccountDetailPanel({
             )}
           </div>
           <div className="flex-1 min-w-0 space-y-1">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-start justify-between gap-2">
               <h2 className="text-base font-semibold text-foreground leading-tight flex items-center gap-1.5 min-w-0">
                 <span className="truncate">{account.name}</span>
                 {isShared && (
@@ -357,7 +376,7 @@ export function AccountDetailPanel({
                   </span>
                 )}
               </h2>
-              <div className="flex items-center gap-0.5 flex-shrink-0">
+              <div className="flex items-center gap-1 flex-shrink-0">
                 {isInHousehold && (
                   <Button
                     size="sm"
@@ -425,7 +444,7 @@ export function AccountDetailPanel({
               <div className="flex items-end gap-2.5">
                 <p
                   className={cn(
-                    'text-3xl font-bold tabular-nums leading-none',
+                    'text-2xl font-bold tabular-nums leading-none sm:text-3xl',
                     isLiability ? 'text-red-500' : 'text-foreground'
                   )}
                 >
@@ -477,7 +496,7 @@ export function AccountDetailPanel({
         onValueChange={value => setActiveTab(value as AccountDetailTab)}
         className="flex flex-col flex-1 min-h-0"
       >
-        <div className="flex-shrink-0 border-b border-border/40 px-6 pt-3 pb-0">
+        <div className="flex-shrink-0 border-b border-border/40 px-4 pb-0 pt-2 md:px-6 md:pt-3">
           <TabsList
             className={cn(
               'grid w-full sm:w-auto sm:inline-grid',
@@ -493,7 +512,8 @@ export function AccountDetailPanel({
               className="flex items-center gap-2 text-xs sm:text-sm"
             >
               <LineChart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span>Balance History</span>
+              <span className="sm:hidden">Balance</span>
+              <span className="hidden sm:inline">Balance History</span>
             </TabsTrigger>
             {canShowTransactions && (
               <TabsTrigger
@@ -518,7 +538,7 @@ export function AccountDetailPanel({
 
         <TabsContent
           value="balance"
-          className="mt-0 flex-1 overflow-y-auto px-6 py-4 focus-visible:outline-none"
+          className="mt-0 flex-1 overflow-y-auto px-4 py-4 focus-visible:outline-none md:px-6"
         >
           {chartLoading ? (
             <div className="h-48 flex items-center justify-center">
@@ -560,7 +580,42 @@ export function AccountDetailPanel({
                       {balanceRows.length === 1 ? '' : 's'}
                     </span>
                   </div>
-                  <div className="overflow-x-auto">
+                  <div className="space-y-2 p-3 md:hidden">
+                    {balanceRows.map(row => (
+                      <div
+                        key={row.date}
+                        className="rounded-md border border-border/60 bg-background/70 px-3 py-2"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs text-muted-foreground">
+                            {formatDate(row.date, preferences.date_format)}
+                          </p>
+                          <p className="text-sm font-medium tabular-nums text-foreground">
+                            {formatCurrency(row.balance, preferences.currency)}
+                          </p>
+                        </div>
+                        <p
+                          className={cn(
+                            'mt-1 text-xs font-medium tabular-nums',
+                            row.change === null
+                              ? 'text-muted-foreground'
+                              : row.change >= 0
+                                ? 'text-green-600'
+                                : 'text-red-500'
+                          )}
+                        >
+                          Change:{' '}
+                          {row.change === null
+                            ? '—'
+                            : `${row.change >= 0 ? '+' : '-'}${formatCurrency(
+                                Math.abs(row.change),
+                                preferences.currency
+                              )}`}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="hidden overflow-x-auto md:block">
                     <table className="w-full text-sm">
                       <thead className="bg-muted/30 text-xs uppercase text-muted-foreground">
                         <tr>
@@ -618,7 +673,7 @@ export function AccountDetailPanel({
         {canShowTransactions && (
           <TabsContent
             value="transactions"
-            className="mt-0 flex-1 overflow-y-auto px-6 py-4 focus-visible:outline-none"
+            className="mt-0 flex-1 overflow-y-auto px-4 py-4 focus-visible:outline-none md:px-6"
           >
             <TransactionsPanel
               accountId={account.id}
@@ -632,7 +687,7 @@ export function AccountDetailPanel({
         {canShowStatements && (
           <TabsContent
             value="statements"
-            className="mt-0 flex-1 overflow-y-auto px-6 py-4 focus-visible:outline-none"
+            className="mt-0 flex-1 overflow-y-auto px-4 py-4 focus-visible:outline-none md:px-6"
           >
             <StorageLocationPanel
               accountId={account.id}

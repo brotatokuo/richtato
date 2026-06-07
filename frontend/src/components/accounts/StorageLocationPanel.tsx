@@ -290,15 +290,15 @@ export function StorageLocationPanel({
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-2 gap-2">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-medium text-muted-foreground">
             Recent files
           </p>
-          <div className="flex items-center gap-1.5">
+          <div className="flex w-full items-center gap-1.5 sm:w-auto sm:justify-end">
             <Button
               size="sm"
               variant="outline"
-              className="h-6 px-2 text-[11px]"
+              className="h-7 px-2 text-[11px]"
               onClick={() => setUploadOpen(true)}
             >
               <Upload className="mr-1 h-3 w-3" />
@@ -307,7 +307,7 @@ export function StorageLocationPanel({
             <Button
               size="sm"
               variant="outline"
-              className="h-6 px-2 text-[11px]"
+              className="h-7 px-2 text-[11px]"
               onClick={handleScan}
               disabled={scanning || !storageReady}
             >
@@ -350,9 +350,9 @@ export function StorageLocationPanel({
                       'border-amber-500/40 bg-amber-500/5'
                   )}
                 >
-                  <div className="flex items-start gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                         <a
                           href={fileUrl}
                           target="_blank"
@@ -420,7 +420,7 @@ export function StorageLocationPanel({
                         </div>
                       )}
                     </div>
-                    <div className="ml-2 flex shrink-0 items-center gap-1.5">
+                    <div className="flex items-center justify-between gap-1.5 sm:ml-2 sm:shrink-0 sm:justify-start">
                       <span className="text-[11px] text-muted-foreground/70">
                         {file.imported_count > 0
                           ? `${file.imported_count} imported`

@@ -34,6 +34,7 @@ import {
 } from '@/lib/api/driveStatements';
 import {
   Cloud,
+  ExternalLink,
   FolderInput,
   FolderOpen,
   FolderPlus,
@@ -87,6 +88,9 @@ declare global {
 const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
 
 type ActivationMode = 'create' | 'adopt';
+
+const getDriveFolderUrl = (folderId: string) =>
+  `https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`;
 
 export function DriveStatementsSection() {
   const {
@@ -351,8 +355,23 @@ export function DriveStatementsSection() {
                 {status?.root_folder_name && (
                   <p className="flex min-w-0 items-center gap-2">
                     <FolderOpen className="h-4 w-4 shrink-0" />
-                    <span className="min-w-0 break-words">
-                      Root folder: {status.root_folder_name}
+                    <span className="min-w-0">
+                      Root folder:{' '}
+                      {status.root_folder_id ? (
+                        <a
+                          href={getDriveFolderUrl(status.root_folder_id)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="break-words text-primary underline-offset-4 hover:underline"
+                        >
+                          {status.root_folder_name}
+                          <ExternalLink className="ml-1 inline h-3.5 w-3.5 align-[-2px]" />
+                        </a>
+                      ) : (
+                        <span className="break-words">
+                          {status.root_folder_name}
+                        </span>
+                      )}
                     </span>
                   </p>
                 )}
