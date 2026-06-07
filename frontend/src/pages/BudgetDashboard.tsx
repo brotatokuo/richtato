@@ -337,21 +337,21 @@ function DashboardContent() {
   ];
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-hidden">
+    <div className="w-full max-w-full space-y-4 overflow-hidden sm:space-y-6">
       {/* Header row */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <MonthYearPicker
           year={year}
           month={month}
           onChange={handleDateChange}
         />
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           {/* Sort dropdown */}
           <div className="relative">
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as SortOption)}
-              className="appearance-none text-sm bg-transparent border border-border rounded-md px-3 py-1.5 pr-7 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+              className="w-full appearance-none rounded-md border border-border bg-transparent px-3 py-2 pr-7 text-sm text-muted-foreground transition-colors hover:text-foreground sm:w-auto sm:py-1.5"
             >
               {sortOptions.map(opt => (
                 <option key={opt.value} value={opt.value}>
@@ -363,7 +363,7 @@ function DashboardContent() {
           </div>
           <Link
             to="/setup?tab=budgets"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-border px-3 text-sm text-muted-foreground transition-colors hover:text-foreground sm:h-auto sm:w-auto sm:border-0 sm:px-0"
           >
             <Pencil className="h-3.5 w-3.5" />
             Edit Budgets
@@ -405,24 +405,24 @@ function DashboardContent() {
       )}
 
       {/* Income context bar */}
-      <Card>
-        <CardContent className="py-3 px-4">
-          <div className="flex items-center justify-between flex-wrap gap-x-6 gap-y-2 text-sm">
-            <div className="flex items-center gap-2">
+      <Card className="overflow-hidden">
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            <div className="flex min-w-0 items-center gap-2">
               <DollarSign className="h-4 w-4 text-emerald-500" />
               <span className="text-muted-foreground">Income</span>
               <span className="font-semibold text-foreground">
                 {formatCurrency(monthlyIncome, preferences.currency)}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <ArrowDown className="h-4 w-4 text-blue-500" />
               <span className="text-muted-foreground">Budgeted</span>
               <span className="font-semibold text-foreground">
                 {formatCurrency(totalBudget, preferences.currency)}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <PiggyBank className="h-4 w-4 text-primary" />
               <span className="text-muted-foreground">Left to budget</span>
               <span
@@ -435,7 +435,7 @@ function DashboardContent() {
               </span>
             </div>
             {isCurrentMonth && (
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-amber-500" />
                 <span className="text-muted-foreground">Projected spend</span>
                 <span
@@ -466,9 +466,9 @@ function DashboardContent() {
       {/* Month Timeline */}
       <div className="flex w-full">
         <div className="flex-1 min-w-0">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
+          <Card className="overflow-hidden">
+            <CardHeader className="p-4 pb-3 sm:p-6 sm:pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <CalendarDays className="h-5 w-5" />
                 Monthly Budget Timeline
               </CardTitle>
@@ -477,7 +477,7 @@ function DashboardContent() {
                 budget breakdown above
               </p>
             </CardHeader>
-            <CardContent className="px-2 sm:px-6 min-w-0">
+            <CardContent className="min-w-0 p-4 pt-0 sm:p-6 sm:pt-0">
               <div className="w-full min-w-0">
                 <MonthTimeline
                   monthlyData={monthlyData}

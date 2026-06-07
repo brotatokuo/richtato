@@ -70,12 +70,12 @@ export function MonthYearPicker({
   };
 
   return (
-    <div className={cn(className)}>
+    <div className={cn('w-full sm:w-auto', className)}>
       <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
         <DropdownMenuTrigger asChild>
           <button
             className={cn(
-              'flex items-center gap-2 px-4 py-2.5',
+              'flex w-full items-center justify-center gap-2 px-4 py-2.5 sm:w-auto',
               'rounded-full',
               'bg-background/80 backdrop-blur-md',
               'border border-border/50',

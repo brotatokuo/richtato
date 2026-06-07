@@ -87,9 +87,9 @@ export function HouseholdSettings() {
 
   if (isInHousehold && household) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className="overflow-hidden">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
             <Users className="h-5 w-5" />
             {household.name}
           </CardTitle>
@@ -97,14 +97,14 @@ export function HouseholdSettings() {
             Manage your household and share finances with your partner.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
           <div>
             <h4 className="text-sm font-medium mb-2">Members</h4>
             <div className="space-y-2">
               {members.map(m => (
                 <div
                   key={m.user_id}
-                  className="flex items-center justify-between rounded-md border px-3 py-2"
+                  className="flex flex-col gap-1 rounded-md border px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <span className="text-sm">{m.username}</span>
                   <span className="text-xs text-muted-foreground">
@@ -135,7 +135,7 @@ export function HouseholdSettings() {
                 <Button
                   variant="outline"
                   onClick={handleGenerateInvite}
-                  className="gap-2"
+                  className="w-full gap-2 sm:w-auto"
                 >
                   <UserPlus className="h-4 w-4" />
                   Generate Invite Code
@@ -149,7 +149,7 @@ export function HouseholdSettings() {
             size="sm"
             onClick={handleLeave}
             disabled={isSubmitting}
-            className="gap-2"
+            className="w-full gap-2 sm:w-auto"
           >
             <LogOut className="h-4 w-4" />
             Leave Household
@@ -160,9 +160,9 @@ export function HouseholdSettings() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card className="overflow-hidden">
+      <CardHeader className="p-4 sm:p-6">
+        <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
           <Users className="h-5 w-5" />
           Household
         </CardTitle>
@@ -171,10 +171,10 @@ export function HouseholdSettings() {
           partner.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 p-4 pt-0 sm:p-6 sm:pt-0">
         <div className="space-y-2">
           <h4 className="text-sm font-medium">Create a Household</h4>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               placeholder="Household name"
               value={createName}
@@ -184,6 +184,7 @@ export function HouseholdSettings() {
             <Button
               onClick={handleCreate}
               disabled={isSubmitting || !createName.trim()}
+              className="w-full sm:w-auto"
             >
               Create
             </Button>
@@ -201,7 +202,7 @@ export function HouseholdSettings() {
 
         <div className="space-y-2">
           <h4 className="text-sm font-medium">Join a Household</h4>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               placeholder="Enter invite code"
               value={joinCode}
@@ -212,6 +213,7 @@ export function HouseholdSettings() {
               variant="outline"
               onClick={handleJoin}
               disabled={isSubmitting || !joinCode.trim()}
+              className="w-full sm:w-auto"
             >
               Join
             </Button>
