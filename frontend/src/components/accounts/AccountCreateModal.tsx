@@ -3,6 +3,7 @@ import { Modal } from '@/components/ui/Modal';
 import { useState } from 'react';
 import {
   AccountFormFields,
+  AccountOpeningBalanceField,
   type InstitutionFieldChoice,
 } from './AccountFormFields';
 import { AccountSyncSettings } from './AccountSyncSettings';
@@ -30,7 +31,7 @@ const EMPTY_FORM = {
   type: 'checking',
   entity: 'other',
   starting_balance: '',
-  sync_mode: 'manual' as SyncMode,
+  sync_mode: 'upload' as SyncMode,
 };
 
 export function AccountCreateModal({
@@ -44,6 +45,7 @@ export function AccountCreateModal({
 }: AccountCreateModalProps) {
   const { isDriveActive } = useDrive();
   const [form, setForm] = useState(EMPTY_FORM);
+  const [formSession, setFormSession] = useState(0);
 
   const handleFieldChange = (
     field: 'name' | 'type' | 'entity' | 'starting_balance',
@@ -59,10 +61,12 @@ export function AccountCreateModal({
   const handleSubmit = async () => {
     await onSubmit(form);
     setForm(EMPTY_FORM);
+    setFormSession(session => session + 1);
   };
 
   const handleClose = () => {
     setForm(EMPTY_FORM);
+    setFormSession(session => session + 1);
     onClose();
   };
 
@@ -70,13 +74,14 @@ export function AccountCreateModal({
     <Modal isOpen={isOpen} onClose={handleClose} title="Create Account">
       <div className="space-y-4">
         <AccountFormFields
+          key={formSession}
           form={form}
           onChange={handleFieldChange}
           accountTypeOptions={accountTypeOptions}
           entityOptions={entityOptions}
           institutions={institutions}
           idPrefix="acc"
-          showStartingBalance
+          autoFillName
         />
         <AccountSyncSettings
           form={{
@@ -88,6 +93,13 @@ export function AccountCreateModal({
           hasStorageUri={isDriveActive}
           idPrefix="acc-sync"
         />
+        {form.sync_mode === 'manual' && (
+          <AccountOpeningBalanceField
+            idPrefix="acc"
+            value={form.starting_balance}
+            onChange={value => handleFieldChange('starting_balance', value)}
+          />
+        )}
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={handleClose}>
             Cancel

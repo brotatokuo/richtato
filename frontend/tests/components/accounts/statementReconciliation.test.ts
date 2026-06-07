@@ -1,4 +1,5 @@
 import {
+  defaultApplyOpeningBalance,
   needsOpeningBalanceConfirmation,
   shouldShowReconciliationWarnings,
 } from '@/components/accounts/statementReconciliation';
@@ -76,5 +77,21 @@ describe('needsOpeningBalanceConfirmation', () => {
     expect(needsOpeningBalanceConfirmation('update')).toBe(false);
     expect(needsOpeningBalanceConfirmation('none')).toBe(false);
     expect(needsOpeningBalanceConfirmation(undefined)).toBe(false);
+  });
+});
+
+describe('defaultApplyOpeningBalance', () => {
+  it('defaults to applying when no opening balance exists yet', () => {
+    expect(defaultApplyOpeningBalance('available_create')).toBe(true);
+  });
+
+  it('defaults to keeping existing opening balance when one differs', () => {
+    expect(defaultApplyOpeningBalance('available_update')).toBe(false);
+  });
+
+  it('defaults to not applying for other actions', () => {
+    expect(defaultApplyOpeningBalance('matched')).toBe(false);
+    expect(defaultApplyOpeningBalance('none')).toBe(false);
+    expect(defaultApplyOpeningBalance(undefined)).toBe(false);
   });
 });
