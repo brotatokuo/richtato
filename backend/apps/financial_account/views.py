@@ -643,11 +643,11 @@ class AccountTransactionsAPIView(APIView):
 
 
 class AccountBalanceUpdateAPIView(APIView):
-    """Set the absolute balance for an account on a given date.
+    """Reconcile account balance on a given date via a Balance Adjustment transaction.
 
-    This writes directly to FinancialAccount.balance and AccountBalanceHistory
-    without creating a Transaction. Use when the user wants to reconcile or
-    snapshot the account balance (e.g. "my balance is $5,200 today").
+    Compares the user-entered balance against the balance implied by existing
+    transactions at that date, then creates an adjustment transaction for any
+    difference. Supported for checking, savings, and investment accounts only.
     """
 
     authentication_classes = [SessionAuthentication, BasicAuthentication]
@@ -659,9 +659,13 @@ class AccountBalanceUpdateAPIView(APIView):
         self.balance_service = AccountBalanceService()
 
     def post(self, request):
-        """Set the account balance to the given amount on the given date."""
+        """Reconcile the account balance to the given amount on the given date."""
         from datetime import date as date_type
         from decimal import Decimal
+
+        from apps.financial_account.services.account_balance_service import (
+            BALANCE_ON_DATE_ACCOUNT_TYPES,
+        )
 
         account_id = request.data.get("account")
         balance = request.data.get("balance")
@@ -676,6 +680,12 @@ class AccountBalanceUpdateAPIView(APIView):
         account = self.account_service.get_account_by_id(account_id, request.user)
         if not account:
             return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if account.account_type not in BALANCE_ON_DATE_ACCOUNT_TYPES:
+            return Response(
+                {"error": "Balance on date is only supported for checking, savings, and investment accounts"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             balance_decimal = Decimal(str(balance))
@@ -693,8 +703,14 @@ class AccountBalanceUpdateAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        old_balance = account.balance
-        updated_account = self.balance_service.set_balance_snapshot(
+        if parsed_balance_date > date_type.today():
+            return Response(
+                {"error": "Balance date cannot be in the future"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        previous_balance = account.balance
+        result = self.balance_service.update_balance(
             account=account,
             new_balance=balance_decimal,
             balance_date=parsed_balance_date,
@@ -702,10 +718,14 @@ class AccountBalanceUpdateAPIView(APIView):
 
         return Response(
             {
-                "balance": str(updated_account.balance),
+                "balance": str(result.account.balance),
                 "date": str(parsed_balance_date),
-                "previous_balance": str(old_balance),
-                "adjustment": str(updated_account.balance - old_balance),
+                "computed_balance": str(result.computed_balance),
+                "previous_balance": str(previous_balance),
+                "adjustment": str(result.adjustment),
+                "adjustment_transaction_id": (
+                    result.adjustment_transaction.id if result.adjustment_transaction else None
+                ),
             },
             status=status.HTTP_200_OK,
         )

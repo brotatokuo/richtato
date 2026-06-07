@@ -39,18 +39,21 @@ class TestManualBalanceAdjustment:
     def test_set_higher_balance_creates_credit(self, service, account):
         result = service.update_balance(account, Decimal("6000.00"))
 
-        assert result.balance == Decimal("6000.00")
+        assert result.account.balance == Decimal("6000.00")
+        assert result.computed_balance == Decimal("5000.00")
+        assert result.adjustment == Decimal("1000.00")
 
         adj = Transaction.objects.filter(account=account, description="Balance Adjustment").first()
         assert adj is not None
         assert adj.transaction_type == "credit"
         assert adj.amount == Decimal("1000.00")
         assert adj.status == "reconciled"
+        assert result.adjustment_transaction == adj
 
     def test_set_lower_balance_creates_debit(self, service, account):
         result = service.update_balance(account, Decimal("3000.00"))
 
-        assert result.balance == Decimal("3000.00")
+        assert result.account.balance == Decimal("3000.00")
 
         adj = Transaction.objects.filter(account=account, description="Balance Adjustment").first()
         assert adj is not None
@@ -60,16 +63,44 @@ class TestManualBalanceAdjustment:
     def test_set_same_balance_no_transaction(self, service, account):
         result = service.update_balance(account, Decimal("5000.00"))
 
-        assert result.balance == Decimal("5000.00")
+        assert result.account.balance == Decimal("5000.00")
+        assert result.adjustment == Decimal("0")
+        assert result.adjustment_transaction is None
         assert not Transaction.objects.filter(account=account, description="Balance Adjustment").exists()
 
     def test_set_balance_on_past_date(self, service, account):
         yesterday = date.today() - timedelta(days=1)
         result = service.update_balance(account, Decimal("4000.00"), balance_date=yesterday)
 
-        assert result.balance == Decimal("4000.00")
+        assert result.account.balance == Decimal("4000.00")
         adj = Transaction.objects.get(account=account, description="Balance Adjustment")
         assert adj.date == yesterday
+
+    def test_past_date_with_later_transactions(self, service, account, user):
+        """Past-date reconciliation adjusts anchor by delta from computed balance, not raw anchor."""
+        yesterday = date.today() - timedelta(days=1)
+        Transaction.objects.create(
+            user=user,
+            account=account,
+            date=date.today(),
+            amount=Decimal("1000.00"),
+            transaction_type="credit",
+            description="Deposit",
+            sync_source="manual",
+        )
+        account.refresh_from_db()
+        assert account.balance == Decimal("6000.00")
+
+        result = service.update_balance(account, Decimal("4500.00"), balance_date=yesterday)
+
+        assert result.computed_balance == Decimal("5000.00")
+        assert result.adjustment == Decimal("-500.00")
+        assert result.account.balance == Decimal("5500.00")
+
+        adj = Transaction.objects.get(account=account, description="Balance Adjustment")
+        assert adj.date == yesterday
+        assert adj.transaction_type == "debit"
+        assert adj.amount == Decimal("500.00")
 
     def test_adjustment_creates_history_entry(self, service, account):
         today = date.today()
@@ -81,7 +112,7 @@ class TestManualBalanceAdjustment:
 
     def test_set_negative_balance(self, service, account):
         result = service.update_balance(account, Decimal("-500.00"))
-        assert result.balance == Decimal("-500.00")
+        assert result.account.balance == Decimal("-500.00")
 
         adj = Transaction.objects.get(account=account, description="Balance Adjustment")
         assert adj.transaction_type == "debit"

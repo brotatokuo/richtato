@@ -1,9 +1,18 @@
 import { StorageLocationPanel } from '@/components/accounts/StorageLocationPanel';
+import { AccountBalanceForm } from '@/components/accounts/AccountBalanceForm';
+import { canSetBalanceOnDate } from '@/components/accounts/accountBalanceOnDate';
 import { BaseChart } from '@/components/asset_dashboard/BaseChart';
 import { AccountDetailModal } from '@/components/settings/AccountDetailModal';
 import { TransactionsPanel } from '@/components/transactions/TransactionsPanel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHousehold } from '@/contexts/HouseholdContext';
@@ -18,6 +27,7 @@ import {
   FileText,
   Landmark,
   LineChart,
+  Plus,
   TrendingDown,
   TrendingUp,
   Users,
@@ -54,6 +64,7 @@ export function AccountDetailPanel({
 
   const [activeTab, setActiveTab] = useState<AccountDetailTab>('balance');
   const [showEdit, setShowEdit] = useState(false);
+  const [showBalanceDialog, setShowBalanceDialog] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [isShared, setIsShared] = useState(
     account?.shared_with_household ?? false
@@ -74,6 +85,7 @@ export function AccountDetailPanel({
     account?.sync_capabilities?.statement_files !== false;
   const visibleTabCount =
     1 + (canShowTransactions ? 1 : 0) + (canShowStatements ? 1 : 0);
+  const canUpdateBalance = account ? canSetBalanceOnDate(account) : false;
 
   useEffect(() => {
     transactionsApiService
@@ -312,6 +324,46 @@ export function AccountDetailPanel({
     }
   };
 
+  const handleSetBalance = async (data: { balance: number; date: string }) => {
+    if (!account) return;
+
+    try {
+      const result = await transactionsApiService.setAccountBalance({
+        account: account.id,
+        balance: data.balance,
+        date: data.date,
+      });
+
+      const adjustment = Number.parseFloat(result.adjustment);
+      if (Number.isNaN(adjustment) || adjustment === 0) {
+        toast.success('Balance already matches transactions');
+      } else {
+        toast.success('Balance reconciled', {
+          description: `${formatCurrency(
+            Math.abs(adjustment),
+            preferences.currency
+          )} adjustment added`,
+        });
+      }
+
+      const updatedBalance = Number.parseFloat(result.balance);
+      onAccountUpdated({
+        ...account,
+        balance: Number.isNaN(updatedBalance)
+          ? account.balance
+          : updatedBalance,
+        lastUpdated: data.date,
+      });
+      await fetchBalanceHistory(account.id);
+      setShowBalanceDialog(false);
+    } catch (e) {
+      toast.error('Failed to update balance', {
+        description: e instanceof Error ? e.message : undefined,
+      });
+      throw e;
+    }
+  };
+
   if (!account) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center px-8">
@@ -526,6 +578,19 @@ export function AccountDetailPanel({
             </div>
           ) : (
             <div className="space-y-4">
+              {canUpdateBalance && (
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowBalanceDialog(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-1.5" />
+                    Update balance
+                  </Button>
+                </div>
+              )}
+
               {balanceHistory.length < 2 ? (
                 <div className="h-48 flex flex-col items-center justify-center text-center">
                   <LineChart className="h-8 w-8 text-muted-foreground/30 mb-2" />
@@ -534,6 +599,11 @@ export function AccountDetailPanel({
                       ? 'No balance history yet'
                       : 'Not enough data to show balance history'}
                   </p>
+                  {canUpdateBalance && (
+                    <p className="text-xs text-muted-foreground/50 mt-1">
+                      Enter a balance on a date to start tracking history.
+                    </p>
+                  )}
                 </div>
               ) : (
                 <BaseChart
@@ -549,14 +619,14 @@ export function AccountDetailPanel({
                   <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
                     <div>
                       <h3 className="text-sm font-medium text-foreground">
-                        Balance Snapshots
+                        Balance History
                       </h3>
                       <p className="text-xs text-muted-foreground">
-                        Dated balance records for this account
+                        Dated balances from transactions and adjustments
                       </p>
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      {balanceRows.length} snapshot
+                      {balanceRows.length} record
                       {balanceRows.length === 1 ? '' : 's'}
                     </span>
                   </div>
@@ -657,6 +727,25 @@ export function AccountDetailPanel({
         institutions={institutions}
         loading={editLoading}
       />
+
+      <Dialog open={showBalanceDialog} onOpenChange={setShowBalanceDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update balance</DialogTitle>
+            <DialogDescription>
+              Enter the account balance on a specific date. Richtato will
+              reconcile it against your transactions and add an adjustment if
+              needed.
+            </DialogDescription>
+          </DialogHeader>
+          <AccountBalanceForm
+            accountId={account.id}
+            accountName={account.name}
+            onSubmit={handleSetBalance}
+            onCancel={() => setShowBalanceDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
