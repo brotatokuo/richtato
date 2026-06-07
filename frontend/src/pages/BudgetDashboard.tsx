@@ -337,7 +337,7 @@ function DashboardContent() {
   ];
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-hidden">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Header row */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <MonthYearPicker
