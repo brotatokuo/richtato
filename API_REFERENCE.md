@@ -90,7 +90,7 @@ Preferences include the master `notifications_enabled` switch for in-app notific
 | `GET` | `/{id}/balance-history/` | Get balance history |
 | `GET` | `/{id}/transactions/` | List account transactions |
 | `GET` | `/summary/` | Get account summary |
-| `POST` | `/details/` | Add balance update entry |
+| `POST` | `/details/` | Reconcile balance on a date (checking/savings/investment); creates Balance Adjustment transaction if needed |
 | `GET` | `/drive/status/` | Get Google Drive statement storage status |
 | `POST` | `/drive/oauth/start/` | Start Google Drive OAuth |
 | `GET` | `/drive/oauth/callback/` | Complete Google Drive OAuth callback |

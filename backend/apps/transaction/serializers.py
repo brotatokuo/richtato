@@ -57,6 +57,7 @@ class TransactionSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(read_only=True)
     category_type = serializers.SerializerMethodField()
     signed_amount = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    statement_running_balance = serializers.SerializerMethodField()
     transaction_type_display = serializers.CharField(source="get_transaction_type_display", read_only=True)
     categorization_status_display = serializers.CharField(source="get_categorization_status_display", read_only=True)
 
@@ -69,6 +70,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             "date",
             "amount",
             "signed_amount",
+            "statement_running_balance",
             "description",
             "transaction_type",
             "transaction_type_display",
@@ -97,6 +99,17 @@ class TransactionSerializer(serializers.ModelSerializer):
         if obj.category:
             return obj.category.type
         return "uncategorized"
+
+    def get_statement_running_balance(self, obj):
+        """Return statement-provided running balance (when present on imported rows)."""
+        raw_data = obj.raw_data or {}
+        value = raw_data.get("running_balance")
+        if value in (None, ""):
+            raw_row = raw_data.get("raw_row") or {}
+            value = raw_row.get("Running Bal.") or raw_row.get("Running Bal") or raw_row.get("Running Balance")
+            if value in (None, ""):
+                value = raw_row.get("Balance")
+        return str(value) if value not in (None, "") else None
 
 
 class TransactionCreateSerializer(serializers.Serializer):

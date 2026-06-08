@@ -451,11 +451,11 @@ export function CategoriesSection() {
         </DialogContent>
       </Dialog>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
+      <Card className="overflow-hidden">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
                 <Tags className="h-5 w-5" />
                 Categories
               </CardTitle>
@@ -465,7 +465,7 @@ export function CategoriesSection() {
             </div>
             <Button
               onClick={() => setAddModalOpen(true)}
-              className="gap-1.5"
+              className="w-full gap-1.5 sm:w-auto"
               size="sm"
             >
               <Plus className="h-4 w-4" />
@@ -473,7 +473,7 @@ export function CategoriesSection() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
           {error && (
             <div className="text-sm text-red-600 bg-red-50 dark:bg-red-950/30 p-3 rounded">
               {error}
@@ -522,22 +522,27 @@ export function CategoriesSection() {
                     type="button"
                     onClick={() => toggleGroup(group.type)}
                     className={cn(
-                      'w-full flex items-center justify-between px-6 py-4',
+                      'flex w-full items-center justify-between px-4 py-3 sm:px-6 sm:py-4',
                       'transition-all duration-200',
                       'hover:shadow-md',
                       group.bgColor,
                       isExpanded && 'shadow-lg'
                     )}
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                       {isExpanded ? (
                         <ChevronDown className="h-5 w-5" />
                       ) : (
                         <ChevronRight className="h-5 w-5" />
                       )}
-                      <div className="flex items-center gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
                         {group.icon}
-                        <span className={cn('text-lg font-bold', group.color)}>
+                        <span
+                          className={cn(
+                            'truncate text-base font-bold sm:text-lg',
+                            group.color
+                          )}
+                        >
                           {group.label}
                         </span>
                       </div>
@@ -565,24 +570,24 @@ export function CategoriesSection() {
                           <div
                             key={item.name}
                             className={cn(
-                              'flex items-center justify-between gap-4 px-6 py-3',
+                              'flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6',
                               'hover:bg-accent/50 cursor-pointer',
                               'transition-all duration-150',
-                              'hover:scale-[1.01]'
+                              'sm:hover:scale-[1.01]'
                             )}
                             onClick={() => openKeywordModal(item)}
                             title="Click to manage keywords for this category"
                           >
                             {/* Left: Icon + Name + Badges */}
-                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="flex min-w-0 flex-1 items-center gap-3">
                               <span className="text-2xl" aria-hidden>
                                 {item.icon}
                               </span>
                               <div className="min-w-0">
-                                <div className="font-medium">
+                                <div className="truncate font-medium">
                                   {item.display}
                                 </div>
-                                <div className="flex items-center gap-2 mt-1">
+                                <div className="mt-1 flex flex-wrap items-center gap-2">
                                   <Badge
                                     variant="outline"
                                     className="text-[10px] h-4 px-1.5"
@@ -606,7 +611,10 @@ export function CategoriesSection() {
                             </div>
 
                             {/* Center: Type Selector */}
-                            <div onClick={e => e.stopPropagation()}>
+                            <div
+                              onClick={e => e.stopPropagation()}
+                              className="w-full sm:w-auto"
+                            >
                               <Select
                                 value={catType}
                                 onValueChange={v =>
@@ -616,7 +624,7 @@ export function CategoriesSection() {
                                   )
                                 }
                               >
-                                <SelectTrigger className="w-[120px] h-8 text-xs">
+                                <SelectTrigger className="h-8 w-full text-xs sm:w-[120px]">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -658,7 +666,7 @@ export function CategoriesSection() {
                             {catType === 'expense' && (
                               <div
                                 onClick={e => e.stopPropagation()}
-                                className="flex items-center gap-1.5"
+                                className="flex w-full items-center justify-between gap-2 rounded-md bg-muted/40 px-3 py-2 sm:w-auto sm:justify-start sm:bg-transparent sm:px-0 sm:py-0"
                                 title="Mark as essential expense (needs vs wants)"
                               >
                                 <span className="text-[10px] text-muted-foreground">
@@ -687,7 +695,7 @@ export function CategoriesSection() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                className="h-7 w-7 self-end text-muted-foreground hover:bg-destructive/10 hover:text-destructive sm:self-auto"
                                 onClick={e => {
                                   e.stopPropagation();
                                   openDeleteModal(item);

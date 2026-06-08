@@ -47,6 +47,9 @@ export interface DisplayTransaction {
     | 'other'
     | 'uncategorized';
   amount: number;
+  computedRunningBalance?: number | null;
+  statementRunningBalance?: number | null;
+  runningBalanceDiff?: number | null;
   account: string;
   transactionType: 'debit' | 'credit';
   notes?: string | null;
@@ -63,6 +66,18 @@ export const transformTransaction = (
     category: apiTransaction.category_name || 'Uncategorized',
     categoryType: apiTransaction.category_type,
     amount: Number(apiTransaction.signed_amount),
+    computedRunningBalance:
+      apiTransaction.computed_running_balance != null
+        ? Number(apiTransaction.computed_running_balance)
+        : null,
+    statementRunningBalance:
+      apiTransaction.statement_running_balance != null
+        ? Number(apiTransaction.statement_running_balance)
+        : null,
+    runningBalanceDiff:
+      apiTransaction.running_balance_diff != null
+        ? Number(apiTransaction.running_balance_diff)
+        : null,
     account: apiTransaction.account_name || 'Unknown',
     transactionType: apiTransaction.transaction_type,
     notes: apiTransaction.notes ?? '',

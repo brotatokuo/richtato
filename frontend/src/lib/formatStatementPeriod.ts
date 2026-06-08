@@ -63,6 +63,31 @@ export function resolveFilingMonth(to: Date): { year: number; month: number } {
   };
 }
 
+export function isPastStatementMonth(
+  year: number,
+  month: number,
+  reference: Date = new Date()
+): boolean {
+  const referenceYear = reference.getFullYear();
+  const referenceMonth = reference.getMonth() + 1;
+
+  if (year !== referenceYear) {
+    return year < referenceYear;
+  }
+
+  return month < referenceMonth;
+}
+
+export function resolveStatementStatusForMonth(
+  year: number,
+  month: number,
+  reference: Date = new Date()
+): 'provisional' | 'closed' {
+  return isPastStatementMonth(year, month, reference)
+    ? 'closed'
+    : 'provisional';
+}
+
 export function validateStatementPeriod(label: string): string | null {
   const trimmed = label.trim();
   if (!trimmed) {

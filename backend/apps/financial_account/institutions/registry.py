@@ -10,6 +10,7 @@ import pandas as pd
 
 from apps.financial_account.institutions.parsers.amex_checking_pdf import parse_amex_checking_pdf
 from apps.financial_account.institutions.parsers.amex_xlsx import parse_amex_activity_excel
+from apps.financial_account.institutions.parsers.chase_credit_pdf import parse_chase_credit_pdf
 from apps.financial_account.institutions.parsers.robinhood_bank_pdf import parse_robinhood_bank_pdf
 from apps.financial_account.institutions.parsers.robinhood_credit_pdf import parse_robinhood_credit_pdf
 
@@ -98,11 +99,12 @@ _PARSER_CONFIGS: dict[str, dict[str, Any]] = {
     },
     "chase": {
         "display_name": "Chase",
-        "date": ["Transaction Date", "Post Date", "Date"],
+        "date": ["Post Date", "Transaction Date", "Date"],
         "description": ["Description", "Payee"],
         "amount": ["Amount"],
         "debit": ["Debit", "Withdrawal"],
         "credit": ["Credit", "Deposit"],
+        "type": ["Type", "type"],
     },
     "citi": {
         "display_name": "Citi",
@@ -118,6 +120,13 @@ _PARSER_CONFIGS: dict[str, dict[str, Any]] = {
         "description": ["Transaction Description"],
         "amount": ["Amount"],
     },
+    "chase_credit": {
+        "display_name": "Chase Credit Card",
+        "date": ["Post Date", "Transaction Date", "Date"],
+        "description": ["Description", "Merchant Name or Transaction Description"],
+        "amount": ["Amount"],
+        "type": ["Type", "type"],
+    },
     "generic": {
         "display_name": "Generic CSV",
         "date": ["date"],
@@ -132,6 +141,7 @@ _PARSER_CONFIGS: dict[str, dict[str, Any]] = {
 PARSER_READERS: dict[str, Callable[[bytes], pd.DataFrame]] = {
     "amex": parse_amex_activity_excel,
     "amex_checking": parse_amex_checking_pdf,
+    "chase_credit": parse_chase_credit_pdf,
     "robinhood_bank": parse_robinhood_bank_pdf,
     "robinhood_credit": parse_robinhood_credit_pdf,
 }
@@ -140,6 +150,7 @@ _DEFAULT_FILE_TYPES = ("csv", "xls", "xlsx")
 _PDF_FILE_TYPES = ("pdf",)
 _PARSER_FILE_TYPES: dict[str, tuple[str, ...]] = {
     "amex_checking": _PDF_FILE_TYPES,
+    "chase_credit": _PDF_FILE_TYPES,
     "robinhood_bank": _DEFAULT_FILE_TYPES + _PDF_FILE_TYPES,
     "robinhood_credit": _PDF_FILE_TYPES,
 }
@@ -279,6 +290,8 @@ def parser_key_for_account(account) -> str | None:
             return "robinhood_investments"
     if canonical == "american_express" and account_type == "checking":
         return "amex_checking"
+    if canonical == "chase" and account_type == "credit_card":
+        return "chase_credit"
     return parser_key_for_slug(institution.slug)
 
 
@@ -379,6 +392,16 @@ def get_supported_institutions() -> list[dict[str, Any]]:
                     "slug": institution.slug,
                     "display_name": f"{institution.name} Checking",
                     "account_types": ["checking"],
+                    "file_types": list(_PDF_FILE_TYPES),
+                }
+            )
+        if institution.slug == "chase" and "credit_card" in institution.account_types:
+            entries.append(
+                {
+                    "id": "chase_credit",
+                    "slug": institution.slug,
+                    "display_name": f"{institution.name} Credit Card",
+                    "account_types": ["credit_card"],
                     "file_types": list(_PDF_FILE_TYPES),
                 }
             )

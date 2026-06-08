@@ -168,11 +168,11 @@ export function BudgetsSection() {
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <CardTitle className="flex items-center gap-2">
+      <Card className="overflow-hidden">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
                 <PiggyBank className="h-5 w-5" />
                 Monthly Budgets
               </CardTitle>
@@ -204,7 +204,7 @@ export function BudgetsSection() {
             />
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
           {error && <div className="text-sm text-red-600 mb-3">{error}</div>}
           {expenseCategories.length === 0 && !loading && (
             <div className="text-sm text-muted-foreground py-4 text-center">
@@ -212,7 +212,7 @@ export function BudgetsSection() {
             </div>
           )}
           {expenseCategories.length > 0 && (
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
@@ -222,11 +222,11 @@ export function BudgetsSection() {
                   className="pl-9"
                 />
               </div>
-              <div className="relative">
+              <div className="relative sm:w-auto">
                 <select
                   value={sortBy}
                   onChange={e => setSortBy(e.target.value as SortOption)}
-                  className="appearance-none h-9 text-sm bg-transparent border border-input rounded-md px-3 pr-7 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                  className="h-9 w-full appearance-none rounded-md border border-input bg-transparent px-3 pr-7 text-sm text-muted-foreground transition-colors hover:text-foreground sm:w-auto"
                 >
                   <option value="default">Default</option>
                   <option value="budgeted-first">Budgeted first</option>
@@ -244,7 +244,7 @@ export function BudgetsSection() {
           )}
           <div
             className={cn(
-              'flex flex-wrap gap-3 transition-opacity',
+              'grid grid-cols-1 gap-3 transition-opacity sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
               loading && 'opacity-50 pointer-events-none'
             )}
           >
@@ -261,7 +261,7 @@ export function BudgetsSection() {
                   key={cat.name}
                   onClick={() => openModal(cat)}
                   className={cn(
-                    'rounded-xl border p-4 w-[180px] cursor-pointer transition-all',
+                    'min-w-0 cursor-pointer rounded-xl border p-4 transition-all',
                     'hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5',
                     isOverBudget
                       ? 'border-destructive/50 bg-destructive/5'

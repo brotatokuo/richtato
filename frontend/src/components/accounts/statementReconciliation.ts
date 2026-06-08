@@ -17,6 +17,12 @@ export function needsOpeningBalanceConfirmation(
   return action === 'available_create' || action === 'available_update';
 }
 
+export function defaultApplyOpeningBalance(
+  action: OpeningBalanceAction | undefined
+): boolean {
+  return action === 'available_create';
+}
+
 export function shouldShowReconciliationWarnings(
   file: Pick<
     StatementFileRecord,

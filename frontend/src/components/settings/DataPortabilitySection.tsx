@@ -159,9 +159,9 @@ export function DataPortabilitySection() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className="overflow-hidden">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
             <Download className="h-5 w-5" />
             Export data
           </CardTitle>
@@ -170,13 +170,17 @@ export function DataPortabilitySection() {
             accounts, and transactions.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
           <p className="text-sm text-muted-foreground">
             Backups exclude Google Drive OAuth tokens and household membership.
             Reconfigure those after restoring on a new account.
           </p>
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={handleDownloadJson} disabled={exportingJson}>
+          <div className="grid gap-3 sm:flex sm:flex-wrap">
+            <Button
+              onClick={handleDownloadJson}
+              disabled={exportingJson}
+              className="w-full sm:w-auto"
+            >
               {exportingJson ? (
                 <LoadingSpinner className="mr-2 h-4 w-4" />
               ) : (
@@ -222,6 +226,7 @@ export function DataPortabilitySection() {
               variant="secondary"
               onClick={handleDownloadCsv}
               disabled={exportingCsv}
+              className="w-full sm:w-auto"
             >
               {exportingCsv ? (
                 <LoadingSpinner className="mr-2 h-4 w-4" />
@@ -234,9 +239,9 @@ export function DataPortabilitySection() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className="overflow-hidden">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
             <Upload className="h-5 w-5" />
             Import backup
           </CardTitle>
@@ -245,7 +250,7 @@ export function DataPortabilitySection() {
             accounts or transactions manually.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
           {loadingStatus ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <LoadingSpinner className="h-4 w-4" />
@@ -267,11 +272,12 @@ export function DataPortabilitySection() {
                 accept="application/json,.json"
                 onChange={handleFileChange}
               />
-              <div className="flex flex-wrap gap-3">
+              <div className="grid gap-3 sm:flex sm:flex-wrap">
                 <Button
                   variant="secondary"
                   onClick={handlePreview}
                   disabled={!selectedFile || previewing}
+                  className="w-full sm:w-auto"
                 >
                   {previewing ? (
                     <LoadingSpinner className="mr-2 h-4 w-4" />
@@ -281,6 +287,7 @@ export function DataPortabilitySection() {
                 <Button
                   onClick={() => setConfirmOpen(true)}
                   disabled={!preview?.valid || committing}
+                  className="w-full sm:w-auto"
                 >
                   Import backup
                 </Button>
@@ -295,7 +302,7 @@ export function DataPortabilitySection() {
                 preview.valid ? 'border-border' : 'border-destructive/40'
               )}
             >
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                 <p className="text-sm font-medium">
                   {preview.valid ? 'Ready to import' : 'Validation failed'}
                 </p>

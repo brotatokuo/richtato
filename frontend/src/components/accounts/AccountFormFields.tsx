@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 export interface InstitutionFieldChoice {
   value: string;
@@ -31,6 +31,20 @@ interface AccountFormFieldsProps {
   institutions?: InstitutionFieldChoice[];
   idPrefix?: string;
   showStartingBalance?: boolean;
+  autoFillName?: boolean;
+}
+
+function buildAutoAccountName(
+  entity: string,
+  type: string,
+  entityOptions: Array<{ value: string; label: string }>,
+  typeOptions: Array<{ value: string; label: string }>
+): string {
+  const entityLabel =
+    entityOptions.find(option => option.value === entity)?.label ?? entity;
+  const typeLabel =
+    typeOptions.find(option => option.value === type)?.label ?? type;
+  return `${entityLabel} ${typeLabel}`;
 }
 
 export function AccountFormFields({
@@ -41,7 +55,10 @@ export function AccountFormFields({
   institutions = [],
   idPrefix = 'acc',
   showStartingBalance = false,
+  autoFillName = false,
 }: AccountFormFieldsProps) {
+  const nameManuallyEdited = useRef(false);
+
   const filteredTypeOptions = useMemo(() => {
     const institution = institutions.find(item => item.value === form.entity);
     if (institution?.account_types?.length) {
@@ -49,6 +66,33 @@ export function AccountFormFields({
     }
     return accountTypeOptions;
   }, [accountTypeOptions, form.entity, institutions]);
+
+  const suggestedName = useMemo(
+    () =>
+      buildAutoAccountName(
+        form.entity,
+        form.type,
+        entityOptions,
+        filteredTypeOptions
+      ),
+    [entityOptions, filteredTypeOptions, form.entity, form.type]
+  );
+
+  useEffect(() => {
+    if (!autoFillName || nameManuallyEdited.current) {
+      return;
+    }
+
+    if (form.name !== suggestedName) {
+      onChange('name', suggestedName);
+    }
+  }, [autoFillName, form.name, onChange, suggestedName]);
+
+  useEffect(() => {
+    if (!autoFillName) {
+      nameManuallyEdited.current = false;
+    }
+  }, [autoFillName]);
 
   const handleEntityChange = (value: string) => {
     onChange('entity', value);
@@ -69,15 +113,6 @@ export function AccountFormFields({
 
   return (
     <>
-      <div>
-        <Label htmlFor={`${idPrefix}-name`}>Name</Label>
-        <Input
-          id={`${idPrefix}-name`}
-          value={form.name}
-          onChange={e => onChange('name', e.target.value)}
-          placeholder="e.g., Main Checking"
-        />
-      </div>
       <div>
         <Label htmlFor={`${idPrefix}-entity`}>Bank/Entity</Label>
         <Select value={form.entity} onValueChange={handleEntityChange}>
@@ -108,33 +143,63 @@ export function AccountFormFields({
           </SelectContent>
         </Select>
       </div>
+      <div>
+        <Label htmlFor={`${idPrefix}-name`}>Name</Label>
+        <Input
+          id={`${idPrefix}-name`}
+          value={form.name}
+          onChange={e => {
+            nameManuallyEdited.current = true;
+            onChange('name', e.target.value);
+          }}
+          placeholder="e.g., Chase Checking"
+        />
+      </div>
       {showStartingBalance && (
-        <div>
-          <Label htmlFor={`${idPrefix}-balance`}>
-            Opening Balance{' '}
-            <span className="text-muted-foreground font-normal">
-              (optional)
-            </span>
-          </Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-              $
-            </span>
-            <Input
-              id={`${idPrefix}-balance`}
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={form.starting_balance ?? ''}
-              onChange={e => onChange('starting_balance', e.target.value)}
-              className="pl-7"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Current balance of this account when you start tracking it.
-          </p>
-        </div>
+        <AccountOpeningBalanceField
+          idPrefix={idPrefix}
+          value={form.starting_balance ?? ''}
+          onChange={value => onChange('starting_balance', value)}
+        />
       )}
     </>
+  );
+}
+
+interface AccountOpeningBalanceFieldProps {
+  idPrefix: string;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+export function AccountOpeningBalanceField({
+  idPrefix,
+  value,
+  onChange,
+}: AccountOpeningBalanceFieldProps) {
+  return (
+    <div>
+      <Label htmlFor={`${idPrefix}-balance`}>
+        Opening Balance{' '}
+        <span className="text-muted-foreground font-normal">(optional)</span>
+      </Label>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+          $
+        </span>
+        <Input
+          id={`${idPrefix}-balance`}
+          type="number"
+          step="0.01"
+          placeholder="0.00"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          className="pl-7"
+        />
+      </div>
+      <p className="text-xs text-muted-foreground mt-1">
+        Current balance of this account when you start tracking it.
+      </p>
+    </div>
   );
 }

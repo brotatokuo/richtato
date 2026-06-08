@@ -57,52 +57,66 @@ export function Setup() {
     <Tabs
       value={activeTab}
       onValueChange={handleTabChange}
-      className="space-y-4"
+      className="w-full min-w-0 space-y-4"
     >
-      <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 sm:w-auto sm:inline-grid">
-        <TabsTrigger
-          value="statements"
-          className="flex items-center gap-2"
-          data-tour="setup-statements-tab"
-        >
-          <Cloud className="h-4 w-4" />
-          <span>Statements</span>
-        </TabsTrigger>
-        <TabsTrigger value="categories" className="flex items-center gap-2">
-          <Tag className="h-4 w-4" />
-          <span>Categories</span>
-        </TabsTrigger>
-        <TabsTrigger value="budgets" className="flex items-center gap-2">
-          <PiggyBank className="h-4 w-4" />
-          <span>Budgets</span>
-        </TabsTrigger>
-        <TabsTrigger value="household" className="flex items-center gap-2">
-          <Users className="h-4 w-4" />
-          <span>Household</span>
-        </TabsTrigger>
-        <TabsTrigger value="data" className="flex items-center gap-2">
-          <Database className="h-4 w-4" />
-          <span>Data</span>
-        </TabsTrigger>
-      </TabsList>
+      <div className="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:overflow-visible sm:px-0">
+        <TabsList className="inline-flex h-auto min-w-max justify-start gap-1 sm:grid sm:w-auto sm:min-w-0 sm:grid-cols-5">
+          <TabsTrigger
+            value="statements"
+            className="flex h-9 shrink-0 items-center gap-2 px-3"
+            data-tour="setup-statements-tab"
+          >
+            <Cloud className="h-4 w-4" />
+            <span>Statements</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="categories"
+            className="flex h-9 shrink-0 items-center gap-2 px-3"
+          >
+            <Tag className="h-4 w-4" />
+            <span>Categories</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="budgets"
+            className="flex h-9 shrink-0 items-center gap-2 px-3"
+          >
+            <PiggyBank className="h-4 w-4" />
+            <span>Budgets</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="household"
+            className="flex h-9 shrink-0 items-center gap-2 px-3"
+          >
+            <Users className="h-4 w-4" />
+            <span>Household</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="data"
+            className="flex h-9 shrink-0 items-center gap-2 px-3"
+          >
+            <Database className="h-4 w-4" />
+            <span>Data</span>
+          </TabsTrigger>
+        </TabsList>
+      </div>
 
-      <TabsContent value="statements">
+      <TabsContent value="statements" className="min-w-0">
         <DriveStatementsSection />
       </TabsContent>
 
-      <TabsContent value="categories">
+      <TabsContent value="categories" className="min-w-0">
         <CategoriesSection />
       </TabsContent>
 
-      <TabsContent value="budgets">
+      <TabsContent value="budgets" className="min-w-0">
         <BudgetsSection />
       </TabsContent>
 
-      <TabsContent value="household">
+      <TabsContent value="household" className="min-w-0">
         <HouseholdSettings />
       </TabsContent>
 
-      <TabsContent value="data">
+      <TabsContent value="data" className="min-w-0">
         <DataPortabilitySection />
       </TabsContent>
     </Tabs>

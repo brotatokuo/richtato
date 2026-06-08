@@ -1,8 +1,10 @@
 import {
   formatSingleMonthPeriod,
   formatStatementPeriodFromRange,
+  isPastStatementMonth,
   parseIsoDateString,
   resolveFilingMonth,
+  resolveStatementStatusForMonth,
   statementPeriodDisplayLabel,
   validateCustomDateRange,
   validateStatementPeriod,
@@ -53,6 +55,26 @@ describe('formatStatementPeriod', () => {
     expect(parseIsoDateString('')).toBeNull();
     expect(parseIsoDateString('2026-13-01')).toBeNull();
     expect(parseIsoDateString('not-a-date')).toBeNull();
+  });
+
+  it('detects past statement months relative to a reference date', () => {
+    const reference = new Date(2026, 5, 7);
+
+    expect(isPastStatementMonth(2026, 5, reference)).toBe(true);
+    expect(isPastStatementMonth(2026, 6, reference)).toBe(false);
+    expect(isPastStatementMonth(2026, 4, reference)).toBe(true);
+    expect(isPastStatementMonth(2025, 12, reference)).toBe(true);
+    expect(isPastStatementMonth(2027, 1, reference)).toBe(false);
+  });
+
+  it('resolves statement status from month selection', () => {
+    const reference = new Date(2026, 5, 7);
+
+    expect(resolveStatementStatusForMonth(2026, 6, reference)).toBe(
+      'provisional'
+    );
+    expect(resolveStatementStatusForMonth(2026, 5, reference)).toBe('closed');
+    expect(resolveStatementStatusForMonth(2025, 11, reference)).toBe('closed');
   });
 
   it('validates custom date ranges', () => {

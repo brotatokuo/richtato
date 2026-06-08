@@ -4,6 +4,16 @@ import { Label } from '@/components/ui/label';
 import { Modal } from '@/components/ui/Modal';
 import { AccountSyncSettings } from '@/components/accounts/AccountSyncSettings';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -73,6 +83,8 @@ export function AccountDetailModal({
     hasStorageUri: false,
   });
   const [initialOpeningBalance, setInitialOpeningBalance] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
   const filteredTypeOptions = useMemo(() => {
     const institution = institutions.find(item => item.value === form.entity);
@@ -101,6 +113,9 @@ export function AccountDetailModal({
     defaultOpeningBalanceDate()
   );
   const [loadingOpeningBalance, setLoadingOpeningBalance] = useState(false);
+  const deleteConfirmationPhrase = account?.name.trim() ?? '';
+  const isDeleteConfirmed =
+    deleteConfirmation.trim() === deleteConfirmationPhrase;
 
   const findEntityValue = (accountRecord: Account): string => {
     if (accountRecord.entity) {
@@ -176,6 +191,13 @@ export function AccountDetailModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account, entityOptions, isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      setShowDeleteConfirm(false);
+      setDeleteConfirmation('');
+    }
+  }, [isOpen]);
+
   const handleFieldChange = (
     field: 'name' | 'type' | 'entity' | 'openingBalance' | 'openingBalanceDate',
     value: string
@@ -229,203 +251,256 @@ export function AccountDetailModal({
   };
 
   return (
-    <Modal
-      isOpen={isOpen && !!account}
-      onClose={onClose}
-      title="Account Details"
-    >
-      {account && (
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="detail-acc-name">Name</Label>
-              <Input
-                id="detail-acc-name"
-                value={form.name}
-                onChange={e => handleFieldChange('name', e.target.value)}
-                placeholder="e.g., Main Checking"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="detail-acc-type">Type</Label>
-              <Select
-                value={form.type}
-                onValueChange={v => handleFieldChange('type', v)}
-              >
-                <SelectTrigger id="detail-acc-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredTypeOptions.map(t => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="detail-acc-entity">Bank/Entity</Label>
-              <Select value={form.entity} onValueChange={handleEntityChange}>
-                <SelectTrigger id="detail-acc-entity">
-                  <SelectValue placeholder="Select a bank" />
-                </SelectTrigger>
-                <SelectContent>
-                  {entityOptions.map(e => (
-                    <SelectItem key={e.value} value={String(e.value)}>
-                      {e.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="detail-acc-opening-balance">
-                Opening Balance{' '}
-                <span className="text-muted-foreground font-normal">
-                  (optional)
-                </span>
-              </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                  $
-                </span>
+    <>
+      <Modal
+        isOpen={isOpen && !!account}
+        onClose={onClose}
+        title="Account Details"
+      >
+        {account && (
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="detail-acc-name">Name</Label>
                 <Input
-                  id="detail-acc-opening-balance"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={form.openingBalance}
-                  onChange={e =>
-                    handleFieldChange('openingBalance', e.target.value)
-                  }
-                  className="pl-7"
-                  disabled={loadingOpeningBalance}
+                  id="detail-acc-name"
+                  value={form.name}
+                  onChange={e => handleFieldChange('name', e.target.value)}
+                  placeholder="e.g., Main Checking"
                 />
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Balance this account had when you started tracking it. Leave
-                blank to remove an existing opening balance.
-              </p>
+
+              <div>
+                <Label htmlFor="detail-acc-type">Type</Label>
+                <Select
+                  value={form.type}
+                  onValueChange={v => handleFieldChange('type', v)}
+                >
+                  <SelectTrigger id="detail-acc-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredTypeOptions.map(t => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="detail-acc-entity">Bank/Entity</Label>
+                <Select value={form.entity} onValueChange={handleEntityChange}>
+                  <SelectTrigger id="detail-acc-entity">
+                    <SelectValue placeholder="Select a bank" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {entityOptions.map(e => (
+                      <SelectItem key={e.value} value={String(e.value)}>
+                        {e.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="detail-acc-opening-balance">
+                  Opening Balance{' '}
+                  <span className="text-muted-foreground font-normal">
+                    (optional)
+                  </span>
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                    $
+                  </span>
+                  <Input
+                    id="detail-acc-opening-balance"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={form.openingBalance}
+                    onChange={e =>
+                      handleFieldChange('openingBalance', e.target.value)
+                    }
+                    className="pl-7"
+                    disabled={loadingOpeningBalance}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Balance this account had when you started tracking it. Leave
+                  blank to remove an existing opening balance.
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="detail-acc-opening-date">
+                  Opening Balance Date
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    ref={dateInputRef}
+                    id="detail-acc-opening-date"
+                    type="date"
+                    value={form.openingBalanceDate}
+                    onChange={e =>
+                      handleFieldChange('openingBalanceDate', e.target.value)
+                    }
+                    className="flex-1"
+                    disabled={
+                      loadingOpeningBalance || !form.openingBalance.trim()
+                    }
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => dateInputRef.current?.showPicker?.()}
+                    title="Open calendar"
+                    disabled={
+                      loadingOpeningBalance || !form.openingBalance.trim()
+                    }
+                  >
+                    <Calendar className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="detail-acc-opening-date">
-                Opening Balance Date
-              </Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  ref={dateInputRef}
-                  id="detail-acc-opening-date"
-                  type="date"
-                  value={form.openingBalanceDate}
-                  onChange={e =>
-                    handleFieldChange('openingBalanceDate', e.target.value)
-                  }
-                  className="flex-1"
-                  disabled={
-                    loadingOpeningBalance || !form.openingBalance.trim()
-                  }
-                />
-                <Button
+            <AccountSyncSettings
+              form={{
+                entity: form.entity,
+                type: form.type,
+                syncMode: form.syncMode,
+              }}
+              onChange={handleSyncChange}
+              hasStorageUri={form.hasStorageUri}
+              idPrefix="detail-sync"
+              disabled={loadingOpeningBalance}
+            />
+
+            {account.account_number_last4 && (
+              <div className="text-sm text-muted-foreground">
+                Account ending in:{' '}
+                <span className="font-mono">
+                  ····{account.account_number_last4}
+                </span>
+              </div>
+            )}
+
+            {isInHousehold && (
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Share with Household</p>
+                    <p className="text-xs text-muted-foreground">
+                      Include this account in your household dashboard
+                    </p>
+                  </div>
+                </div>
+                <button
                   type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => dateInputRef.current?.showPicker?.()}
-                  title="Open calendar"
-                  disabled={
-                    loadingOpeningBalance || !form.openingBalance.trim()
+                  role="switch"
+                  aria-checked={form.sharedWithHousehold}
+                  onClick={() =>
+                    setForm(prev => ({
+                      ...prev,
+                      sharedWithHousehold: !prev.sharedWithHousehold,
+                    }))
                   }
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                    form.sharedWithHousehold ? 'bg-primary' : 'bg-muted'
+                  }`}
                 >
-                  <Calendar className="h-4 w-4" />
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow-lg ring-0 transition-transform ${
+                      form.sharedWithHousehold
+                        ? 'translate-x-5'
+                        : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            )}
+
+            <div className="flex justify-between gap-2 pt-4 border-t">
+              <Button
+                variant="destructive"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={loading}
+              >
+                Delete Account
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={onClose}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!form.name || loading || loadingOpeningBalance}
+                >
+                  Save Changes
                 </Button>
               </div>
             </div>
           </div>
+        )}
+      </Modal>
 
-          <AccountSyncSettings
-            form={{
-              entity: form.entity,
-              type: form.type,
-              syncMode: form.syncMode,
-            }}
-            onChange={handleSyncChange}
-            hasStorageUri={form.hasStorageUri}
-            idPrefix="detail-sync"
-            disabled={loadingOpeningBalance}
-          />
+      <AlertDialog
+        open={showDeleteConfirm}
+        onOpenChange={open => {
+          setShowDeleteConfirm(open);
+          if (!open) setDeleteConfirmation('');
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the account and its related history from
+              Richtato. To confirm, type the account name exactly as shown.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
 
-          {account.account_number_last4 && (
-            <div className="text-sm text-muted-foreground">
-              Account ending in:{' '}
-              <span className="font-mono">
-                ····{account.account_number_last4}
-              </span>
-            </div>
-          )}
-
-          {isInHousehold && (
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Share with Household</p>
-                  <p className="text-xs text-muted-foreground">
-                    Include this account in your household dashboard
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={form.sharedWithHousehold}
-                onClick={() =>
-                  setForm(prev => ({
-                    ...prev,
-                    sharedWithHousehold: !prev.sharedWithHousehold,
-                  }))
-                }
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-                  form.sharedWithHousehold ? 'bg-primary' : 'bg-muted'
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow-lg ring-0 transition-transform ${
-                    form.sharedWithHousehold ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-          )}
-
-          <div className="flex justify-between gap-2 pt-4 border-t">
-            <Button
-              variant="destructive"
-              onClick={() => {
-                onClose();
-                onDelete();
-              }}
-              disabled={loading}
-            >
-              Delete Account
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={!form.name || loading || loadingOpeningBalance}
-              >
-                Save Changes
-              </Button>
+          <div className="space-y-2">
+            <p className="rounded-md bg-muted px-3 py-2 text-sm font-medium text-foreground">
+              {deleteConfirmationPhrase}
+            </p>
+            <div className="space-y-1">
+              <Label htmlFor="delete-account-confirmation">Account name</Label>
+              <Input
+                id="delete-account-confirmation"
+                value={deleteConfirmation}
+                onChange={e => setDeleteConfirmation(e.target.value)}
+                placeholder={deleteConfirmationPhrase}
+                autoComplete="off"
+                autoFocus
+              />
             </div>
           </div>
-        </div>
-      )}
-    </Modal>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={!isDeleteConfirmed || loading}
+              onClick={event => {
+                event.preventDefault();
+                if (!isDeleteConfirmed || loading) return;
+                setShowDeleteConfirm(false);
+                setDeleteConfirmation('');
+                onDelete();
+              }}
+            >
+              Delete Account
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

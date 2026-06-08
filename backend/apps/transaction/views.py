@@ -1,6 +1,7 @@
 """Views for transactions API."""
 
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 
 from loguru import logger
 from rest_framework import status
@@ -219,16 +220,66 @@ class TransactionListCreateAPIView(APIView):
         end = start + page_size
         page_slice = queryset[start:end]
         serializer = TransactionSerializer(page_slice, many=True)
+        rows = serializer.data
+        if account is not None:
+            rows = self._attach_account_running_balances(
+                account=account,
+                rows=list(rows),
+            )
 
         return Response(
             {
-                "transactions": serializer.data,
+                "transactions": rows,
                 "page": page,
                 "page_size": page_size,
                 "total_count": total_count,
                 "has_next": end < total_count,
             }
         )
+
+    def _attach_account_running_balances(self, *, account, rows: list[dict]) -> list[dict]:
+        running_map = self._compute_running_balance_map(account)
+        for row in rows:
+            transaction_id = row.get("id")
+            if transaction_id is None:
+                continue
+            computed = running_map.get(transaction_id)
+            if computed is None:
+                continue
+            row["computed_running_balance"] = str(computed.quantize(Decimal("0.01")))
+            statement_balance = self._parse_optional_decimal(row.get("statement_running_balance"))
+            if statement_balance is None:
+                row["running_balance_diff"] = None
+                continue
+            diff = (statement_balance - computed).quantize(Decimal("0.01"))
+            row["running_balance_diff"] = str(diff)
+        return rows
+
+    def _compute_running_balance_map(self, account) -> dict[int, Decimal]:
+        running_map: dict[int, Decimal] = {}
+        running_total = Decimal("0")
+        transactions = self.transaction_service.get_user_transactions(user=account.user, account=account).order_by(
+            "date", "created_at", "id"
+        )
+        for transaction in transactions:
+            signed_amount = transaction.amount
+            if transaction.transaction_type == "debit":
+                signed_amount = -signed_amount
+            running_total = (running_total + signed_amount).quantize(Decimal("0.01"))
+            running_map[transaction.id] = running_total
+        return running_map
+
+    @staticmethod
+    def _parse_optional_decimal(value) -> Decimal | None:
+        if value in (None, ""):
+            return None
+        normalized = str(value).replace("$", "").replace(",", "").replace("(", "-").replace(")", "").strip()
+        if normalized in {"", "-", "--"}:
+            return None
+        try:
+            return Decimal(normalized).quantize(Decimal("0.01"))
+        except (InvalidOperation, ValueError):
+            return None
 
     def post(self, request):
         """Create a new manual transaction."""

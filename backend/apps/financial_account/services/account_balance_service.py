@@ -1,14 +1,48 @@
 """Service for account balance tracking."""
 
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
+from django.db.models import Sum
 from loguru import logger
 
 from apps.financial_account.models import AccountBalanceHistory, FinancialAccount
 from apps.financial_account.repositories.account_repository import (
     FinancialAccountRepository,
 )
+from apps.transaction.models import Transaction
+
+BALANCE_ON_DATE_ACCOUNT_TYPES = frozenset({"checking", "savings", "investment"})
+
+
+@dataclass
+class BalanceReconciliationResult:
+    """Result of reconciling a user-entered balance against transaction history."""
+
+    account: FinancialAccount
+    computed_balance: Decimal
+    adjustment: Decimal
+    adjustment_transaction: Transaction | None
+
+
+def compute_balance_at_date(
+    account: FinancialAccount, target_date: date, current_balance: Decimal | None = None
+) -> Decimal:
+    """Compute account balance at target_date from the anchor and later transactions."""
+    if current_balance is None:
+        account.refresh_from_db(fields=["balance"])
+        current_balance = account.balance
+
+    credits_after = Transaction.objects.filter(
+        account=account, date__gt=target_date, transaction_type="credit"
+    ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+    debits_after = Transaction.objects.filter(
+        account=account, date__gt=target_date, transaction_type="debit"
+    ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+    net_change_after = credits_after - debits_after
+    return current_balance - net_change_after
 
 
 class AccountBalanceService:
@@ -19,23 +53,20 @@ class AccountBalanceService:
 
     def update_balance(
         self, account: FinancialAccount, new_balance: Decimal, balance_date: date = None
-    ) -> FinancialAccount:
-        """Set an account to a specific balance by creating an adjustment transaction.
+    ) -> BalanceReconciliationResult:
+        """Reconcile account balance on a date via a Balance Adjustment transaction.
 
-        Computes the difference between current and desired balance, then
-        creates a Balance Adjustment transaction. The transaction signal
-        handles updating the anchor and history.
-
-        Returns:
-            Updated account (refreshed from DB)
+        Computes the balance implied by existing transactions at the target date,
+        then creates an adjustment transaction for any difference. Transaction
+        signals update the anchor balance and history.
         """
-        from apps.transaction.models import Transaction
-
         if balance_date is None:
             balance_date = date.today()
 
         account.refresh_from_db(fields=["balance"])
-        difference = new_balance - account.balance
+        computed_balance = compute_balance_at_date(account, balance_date)
+        difference = new_balance - computed_balance
+        adjustment_transaction = None
 
         if difference != Decimal("0"):
             if difference > 0:
@@ -45,7 +76,7 @@ class AccountBalanceService:
                 txn_type = "debit"
                 amount = abs(difference)
 
-            Transaction.objects.create(
+            adjustment_transaction = Transaction.objects.create(
                 user=account.user,
                 account=account,
                 date=balance_date,
@@ -60,10 +91,15 @@ class AccountBalanceService:
 
         logger.info(
             f"Adjusted balance for account {account.id} ({account.name}) "
-            f"to {new_balance} on {balance_date} (delta: {difference})"
+            f"to {new_balance} on {balance_date} (computed: {computed_balance}, delta: {difference})"
         )
 
-        return account
+        return BalanceReconciliationResult(
+            account=account,
+            computed_balance=computed_balance,
+            adjustment=difference,
+            adjustment_transaction=adjustment_transaction,
+        )
 
     def set_balance_snapshot(
         self,
@@ -74,9 +110,8 @@ class AccountBalanceService:
     ) -> FinancialAccount:
         """Set absolute balance and overwrite/create history for the date.
 
-        This is used by manual reconciliation/snapshot flows where users provide
-        the true account balance for a specific date. Unlike adjustment-transaction
-        mode, this writes the account anchor and dated history directly.
+        Internal-only snapshot write that bypasses transactions. Prefer
+        update_balance() for user-facing reconciliation flows.
         """
         updated_account = self.account_repository.update_balance(
             account=account,

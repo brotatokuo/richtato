@@ -6,6 +6,15 @@ import { fetchWithAuth } from './fetchClient';
 
 export type SyncMode = 'upload' | 'manual';
 
+export interface SetAccountBalanceResult {
+  balance: string;
+  date: string;
+  computed_balance: string;
+  previous_balance: string;
+  adjustment: string;
+  adjustment_transaction_id: number | null;
+}
+
 export interface Transaction {
   id: number;
   account: number;
@@ -13,6 +22,9 @@ export interface Transaction {
   date: string;
   amount: number;
   signed_amount: number;
+  statement_running_balance?: string | null;
+  computed_running_balance?: string | null;
+  running_balance_diff?: string | null;
   description: string;
   transaction_type: 'debit' | 'credit';
   transaction_type_display: string;
@@ -385,14 +397,14 @@ class TransactionsApiService {
   }
 
   /**
-   * Set the absolute balance for an account on a given date.
-   * This is a balance snapshot, not a transaction.
+   * Reconcile account balance on a given date via a Balance Adjustment transaction.
+   * Supported for checking, savings, and investment accounts.
    */
   async setAccountBalance(input: {
     account: number;
     balance: number;
     date: string; // YYYY-MM-DD
-  }): Promise<{ balance: string; date: string }> {
+  }): Promise<SetAccountBalanceResult> {
     let response = await fetchWithAuth(`${this.baseUrl}/accounts/details/`, {
       method: 'POST',
       headers: await csrfService.getHeaders(),
@@ -411,7 +423,7 @@ class TransactionsApiService {
       });
     }
 
-    return this.handleResponse<{ balance: string; date: string }>(response);
+    return this.handleResponse<SetAccountBalanceResult>(response);
   }
 
   /**

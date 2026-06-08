@@ -1,5 +1,6 @@
 """Views for financial accounts API."""
 
+from decimal import Decimal, InvalidOperation
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -526,6 +527,15 @@ class AccountTransactionsAPIView(APIView):
         start = (page - 1) * page_size
         end = start + page_size
         transactions = queryset[start:end]
+        running_map: dict[int, Decimal] = {}
+        running_total = Decimal("0")
+        ordered_all = queryset.order_by("date", "created_at", "id").only()
+        for transaction in ordered_all:
+            signed = transaction.amount
+            if transaction.transaction_type == "debit":
+                signed = -signed
+            running_total = (running_total + signed).quantize(Decimal("0.01"))
+            running_map[transaction.id] = running_total
 
         columns = [
             {"field": "id", "title": "ID"},
@@ -535,16 +545,46 @@ class AccountTransactionsAPIView(APIView):
             {"field": "transaction_type", "title": "Type"},
         ]
 
-        rows = [
-            {
-                "id": t.id,
-                "date": t.date.isoformat() if t.date else None,
-                "description": t.description or "",
-                "amount": str(t.amount),
-                "transaction_type": t.transaction_type,
-            }
-            for t in transactions
-        ]
+        rows = []
+        for transaction in transactions:
+            raw_data = transaction.raw_data or {}
+            statement_running = raw_data.get("running_balance")
+            if statement_running in (None, ""):
+                raw_row = raw_data.get("raw_row") or {}
+                statement_running = (
+                    raw_row.get("Running Bal.")
+                    or raw_row.get("Running Bal")
+                    or raw_row.get("Running Balance")
+                    or raw_row.get("Balance")
+                )
+            computed_running = running_map.get(transaction.id)
+            diff_value = None
+            if computed_running is not None and statement_running not in (None, ""):
+                normalized = (
+                    str(statement_running).replace("$", "").replace(",", "").replace("(", "-").replace(")", "").strip()
+                )
+                try:
+                    statement_decimal = Decimal(normalized).quantize(Decimal("0.01"))
+                    diff_value = str((statement_decimal - computed_running).quantize(Decimal("0.01")))
+                except (InvalidOperation, ValueError):
+                    diff_value = None
+
+            rows.append(
+                {
+                    "id": transaction.id,
+                    "date": transaction.date.isoformat() if transaction.date else None,
+                    "description": transaction.description or "",
+                    "amount": str(transaction.amount),
+                    "transaction_type": transaction.transaction_type,
+                    "statement_running_balance": str(statement_running)
+                    if statement_running not in (None, "")
+                    else None,
+                    "computed_running_balance": (
+                        str(computed_running.quantize(Decimal("0.01"))) if computed_running is not None else None
+                    ),
+                    "running_balance_diff": diff_value,
+                }
+            )
 
         return Response(
             {
@@ -603,11 +643,11 @@ class AccountTransactionsAPIView(APIView):
 
 
 class AccountBalanceUpdateAPIView(APIView):
-    """Set the absolute balance for an account on a given date.
+    """Reconcile account balance on a given date via a Balance Adjustment transaction.
 
-    This writes directly to FinancialAccount.balance and AccountBalanceHistory
-    without creating a Transaction. Use when the user wants to reconcile or
-    snapshot the account balance (e.g. "my balance is $5,200 today").
+    Compares the user-entered balance against the balance implied by existing
+    transactions at that date, then creates an adjustment transaction for any
+    difference. Supported for checking, savings, and investment accounts only.
     """
 
     authentication_classes = [SessionAuthentication, BasicAuthentication]
@@ -619,9 +659,13 @@ class AccountBalanceUpdateAPIView(APIView):
         self.balance_service = AccountBalanceService()
 
     def post(self, request):
-        """Set the account balance to the given amount on the given date."""
+        """Reconcile the account balance to the given amount on the given date."""
         from datetime import date as date_type
         from decimal import Decimal
+
+        from apps.financial_account.services.account_balance_service import (
+            BALANCE_ON_DATE_ACCOUNT_TYPES,
+        )
 
         account_id = request.data.get("account")
         balance = request.data.get("balance")
@@ -636,6 +680,12 @@ class AccountBalanceUpdateAPIView(APIView):
         account = self.account_service.get_account_by_id(account_id, request.user)
         if not account:
             return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if account.account_type not in BALANCE_ON_DATE_ACCOUNT_TYPES:
+            return Response(
+                {"error": "Balance on date is only supported for checking, savings, and investment accounts"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             balance_decimal = Decimal(str(balance))
@@ -653,8 +703,14 @@ class AccountBalanceUpdateAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        old_balance = account.balance
-        updated_account = self.balance_service.set_balance_snapshot(
+        if parsed_balance_date > date_type.today():
+            return Response(
+                {"error": "Balance date cannot be in the future"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        previous_balance = account.balance
+        result = self.balance_service.update_balance(
             account=account,
             new_balance=balance_decimal,
             balance_date=parsed_balance_date,
@@ -662,10 +718,14 @@ class AccountBalanceUpdateAPIView(APIView):
 
         return Response(
             {
-                "balance": str(updated_account.balance),
+                "balance": str(result.account.balance),
                 "date": str(parsed_balance_date),
-                "previous_balance": str(old_balance),
-                "adjustment": str(updated_account.balance - old_balance),
+                "computed_balance": str(result.computed_balance),
+                "previous_balance": str(previous_balance),
+                "adjustment": str(result.adjustment),
+                "adjustment_transaction_id": (
+                    result.adjustment_transaction.id if result.adjustment_transaction else None
+                ),
             },
             status=status.HTTP_200_OK,
         )
