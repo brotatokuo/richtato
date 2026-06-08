@@ -12,3 +12,5 @@ DATABASES = {
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
+
+RUN_DEMO_MAINTENANCE_THREADS = False

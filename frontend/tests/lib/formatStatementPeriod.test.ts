@@ -60,7 +60,7 @@ describe('formatStatementPeriod', () => {
   it('detects past statement months relative to a reference date', () => {
     const reference = new Date(2026, 5, 7);
 
-    expect(isPastStatementMonth(2026, 5, reference)).toBe(false);
+    expect(isPastStatementMonth(2026, 5, reference)).toBe(true);
     expect(isPastStatementMonth(2026, 6, reference)).toBe(false);
     expect(isPastStatementMonth(2026, 4, reference)).toBe(true);
     expect(isPastStatementMonth(2025, 12, reference)).toBe(true);

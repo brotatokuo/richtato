@@ -86,9 +86,7 @@ class TestAccountBalanceUpdateAPI(TestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(
-            Transaction.objects.filter(account=self.account, description="Balance Adjustment").exists()
-        )
+        self.assertFalse(Transaction.objects.filter(account=self.account, description="Balance Adjustment").exists())
         data = response.json()
         self.assertEqual(data["adjustment"], "0.00")
         self.assertIsNone(data["adjustment_transaction_id"])

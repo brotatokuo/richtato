@@ -3,6 +3,7 @@
 import threading
 import time
 
+from django.conf import settings
 from django.db import close_old_connections
 from django.utils import timezone
 from loguru import logger
@@ -11,15 +12,22 @@ from .demo_user_factory import DemoUserFactory
 from .models import User
 
 
+def should_run_demo_maintenance_threads() -> bool:
+    """Demo maintenance threads are unsafe in pytest's transactional DB setup."""
+    return getattr(settings, "RUN_DEMO_MAINTENANCE_THREADS", True)
+
+
 class CleanupDemoUsersMiddleware:
     """Middleware that periodically cleans up expired demo users."""
 
     def __init__(self, get_response):
         self.get_response = get_response
         self.keep_running = True
-        self.thread = threading.Thread(target=self.cleanup_periodically)
-        self.thread.daemon = True
-        self.thread.start()
+        self.thread = None
+        if should_run_demo_maintenance_threads():
+            self.thread = threading.Thread(target=self.cleanup_periodically)
+            self.thread.daemon = True
+            self.thread.start()
 
     def cleanup_periodically(self):
         while self.keep_running:
@@ -42,7 +50,7 @@ class CleanupDemoUsersMiddleware:
 
     def stop_cleanup(self):
         self.keep_running = False
-        if self.thread.is_alive():
+        if self.thread and self.thread.is_alive():
             self.thread.join()
 
 
@@ -52,9 +60,11 @@ class ResetDemoUserMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
         self.keep_running = True
-        self.thread = threading.Thread(target=self.reset_periodically)
-        self.thread.daemon = True
-        self.thread.start()
+        self.thread = None
+        if should_run_demo_maintenance_threads():
+            self.thread = threading.Thread(target=self.reset_periodically)
+            self.thread.daemon = True
+            self.thread.start()
 
     def reset_periodically(self):
         """Reset demo user data every hour."""
@@ -80,5 +90,5 @@ class ResetDemoUserMiddleware:
     def stop_reset(self):
         """Stop the reset thread (for testing/shutdown)."""
         self.keep_running = False
-        if self.thread.is_alive():
+        if self.thread and self.thread.is_alive():
             self.thread.join()
