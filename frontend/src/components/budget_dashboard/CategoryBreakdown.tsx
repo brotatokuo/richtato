@@ -147,15 +147,15 @@ export function CategoryBreakdown({
   const sorted = sortCategories(categories, sortBy);
 
   return (
-    <div className="h-80 overflow-y-auto">
+    <div className="max-h-[28rem] overflow-y-auto lg:h-80">
       <div className="text-sm font-medium text-muted-foreground mb-4">
         Category Breakdown
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         {sorted.map(category => (
           <div
             key={category.name}
-            className="group flex items-center justify-between p-3 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+            className="group flex min-w-0 items-center justify-between rounded-lg bg-muted p-3 transition-colors hover:bg-muted/80"
           >
             <div className="flex items-center space-x-3 flex-1 min-w-0">
               <div className="relative w-8 h-8 flex-shrink-0">
@@ -190,7 +190,7 @@ export function CategoryBreakdown({
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1">
+                <div className="flex min-w-0 items-center gap-1">
                   <div className="text-sm font-medium text-foreground truncate">
                     {category.name}
                   </div>
@@ -204,7 +204,7 @@ export function CategoryBreakdown({
                     />
                   )}
                 </div>
-                <div className="text-xs text-muted-foreground">
+                <div className="truncate text-xs text-muted-foreground">
                   {formatCurrency(category.spent, preferences.currency)}/
                   {formatCurrency(category.budget, preferences.currency)}
                 </div>

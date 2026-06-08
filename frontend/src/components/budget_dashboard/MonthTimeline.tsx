@@ -50,7 +50,7 @@ export function MonthTimeline({
   return (
     <div className="w-full min-w-0">
       {/* Timeline Grid (no horizontal scroll) */}
-      <div className="grid gap-3 py-2 px-1 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+      <div className="grid grid-cols-1 gap-3 px-1 py-2 min-[420px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
         {monthlyData.map(month => {
           const isCurrentMonth =
             month.year === currentYear && month.month === currentMonth;

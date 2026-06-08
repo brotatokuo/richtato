@@ -352,9 +352,9 @@ export function BudgetTrendsChart({
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="flex flex-col gap-3 p-4 pb-2 sm:flex-row sm:items-center sm:justify-between sm:p-6 sm:pb-2">
         <CardTitle className="text-lg">Budget Trends</CardTitle>
-        <div className="flex gap-1 bg-muted rounded-lg p-1">
+        <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1 sm:flex">
           <button
             onClick={() => setActiveView('bar')}
             className={`p-2 rounded transition-colors ${
@@ -390,12 +390,12 @@ export function BudgetTrendsChart({
           </button>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 pt-2 sm:p-6 sm:pt-2">
         <BaseChart
           type={activeView === 'bar' ? 'bar' : 'line'}
           data={data}
           options={options}
-          height="280px"
+          height="260px"
         />
       </CardContent>
     </Card>

@@ -34,6 +34,7 @@ import {
 } from '@/lib/api/driveStatements';
 import {
   Cloud,
+  ExternalLink,
   FolderInput,
   FolderOpen,
   FolderPlus,
@@ -87,6 +88,9 @@ declare global {
 const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
 
 type ActivationMode = 'create' | 'adopt';
+
+const getDriveFolderUrl = (folderId: string) =>
+  `https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`;
 
 export function DriveStatementsSection() {
   const {
@@ -305,9 +309,9 @@ export function DriveStatementsSection() {
   const missingFolderCount = status?.missing_folder_count ?? 0;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card className="overflow-hidden">
+      <CardHeader className="p-4 sm:p-6">
+        <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
           <Cloud className="h-5 w-5" />
           Statement Storage
         </CardTitle>
@@ -320,7 +324,7 @@ export function DriveStatementsSection() {
           subfolders.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -329,7 +333,7 @@ export function DriveStatementsSection() {
         ) : (
           <>
             <div
-              className="rounded-lg border border-border bg-muted/20 p-4"
+              className="rounded-lg border border-border bg-muted/20 p-3 sm:p-4"
               data-tour="drive-status"
             >
               <div className="flex flex-wrap items-center gap-2">
@@ -349,9 +353,26 @@ export function DriveStatementsSection() {
                   <p>Google account: {status.google_account_email}</p>
                 )}
                 {status?.root_folder_name && (
-                  <p className="flex items-center gap-2">
-                    <FolderOpen className="h-4 w-4" />
-                    Root folder: {status.root_folder_name}
+                  <p className="flex min-w-0 items-center gap-2">
+                    <FolderOpen className="h-4 w-4 shrink-0" />
+                    <span className="min-w-0">
+                      Root folder:{' '}
+                      {status.root_folder_id ? (
+                        <a
+                          href={getDriveFolderUrl(status.root_folder_id)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="break-words text-primary underline-offset-4 hover:underline"
+                        >
+                          {status.root_folder_name}
+                          <ExternalLink className="ml-1 inline h-3.5 w-3.5 align-[-2px]" />
+                        </a>
+                      ) : (
+                        <span className="break-words">
+                          {status.root_folder_name}
+                        </span>
+                      )}
+                    </span>
                   </p>
                 )}
                 {isActive && (
@@ -374,13 +395,14 @@ export function DriveStatementsSection() {
             </div>
 
             <div
-              className="flex flex-wrap gap-2"
+              className="grid gap-2 sm:flex sm:flex-wrap"
               data-tour="drive-folder-actions"
             >
               {!isConnected && (
                 <Button
                   onClick={connectDrive}
                   disabled={busy || !status?.configured}
+                  className="w-full sm:w-auto"
                   data-tour="drive-connect"
                 >
                   {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -391,6 +413,7 @@ export function DriveStatementsSection() {
                 <Button
                   onClick={() => void chooseFolder('create')}
                   disabled={busy}
+                  className="w-full sm:w-auto"
                 >
                   {busy ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -405,6 +428,7 @@ export function DriveStatementsSection() {
                   variant="outline"
                   onClick={() => void chooseFolder('adopt')}
                   disabled={busy}
+                  className="w-full sm:w-auto"
                 >
                   {busy ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -415,13 +439,22 @@ export function DriveStatementsSection() {
                 </Button>
               )}
               {isConnected && !isActive && (
-                <Button variant="outline" onClick={disconnect} disabled={busy}>
+                <Button
+                  variant="outline"
+                  onClick={disconnect}
+                  disabled={busy}
+                  className="w-full sm:w-auto"
+                >
                   <Unplug className="mr-2 h-4 w-4" />
                   Disconnect
                 </Button>
               )}
               {isActive && missingFolderCount > 0 && (
-                <Button onClick={syncFolders} disabled={busy}>
+                <Button
+                  onClick={syncFolders}
+                  disabled={busy}
+                  className="w-full sm:w-auto"
+                >
                   {busy ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
@@ -435,6 +468,7 @@ export function DriveStatementsSection() {
                   variant="outline"
                   onClick={() => setShowUnlinkConfirm(true)}
                   disabled={busy}
+                  className="w-full sm:w-auto"
                 >
                   <Unlink className="mr-2 h-4 w-4" />
                   Unlink Folder

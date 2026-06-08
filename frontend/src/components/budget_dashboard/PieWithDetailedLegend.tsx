@@ -47,9 +47,9 @@ export function PieWithDetailedLegend({
 }: PieWithDetailedLegendProps) {
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 sm:p-6">
         <div className="flex items-center gap-2">
-          <CardTitle>{title}</CardTitle>
+          <CardTitle className="text-lg sm:text-2xl">{title}</CardTitle>
           {info && (
             <Dialog>
               <DialogTrigger asChild>
@@ -71,8 +71,8 @@ export function PieWithDetailedLegend({
           )}
         </div>
       </CardHeader>
-      <CardContent className="overflow-y-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <CardContent className="overflow-y-hidden p-4 pt-0 sm:p-6 sm:pt-0">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
           <div
             className="relative flex items-center justify-center"
             style={{ height }}
@@ -88,7 +88,7 @@ export function PieWithDetailedLegend({
             </div>
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center flex flex-col items-center justify-center">
-                <div className="text-3xl font-bold text-foreground leading-none">
+                <div className="text-2xl font-bold leading-none text-foreground sm:text-3xl">
                   {centerPrimary}
                 </div>
                 {centerSecondaryLabel ? (
@@ -97,7 +97,7 @@ export function PieWithDetailedLegend({
                   </div>
                 ) : null}
                 {centerTertiaryLabel ? (
-                  <div className="text-xs text-muted-foreground/70 mt-1">
+                  <div className="mt-1 max-w-40 break-words text-xs text-muted-foreground/70 sm:max-w-none">
                     {centerTertiaryLabel}
                   </div>
                 ) : null}
